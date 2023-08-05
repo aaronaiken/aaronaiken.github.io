@@ -1,0 +1,98 @@
+/* my own styles */
+
+@import url(https://fonts.bunny.net/css?family=amethysta:400|average:400);
+body {
+  font-family: 'Average', serif;
+  margin: 0 auto;
+  max-width: 40em;
+  padding: 2em;
+  position: relative;
+}
+img {
+  margin: 5px 0 5px 0;
+  max-width: 100%;
+}
+
+img.board-member {
+  align-content: left;
+  margin: 0 10px 5px 0;
+}
+
+h1 {
+  font-family: 'Amethysta', serif;
+}
+#header {
+  align-items: right;
+}
+#footer {
+  font-size: x-small;
+  margin: 50px 0 0 0;
+}
+
+a:hover {
+  background: yellow;
+  padding: 1px;
+}
+
+hr {
+  margin-top: 2em;
+}
+
+.fine-print {
+  font-size: small;
+  margin-top: 15px;
+}
+
+/* Style the button that is used to open and close the collapsible content */
+.collapsible {
+  background-color: #eee;
+  color: #444;
+  cursor: pointer;
+  padding: 18px;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 15px;
+}
+
+/* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+.active, .collapsible:hover {
+  background-color: #ccc;
+}
+
+/* Style the collapsible content. Note: hidden by default */
+.learn-more {
+  padding: 0 18px;
+  display: none;
+  overflow: hidden;
+  background-color: inherit;
+}
+
+/* In support of Dark Mode */
+@media (prefers-color-scheme: dark) {
+body {
+color: #E5E7EB;
+background-color: #1F2937; 
+}
+a {
+color: #3B82F6;
+}
+img {
+opacity: .75;
+transition: opacity .5s ease-in-out;
+}
+img:hover {
+opacity: 1;
+}
+html {
+--text-color-normal: #0a244d;
+--text-color-light: #8cabd9;
+}
+html[data-theme='dark'] {
+--text-color-normal: hsl(210, 10%, 62%);
+--text-color-light: hsl(210, 15%, 35%);
+--text-color-richer: hsl(210, 50%, 72%);
+--text-color-highlight: hsl(25, 70%, 45%);
+}
+}
