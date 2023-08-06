@@ -43,6 +43,19 @@ hr {
   margin-top: 15px;
 }
 
+nav {
+  margin-bottom: 10px;
+}
+
+.post-link {
+  display: inline;
+  font-size: inherit;  
+}
+
+.post-list > li {
+  margin-bottom: 0;
+}
+
 /* Style the button that is used to open and close the collapsible content */
 .collapsible {
   background-color: #eee;
