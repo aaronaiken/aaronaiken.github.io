@@ -1,10 +1,21 @@
 {%- if site.posts.size > 0 -%}
-<h2 class="post-list-heading">{{ page.list_title | default: "Posts" }}</h2>
-<ul class="post-list">
-{%- for post in site.posts -%}
-<li>
-  {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
-  <span class="post-meta">{{ post.date | date: date_format }}</span> - <a class="post-link" href="{{ post.url | relative_url }}">{{ post.title | escape }}</a>
-</li>
-{%- endfor -%}
-</ul>
+  {% if page.title == "Home" %}
+    <h2 class="post-list-heading"> Some Recent <a href="/blog/">Blog</a> Posts</h2>
+    {% else %}
+    <h2 class="post-list-heading">{{ page.list_title | default: "Posts" }}</h2>
+  {% endif %}
+  <ul class="post-list">
+  {%- for post in site.posts -%}
+  <li>
+    {% if post.source %}
+      {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
+    <span class="post-meta">{{ post.date | date: date_format }}</span> - <a class="post-link" href="{{ post.url | relative_url }}">🔗 {{ post.title | escape }}</a>
+    {% else %}
+    {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
+    <span class="post-meta">{{ post.date | date: date_format }}</span> - <a class="post-link" href="{{ post.url | relative_url }}">{{ post.title | escape }}</a>
+    {% endif %}
+  </li>
+  {%- endfor -%}
+  </ul>
+  <p class="rss-subscribe">subscribe <a href="{{ "/feed.xml" | relative_url }}">via RSS</a></p>
+{%- endif -%}

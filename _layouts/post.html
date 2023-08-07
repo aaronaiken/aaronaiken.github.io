@@ -21,9 +21,12 @@ layout: default
 
   <div class="post-content e-content" itemprop="articleBody">
     {% if page.image %}
-      <img src="{{ page.image }}" />
+      <img class="featured-image" src="{{ page.image }}" />
     {% endif %}
     {{ content }}
+    {% if page.source %}
+      <p><a href="{{ page.source }}" title="{{ page.title }}" target="_blank">Source</a></p>
+    {% endif %}
   </div>
 
   {%- if site.disqus.shortname -%}
