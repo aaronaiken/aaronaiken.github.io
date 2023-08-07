@@ -1,7 +1,7 @@
 ---
 layout: post
-title:  "Simplicity"
-date:   2023-08-05 10:39 PM
+title: "Simplicity"
+date:  2023-08-05 10:39 PM
 categories: design
 author: Aaron Aiken
 ---
