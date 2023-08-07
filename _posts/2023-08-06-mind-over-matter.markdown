@@ -1,7 +1,7 @@
 ---
 layout: post
-title:  "Mind Over Matter"
-date:  2023-08-06 10:50 PM
+title: "Mind Over Matter"
+date: 2023-08-06 10:50 PM
 categories: motivation
 author: Aaron Aiken
 ---
