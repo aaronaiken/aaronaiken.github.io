@@ -79,6 +79,20 @@ nav {
   background: color(display-p3 0.757 0.757 0.757);
 }
 
+.statuslol_content {
+font-family: Courier New;
+color: #04D939;
+font-size: .75em;
+text-align: left;
+background: black;
+padding: 1em;
+border-radius: .25em;
+}
+
+.statuslol_content a {
+color: #04D939;
+}
+
 /* Style the button that is used to open and close the collapsible content */
 .collapsible {
   background-color: #eee;
