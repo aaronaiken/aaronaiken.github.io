@@ -3,7 +3,7 @@ layout: post
 title: "NASA’s DC-8"
 date: 2023-08-06 10:26 AM
 categories: NASA, science, technology
-author: Aaron Aiken
+author: aaron
 source: https://www.nasa.gov/centers/armstrong/news/FactSheets/FS-050-DFRC.html
 image: /assets/img/nasa-dc8.jpg
 ---
