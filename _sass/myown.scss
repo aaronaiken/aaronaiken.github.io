@@ -13,13 +13,22 @@ img {
   max-width: 100%;
 }
 
-img.board-member {
+img.board-member, img.about {
   align-content: left;
   margin: 0 10px 5px 0;
+  width: 300px;
+  float: left;
 }
 
 img.featured-image {
   padding-bottom: 10px;
+}
+
+img.post-author-img {
+  width: 100px;
+  border-radius: 50px;
+  float: left;
+  margin: 0 10px 5px 0;
 }
 
 h1 {
@@ -63,6 +72,11 @@ nav {
 
 .post-list > li {
   margin-bottom: 0;
+}
+
+.post-author-about {
+  padding: 5px;
+  background: color(display-p3 0.757 0.757 0.757);
 }
 
 /* Style the button that is used to open and close the collapsible content */
@@ -116,5 +130,8 @@ html[data-theme='dark'] {
 --text-color-light: hsl(210, 15%, 35%);
 --text-color-richer: hsl(210, 50%, 72%);
 --text-color-highlight: hsl(25, 70%, 45%);
+}
+.post-author-about {
+  background: color(display-p3 0.133 0.145 0.161);
 }
 }

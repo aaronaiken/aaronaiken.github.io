@@ -15,7 +15,8 @@ layout: default
         {{ page.date | date: date_format }}
       </time>
       {%- if page.author -%}
-        • <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name">{{ page.author }}</span></span>
+        {% assign author = site.data.people[page.author] %}
+        • <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name"><a href="{{ author.author-page }}" title="About {{ author.name }}">{{ author.name }}</a></span></span>
       {%- endif -%}</p>
   </header>
 
@@ -34,5 +35,12 @@ layout: default
   {%- endif -%}
 
   <a class="u-url" href="{{ page.url | relative_url }}" hidden></a>
-  <p>Have something to say about this post? <a href="mailto:{{ site.email }}?subject=Re: {{ page.title }}&body={{ site.url }}{{ page.url }}">Send me an email</a>.</p>
+  
+  
+  <div class="post-author-about">
+    <img src="{{ author.img }}" class="post-author-img" title="{{ author.name }}" alt="{{author.img-alt}}" />
+    <p class="post-author">This post was written by <strong><a href="{{ author.author-page }}">{{ author.name }}</a></strong></p>
+    <p>{{ author.post-bio }}</p>
+    <p>Have something to say about this post? <a href="mailto:{{ author.email }}?subject=Re: {{ page.title }}&body={{ site.url }}{{ page.url }}">Send me an email</a>.</p>
+  </div>
 </article>

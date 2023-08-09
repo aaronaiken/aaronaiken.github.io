@@ -21,7 +21,7 @@
 title: Aaron's Test Website
 email: aaron@omg.lol
 webmaster: Aaron Aiken
-webmaster-url: https://aaronaiken.com
+webmaster-url: /about/aaronaiken
 description: >- # this means to ignore newlines until "baseurl:"
  Hi there! My name is Aaron Aiken and this is a simple test site 🧪
 baseurl: "" # the subpath of your site, e.g. /blog
