@@ -7,7 +7,14 @@ body {
   max-width: 40em;
   padding: 2em;
   position: relative;
+  font-size: x-large;
 }
+
+.wrapper {
+  max-width: 40em;
+  padding: 0;
+}
+
 img {
   margin: 5px 0 5px 0;
   max-width: 100%;
@@ -25,8 +32,8 @@ img.featured-image {
 }
 
 img.post-author-img {
-  width: 100px;
-  border-radius: 50px;
+  width: 150px;
+  border-radius: 75px;
   float: left;
   margin: 0 10px 5px 0;
 }
@@ -96,6 +103,7 @@ color: #04D939;
 pre, code {
   background-color: black;
   color: #04D939;
+  font-size: inherit;
 }
 
 /* Style the button that is used to open and close the collapsible content */
@@ -130,7 +138,7 @@ body {
 color: #E5E7EB;
 background-color: #1F2937; 
 }
-a {
+a, a:visited {
 color: #3B82F6;
 }
 img {
