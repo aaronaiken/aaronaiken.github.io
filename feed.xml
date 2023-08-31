@@ -18,6 +18,9 @@ layout: null
 				{{ post.url | prepend: site.url }}
 			</link>
 			<description>
+				{% if post.image %}
+					<img src="{{ page.image }}" />
+				{% endif %}
 				{{ post.content | escape | truncate: '400' }}
 			</description>
 			<pubDate>{{ post.date | date_to_rfc822 }}</pubDate>
