@@ -12,6 +12,8 @@ layout: default
       <img class="about" src="{{ author.img }}" alt="{{ author.img-alt }}" title="{{ author.name }}"/>
       <p>{{ author.short-about }}</p>
       {{ content }}
+      <br />
+      <br />
       <h4>A list of my blog posts on this site are linked below:</h4>
       <ul class="post-list">
       {% assign filtered_posts = site.posts | where: 'author', author.short-name %}
