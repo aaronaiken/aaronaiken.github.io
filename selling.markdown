@@ -17,13 +17,13 @@ Pretty self-explanatory. Where I have photos or more info to share you can just 
 - 🍽️ kitchen table - $125 <a href="#table">📷</a>
 - 🪑 4 chairs (to go with kitchen table, ideally but not required) - $ 55/ea
 - 🛋️ couch (sleeper sectional, 3 seat, with chaise and storage) - $450 <a href="#couch">📷</a>
-- stools - $8/ea (I have 6) - <a href="https://www.ikea.com/us/en/p/kyrre-stool-birch-60416925/" target="_blank" rel="noopener noreferrer">↗️ view on IKEA</a>
+- stools - $8/ea (I have 7) - <a href="https://www.ikea.com/us/en/p/kyrre-stool-birch-60416925/" target="_blank" rel="noopener noreferrer">↗️ view on IKEA</a>
 - swivel chair - $95 - <a href="https://www.ikea.com/us/en/p/odger-swivel-chair-white-beige-70308685/" target="_blank" rel="noopener noreferrer">↗️ view on IKEA</a>
-- 🪞 standing mirror - $85 <a href="#mirror">📷</a>
-- 🛏️ queen bed frame (w/slated base & support beam) - $75 <a href="#frame">📷</a>
-- 🛏️ queen spring mattress - $125 <a href="#mattress">📷</a>
+- 🪞 standing mirror - <strong>SALE PENDING</strong> - $85 <a href="#mirror">📷</a>
+- 🛏️ queen bed frame (w/slated base & support beam) - <strong>SALE PENDING</strong> - $75 <a href="#frame">📷</a>
+- 🛏️ queen spring mattress - <strong>SALE PENDING</strong>- $125 <a href="#mattress">📷</a>
 - 🛏️ queen comforter set - $60 📷
-- 🆓 TV stand with 2 matching shelves (FREE) <a href="#tv">📷</a>
+- 🆓 TV stand with 2 matching shelves (FREE) - <strong>SALE PENDING</strong> - <a href="#tv">📷</a>
 - 🆓 Desk (FREE) <a href="#desk">📷</a>
 - 🎧 SteelSeries - Arctis 9X Wireless Gaming Headset - $100 <a href="#headset">📷</a>
 - <a href="#leather">⚙️ leather machines</a>
