@@ -19,11 +19,7 @@ Pretty self-explanatory. Where I have photos or more info to share you can just 
 - 🛋️ couch (sleeper sectional, 3 seat, with chaise and storage) - $450 <a href="#couch">📷</a>
 - stools - $8/ea (I have 7) - <a href="https://www.ikea.com/us/en/p/kyrre-stool-birch-60416925/" target="_blank" rel="noopener noreferrer">↗️ view on IKEA</a>
 - swivel chair - $95 - <a href="https://www.ikea.com/us/en/p/odger-swivel-chair-white-beige-70308685/" target="_blank" rel="noopener noreferrer">↗️ view on IKEA</a>
-- 🪞 standing mirror - <strong>SALE PENDING</strong> - $85 <a href="#mirror">📷</a>
-- 🛏️ queen bed frame (w/slated base & support beam) - <strong>SALE PENDING</strong> - $75 <a href="#frame">📷</a>
-- 🛏️ queen spring mattress - <strong>SALE PENDING</strong>- $125 <a href="#mattress">📷</a>
-- 🛏️ queen comforter set - $60 📷
-- 🆓 TV stand with 2 matching shelves (FREE) - <strong>SALE PENDING</strong> - <a href="#tv">📷</a>
+- 🛏️ queen comforter set - $60 <a href="#comforter">📷</a> (bed has sold)
 - 🆓 Desk (FREE) <a href="#desk">📷</a>
 - 🎧 SteelSeries - Arctis 9X Wireless Gaming Headset - $100 <a href="#headset">📷</a>
 - <a href="#leather">⚙️ leather machines</a>
@@ -50,51 +46,14 @@ Purchased in 2021, light use.
 ![](assets/img/selling/couch3.jpeg)
 <a href="#list">⬆️ back up to the list</a>
 
-<h2 id="mirror">Standing mirror - $85</h2>
+<h2 id="comforter">Comforter set - $60</h2>
+Used from June 2024 to February 2025. 
 
-<a href="https://www.ikea.com/us/en/p/ikornnes-floor-mirror-ash-90524042/" target="_blank" rel="noopener noreferrer">↗️ view on IKEA</a>
-
-![](assets/img/selling/mirror1.jpeg)
-![](assets/img/selling/mirror2.jpeg)
-
-<a href="#list">⬆️ back up to the list</a>
-
-<h2>Queen Bed Set - $260</h2>
-
-<h3 id="comforter">↳ Comforter set - $60</h3>
-Used from June 2024 to February 2025.
+(Bed shown has sold).
 
 <a href="https://www.ikea.com/us/en/p/piggtistel-comforter-set-dark-blue-30577062/" target="_blank" rel="noopener noreferrer">↗️ view on IKEA</a>
 
 ![](assets/img/selling/bed1.jpeg)
-
-<a href="#list">⬆️ back up to the list</a>
-
-<h3 id="frame">↳ Queen bed frame - $75</h3>
-
-Includes the slated base & support beam.
-
-<a href="https://www.ikea.com/us/en/p/tarva-bed-frame-pine-90249949/" target="_blank" rel="noopener noreferrer">↗️ view bed frame on IKEA</a>
-<a href="https://www.ikea.com/us/en/p/luroey-slatted-bed-base-00160215/" target="_blank" rel="noopener noreferrer">↗️ view slated base on IKEA</a>
-<a href="https://www.ikea.com/us/en/p/skorva-center-support-beam-galvanized-90124534/" target="_blank" rel="noopener noreferrer">↗️ view support beam on IKEA</a>
-
-![](assets/img/selling/bed2.jpeg)
-![](assets/img/selling/bed3.jpeg)
-
-<a href="#list">⬆️ back up to the list</a>
-
-<h3 id="mattress">↳ Queen spring mattress - $125</h3>
-Purchased in 2021 from IKEA. They don't have it available any longer. I used this mattress from 6/1/2021 to ~2/13/2025. Similar model is shown <a href="https://www.ikea.com/us/en/p/valevag-pocket-spring-mattress-medium-firm-white-50511857/" target="_blank" rel="noopener noreferrer">here</a>.
-
-![](assets/img/selling/mattress1.jpeg)
-![](assets/img/selling/mattress2.jpeg)
-![](assets/img/selling/mattress3.jpeg)
-
-<a href="#list">⬆️ back up to the list</a>
-
-<h2 id="tv">TV stand with 2 matching shelves - FREE</h2>
-
-![](assets/img/selling/tvstand.jpeg)
 
 <a href="#list">⬆️ back up to the list</a>
 
