@@ -28,7 +28,8 @@ baseurl: "" # the subpath of your site, e.g. /blog
 url: "http://test.aaronaiken.me" # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: 
 github_username:
-tinylytics: https://tinylytics.app/embed/JAcikz85WjJxvUP4zoem.js?hits
+tinylytics:
+rss: Subscribe via RSS 👍
 
 defaults:
 - scope:
