@@ -2,7 +2,7 @@
 layout: post
 title:  "Author Support"
 date:  2023-08-08 10:37 PM
-categories: 
+categories: release notes
 author: aaron
 img:
 source:
