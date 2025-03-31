@@ -2,7 +2,7 @@
 layout: post
 title:  "Version One"
 date:  2023-08-11 11:08 PM
-categories: 
+categories: release_notes
 author: aaron
 img:
 source:
