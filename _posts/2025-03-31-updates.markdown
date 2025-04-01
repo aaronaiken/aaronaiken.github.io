@@ -22,7 +22,7 @@ I digress.
 Since getting back on here, and since wanting a place to put some of my words, and since I now feel like I actually have words of value to put out into the world (eventually), I’ve made a few enhancements, which is the entire purpose of this post.
 
 ### Improved Image Handling
-![A screenshot showing the first run of Calibre Image Actions on this website's github repository.](/assets/img/calibres image actions.png)
+<img src="{{ '/assets/img/calibres_image_actions.jpeg' | relative_url }}" />
 A large part of websites that can really bog things down is <a href="https://calibreapp.com/blog/compress-images-in-prs" target="_blank" rel="noopener noreferrer">images</a>. I use a max width of 1280px, use <a href="https://imageoptim.com/mac" target="_blank" rel="noopener noreferrer">ImageOptim</a> to reduce the file size, and then most recently implemented <a href="https://github.com/calibreapp/image-actions?tab=readme-ov-file" target="_blank" rel="noopener noreferrer">Calibre Image Actions</a> on this site's github repository. A recent run of the Image Actions *workflow* reduced image file sizes on this site, which were not many, by 78.3%. The same workflow will run with each pull request, making sure the images you see are using the smallest amount of data as possible, which leads me to my next improvement... 
 
 ### Improved Source Control
