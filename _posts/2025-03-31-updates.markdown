@@ -4,17 +4,17 @@ title:  "Website Updates and Such"
 date:  2025-03-31 7:14 AM
 categories: release_notes
 author: aaron
-image: /assets/img/github_commits.png
+image: /assets/img/github_commits.jpeg
 source:
 description: Long time no see! A quick but still wordy update on this website and where I think it may head.
 ---
-Been a while since I’ve written anything here. Actually, since <a href="{{ "/2023/08/11/version-one.html" | relative_url }}">completing</a> this “test” site back in 2023 I just left it where it was and never returned to it. A lot has happened since then, a lot of bad and a whole lot of good, and I recently had a need to list a few things for sale. I wanted a quick way to do so, a way that I could then easily share with family and friends. I remembered this site, remembered the process of updating it using <a href="https://jekyllrb.com" target="_blank" rel="noopener noreferrer">Jekyll</a> and <a href="https://pages.github.com" target="_blank" rel="noopener noreferrer">Github Pages</a>, remembered how much I enjoyed using <a href="https://nova.app" target="_blank" rel="noopener noreferrer">Nova</a> and tinkering with websites, and made a page showing items for sale. 
+Been a while since I’ve written anything here. Actually, since <a href="{{ 'release_notes/2023/08/11/version-one.html' | relative_url }}">completing</a> this “test” site back in 2023 I just left it where it was and never returned to it. A lot has happened since then, a lot of bad and a whole lot of good, and I recently had a need to list a few things for sale. I wanted a quick way to do so, a way that I could then easily share with family and friends. I remembered this site, remembered the process of updating it using <a href="https://jekyllrb.com" target="_blank" rel="noopener noreferrer">Jekyll</a> and <a href="https://pages.github.com" target="_blank" rel="noopener noreferrer">Github Pages</a>, remembered how much I enjoyed using <a href="https://nova.app" target="_blank" rel="noopener noreferrer">Nova</a> and tinkering with websites, and made a page showing items for sale. 
 
 Since I dusted it off, and since I’ve scrubbed every other area of “me” online, I thought this may be a good place to call home. Now that I am actually *me* I think this one will stick. 
 
 I’ve been building websites and writing and publishing online since the early 2000’s. All of those websites are gone, my social media is not used (if they exist at all). I love the freedom of how this website is built and maintained, I love that it is something I can make and maintain myself, and I love the process. I love (and miss) writing. And so, here we are. 
 
-As part of getting this place ready for other people to see I did update <a href="{{ "/about/aaronaiken" | relative_url }}">the about page</a> and also the author “bio” that appears beneath each post. Thankfully, since I built the site using config files based on the Jekyll framework, I just had to update these items in `data/people.yml`. Making that change there updated all necessary pages/posts. I also updated my picture to reflect much more of who I am instead of the previous version (which was very much in the mindset of “fake it ’til you make it). Again, just replaced the photo in `assets/img` that had my name on it. 
+As part of getting this place ready for other people to see I did update <a href="{{ '/about/aaronaiken' | relative_url }}">the about page</a> and also the author “bio” that appears beneath each post. Thankfully, since I built the site using config files based on the Jekyll framework, I just had to update these items in `data/people.yml`. Making that change there updated all necessary pages/posts. I also updated my picture to reflect much more of who I am instead of the previous version (which was very much in the mindset of “fake it ’til you make it). Again, just replaced the photo in `assets/img` that had my name on it. 
 
 I digress. 
 

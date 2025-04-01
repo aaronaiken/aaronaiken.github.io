@@ -20,7 +20,7 @@ layout: null
 			<description>
 				<![CDATA[
 					{% if post.image %}
-						<img src="{{ post.image | prepend: site.url }}" />
+						<enclosure url="{{ post.image | prepend: site.url }}" type="image/jpeg" />
 					{% endif %}
 					{{ post.description }}
 				]]>
