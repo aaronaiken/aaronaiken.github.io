@@ -8,7 +8,7 @@ image: /assets/img/github_commits.jpeg
 source:
 description: Long time no see! A quick but still wordy update on this website and where I think it may head.
 ---
-Been a while since I’ve written anything here. Actually, since <a href="{{ 'release_notes/2023/08/11/version-one.html' | relative_url }}">completing</a> this “test” site back in 2023 I just left it where it was and never returned to it. A lot has happened since then, a lot of bad and a whole lot of good, and I recently had a need to list a few things for sale. I wanted a quick way to do so, a way that I could then easily share with family and friends. I remembered this site, remembered the process of updating it using <a href="https://jekyllrb.com" target="_blank" rel="noopener noreferrer">Jekyll</a> and <a href="https://pages.github.com" target="_blank" rel="noopener noreferrer">Github Pages</a>, remembered how much I enjoyed using <a href="https://nova.app" target="_blank" rel="noopener noreferrer">Nova</a> and tinkering with websites, and made a page showing items for sale. 
+Been a while since I’ve written anything here. Actually, since <a href="{{ '/release_notes/2023/08/11/version-one.html' | prepend: site.url }}">completing</a> this “test” site back in 2023 I just left it where it was and never returned to it. A lot has happened since then, a lot of bad and a whole lot of good, and I recently had a need to list a few things for sale. I wanted a quick way to do so, a way that I could then easily share with family and friends. I remembered this site, remembered the process of updating it using <a href="https://jekyllrb.com" target="_blank" rel="noopener noreferrer">Jekyll</a> and <a href="https://pages.github.com" target="_blank" rel="noopener noreferrer">Github Pages</a>, remembered how much I enjoyed using <a href="https://nova.app" target="_blank" rel="noopener noreferrer">Nova</a> and tinkering with websites, and made a page showing items for sale. 
 
 Since I dusted it off, and since I’ve scrubbed every other area of “me” online, I thought this may be a good place to call home. Now that I am actually *me* I think this one will stick. 
 
@@ -22,7 +22,7 @@ I digress.
 Since getting back on here, and since wanting a place to put some of my words, and since I now feel like I actually have words of value to put out into the world (eventually), I’ve made a few enhancements, which is the entire purpose of this post.
 
 ### Improved Image Handling
-<img src="{{ '/assets/img/calibres_image_actions.jpeg' | relative_url }}" />
+<img src="{{ '/assets/img/calibres_image_actions.jpeg' | prepend: site.url }}" />
 A large part of websites that can really bog things down is <a href="https://calibreapp.com/blog/compress-images-in-prs" target="_blank" rel="noopener noreferrer">images</a>. I use a max width of 1280px, use <a href="https://imageoptim.com/mac" target="_blank" rel="noopener noreferrer">ImageOptim</a> to reduce the file size, and then most recently implemented <a href="https://github.com/calibreapp/image-actions?tab=readme-ov-file" target="_blank" rel="noopener noreferrer">Calibre Image Actions</a> on this site's github repository. A recent run of the Image Actions *workflow* reduced image file sizes on this site, which were not many, by 78.3%. The same workflow will run with each pull request, making sure the images you see are using the smallest amount of data as possible, which leads me to my next improvement... 
 
 ### Improved Source Control
@@ -46,7 +46,7 @@ And so that’s where I’ll leave this.
 
 Thanks for reading!
 
-Until next time, <a href="{{ "/feed.xml" | relative_url }}">subscribe to the RSS feed</a> so you catch the next post. (RSS is better than any social media feed, btw. Take your attention back. <a href="https://netnewswire.com" target="_blank" rel="noopener noreferrer">I recommend NetNewsWire for fetching your feeds</a>).
+Until next time, <a href="{{ '/feed.xml' | prepend: site.url }}">subscribe to the RSS feed</a> so you catch the next post. (RSS is better than any social media feed, btw. Take your attention back. <a href="https://netnewswire.com" target="_blank" rel="noopener noreferrer">I recommend NetNewsWire for fetching your feeds</a>).
 
 Cheers!<br />
 Aaron
