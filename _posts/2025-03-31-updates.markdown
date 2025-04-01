@@ -6,6 +6,7 @@ categories: release_notes
 author: aaron
 image: /assets/img/github_commits.png
 source:
+description: Long time no see! A quick but still wordy update on this website and where I think it may head.
 ---
 Been a while since I’ve written anything here. Actually, since <a href="{{ "/2023/08/11/version-one.html" | relative_url }}">completing</a> this “test” site back in 2023 I just left it where it was and never returned to it. A lot has happened since then, a lot of bad and a whole lot of good, and I recently had a need to list a few things for sale. I wanted a quick way to do so, a way that I could then easily share with family and friends. I remembered this site, remembered the process of updating it using <a href="https://jekyllrb.com" target="_blank" rel="noopener noreferrer">Jekyll</a> and <a href="https://pages.github.com" target="_blank" rel="noopener noreferrer">Github Pages</a>, remembered how much I enjoyed using <a href="https://nova.app" target="_blank" rel="noopener noreferrer">Nova</a> and tinkering with websites, and made a page showing items for sale. 
 
