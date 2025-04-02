@@ -4,7 +4,7 @@ title:  "Website Updates and Such"
 date:  2025-03-31 7:14 AM
 categories: release_notes
 author: aaron
-image: /assets/img/github_commits.jpeg
+image: /assets/img/IMG_7643.jpeg
 source:
 description: Long time no see! A quick but still wordy update on this website and where I think it may head.
 ---
@@ -14,7 +14,7 @@ Since I dusted it off, and since I’ve scrubbed every other area of “me” on
 
 I’ve been building websites and writing and publishing online since the early 2000’s. All of those websites are gone, my social media is not used (if they exist at all). I love the freedom of how this website is built and maintained, I love that it is something I can make and maintain myself, and I love the process. I love (and miss) writing. And so, here we are. 
 
-As part of getting this place ready for other people to see I did update <a href="{{ '/about/aaronaiken' | relative_url }}">the about page</a> and also the author “bio” that appears beneath each post. Thankfully, since I built the site using config files based on the Jekyll framework, I just had to update these items in `data/people.yml`. Making that change there updated all necessary pages/posts. I also updated my picture to reflect much more of who I am instead of the previous version (which was very much in the mindset of “fake it ’til you make it). Again, just replaced the photo in `assets/img` that had my name on it. 
+As part of getting this place ready for other people to see I did update <a href="{{ '/about/aaronaiken' | prepend: site.url }}">the about page</a> and also the author “bio” that appears beneath each post. Thankfully, since I built the site using config files based on the Jekyll framework, I just had to update these items in `data/people.yml`. Making that change there updated all necessary pages/posts. I also updated my picture to reflect much more of who I am instead of the previous version (which was very much in the mindset of “fake it ’til you make it). Again, just replaced the photo in `assets/img` that had my name on it. 
 
 I digress. 
 
