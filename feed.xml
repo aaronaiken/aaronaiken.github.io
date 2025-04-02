@@ -19,9 +19,6 @@ layout: null
 			</link>
 			<description>
 				<![CDATA[
-					{% if post.image %}
-						<img src="{{ post.image | prepend: site.url }}" type="image/jpeg" />
-					{% endif %}
 					{{ post.description }}
 				]]>
 			</description>
