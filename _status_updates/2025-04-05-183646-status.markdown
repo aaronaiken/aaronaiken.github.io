@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-05 18:36:46 
+layout: status_update
+categories: status
+author: aaron
+---
+third try via terminal. this one should push without me having to do anything...hopefully :-)
