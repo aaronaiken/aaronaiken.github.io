@@ -44,6 +44,10 @@ plugins:
   - jekyll-sitemap
   - jekyll-seo-tag
   - jekyll-loading-lazy
+  
+collections:
+  status_updates:
+    output: true
 
 # Exclude from processing.
 # The following items will not be processed, by default.
