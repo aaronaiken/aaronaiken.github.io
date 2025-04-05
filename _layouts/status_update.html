@@ -1,0 +1,46 @@
+---
+layout: default
+---
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    {% if page.source %}
+      <a href="{{ page.source }}" title="{{ page.title }}" target="_blank"><h1 class="post-title p-name" itemprop="name headline">{{ page.title | escape }}</h1></a>
+      {% else %}
+      <h1 class="post-title p-name" itemprop="name headline">{{ page.title | escape }}</h1>
+    {% endif %}
+    <p class="post-meta">
+      <time class="dt-published" datetime="{{ page.date | date_to_xmlschema }}" itemprop="datePublished">
+        {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
+        {{ page.date | date: date_format }}
+      </time>
+      {%- if page.author -%}
+        {% assign author = site.data.people[page.author] %}
+        • <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name"><a href="{{ author.author-page }}" title="About {{ author.name }}">{{ author.name }}</a></span></span>
+      {%- endif -%}</p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    {% if page.image %}
+      <img class="featured-image" src="{{ page.image }}" />
+    {% endif %}
+    {{ content }}
+    {% if page.source %}
+      <p><a href="{{ page.source }}" title="{{ page.title }}" target="_blank">Source</a></p>
+    {% endif %}
+  </div>
+
+  {%- if site.disqus.shortname -%}
+    {%- include disqus_comments.html -%}
+  {%- endif -%}
+
+  <a class="u-url" href="{{ page.url | relative_url }}" hidden></a>
+  
+  
+  <div class="post-author-about">
+    <img src="{{ author.img }}" class="post-author-img" title="{{ author.name }}" alt="{{author.img-alt}}" />
+    <p class="post-author">This post was written by <strong><a href="{{ author.author-page }}">{{ author.name }}</a></strong></p>
+    <p>{{ author.post-bio }}</p>
+    <p>Have something to say about this post? <a href="mailto:{{ author.email }}?subject=Re: {{ page.title }}&body={{ site.url }}{{ page.url }}">Send me an email</a>.</p>
+  </div>
+</article>
