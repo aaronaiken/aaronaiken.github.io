@@ -19,6 +19,8 @@ front_matter = f"""---
 title: Status Update
 date: {date_str}
 layout: status_update
+categories: status
+author: aaron
 ---
 {status_text}
 """
