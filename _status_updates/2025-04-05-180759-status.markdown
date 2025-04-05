@@ -1,0 +1,6 @@
+---
+title: Status Update
+date: 2025-04-05 18:07:59 
+layout: status_update
+---
+testing a status update in terminal!
