@@ -1,0 +1,8 @@
+---
+title: status update test 3
+layout: status_update
+date: 2025-04-05 08:41:00 -0400
+categories: status
+author: aaron
+---
+Test post 3. Trying to get the sorting right on the page.
