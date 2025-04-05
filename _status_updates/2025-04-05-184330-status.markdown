@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-05 18:43:30 
+layout: status_update
+categories: status
+author: aaron
+---
+seems to be working great!
