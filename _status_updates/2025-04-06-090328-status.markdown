@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-06 09:03:28 
+layout: status_update
+categories: status
+author: aaron
+---
+took a few attempts for me to do this one, actually, but now mozzie can see how it all works! he's standing behind me :-)
