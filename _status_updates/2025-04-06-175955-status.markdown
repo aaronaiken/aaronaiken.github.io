@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-06 17:59:55 
+layout: status_update
+categories: status
+author: aaron
+---
+Mozzie's first flag football game went great, he had fun! Wine now, low key evening before a busy week ahead.
