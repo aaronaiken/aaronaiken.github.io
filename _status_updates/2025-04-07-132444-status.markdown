@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-07 13:24:44 
+layout: status_update
+categories: status
+author: aaron
+---
+status page is coming along really well on local! eager to continue chipping away.
