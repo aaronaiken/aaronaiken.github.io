@@ -2,13 +2,22 @@
 <html lang="en">
   {% include head.html %}
   <body class="status-page">
-	  <div class="container">
-		{% include nav.html %}
-		<section>
-		<h1>{{ page.title }}</h1> {{ content }}
-		<hr />
-		</section>
-		{% include footer.html %}
+	  <div class="main-container">
+		  <!--{% include nav.html %}-->
+		<h1 class="status-page-title">{{ page.title }}</h1>
+		<div class="profile-header">
+			<img src="/assets/img/aaron_profile.jpeg" alt="Aaron Aiken's profile picture" class="profile-pic">
+		    <div class="account-info">
+				<span class="account-name">aaronaiken</span>
+			</div>
+		</div>
+		<div class="updates-container">
+			<section>
+			{{ content }}
+			<hr />
+			</section>
+			{% include footer.html %}
+		</div>
 	  </div>
   </body>
 </html>
