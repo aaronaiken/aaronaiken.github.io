@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-06 22:30:16 
+layout: status_update
+categories: status
+author: aaron
+---
+End of a great family weekend! Full week ahead. Goal for this site: style the Status Page as a 2007-ish Twitter profile.
