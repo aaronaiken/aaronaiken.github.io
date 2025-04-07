@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-07 08:10:11 
+layout: status_update
+categories: status
+author: aaron
+---
+Background styling in place for the status page locally. WIP. Happy with how it is looking so far!
