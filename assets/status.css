@@ -1,0 +1,26 @@
+/* Styles for the background of the status page */
+body.status-page {
+  background-color: #9ae4e8; /* Example light blue */
+  background-image: url('/assets/img/status/bg.gif'); /* Path to your cloud image */
+  background-repeat: no-repeat;
+  background-position: top left;
+  /* Other background styles */
+}
+
+/* You can then add more styles for other elements *within* the status page,
+   also using the body.status-page context for specificity if needed */
+body.status-page .container {
+  /* Styles for the main content area of the status page */
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: white;
+  border: 1px solid #ccc;
+}
+
+/* Or you can target elements directly by their class or ID within the status page */
+.status-update {
+  /* Styles for individual status updates */
+  border-bottom: 1px solid #eee;
+  padding: 10px 0;
+}
