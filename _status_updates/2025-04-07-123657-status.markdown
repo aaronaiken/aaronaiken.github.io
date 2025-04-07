@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-07 12:36:57 
+layout: status_update
+categories: status
+author: aaron
+---
+more coffee. short break, working on the styling of status.html for a bit. then back to it. 
