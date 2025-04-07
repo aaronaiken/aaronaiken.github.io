@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-06 23:20:58 
+layout: status_update
+categories: status
+author: aaron
+---
+ok, enough of heading down rabbit holes. sleep!
