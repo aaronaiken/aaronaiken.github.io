@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredericka+the+Great&display=swap');
+
 /* Styles for the background of the status page */
 body.status-page {
   background-color: #9ae4e8; /* Example light blue */
@@ -7,9 +9,14 @@ body.status-page {
   /* Other background styles */
 }
 
+body.status-page .main-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
 /* You can then add more styles for other elements *within* the status page,
    also using the body.status-page context for specificity if needed */
-body.status-page .container {
+body.status-page .updates-container {
   /* Styles for the main content area of the status page */
   max-width: 600px;
   margin: 0 auto;
@@ -23,4 +30,40 @@ body.status-page .container {
   /* Styles for individual status updates */
   border-bottom: 1px solid #eee;
   padding: 10px 0;
+}
+
+.status-page-title {
+  font-family: "Fredericka the Great", serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: xxx-large;
+}
+
+.profile-header {
+  display: flex; /* To align picture and name horizontally */
+  align-items: center; /* Vertically align items in the flex container */
+  margin-bottom: 15px; /* Add some space below */
+}
+
+.profile-pic {
+  width: 50px; /* Example size */
+  height: 50px;
+  margin-right: 10px;
+}
+
+.account-info {
+  display: flex;
+  flex-direction: column; /* Stack name and handle vertically */
+}
+
+.account-name {
+  font-weight: bold;
+  font-size: 1.2em;
+  color: #292f33; /* Dark gray text */
+}
+
+/* Style for the handle if you add it */
+.account-handle {
+  color: #657786; /* Gray text */
+  font-size: 0.9em;
 }
