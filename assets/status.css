@@ -9,9 +9,20 @@ body.status-page {
   /* Other background styles */
 }
 
-body.status-page .main-container {
-  max-width: 600px;
+body.status-page #container {
+  max-width: 900px;
   margin: 0 auto;
+  padding: 15px 0;
+  text-align: left;
+  position: relative;
+}
+
+body.status-page #content {
+  width: 555px;
+  margin-top: 0px;
+  margin-right: 25px;
+  float: left;
+  padding-bottom: 15px;
 }
 
 /* You can then add more styles for other elements *within* the status page,
@@ -28,11 +39,11 @@ body.status-page .updates-container {
 /* Or you can target elements directly by their class or ID within the status page */
 .status-update {
   /* Styles for individual status updates */
-  border-bottom: 1px solid #eee;
-  padding: 10px 0;
+  border-bottom: 1px solid #fff;
+  padding: 5px;
 }
 
-.status-page-title {
+body.status-page h1#header {
   font-family: "Fredericka the Great", serif;
   font-weight: 400;
   font-style: normal;
@@ -42,7 +53,7 @@ body.status-page .updates-container {
 .profile-header {
   display: flex; /* To align picture and name horizontally */
   align-items: center; /* Vertically align items in the flex container */
-  margin-bottom: 15px; /* Add some space below */
+  /*margin-bottom: 15px; /* Add some space below */
 }
 
 .profile-pic {
@@ -66,4 +77,94 @@ body.status-page .updates-container {
 .account-handle {
   color: #657786; /* Gray text */
   font-size: 0.9em;
+}
+
+body.status-page #side {
+  width: 250px;
+  padding: 12px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  line-height: 1.2;
+  float: right;
+  background-color: #e0ff92;
+  border: 1px solid #87bc44;
+}
+
+body.status-page .site-footer {
+  border-top: none;
+  padding: 0px;
+}
+
+.latest-update-container {
+  padding-top: 11px;
+  background: url('/assets/img/arr2.gif') no-repeat 14px 0px;
+  margin-top: 6px;
+}
+
+.latest-status {
+  display: block;
+  background: #fff;
+  /*font-size: 2.12em;*/
+  line-height: 1.2;
+  padding: 7px;
+  font-weight: bold;
+}
+
+.older-updates-container {
+  background: #fff;
+  border: 1px inherit;
+}
+
+.older-updates-container {
+  margin-top: 25px;
+  font-size: smaller;
+}
+
+ul.older-updates-list {
+  list-style-type: none;
+  margin: 0px;
+}
+
+li.older-status-item {
+  border-bottom: solid 1px;
+  padding-left: 5px;
+}
+
+li.older-status-item p {
+  margin-bottom: 0px;
+}
+
+p.timestamp, a.timestamp-link {
+  font-size: small;
+}
+
+body.status-page .footer-col-wrapper {
+  margin-left: 0px;
+  color: inherit;
+  margin-top: 15px;
+}
+
+body.status-page .footer-col-wrapper hr {
+  margin: 0px;
+}
+
+@media (prefers-color-scheme: dark) {
+body.status-page {
+  background-color: #1F2937;
+  background-image: none;
+  color: color(display-p3 0.69 0.898 0.537);
+}  
+
+.latest-status, .older-updates-container {
+  background: color(display-p3 0.11 0.114 0.122);
+  border: solid 1px color(display-p3 0.69 0.898 0.537);
+}
+.account-name {
+ color: color(display-p3 0.69 0.898 0.537);
+}
+
+body.status-page #side {
+  background-color: #363535;
+  border: 1px solid #87bc44;
+}
 }
