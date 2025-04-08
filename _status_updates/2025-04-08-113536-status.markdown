@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-08 11:35:36 
+layout: status_update
+categories: status
+author: aaron
+---
+seems I can't not do things, no surprise there. in-progress: sidebar, pagination, footer.
