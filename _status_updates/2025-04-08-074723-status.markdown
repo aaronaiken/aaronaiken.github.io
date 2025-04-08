@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-08 07:47:23 
+layout: status_update
+categories: status
+author: aaron
+---
+so this is really good for now, I'm satisfied with my progress. Love how it looks! Next small update will be to update the site nav ..
