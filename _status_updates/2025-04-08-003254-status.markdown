@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-08 00:32:54 
+layout: status_update
+categories: status
+author: aaron
+---
+Initial styling of /status.html is good to go for noww. will get things pushed to prod after sleeping. Fun project!
