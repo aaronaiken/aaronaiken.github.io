@@ -44,7 +44,7 @@ plugins:
   - jekyll-sitemap
   - jekyll-seo-tag
   - jekyll-loading-lazy
-  
+  - jekyll-paginate
 collections:
   status_updates:
     output: true
