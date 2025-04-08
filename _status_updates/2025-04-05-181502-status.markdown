@@ -2,5 +2,6 @@
 title: Status Update
 date: 2025-04-05 18:15:02 
 layout: status_update
+author: aaron
 ---
 testing via terminal!

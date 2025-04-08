@@ -1,12 +1,57 @@
 <!doctype html>
 <html lang="en">
   {% include head.html %}
-  <body>
-	{% include nav.html %}
-	<section>
-	  <h1>{{ page.title }}</h1> {{ content }}
-	  <hr />
-	</section>
-	{% include footer.html %}
+  <body class="status-page">
+	<div id="container">
+	  <h1 id="header">{{ page.title }}</h1>
+	  <div id="content">
+		<div class="profile-header">
+		  <img src="/assets/img/aaron_profile.jpeg" alt="Aaron Aiken's profile picture" class="profile-pic">
+		  <div class="account-info">
+			<span class="account-name">aaronaiken</span>
+		  </div>
+		</div>
+
+		<div class="latest-update-container">
+		  {% assign latest = site.status_updates | sort: 'date' | reverse | first %}
+		  {% if latest %}
+			<div class="latest-status">
+			  <div class="latest-content">
+				<p class="content">{{ latest.content | markdownify }}</p>
+				<p class="timestamp"><a href="{{ latest.url }}" target="_blank">{{ latest.date | date: "%I:%M %p %B %-d, %Y" }}</a></p>
+				{% if latest.source %}
+				  <p class="source">via {{ latest.source }}</p>
+				{% endif %}
+			  </div>
+			</div>
+		  {% endif %}
+		</div>
+
+		<div class="older-updates-container">
+		  <!--<h3>...previously</h3>-->
+		  <ul class="older-updates-list">
+			{% assign sorted_older_updates = site.status_updates | sort: 'date' | reverse %}
+			{% for status in sorted_older_updates %}
+			  {% unless forloop.first %}
+				<li class="older-status-item">
+				  <p class="content">{{ status.content | markdownify | truncate: 140 }}<a href="{{ status.url }}" target="_blank" class="timestamp-link">{{ status.date | date: "%I:%M %p %B %-d, %Y" }}</a></p>
+				  {% if status.source %}
+					<p class="source">via {{ status.source }}</p>
+				  {% endif %}
+				</li>
+			  {% endunless %}
+			{% endfor %}
+		  </ul>
+		</div>
+		{% include footer.html %}
+	  </div>
+	  <!--<div id="side">
+		About
+		Aaron Aiken
+		Bio: Founder of Obvious
+		Location: Harrisburg, PA
+		Web: {{ site.url }}
+	  </div>-->
+	</div>
   </body>
 </html>
