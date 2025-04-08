@@ -23,7 +23,7 @@ email: aaron@omg.lol
 webmaster: Aaron Aiken
 webmaster-url: /about/aaronaiken
 description: >- # this means to ignore newlines until "baseurl:"
- Hi there! My name is Aaron Aiken and this is a simple test site 🧪
+ Hi there! My name is Aaron Aiken and you have, by some miracle, stumbled across my website! Welcome to my small little corner on the internet :-) I have a story to tell, and it is my prayer that you will stick around to hear/read it, and even further, that God will use the story He has given me for His glory.
 baseurl: "" # the subpath of your site, e.g. /blog
 url: https://test.aaronaiken.me # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: aaronaiken

@@ -1,33 +1,29 @@
 <footer class="site-footer h-card">
   <data class="u-url" href="{{ "/" | relative_url }}"></data>
-
   <div class="wrapper">
-
     <!-- <h2 class="footer-heading">{{ site.title }}</h2> -->
-
     <div class="footer-col-wrapper">
       <div class="footer-col footer-col-1">
         <ul class="contact-list">
             {%- if site.email -%}
-            <li><a class="u-email" href="mailto:{{ site.email }}">{{ site.email }}</a></li>
+            <li><a class="u-email" href="mailto:{{ site.email }}" title="Send me an email!">{{ site.email }}</a></li>
             {%- endif -%}
-            <li><a href="{{ site.url }}/selling" target="_blank" rel="noopener noreferrer">selling</a></li>
-            <li><a href="{{ site.url }}" title="Home">Home</a>
+            <li><a href="{{ site.url }}/selling" title="I'm moving, thanks be to God, and have stuff to sell as a result." target="_blank">Selling</a></li>
+            <li><a href="{{ site.url }}/status" title="A 2007-ish Twitter-like page for status updates from yours truly.">Status</li>
+            <li><a href="{{ site.url }}" title="Let's head back to the homepage, shall we?">Home</a>
         </ul>
       </div>
-
       <div class="footer-col footer-col-2">
         {%- include social.html -%}
       </div>
-
       <div class="footer-col footer-col-3">
         <p>{{- site.description | escape -}}</p>
       </div>
     </div>
-    <hr />
+    <!--<hr />-->
     <div class="fine-print">
       <p>Website Made by Hand in Harrisburg Pennsylvania by <a href="{{ site.webmaster-url }}" target="_blank">{{ site.webmaster }}</a> | <a href="https://themarkup.org/blacklight?url=test.aaronaiken.me" target="_blank" rel="noopener noreferrer">not tracking you</a></p>
     </div>
   </div>
-<script src="{{ site.tinylytics }}" defer></script>
+<!--<script src="{{ site.tinylytics }}" defer></script>-->
 </footer>
