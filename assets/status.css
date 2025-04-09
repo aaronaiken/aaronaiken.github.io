@@ -88,6 +88,21 @@ body.status-page #side {
   float: right;
   background-color: #e0ff92;
   border: 1px solid #87bc44;
+  font-size: small;
+}
+
+body.status-page #side h3 {
+  margin-bottom: 0px;
+}
+
+#side div.msg {
+  padding: 10px 5px 10px 30px;
+  background: url('/assets/img/status/girl.gif') no-repeat 0% 50%;
+}
+
+#side ul#author-details {
+  margin-left: 0px;
+  list-style-type: none;
 }
 
 body.status-page .site-footer {
@@ -97,7 +112,7 @@ body.status-page .site-footer {
 
 .latest-update-container {
   padding-top: 11px;
-  background: url('/assets/img/arr2.gif') no-repeat 14px 0px;
+  background: url('/assets/img/status/arr2.gif') no-repeat 14px 0px;
   margin-top: 6px;
 }
 
