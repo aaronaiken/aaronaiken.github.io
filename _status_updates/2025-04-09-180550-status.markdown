@@ -1,0 +1,7 @@
+---
+title: Status Update
+date: 2025-04-09 18:05:50 
+layout: status_update
+author: aaron
+---
+I lied. Next item to add: status update source. Showing as "via SMS" will be cool.
