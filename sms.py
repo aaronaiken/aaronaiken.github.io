@@ -2,7 +2,7 @@ from flask import Flask, request
 import datetime
 import os
 import subprocess
-from twilio.twiml.messaging_response import MessagingResponse
+# from twilio.twiml.messaging_response import MessagingResponse
 
 app = Flask(__name__)
 
@@ -30,9 +30,11 @@ author: aaron
     subprocess.run(["git", "commit", "-m", "Add status update via SMS"], check=True)
     subprocess.run(["git", "push", "origin", "main"], check=True)
 
-    resp = MessagingResponse()
-    resp.message("Status update published!")
-    return str(resp)
+    # resp = MessagingResponse()
+    # resp.message("Status update published!")
+    # return str(resp)
+
+    return "OK", 200
 
 if __name__ == "__main__":
     app.run(debug=True)
