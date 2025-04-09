@@ -1,6 +1,7 @@
 ---
 layout: status
 title: status updates
+author: aaron
 ---
 
 {% assign sorted_updates = site.status_updates | sort: 'date' | reverse %}
