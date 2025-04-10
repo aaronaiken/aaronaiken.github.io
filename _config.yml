@@ -30,7 +30,7 @@ twitter_username: aaronaiken
 github_username: aaronaiken
 tinylytics:
 rss: Subscribe via RSS 👍
-timezone: null
+timezone: UTC
 
 defaults:
 - scope:
