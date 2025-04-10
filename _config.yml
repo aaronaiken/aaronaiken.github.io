@@ -37,6 +37,11 @@ defaults:
     path: "assets/img"
   values:
     image: true
+- scope:
+    path: "_status_updates"
+    type: "status_updates"
+  values:
+    timezone: America/New_York
 
 # Build settings
 theme: minima
