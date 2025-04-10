@@ -41,10 +41,8 @@ def perform_git_operations(filename, commit_message):
 @app.route("/sms", methods=['POST'])
 def sms_reply():
     sms_text = request.form['Body']
-    utc_now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
-    eastern = pytz.timezone('America/New_York')
-    now_eastern = utc_now.astimezone(eastern)  # Convert the timezone-aware UTC to Eastern
-    date_str = now_eastern.strftime("%Y-%m-%d %H:%M:%S %z")
+    now_eastern = utc_now.astimezone(eastern)
+    date_str = now_eastern.strftime("%Y-%m-%d %H:%M:%S")  # Removed %z
     filename = now_eastern.strftime("_status_updates/%Y-%m-%d-%H%M%S-status-sms.markdown")
     # now = datetime.datetime.now()
     # date_str = now.strftime("%Y-%m-%d %H:%M:%S %z")
@@ -72,10 +70,8 @@ source: sms ($0.0079)
 def publish_status():
     if request.method == 'POST':
         status_text = request.form['status']
-        utc_now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
-        eastern = pytz.timezone('America/New_York')
-        now_eastern = utc_now.astimezone(eastern)  # Convert the timezone-aware UTC to Eastern
-        date_str = now_eastern.strftime("%Y-%m-%d %H:%M:%S %z")
+        now_eastern = utc_now.astimezone(eastern)
+        date_str = now_eastern.strftime("%Y-%m-%d %H:%M:%S")  # Removed %z
         print(f"Generated date string: {date_str}")
         filename = now_eastern.strftime("_status_updates/%Y-%m-%d-%H%M%S-status-web.markdown")
         # now = datetime.datetime.now()
