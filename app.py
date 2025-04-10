@@ -76,6 +76,7 @@ def publish_status():
         eastern = pytz.timezone('America/New_York')
         now_eastern = utc_now.astimezone(eastern)  # Convert the timezone-aware UTC to Eastern
         date_str = now_eastern.strftime("%Y-%m-%d %H:%M:%S %z")
+        print(f"Generated date string: {date_str}")
         filename = now_eastern.strftime("_status_updates/%Y-%m-%d-%H%M%S-status-web.markdown")
         # now = datetime.datetime.now()
         # date_str = now.strftime("%Y-%m-%d %H:%M:%S %z")
