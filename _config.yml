@@ -30,18 +30,18 @@ twitter_username: aaronaiken
 github_username: aaronaiken
 tinylytics:
 rss: Subscribe via RSS 👍
-# timezone: UTC
+timezone: America/New_York
 
 defaults:
 - scope:
     path: "assets/img"
   values:
     image: true
-- scope:
-    path: "_status_updates"
-    type: "status_updates"
-  values:
-    timezone: America/New_York
+# - scope:
+#    path: "_status_updates"
+#    type: "status_updates"
+#  values:
+#    timezone: America/New_York
 
 # Build settings
 theme: minima
