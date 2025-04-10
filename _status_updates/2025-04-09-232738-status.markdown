@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-09 23:27:38 
+layout: status_update
+categories: status
+author: aaron
+---
+ipod battery replaced! love the focus of a device that does one thing only. for testing: 11:27 PM April 9, 2025
