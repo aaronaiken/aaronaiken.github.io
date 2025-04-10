@@ -44,7 +44,7 @@ def sms_reply():
     utc_now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
     eastern = pytz.timezone('America/New_York')
     now_eastern = utc_now.astimezone(eastern)
-    date_str = now_eastern.strftime("%Y-%m-%d %H:%M:%S")  # Removed %z
+    date_str = now_eastern.strftime("%Y-%m-%d %H:%M:%S %z")  # Removed %z
     filename = now_eastern.strftime("_status_updates/%Y-%m-%d-%H%M%S-status-sms.markdown")
     # now = datetime.datetime.now()
     # date_str = now.strftime("%Y-%m-%d %H:%M:%S %z")
@@ -75,7 +75,7 @@ def publish_status():
         utc_now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
         eastern = pytz.timezone('America/New_York')
         now_eastern = utc_now.astimezone(eastern)
-        date_str = now_eastern.strftime("%Y-%m-%d %H:%M:%S")  # Removed %z
+        date_str = now_eastern.strftime("%Y-%m-%d %H:%M:%S %z")  # Removed %z
         print(f"Generated date string: {date_str}")
         filename = now_eastern.strftime("_status_updates/%Y-%m-%d-%H%M%S-status-web.markdown")
         # now = datetime.datetime.now()
