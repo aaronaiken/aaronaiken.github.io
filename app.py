@@ -33,7 +33,7 @@ def requires_auth(f):
     return decorated
 
 def perform_git_operations(filename, commit_message):
-    subprocess.run(["git", "pull", "--rebase", "origin", "main"], check=True)  # Pull first
+    subprocess.run(["git", "pull", "origin", "main"], check=True)  # Pull first
     subprocess.run(["git", "add", filename], check=True)
     subprocess.run(["git", "commit", "-m", commit_message], check=True)
     subprocess.run(["git", "push", "origin", "main"], check=True)
