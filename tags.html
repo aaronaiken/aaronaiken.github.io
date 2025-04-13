@@ -1,0 +1,14 @@
+---
+layout: default
+title: Tags
+---
+
+<h1>Tags</h1>
+
+<ul>
+  {% for tag in site.tags %}
+  <li>
+    <a href="/tags/{{ tag | slugify }}/">{{ tag[0] }}</a> ({{ tag[1].size }})
+  </li>
+  {% endfor %}
+</ul>
