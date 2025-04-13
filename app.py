@@ -49,19 +49,19 @@ def extract_tags(text):
 
 def generate_front_matter(title, date_str, layout, author, source, content):
     front_matter = f"""---
-    title: {title}
-    date: {date_str}
-    layout: {layout}
-    author: {author}
-    source: {source}
-    """
-tags = extract_tags(content)
-if tags:
-    front_matter += f"tags: {tags}\n"
-front_matter += f"""---
+title: {title}
+date: {date_str}
+layout: {layout}
+author: {author}
+source: {source}
+"""
+    tags = extract_tags(content)
+    if tags:
+        front_matter += f"tags: {tags}\n"
+    front_matter += f"""---
 {content}
 """
-return front_matter
+    return front_matter
 
 @app.route("/sms", methods=['POST'])
 def sms_reply():
@@ -105,25 +105,20 @@ def publish_status():
         # now = datetime.datetime.now()
         # date_str = now.strftime("%Y-%m-%d %H:%M:%S %z")
         # filename = now.strftime("_status_updates/%Y-%m-%d-%H%M%S-status-web.markdown")
-
-    front_matter = generate_front_matter(
-        title="Status Update",
-        date_str=date_str,
-        layout="status_update",
-        author="aaron",
-        source="web",
-        content=status_text
-    )
-
+        front_matter = generate_front_matter(
+            title="Status Update",
+            date_str=date_str,
+            layout="status_update",
+            author="aaron",
+            source="web",
+            content=status_text
+        )
         os.makedirs("_status_updates", exist_ok=True)
         with open(filename, "w") as f:
             f.write(front_matter)
-
         perform_git_operations(filename, "Add status update via web form")
-
         return "Status update published via web!", 200
     else:
         return render_template('publish_form.html')
-
 if __name__ == "__main__":
     app.run(debug=True)
