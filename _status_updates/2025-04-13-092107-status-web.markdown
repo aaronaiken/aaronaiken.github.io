@@ -5,4 +5,4 @@ layout: status_update
 author: aaron
 source: web
 ---
-🍿 [The King of Kings](https://www.angel.com/movies/king-of-kings) - ⭐️⭐️⭐️⭐️ - Excellent movie, great way to tell the story of Jesus for a younger audience.
+🍿 [The King of Kings](https://www.angel.com/movies/king-of-kings) - ⭐️⭐️⭐️⭐️ - Excellent movie, great way to tell the story of Jesus for a younger audience. #movie
