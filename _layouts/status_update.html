@@ -28,6 +28,14 @@ layout: default
     {% if page.source %}
       <p><a href="{{ page.source }}" title="{{ page.title }}" target="_blank">Source</a></p>
     {% endif %}
+    {% if page.tags %}
+        <div class="tags">
+            Tags:
+            {% for tag in page.tags %}
+                <a href="/tags/{{ tag | slugify }}/">{{ tag }}</a>
+            {% endfor %}
+        </div>
+    {% endif %}
   </div>
 
   {%- if site.disqus.shortname -%}
@@ -35,8 +43,8 @@ layout: default
   {%- endif -%}
 
   <a class="u-url" href="{{ page.url | relative_url }}" hidden></a>
-  
-  
+
+
   <div class="post-author-about">
     <img src="{{ author.img }}" class="post-author-img" title="{{ author.name }}" alt="{{author.img-alt}}" />
     <p class="post-author">This post was written by <strong><a href="{{ author.author-page }}">{{ author.name }}</a></strong></p>

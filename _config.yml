@@ -55,6 +55,15 @@ plugins:
 collections:
   status_updates:
     output: true
+    permalink: /status/%Y/%m/%d/%H/%M/%S/
+defaults:
+  - scope:
+      path: ""
+      type: "status_updates"
+    values:
+      layout: "status_update"
+permalink: /:year/:month/:day/:title/
+tag_page_dir: "tags"
 
 # Exclude from processing.
 # The following items will not be processed, by default.
