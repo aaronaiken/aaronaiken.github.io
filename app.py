@@ -38,27 +38,51 @@ def perform_git_operations(filename, commit_message):
     subprocess.run(["git", "commit", "-m", commit_message], check=True)
     subprocess.run(["git", "push", "origin", "main"], check=True)
 
+def extract_tags(text):
+    tags = []
+    if "#movie" in text.lower():
+        tags.append("movie")
+    if "#book" in text.lower():
+        tags.append("book")
+    # Add more tag checks as needed
+    return tags
+
+def generate_front_matter(title, date_str, layout, author, source, content):
+    front_matter = f"""---
+    title: {title}
+    date: {date_str}
+    layout: {layout}
+    author: {author}
+    source: {source}
+    """
+tags = extract_tags(content)
+if tags:
+    front_matter += f"tags: {tags}\n"
+front_matter += f"""---
+{content}
+"""
+return front_matter
+
 @app.route("/sms", methods=['POST'])
 def sms_reply():
     sms_text = request.form['Body']
     utc_now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
     eastern = pytz.timezone('America/New_York')
     now_eastern = utc_now.astimezone(eastern)
-    date_str = now_eastern.strftime("%Y-%m-%d %H:%M:%S %z")  # Removed %z
+    date_str = now_eastern.strftime("%Y-%m-%d %H:%M:%S %z")
     filename = now_eastern.strftime("_status_updates/%Y-%m-%d-%H%M%S-status-sms.markdown")
     # now = datetime.datetime.now()
     # date_str = now.strftime("%Y-%m-%d %H:%M:%S %z")
     # filename = now.strftime("_status_updates/%Y-%m-%d-%H%M%S-status-sms.markdown")
 
-    front_matter = f"""---
-title: Status Update
-date: {date_str}
-layout: status_update
-author: aaron
-source: sms ($0.0079)
----
-{sms_text}
-"""
+    front_matter = generate_front_matter(
+        title="Status Update",
+        date_str=date_str,
+        layout="status_update",
+        author="aaron",
+        source="sms ($0.0079)",
+        content=sms_text
+    )
 
     os.makedirs("_status_updates", exist_ok=True)
     with open(filename, "w") as f:
@@ -75,22 +99,21 @@ def publish_status():
         utc_now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
         eastern = pytz.timezone('America/New_York')
         now_eastern = utc_now.astimezone(eastern)
-        date_str = now_eastern.strftime("%Y-%m-%d %H:%M:%S %z")  # Removed %z
+        date_str = now_eastern.strftime("%Y-%m-%d %H:%M:%S %z")
         print(f"Generated date string: {date_str}")
         filename = now_eastern.strftime("_status_updates/%Y-%m-%d-%H%M%S-status-web.markdown")
         # now = datetime.datetime.now()
         # date_str = now.strftime("%Y-%m-%d %H:%M:%S %z")
         # filename = now.strftime("_status_updates/%Y-%m-%d-%H%M%S-status-web.markdown")
 
-        front_matter = f"""---
-title: Status Update
-date: {date_str}
-layout: status_update
-author: aaron
-source: web
----
-{status_text}
-"""
+    front_matter = generate_front_matter(
+        title="Status Update",
+        date_str=date_str,
+        layout="status_update",
+        author="aaron",
+        source="web",
+        content=status_text
+    )
 
         os.makedirs("_status_updates", exist_ok=True)
         with open(filename, "w") as f:
