@@ -55,15 +55,6 @@ plugins:
 collections:
   status_updates:
     output: true
-    permalink: /status/%Y/%m/%d/%H/%M/%S/
-defaults:
-  - scope:
-      path: ""
-      type: "status_updates"
-    values:
-      layout: "status_update"
-permalink: / # Add this line, explicitly setting the global permalink to the root
-tag_page_dir: "tags"
 
 # Exclude from processing.
 # The following items will not be processed, by default.
