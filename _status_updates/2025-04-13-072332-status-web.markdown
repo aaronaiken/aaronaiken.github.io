@@ -1,8 +1,0 @@
----
-title: Status Update
-date: 2025-04-13 07:23:32 -0400
-layout: status_update
-author: aaron
-source: web
----
-First things first, update the selling page. `git commit -m "So long, sold! Updating selling list"
