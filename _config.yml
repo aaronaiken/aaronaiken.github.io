@@ -62,7 +62,7 @@ defaults:
       type: "status_updates"
     values:
       layout: "status_update"
-# permalink: /:year/:month/:day/:title/
+permalink: / # Add this line, explicitly setting the global permalink to the root
 tag_page_dir: "tags"
 
 # Exclude from processing.
