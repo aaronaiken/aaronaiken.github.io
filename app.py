@@ -61,6 +61,7 @@ source: {source}
     front_matter += f"""---
 {content}
 """
+    print(front_matter)
     return front_matter
 
 @app.route("/sms", methods=['POST'])
