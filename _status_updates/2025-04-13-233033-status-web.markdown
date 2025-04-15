@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-13 23:30:33 -0400
+layout: status_update
+author: aaron
+source: web
+tags: ['movie']
+---
+Another Test Movie Update - ⭐️⭐️⭐️⭐️ - I have high hopes, but am realistic as-well. After this test I'm going to bed. #movie

@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-08 17:37:43 
+layout: status_update
+categories: status
+author: aaron
+---
+FF practice for Mozzie, sitting in the car. listing a few things on FB mkt place. Then back to pagination..
