@@ -1,0 +1,11 @@
+---
+title: Status Update
+date: 2025-04-14 17:45:02 -0400
+layout: status_update
+author: aaron
+source: web
+---
+✅ Grass cut. 
+😊 Jack and coke never tasted so good. 
+🍕 Pizza ordered.
+Townhouse run later.

@@ -1,0 +1,7 @@
+---
+title: Status Update
+date: 2025-04-09 15:31:30 
+layout: status_update
+author: aaron
+---
+Perfection. Back to regular stuff. Just a few more small tweaks to this page then I need to stop the enhancements for a bit. If I can :-)

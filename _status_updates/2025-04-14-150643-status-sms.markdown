@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-14 15:06:43 -0400
+layout: status_update
+author: aaron
+source: sms ($0.0079)
+---
+Insane day, typical for a Monday. All good stuff though!
