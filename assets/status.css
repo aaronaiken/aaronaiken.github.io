@@ -163,6 +163,15 @@ body.status-page .footer-col-wrapper hr {
   margin: 0px;
 }
 
+.older-updates-list .older-status-item {
+  opacity: 0; /* Initially hide the items */
+  transition: opacity 0.3s ease-in-out; /* Optional: Add a fade-in effect */
+}
+
+.older-updates-list .older-status-item.loaded {
+  opacity: 1; /* Make them visible when loaded */
+}
+
 @media (prefers-color-scheme: dark) {
 body.status-page {
   background-color: #1F2937;

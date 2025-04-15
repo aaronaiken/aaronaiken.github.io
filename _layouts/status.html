@@ -3,6 +3,7 @@
   {% include head.html %}
   <body class="status-page">
 	<div id="container">
+		{% include nav.html %}
 	  <h1 id="header">{{ page.title }}</h1>
 	  <div id="content">
 		<div class="profile-header">
@@ -42,6 +43,7 @@
 			  {% endunless %}
 			{% endfor %}
 		  </ul>
+		  <script src="/js/lazy-load-posts.js"></script>
 		</div>
 		{% include footer.html %}
 	  </div>
