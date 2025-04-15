@@ -1,46 +1,54 @@
----
-layout: default
----
-<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
-
-  <header class="post-header">
-    {% if page.source %}
-      <a href="{{ page.source }}" title="{{ page.title }}" target="_blank"><h1 class="post-title p-name" itemprop="name headline">{{ page.title | escape }}</h1></a>
-      {% else %}
-      <h1 class="post-title p-name" itemprop="name headline">{{ page.title | escape }}</h1>
+<!doctype html>
+<html lang="en">
+  {% include head.html %}
+  <body class="status-page">
+    <div id="container">
+      {% include nav.html %}
+      <h1 id="header">{{ page.title }}</h1>
+      <div id="content">
+      <div class="profile-header">
+        <img src="/assets/img/aaron_profile.jpeg" alt="Aaron Aiken's profile picture" class="profile-pic">
+        <div class="account-info">
+        <span class="account-name">aaronaiken</span>
+        </div>
+      </div>
+      <div class="latest-update-container">
+        <div class="latest-status">
+          <div class="latest-content">
+            <p class="content">{{ content }}</p>
+            <p class="timestamp"><a href="{{ latest.url }}" target="_blank">{{ page.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a></p>
+            {% if page.source %}
+              <p class="source">via {{ page.source }}</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% include footer.html %}
+    </div>
+    <div id="side">
+    {% assign author_data = site.data.people[page.author] %}
+    {% if author_data %}
+      <div class="msg">
+        <h3>About</h3>
+        {{ author_data.name }}
+      </div><!--div.msg-->
+      <ul id="author-details">
+        {% if author_data.status-bio %}
+        <li>Bio: {{ author_data.status-bio }}</li>
+        {% endif %}
+        {% if author_data.location %}
+        <li>Location: {{ author_data.location }}</li>
+        {% endif %}
+        {% if author_data.author-page %}
+        <li>Web: <a href="{{ site.url }}{{ author_data.author-page }}">{{ site.url }}{{ author_data.author-page | truncate: 30 }}</a></li>
+        {% endif %}
+        {% else %}
+      </ul>
+      <p>About Aaron Aiken</p>
+      <p>Bio: Founder of Obvious</p>
+      <p>Location: Harrisburg, PA</p>
+      <p>Web: {{ site.url }}</p>
     {% endif %}
-    <p class="post-meta">
-      <time class="dt-published" datetime="{{ page.date | date_to_xmlschema }}" itemprop="datePublished">
-        {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
-        {{ page.date | date: date_format }}
-      </time>
-      {%- if page.author -%}
-        {% assign author = site.data.people[page.author] %}
-        • <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name"><a href="{{ author.author-page }}" title="About {{ author.name }}">{{ author.name }}</a></span></span>
-      {%- endif -%}</p>
-  </header>
-
-  <div class="post-content e-content" itemprop="articleBody">
-    {% if page.image %}
-      <img class="featured-image" src="{{ page.image }}" />
-    {% endif %}
-    {{ content }}
-    {% if page.source %}
-      <p><a href="{{ page.source }}" title="{{ page.title }}" target="_blank">Source</a></p>
-    {% endif %}
-  </div>
-
-  {%- if site.disqus.shortname -%}
-    {%- include disqus_comments.html -%}
-  {%- endif -%}
-
+    </div>
+  </body>
   <a class="u-url" href="{{ page.url | relative_url }}" hidden></a>
-
-
-  <div class="post-author-about">
-    <img src="{{ author.img }}" class="post-author-img" title="{{ author.name }}" alt="{{author.img-alt}}" />
-    <p class="post-author">This post was written by <strong><a href="{{ author.author-page }}">{{ author.name }}</a></strong></p>
-    <p>{{ author.post-bio }}</p>
-    <p>Have something to say about this post? <a href="mailto:{{ author.email }}?subject=Re: {{ page.title }}&body={{ site.url }}{{ page.url }}">Send me an email</a>.</p>
-  </div>
-</article>
