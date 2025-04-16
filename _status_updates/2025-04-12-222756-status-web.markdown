@@ -5,4 +5,4 @@ layout: status_update
 author: aaron
 source: web
 ---
-More ideas for this page. Need to finish the primary [Status Page project](https://github.com/users/aaronaiken/projects/2/views/1), but first I may implement the way [movie and book reviews](https://github.com/users/aaronaiken/projects/3/views/1) are handled as status updates.
+More ideas for this page. Need to finish the primary [Status Page project](https://github.com/users/aaronaiken/projects/2/views/1){:target="_blank" rel="nofollow"}, but first I may implement the way [movie and book reviews](https://github.com/users/aaronaiken/projects/3/views/1){:target="_blank" rel="nofollow"} are handled as status updates.
