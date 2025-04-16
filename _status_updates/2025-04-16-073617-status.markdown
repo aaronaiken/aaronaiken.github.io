@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-16 07:36:17 
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+kept it simple. not doing a sitewide config for opening markdown links in a new tab. Will just do it by hand as needed. issue #64 closed.
