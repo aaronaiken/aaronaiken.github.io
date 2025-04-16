@@ -128,6 +128,7 @@ body.status-page .site-footer {
 .older-updates-container {
   background: #fff;
   border: 1px inherit;
+  clear: both;
 }
 
 .older-updates-container {
@@ -191,4 +192,21 @@ body.status-page #side {
   background-color: #363535;
   border: 1px solid #87bc44;
 }
+}
+
+.mobile-content {
+  display: none; /* Hidden by default */
+}
+
+@media (max-width: 768px) {
+  .desktop-content {
+    display: none; /* Hide on smaller screens */
+  }
+  .mobile-content {
+    display: block; /* Show on smaller screens */
+  }
+}
+
+body.status-page #side.mobile-content {
+  float: none;
 }
