@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-16 15:06:36 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Quick and simple update to have the status page a bit friendlier for smaller screens. Chipping away at the list of things for this page and then will move away from working on it. 
