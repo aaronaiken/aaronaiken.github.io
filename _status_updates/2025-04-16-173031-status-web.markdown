@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-16 17:30:31 -0400
+layout: status_update
+author: aaron
+source: web
+---
+FF practice. Doing some small things to help a friend. Then tweaks here.
