@@ -5,4 +5,4 @@ layout: status_update
 author: aaron
 source: web
 ---
-Dropped the pagination idea _again_ and went with lazy-loading via [IntersectionObserver](https://www.smashingmagazine.com/2018/01/deferring-lazy-loading-intersection-observer-api/). Pushing to prod soon.
+Dropped the pagination idea _again_ and went with lazy-loading using [IntersectionObserver](https://www.smashingmagazine.com/2018/01/deferring-lazy-loading-intersection-observer-api/){:target="_blank" rel="nofollow"}. Pushing to prod soon.
