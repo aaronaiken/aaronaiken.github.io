@@ -18,9 +18,9 @@
 			<div class="latest-status">
 			  <div class="latest-content">
 				<p class="content">{{ latest.content | markdownify }}</p>
-				<p class="timestamp"><a href="{{ latest.url }}" target="_blank">{{ latest.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a></p>
+				<p class="timestamp" data-timestamp="{{ latest.date | date: '%s' }}">{{ latest.date | date: "%I:%M %p %B %-d, %Y %Z" }}</p>
 				{% if latest.source %}
-				  <p class="source">via {{ latest.source }}</p>
+				  <p class="source">via {{ latest.source }} - <a href="{{ latest.url }}">🔗</a></p>
 				{% endif %}
 			  </div>
 			</div>
@@ -45,6 +45,7 @@
 			{% endfor %}
 		  </ul>
 		  <script src="/js/lazy-load-posts.js"></script>
+		  <script src="/js/dynamic-timestamp.js"></script>
 		</div>
 		{% include footer.html %}
 	  </div>
