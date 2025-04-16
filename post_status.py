@@ -21,6 +21,7 @@ date: {date_str}
 layout: status_update
 categories: status
 author: aaron
+source: bash
 ---
 {status_text}
 """
