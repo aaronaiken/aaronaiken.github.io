@@ -1,0 +1,23 @@
+{% assign author_data = site.data.people[page.author] %}
+{% if author_data %}
+	<div class="msg">
+		<h3>About</h3>
+		{{ author_data.name }}
+	</div><!--div.msg-->
+	<ul id="author-details">
+		{% if author_data.status-bio %}
+		<li>Bio: {{ author_data.status-bio }}</li>
+		{% endif %}
+		{% if author_data.location %}
+		<li>Location: {{ author_data.location }}</li>
+		{% endif %}
+		{% if author_data.author-page %}
+		<li>Web: <a href="{{ site.url }}{{ author_data.author-page }}">{{ site.url }}{{ author_data.author-page | truncate: 30 }}</a></li>
+		{% endif %}
+		{% else %}
+	</ul>
+	<p>About Aaron Aiken</p>
+	<p>Bio: Founder of Obvious</p>
+	<p>Location: Harrisburg, PA</p>
+	<p>Web: {{ site.url }}</p>
+{% endif %}
