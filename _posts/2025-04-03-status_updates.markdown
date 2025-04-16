@@ -8,7 +8,9 @@ image: /assets/img/2007-twitter.jpeg
 source: https://github.com/aaronaiken/aaronaiken.github.io/issues/22
 description:
 ---
-Concept is simple: short posts, no titles, kind of like Twitter back in the good 'ol days of 2007. Back then I'd send a SMS message to a number, typing on my QWERTY keyboard phone from Verizon (would need to dig back to see who made it, probably Motorola[^ yep, the <a href="https://www.mobilephonemuseum.com/phone-detail/q" target="_blank" rel="noopener noreferrer">Motorola Q</a>. This phone was awesome. So tactile. Going back to something like this could be a fun rabbit hole.]), and the content of that message would publish to my @aaronaiken Twitter profile. No links. No spam. No pictures. No fuss. Just words up to 140 characters. It was great. And great fun!
+Concept is simple: short posts, no titles, kind of like Twitter back in the good 'ol days of 2007. Back then I'd send a SMS message to a number, typing on my QWERTY keyboard phone from Verizon (would need to dig back to see who made it, probably Motorola[^1], and the content of that message would publish to my @aaronaiken Twitter profile. No links. No spam. No pictures. No fuss. Just words up to 140 characters. It was great. And great fun!
+
+[^1]: yep, the <a href="https://www.mobilephonemuseum.com/phone-detail/q" target="_blank" rel="noopener noreferrer">Motorola Q</a>. This phone was awesome. So tactile. Going back to something like this could be a fun rabbit hole.)
 
 The first feed of its kind that began to feed the monster.
 
