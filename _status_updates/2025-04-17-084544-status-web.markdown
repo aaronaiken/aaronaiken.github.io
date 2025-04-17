@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-17 08:45:44 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Good morning ☕️ Nice walk with Mozzie, now coffee and a quick swing at issue [#42](https://github.com/users/aaronaiken/projects/2/views/1?pane=issue&itemId=105237977&issue=aaronaiken%7Caaronaiken.github.io%7C42)
