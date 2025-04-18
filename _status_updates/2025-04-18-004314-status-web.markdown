@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-18 00:43:14 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Done. Not pretty, but got the work finished. Time for bed.
