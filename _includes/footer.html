@@ -24,6 +24,9 @@
     <div class="fine-print">
       <p>Website Made by Hand in Harrisburg Pennsylvania by <a href="{{ site.webmaster-url }}" target="_blank">{{ site.webmaster }}</a> | <a href="https://themarkup.org/blacklight?url=test.aaronaiken.me" target="_blank" rel="noopener noreferrer">not tracking you</a></p>
     </div>
+    {% unless page.path == 'status.html' or page.path contains 'status_updates/' %}
+      {% include latest-tweet.html %}
+    {% endunless %}
   </div>
 <!--<script src="{{ site.tinylytics }}" defer></script>-->
 </footer>
