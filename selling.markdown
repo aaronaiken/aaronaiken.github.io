@@ -21,7 +21,6 @@ Pretty self-explanatory. Where I have photos or more info to share you can just 
 - swivel chair - $95 - <a href="https://www.ikea.com/us/en/p/odger-swivel-chair-white-beige-70308685/" target="_blank" rel="noopener noreferrer">↗️ view on IKEA</a>
 - 🛏️ queen comforter set - $60 <a href="#comforter">📷</a> (bed has sold)
 - 🆓 Desk (FREE) <a href="#desk">📷</a>
-- <a href="#leather">⚙️ leather machines</a>
 <br />
 <hr />
 <br />
@@ -69,29 +68,5 @@ Large and in charge. Currently in my basement, used previously as my "shipping s
 ![](assets/img/selling/desk8.jpeg)
 ![](assets/img/selling/desk9.jpeg)
 ![](assets/img/selling/desk10.jpeg)
-
-<a href="#list">⬆️ back up to the list</a>
-
-<h2 id="leather">Leather Machines</h2>
-
-<h3>↳ Tandy Pro Clicker Press - $750</h3>
-
-<a href="https://tandyleather.com/products/tandypro-r-clicker-press" target="_blank" rel="noopener noreferrer">↗️ view on Tandy's site</a>
-
-Purchased Spring of 2024.
-
-In perfect condition, except the height adjustment wheel is stuck (can't rotate, not sure why...just stopped working one day) :-/ To adjust the "height" I would adjust the height of the plate below, instead of the arm above.
-
-![](assets/img/selling/clickerpress.jpeg)
-
-<a href="#list">⬆️ back up to the list</a>
-
-<h3>↳ Tandy Pro Hand Press - $300 - Like New</h3>
-
-<a href="https://tandyleather.com/products/tandypro-r-hand-press?_pos=1&_sid=53af11ed0&_ss=r" target="_blank" rel="noopener noreferrer">↗️ view on Tandy's site</a>
-
-Purchased Spring of 2023.
-
-![](assets/img/selling/handpress.jpeg)
 
 <a href="#list">⬆️ back up to the list</a>
