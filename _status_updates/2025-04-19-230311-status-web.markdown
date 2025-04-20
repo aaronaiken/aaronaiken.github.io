@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-19 23:03:11 -0400
+layout: status_update
+author: aaron
+source: web
+---
+The full list of my projects, [publicly available](https://github.com/aaronaiken?tab=projects). 
