@@ -1,22 +1,12 @@
-<div id="content">
-	<div class="profile-header">
-		<img src="/assets/img/aaron_profile.jpeg" alt="Aaron Aiken's profile picture" class="profile-pic">
-		<div class="account-info">
-		<span class="account-name">Latest status update from Aaron. <a href="{{ site.url }}/status.html" title="See all of the latest greatest updates Twitter-2007 style from Aaron!">See more here.</a></span>
-		</div>
-	</div>
-	<div class="latest-update-container">
+{% unless page.path == 'status.html' or page.path contains 'status_updates/' %}
 	{% assign latest = site.status_updates | sort: 'date' | reverse | first %}
 	{% if latest %}
-		<div class="latest-status">
 		<div class="latest-content">
-			<p class="content">{{ latest.content | markdownify }}</p>
+			{{ latest.content | markdownify }}
 			<p class="timestamp" data-timestamp="{{ latest.date | date: '%s' }}">{{ latest.date | date: "%I:%M %p %B %-d, %Y %Z" }}</p>
-			{% if latest.source %}
-			<p class="source">via {{ latest.source }} - <a href="{{ latest.url }}">🔗</a></p>
-			{% endif %}
-		</div>
+			<!-- {% if latest.source %}
+				<p class="source">via {{ latest.source }} - <a href="{{ latest.url }}">🔗</a></p>
+			{% endif %} -->
 		</div>
 	{% endif %}
-	</div>
-</div>
+{% endunless %}
