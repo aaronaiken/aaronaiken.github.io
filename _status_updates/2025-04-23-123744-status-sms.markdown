@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-23 12:37:44 -0400
+layout: status_update
+author: aaron
+source: sms ($0.0079)
+---
+Had to give up on using taskwarrior on my work computer, also no luck getting it setup via a PythonAnywhere console. Not for lack of effort! May pick it up again later but pressing pause for now. Have it in use on my Mac for personal tasks, which is a great place to get comfortable using it. 
