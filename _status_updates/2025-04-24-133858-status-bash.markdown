@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-24 13:38:58 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+test 2 via bash using the modified process. First one was spot on excluding a small error generated that did not impact publishing. April 24, 2025 1:38 PM
