@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-24 14:06:58 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+should do the trick now.
