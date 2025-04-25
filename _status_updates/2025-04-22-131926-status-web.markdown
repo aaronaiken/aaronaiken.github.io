@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-22 13:19:26 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Great day so far! Coffee this morning with P. Matt, good conversation with Lindsay afterwards, walk with Mozzie, lunch with them outside, lovely weather, and making progress on work and website tinkering!

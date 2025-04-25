@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-24 22:10:44 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+wine and tinkering.

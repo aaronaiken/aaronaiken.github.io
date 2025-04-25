@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-23 01:02:57 
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+ah, CLI. Too much fun. Can't believe it has taken me this long to discover it.

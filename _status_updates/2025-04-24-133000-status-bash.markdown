@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-24 13:30:00 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+testing locally...hoping to see correct a correct timestamp April 24, 2025 1:29 PM
