@@ -17,7 +17,7 @@
 		  {% if latest %}
 			<div class="latest-status">
 			  <div class="latest-content">
-				<p class="content">{{ latest.content | markdownify }}</p>
+				<p class="content">{{ latest.content | markdownify | truncate: 300 }}</p>
 				<p class="timestamp" data-timestamp="{{ latest.date | date: '%s' }}">{{ latest.date | date: "%I:%M %p %B %-d, %Y %Z" }}</p>
 				{% if latest.source %}
 				  <p class="source">via {{ latest.source }} - <a href="{{ latest.url }}">🔗</a></p>
@@ -36,7 +36,7 @@
 			{% for status in sorted_older_updates %}
 			  {% unless forloop.first %}
 				<li class="older-status-item">
-				  <p class="content">{{ status.content | markdownify | truncate: 140 }}<a href="{{ status.url }}" target="_blank" class="timestamp-link">{{ status.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a></p>
+				  <p class="content">{{ status.content | markdownify | truncate: 300 }}<a href="{{ status.url }}" target="_blank" class="timestamp-link">{{ status.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a></p>
 				  {% if status.source %}
 					<p class="source">via {{ status.source }}</p>
 				  {% endif %}
