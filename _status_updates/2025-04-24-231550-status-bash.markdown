@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-24 23:15:50 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+ok ok. one more thing done. closed #85 - increasing the `truncate` setting to 300 for status updates. _now_ it is time for bed :-)
