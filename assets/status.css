@@ -236,3 +236,18 @@ body.status-page #side.mobile-content {
   padding: 7px;
   font-weight: bold;
 }
+
+/* site header status display */
+nav .latest-content {
+  max-width: 50%;
+  float: right;
+  font-size: 9pt;
+  border: 1px dashed gray;
+  padding: 3px;
+  text-align: right;
+}
+
+nav .latest-content p.timestamp, nav .latest-content p {
+  margin-bottom: 0px;
+  font-size: 9pt;
+}
