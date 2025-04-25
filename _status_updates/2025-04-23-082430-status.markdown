@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-23 08:24:30 
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+fast morning so far! and I forgot about how my status_update via bash messes with the timestamp of the post. need to fix that. April 23, 2025 8:24 AM

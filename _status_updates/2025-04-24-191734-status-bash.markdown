@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-24 19:17:34 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+Great day, incredible weather. Started to get the patio setup, grilled dinner, cigar and cocktail outside after work! Love this time of year!

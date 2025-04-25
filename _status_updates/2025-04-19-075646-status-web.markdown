@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-19 07:56:46 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Need more coffee. This weekend knocked me out! ☕️
