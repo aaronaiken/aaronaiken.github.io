@@ -194,6 +194,7 @@ body.status-page #side {
 }
 }
 
+/* for the smaller screens */
 .mobile-content {
   display: none; /* Hidden by default */
 }
@@ -209,4 +210,44 @@ body.status-page #side {
 
 body.status-page #side.mobile-content {
   float: none;
+}
+
+/* site footer status display */
+.site-footer #content {
+  background-color: #9ae4e8; /* Example light blue */
+  background-image: url('/assets/img/status/bg.gif'); /* Path to your cloud image */
+}
+
+.site-footer .profile-header {
+  padding: 7px;
+}
+
+.site-footer .latest-update-container {
+  padding-top: 0px;
+  margin-top: 0px;
+  background: none;
+}
+
+.site-footer .latest-status {
+  display: block;
+  background: none;
+  /*font-size: 2.12em;*/
+  line-height: 1.2;
+  padding: 7px;
+  font-weight: bold;
+}
+
+/* site header status display */
+nav .latest-content {
+  max-width: 50%;
+  float: right;
+  font-size: 9pt;
+  border: 1px dashed gray;
+  padding: 3px;
+  text-align: right;
+}
+
+nav .latest-content p.timestamp, nav .latest-content p {
+  margin-bottom: 0px;
+  font-size: 9pt;
 }
