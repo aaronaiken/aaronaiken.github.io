@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-25 18:01:35 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+and then there were 2. Two items left on my [Status Page](https://github.com/users/aaronaiken/projects/2/views/1) project until I move this site to the next release. Item 81 next, which will become v1.0.3, then item 32, moving the site to v1.0.4. I did having things organized like this. Even for a hobby, feels good to be organized.
