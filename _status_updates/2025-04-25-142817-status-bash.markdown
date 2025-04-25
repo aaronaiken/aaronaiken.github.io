@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-25 14:28:17 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+man o day! crazy how quickly these days go by!
