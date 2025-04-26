@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-26 13:25:58 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+[v1.0.3](https://github.com/aaronaiken/aaronaiken.github.io/releases/tag/v1.0.3) live.
