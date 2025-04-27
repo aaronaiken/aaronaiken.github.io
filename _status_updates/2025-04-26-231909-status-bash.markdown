@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-26 23:19:09 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+that was easy, actually. [v1.0.4 is live](https://github.com/aaronaiken/aaronaiken.github.io/releases/tag/v1.0.4). Release notes courtesy of Gemini. RSS for status updates is available.
