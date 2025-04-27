@@ -14,8 +14,11 @@
 		{% if author_data.author-page %}
 		<li>Web: <a href="{{ site.url }}{{ author_data.author-page }}">{{ site.url }}{{ author_data.author-page | truncate: 30 }}</a></li>
 		{% endif %}
-		{% else %}
 	</ul>
+	{%- if site.rss_status -%}
+		<a href="{{ 'status.xml' | relative_url }}" title="{{ site.rss_status }}"><svg class="svg-icon"><use xlink:href="{{ '/assets/minima-social-icons.svg#rss' | relative_url }}"></use></svg> <span>{{ site.rss_status | escape }}</span></a>
+	{%- endif -%}
+	{% else %}
 	<p>About Aaron Aiken</p>
 	<p>Bio: Founder of Obvious</p>
 	<p>Location: Harrisburg, PA</p>

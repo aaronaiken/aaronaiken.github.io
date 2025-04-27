@@ -29,7 +29,8 @@ url: https://test.aaronaiken.me # the base hostname & protocol for your site, e.
 twitter_username: aaronaiken
 github_username: aaronaiken
 tinylytics:
-rss: Subscribe via RSS 👍
+rss: Subscribe to blog posts via RSS 👍
+rss_status: Status updates in your reader 📡
 timezone: America/New_York
 
 defaults:
