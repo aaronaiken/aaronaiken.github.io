@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-26 22:13:28 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+working on RSS for the status updates. attempted this a while ago and it went nowhere...fingers crossed this time is different. Once up and running I'll feel comfortable leaving this portion of the site as-is for a while. 
