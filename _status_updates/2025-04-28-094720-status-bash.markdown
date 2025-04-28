@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-28 09:47:20 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+talking with Mozzie about technology, of the electronic variety, our use of it and how we need to do better. I enjoy conversations like that with him. I hopee some of it sticks.
