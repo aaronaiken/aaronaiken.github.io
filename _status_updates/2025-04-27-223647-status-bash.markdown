@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-27 22:36:47 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+what a weekend, so good! unwinding for a bit before sleep. full week ahead.
