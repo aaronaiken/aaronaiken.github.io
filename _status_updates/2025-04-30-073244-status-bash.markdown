@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-30 07:32:44 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+blur of a week so far! Today is the last day of moving out. Praying I can get everything finished.
