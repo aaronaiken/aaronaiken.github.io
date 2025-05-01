@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-30 23:13:38 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+the internet is awesome. read [this](https://localghost.dev/blog/building-a-website-like-it-s-1999-in-2022/) and come across [this](https://www.11ty.dev){:target="_blank" rel="noopener" title="
