@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-05-04 18:06:33 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+Great time at church this morning, flag football game in the books. Cigar now to relax for a moment.
