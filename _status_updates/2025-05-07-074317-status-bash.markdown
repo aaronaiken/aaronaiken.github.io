@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-05-07 07:43:17 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+eager for something that may resemble a vacation! Not sure when that will happen, likely has random days here and there over the summer.
