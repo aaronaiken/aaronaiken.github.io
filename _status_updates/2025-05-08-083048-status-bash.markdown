@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-05-08 08:30:48 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+great day yesterday, finally a break in the rain for outdoor work. full workday otherwise, started the additional part-time work as-well. Also got my workbench put back together in the garage!
