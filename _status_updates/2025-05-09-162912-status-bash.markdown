@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-05-09 16:29:12 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+friday means wine at 4 🍷
