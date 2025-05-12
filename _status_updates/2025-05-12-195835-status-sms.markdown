@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-05-12 19:58:35 -0400
+layout: status_update
+author: aaron
+source: sms ($0.0079)
+---
+No more car lease! Expenses continue to be eliminated!
