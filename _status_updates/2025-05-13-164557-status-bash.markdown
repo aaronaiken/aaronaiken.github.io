@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-05-13 16:45:57 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+i may be slightly old-school by saying this, but I belive that, unless asked, opinions or commentary on current events and politics should remain private.
