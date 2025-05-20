@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-05-19 22:19:59 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+now though, _Your Friends & Neighbors_ S1, E6 and some Woodford to unwind for a bit.
