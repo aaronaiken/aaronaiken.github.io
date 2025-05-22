@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-05-21 23:14:50 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+an amazing day today. good work. good family time. now, unwinding before rest and starting all over again tomorrow.
