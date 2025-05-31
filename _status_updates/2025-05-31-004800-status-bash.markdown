@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-05-31 00:48:00 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+the wind and rain right now is insane!
