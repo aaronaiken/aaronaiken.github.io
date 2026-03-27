@@ -5,3 +5,11 @@ _site
 vendor
 __pycache__/
 *.pyc
+# Sensitive credentials
+.env
+
+# SSH Keys (Double-check these aren't in your web folder)
+id_rsa
+id_rsa.pub
+ssh
+ssh.pub
