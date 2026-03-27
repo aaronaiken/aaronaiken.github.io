@@ -5,6 +5,7 @@ _site
 vendor
 __pycache__/
 *.pyc
+
 # Sensitive credentials
 .env
 
@@ -13,3 +14,4 @@ id_rsa
 id_rsa.pub
 ssh
 ssh.pub
+
