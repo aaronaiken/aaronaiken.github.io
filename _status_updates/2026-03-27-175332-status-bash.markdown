@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2026-03-27 17:53:32 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+🚀 Testing the new SSH pipeline
