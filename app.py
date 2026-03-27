@@ -9,8 +9,8 @@ wraps = functools.wraps
 app = Flask(__name__)
 
 # --- Configuration for Basic Auth ---
-USERNAME = 'purring'  # Replace with your desired username
-PASSWORD = '67i4uc_Rvq@yXjeNF_Z.'  # Replace with a strong password
+USERNAME = os.environ.get('FLASK_USERNAME')
+PASSWORD = os.environ.get('FLASK_PASSWORD')
 
 def check_auth(username, password):
     """Checks if username/password combination is valid."""
