@@ -1,16 +1,144 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Publish Status Update</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Cockpit</title>
+    <style>
+        :root { --bg: #000; --text: #fff; --input-bg: #1c1c1e; --accent: #0a84ff; --border: #333; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; display: flex; justify-content: center; overscroll-behavior-y: contain; }
+        .container { width: 100%; max-width: 500px; padding: 20px; padding-top: 40px; box-sizing: border-box; }
+
+        #ptr { text-align: center; color: #444; font-size: 10px; height: 0; overflow: hidden; transition: height 0.2s; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Status & Navigation */
+        .status-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .dot-container { display: flex; align-items: center; gap: 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #444; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .dot.online { background: #4bb543; box-shadow: 0 0 8px #4bb543; }
+        .dot.syncing { background: #ffd700; box-shadow: 0 0 8px #ffd700; }
+        .dot.offline { background: #ff4500; box-shadow: 0 0 8px #ff4500; }
+        .logout { color: #444; text-decoration: none; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Horizontal Bars (Emojis & Tags) */
+        .scroller { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 5px; -webkit-overflow-scrolling: touch; }
+        .scroller::-webkit-scrollbar { display: none; }
+
+        .pill { background: #1c1c1e; border: 1px solid var(--border); color: #fff; padding: 8px 14px; border-radius: 20px; font-size: 14px; white-space: nowrap; cursor: pointer; -webkit-appearance: none; }
+        .pill.tag { color: var(--accent); font-weight: 500; border-color: #222; }
+        .pill:active { background: var(--accent); border-color: var(--accent); }
+
+        textarea { width: 100%; height: 160px; background: var(--input-bg); color: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 15px; font-size: 18px; outline: none; box-sizing: border-box; resize: none; -webkit-appearance: none; }
+        #char-count { text-align: right; font-size: 12px; color: #444; margin-top: 8px; font-variant-numeric: tabular-nums; }
+        .warn { color: #ffd700 !important; }
+        .danger { color: #ff4500 !important; }
+
+        button#publish-btn { width: 100%; background: var(--accent); color: #fff; border: none; padding: 18px; border-radius: 14px; font-size: 18px; font-weight: 600; margin-top: 20px; -webkit-appearance: none; cursor: pointer; }
+        button#publish-btn:active { opacity: 0.7; transform: scale(0.98); }
+
+        .history-section { margin-top: 40px; border-top: 1px solid #222; padding-top: 20px; }
+        .history-title { color: #333; font-size: 11px; text-transform: uppercase; margin-bottom: 20px; letter-spacing: 1px; }
+        .history-item { color: #888; font-size: 15px; margin-bottom: 18px; line-height: 1.5; padding-bottom: 18px; border-bottom: 1px solid #111; }
+    </style>
 </head>
 <body>
-    <h1>Publish a New Status Update</h1>
-    <form method="POST">
-        <div>
-            <label for="status">Status Text:</label><br>
-            <textarea id="status" name="status" rows="5" cols="60"></textarea>
+    <div class="container">
+        <div id="ptr">Pull to Refresh</div>
+
+        <div class="status-bar">
+            <div class="dot-container">
+                <div class="dot {{ git_status }}"></div>
+                Systems {{ git_status }}
+            </div>
+            <a href="/logout" class="logout">Power Down</a>
         </div>
-        <button type="submit">Publish</button>
-    </form>
+
+        <div class="scroller">
+            <button class="pill" onclick="insertText('🚀')">🚀</button>
+            <button class="pill" onclick="insertText('🔫')">🔫</button>
+            <button class="pill" onclick="insertText('☕️')">☕️</button>
+            <button class="pill" onclick="insertText('💻')">💻</button>
+            <button class="pill" onclick="insertText('🛰️')">🛰️</button>
+            <button class="pill" onclick="insertText('🛠️')">🛠️</button>
+            <button class="pill" onclick="insertText('✨')">✨</button>
+        </div>
+
+        <div class="scroller">
+            <button class="pill tag" onclick="insertText('#movie')">#movie</button>
+            <button class="pill tag" onclick="insertText('#book')">#book</button>
+            <button class="pill tag" onclick="insertText('#music')">#music</button>
+            <button class="pill tag" onclick="insertText('#idea')">#idea</button>
+            <button class="pill tag" onclick="insertText('#coffee')">#coffee</button>
+            <button class="pill tag" onclick="insertText('#tech')">#tech</button>
+        </div>
+
+        <form action="/publish" method="post" id="status-form">
+            <textarea name="status" id="status-input" placeholder="Punch it, Chewie..." autofocus></textarea>
+            <div id="char-count">0 / 280</div>
+            <button type="submit" id="publish-btn">Publish</button>
+        </form>
+
+        <div class="history-section">
+            <div class="history-title">Recent Comms</div>
+            {% for post in history %}
+            <div class="history-item">{{ post }}</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        const tx = document.getElementById('status-input');
+        const count = document.getElementById('char-count');
+
+        // Combined Insertion Logic
+        function insertText(val) {
+            const space = (tx.value.length > 0 && !tx.value.endsWith(' ')) ? ' ' : '';
+            tx.value += space + val + (val.startsWith('#') ? ' ' : '');
+            tx.focus();
+            updateCount();
+            localStorage.setItem('status_draft', tx.value);
+        }
+
+        // Drafts & Counting
+        tx.value = localStorage.getItem('status_draft') || '';
+        const updateCount = () => {
+            const len = tx.value.length;
+            count.innerText = `${len} / 280`;
+            count.classList.toggle('warn', len > 240);
+            count.classList.toggle('danger', len > 280);
+        };
+        updateCount();
+
+        tx.addEventListener('input', () => {
+            localStorage.setItem('status_draft', tx.value);
+            updateCount();
+        });
+
+        document.getElementById('status-form').addEventListener('submit', () => {
+            localStorage.removeItem('status_draft');
+        });
+
+        // Pull to Refresh
+        let startY = 0;
+        const ptr = document.getElementById('ptr');
+        window.addEventListener('touchstart', (e) => { if (window.scrollY === 0) startY = e.touches[0].pageY; }, {passive: true});
+        window.addEventListener('touchmove', (e) => {
+            const y = e.touches[0].pageY;
+            if (window.scrollY === 0 && y > startY) {
+                const diff = Math.min((y - startY) * 0.4, 60);
+                ptr.style.height = diff + 'px';
+                if (diff >= 50) ptr.innerText = "Release to Refresh";
+            }
+        }, {passive: true});
+        window.addEventListener('touchend', () => {
+            if (parseInt(ptr.style.height) >= 50) { location.reload(); } else { ptr.style.height = '0px'; }
+        });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+    </script>
 </body>
 </html>
