@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2026-03-28 01:06:30 -0400
+layout: status_update
+author: aaron
+source: web
+---
+✨ blown away by what is possible these days. definitely going to be sharing some of what I have built in a post later!
