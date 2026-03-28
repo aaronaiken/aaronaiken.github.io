@@ -1,23 +1,137 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta http-equiv="refresh" content="1.5;url=/publish">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Transmission Sent</title>
     <style>
-        body { background: #000; color: #fff; font-family: -apple-system; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .checkmark { width: 80px; height: 80px; border-radius: 50%; display: block; stroke-width: 2; stroke: #4bb543; stroke-miterlimit: 10; animation: scale .3s ease-in-out .9s both; }
-        .checkmark__circle { stroke-dasharray: 166; stroke-dashoffset: 166; stroke-width: 2; stroke-miterlimit: 10; stroke: #4bb543; fill: none; animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards; }
-        .checkmark__check { transform-origin: 50% 50%; stroke-dasharray: 48; stroke-dashoffset: 48; stroke: #4bb543; stroke-width: 3; fill: none; animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards; }
-        @keyframes stroke { 100% { stroke-dashoffset: 0; } }
-        @keyframes scale { 0%, 100% { transform: none; } 50% { transform: scale3d(1.1, 1.1, 1); } }
-        h2 { font-weight: 200; letter-spacing: 2px; margin-top: 20px; color: #4bb543; font-size: 14px; text-transform: uppercase; }
+        :root {
+            --bg: #000;
+            --text: #fff;
+            --accent: #4bb543; /* Green for success */
+            --button-bg: #1c1c1e;
+        }
+
+        [data-theme="light"] {
+            --bg: #f2f2f7;
+            --text: #000;
+            --accent: #34c759;
+            --button-bg: #e5e5ea;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            padding-top: env(safe-area-inset-top, 20px);
+            transition: background 0.3s ease;
+        }
+
+        .success-container {
+            text-align: center;
+            animation: arrive 0.6s cubic-bezier(0.2, 0, 0.2, 1);
+        }
+
+        @keyframes arrive {
+            0% { transform: scale(3); filter: blur(20px); opacity: 0; }
+            100% { transform: scale(1); filter: blur(0); opacity: 1; }
+        }
+
+        .check-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            box-shadow: 0 0 30px rgba(75, 181, 67, 0.4);
+        }
+
+        h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px; }
+        p { color: #888; font-size: 16px; margin-bottom: 40px; }
+
+        .back-btn {
+            background: var(--button-bg);
+            color: var(--text);
+            border: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: transform 0.2s, opacity 0.2s;
+            display: inline-block;
+            -webkit-appearance: none;
+        }
+
+        .back-btn:active { transform: scale(0.95); opacity: 0.8; }
+
+        /* Exit Animation */
+        .exit-hyperspace {
+            animation: depart 0.4s forwards cubic-bezier(0.5, 0, 0.5, 1);
+        }
+
+        @keyframes depart {
+            to { transform: scale(0.1) translateY(-1000px); filter: blur(20px); opacity: 0; }
+        }
     </style>
 </head>
 <body>
-    <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
-        <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
-        <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
-    </svg>
-    <h2>SENT</h2>
+
+    <div class="success-container" id="success-ui">
+        <div class="check-circle">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+        </div>
+        <h1>Transmission Sent</h1>
+        <p>Your status is now live.</p>
+
+        <a href="/publish" class="back-btn" onclick="returnToCockpit(event)">Return to Cockpit</a>
+    </div>
+
+    <script>
+        // Apply saved theme immediately
+        const savedTheme = localStorage.getItem('cockpit-theme') ||
+            (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        function triggerHaptic(type) {
+            if ("vibrate" in navigator) {
+                if (type === 'tap') navigator.vibrate(15);
+            }
+        }
+
+        function returnToCockpit(e) {
+            e.preventDefault();
+            triggerHaptic('tap');
+            const ui = document.getElementById('success-ui');
+            ui.classList.add('exit-hyperspace');
+
+            setTimeout(() => {
+                window.location.href = e.target.href;
+            }, 350);
+        }
+
+        // Auto-return after 3 seconds if user does nothing
+        setTimeout(() => {
+            const ui = document.getElementById('success-ui');
+            if (!ui.classList.contains('exit-hyperspace')) {
+                ui.classList.add('exit-hyperspace');
+                setTimeout(() => window.location.href = "/publish", 350);
+            }
+        }, 3000);
+    </script>
 </body>
 </html>

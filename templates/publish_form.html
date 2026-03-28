@@ -7,40 +7,84 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Cockpit</title>
     <style>
-        :root { --bg: #000; --text: #fff; --input-bg: #1c1c1e; --accent: #0a84ff; --border: #333; }
-        body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; display: flex; justify-content: center; overscroll-behavior-y: contain; overflow-x: hidden; }
-        .container { width: 100%; max-width: 500px; padding: 20px; padding-top: 40px; box-sizing: border-box; transition: transform 0.6s cubic-bezier(0.5, 0, 0.5, 1), opacity 0.4s ease-in; }
-
-        /* Hyperspace Animation Class */
-        .hyperspace {
-            transform: scale(0.1) translateY(-1000px);
-            filter: blur(20px);
-            opacity: 0;
-            pointer-events: none;
+        :root {
+            /* Default Dark (OLED) */
+            --bg: #000;
+            --text: #fff;
+            --input-bg: #1c1c1e;
+            --accent: #0a84ff;
+            --border: #333;
+            --pill-bg: #1c1c1e;
+            --history-border: #111;
         }
 
-        #ptr { text-align: center; color: #444; font-size: 10px; height: 0; overflow: hidden; transition: height 0.2s; text-transform: uppercase; letter-spacing: 1px; }
+        [data-theme="light"] {
+            --bg: #f2f2f7;
+            --text: #000;
+            --input-bg: #fff;
+            --accent: #007aff;
+            --border: #d1d1d6;
+            --pill-bg: #e5e5ea;
+            --history-border: #e5e5ea;
+        }
 
-        .status-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-        .dot-container { display: flex; align-items: center; gap: 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #444; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            overscroll-behavior-y: contain;
+            overflow-x: hidden;
+            /* Fix for Dynamic Island / Notch */
+            padding-top: env(safe-area-inset-top, 20px);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            box-sizing: border-box;
+            transition: transform 0.6s cubic-bezier(0.5, 0, 0.5, 1), opacity 0.4s ease-in;
+        }
+
+        .hyperspace { transform: scale(0.1) translateY(-1000px); filter: blur(20px); opacity: 0; pointer-events: none; }
+
+        .status-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-top: 10px; }
+
+        .controls-right { display: flex; align-items: center; gap: 15px; }
+
+        /* Theme Toggle Button */
+        .theme-toggle {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .dot-container { display: flex; align-items: center; gap: 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
         .dot { width: 8px; height: 8px; border-radius: 50%; }
         .dot.online { background: #4bb543; box-shadow: 0 0 8px #4bb543; }
         .dot.syncing { background: #ffd700; box-shadow: 0 0 8px #ffd700; }
         .dot.offline { background: #ff4500; box-shadow: 0 0 8px #ff4500; }
-        .logout { color: #444; text-decoration: none; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+
+        .logout { color: #888; text-decoration: none; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
 
         .scroller { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 5px; -webkit-overflow-scrolling: touch; }
         .scroller::-webkit-scrollbar { display: none; }
 
-        .pill { background: #1c1c1e; border: 1px solid var(--border); color: #fff; padding: 8px 14px; border-radius: 20px; font-size: 14px; white-space: nowrap; cursor: pointer; -webkit-appearance: none; }
-        .pill.tag { color: var(--accent); font-weight: 500; border-color: #222; }
-        .pill:active { background: var(--accent); border-color: var(--accent); }
+        .pill { background: var(--pill-bg); border: 1px solid var(--border); color: var(--text); padding: 8px 14px; border-radius: 20px; font-size: 14px; white-space: nowrap; cursor: pointer; -webkit-appearance: none; }
+        .pill.tag { color: var(--accent); font-weight: 500; }
 
         textarea {
             width: 100%;
             height: 160px;
             background: var(--input-bg);
-            color: #fff;
+            color: var(--text);
             border: 1px solid var(--border);
             border-radius: 14px;
             padding: 15px;
@@ -54,31 +98,28 @@
 
         textarea:focus {
             border-color: var(--accent) !important;
-            box-shadow: 0 0 20px rgba(10, 132, 255, 0.5);
+            box-shadow: 0 0 20px rgba(10, 132, 255, 0.3);
         }
 
-        #char-count { text-align: right; font-size: 12px; color: #444; margin-top: 8px; font-variant-numeric: tabular-nums; }
-        .warn { color: #ffd700 !important; }
-        .danger { color: #ff4500 !important; }
+        #char-count { text-align: right; font-size: 12px; color: #888; margin-top: 8px; }
 
-        button#publish-btn { width: 100%; background: var(--accent); color: #fff; border: none; padding: 18px; border-radius: 14px; font-size: 18px; font-weight: 600; margin-top: 20px; -webkit-appearance: none; cursor: pointer; transition: transform 0.1s; }
-        button#publish-btn:active { transform: scale(0.96); }
+        button#publish-btn { width: 100%; background: var(--accent); color: #fff; border: none; padding: 18px; border-radius: 14px; font-size: 18px; font-weight: 600; margin-top: 20px; -webkit-appearance: none; cursor: pointer; }
 
-        .history-section { margin-top: 40px; border-top: 1px solid #222; padding-top: 20px; }
-        .history-title { color: #333; font-size: 11px; text-transform: uppercase; margin-bottom: 20px; letter-spacing: 1px; }
-        .history-item { color: #888; font-size: 15px; margin-bottom: 18px; line-height: 1.5; padding-bottom: 18px; border-bottom: 1px solid #111; }
+        .history-section { margin-top: 40px; border-top: 1px solid var(--border); padding-top: 20px; }
+        .history-item { color: #888; font-size: 15px; margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--history-border); }
     </style>
 </head>
 <body>
     <div class="container" id="main-cockpit">
-        <div id="ptr">Pull to Refresh</div>
-
         <div class="status-bar">
             <div class="dot-container">
                 <div class="dot {{ git_status }}"></div>
                 Systems {{ git_status }}
             </div>
-            <a href="/logout" class="logout">Power Down</a>
+            <div class="controls-right">
+                <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">🌓</button>
+                <a href="/logout" class="logout">Power Down</a>
+            </div>
         </div>
 
         <div class="scroller">
@@ -107,7 +148,6 @@
         </form>
 
         <div class="history-section">
-            <div class="history-title">Recent Comms</div>
             {% for post in history %}
             <div class="history-item">{{ post }}</div>
             {% endfor %}
@@ -116,14 +156,29 @@
 
     <script>
         const tx = document.getElementById('status-input');
-        const count = document.getElementById('char-count');
-        const form = document.getElementById('status-form');
         const cockpit = document.getElementById('main-cockpit');
 
+        // Theme Management
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const target = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', target);
+            localStorage.setItem('cockpit-theme', target);
+            triggerHaptic('tap');
+        }
+
+        // Apply saved theme on boot
+        const savedTheme = localStorage.getItem('cockpit-theme') ||
+            (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        // Enhanced Haptics
         function triggerHaptic(type) {
             if ("vibrate" in navigator) {
-                if (type === 'tap') navigator.vibrate(10);
-                else if (type === 'publish') navigator.vibrate([30, 50, 30]);
+                try {
+                    if (type === 'tap') navigator.vibrate(15);
+                    else if (type === 'publish') navigator.vibrate([40, 60, 40]);
+                } catch(e) { console.log("Haptics blocked"); }
             }
         }
 
@@ -132,17 +187,16 @@
             const space = (tx.value.length > 0 && !tx.value.endsWith(' ')) ? ' ' : '';
             tx.value += space + val + (val.startsWith('#') ? ' ' : '');
             tx.focus();
-            updateCount();
             localStorage.setItem('status_draft', tx.value);
+            updateCount();
+        }
+
+        function updateCount() {
+            const len = tx.value.length;
+            document.getElementById('char-count').innerText = `${len} / 280`;
         }
 
         tx.value = localStorage.getItem('status_draft') || '';
-        const updateCount = () => {
-            const len = tx.value.length;
-            count.innerText = `${len} / 280`;
-            count.classList.toggle('warn', len > 240);
-            count.classList.toggle('danger', len > 280);
-        };
         updateCount();
 
         tx.addEventListener('input', () => {
@@ -150,41 +204,13 @@
             updateCount();
         });
 
-        form.addEventListener('submit', (e) => {
-            // 1. Trigger Haptic
+        document.getElementById('status-form').addEventListener('submit', (e) => {
             triggerHaptic('publish');
-
-            // 2. Clear Draft
             localStorage.removeItem('status_draft');
-
-            // 3. JUMP TO HYPERSPACE
             cockpit.classList.add('hyperspace');
-
-            // 4. Delay the actual POST just slightly to let the animation start
             e.preventDefault();
-            setTimeout(() => {
-                form.submit();
-            }, 400);
+            setTimeout(() => e.target.submit(), 450);
         });
-
-        // Pull to Refresh logic stays same
-        let startY = 0;
-        const ptr = document.getElementById('ptr');
-        window.addEventListener('touchstart', (e) => { if (window.scrollY === 0) startY = e.touches[0].pageY; }, {passive: true});
-        window.addEventListener('touchmove', (e) => {
-            const y = e.touches[0].pageY;
-            if (window.scrollY === 0 && y > startY) {
-                const diff = Math.min((y - startY) * 0.4, 60);
-                ptr.style.height = diff + 'px';
-                if (diff >= 50) ptr.innerText = "Release to Refresh";
-            }
-        }, {passive: true});
-        window.addEventListener('touchend', () => {
-            if (parseInt(ptr.style.height) >= 50) { triggerHaptic('tap'); location.reload(); }
-            else { ptr.style.height = '0px'; }
-        });
-
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
     </script>
 </body>
 </html>
