@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2026-03-27 23:42:35 -0400
+layout: status_update
+author: aaron
+source: web
+---
+🥃 pouring a smidge more. Family is sleeping. I’m exhausted but have a few more things I want to tweak. 
