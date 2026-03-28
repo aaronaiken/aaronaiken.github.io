@@ -163,7 +163,7 @@ def publish_status():
 
         return "Status update published via web!", 200
     else:
-        return render_template('publish_form.html')
+        return render_template('success.html')
 
 if __name__ == "__main__":
     app.run(debug=True)
