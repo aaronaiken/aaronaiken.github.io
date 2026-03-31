@@ -1,0 +1,6 @@
+---
+title: Status
+date: 2026-03-31 17:19:34 -0400
+layout: status_update
+---
+🐍 Python has become a goto for a lot of personal and work stuff lately. Not sure where it has been my entire life, not sure why I didn't use it before, but man am I glad to have gotten into it!
