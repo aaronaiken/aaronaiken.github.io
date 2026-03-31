@@ -15,3 +15,4 @@ id_rsa.pub
 ssh
 ssh.pub
 
+static/comms.txt

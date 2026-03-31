@@ -10,7 +10,7 @@
     :root {
         --bg: #000; --text: #eee; --input-bg: #0a0a0a; --accent: #0a84ff; --border: #333;
         --pill-bg: #111; --shield: #4bb543; --heat: rgba(10, 132, 255, 0);
-        --muted: #aaa; /* Brighter grey for readability */
+        --muted: #aaa;
     }
 
     [data-theme="light"] {
@@ -22,6 +22,7 @@
         background: var(--bg); color: var(--text); font-family: 'Courier New', Courier, monospace;
         margin: 0; display: flex; justify-content: center; overscroll-behavior-y: contain;
         overflow-x: hidden; padding-top: env(safe-area-inset-top, 20px);
+        transition: background 0.3s ease;
     }
 
     .container { width: 100%; max-width: 500px; padding: 20px; transition: transform 0.6s cubic-bezier(0.5, 0, 0.5, 1), opacity 0.4s ease-in; }
@@ -31,7 +32,6 @@
     .status-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
     .systems-group { display: flex; align-items: center; gap: 12px; }
 
-    /* GitHub Dot Styles */
     .dot { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 5px currentColor; }
     .online { background: #4bb543; color: #4bb543; }
     .syncing { background: #ffd700; color: #ffd700; }
@@ -39,27 +39,30 @@
 
     .shield-meter { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
     .shield-bar { width: 50px; height: 4px; background: #111; border-radius: 2px; overflow: hidden; border: 1px solid #333; }
-    .shield-fill { height: 100%; width: 0%; background: var(--shield) !important; transition: width 0.5s, background 0.5s; box-shadow: 0 0 8px var(--shield); }
+    .shield-fill { height: 100%; width: 0%; background: var(--shield); transition: width 0.5s, background 0.5s; box-shadow: 0 0 8px var(--shield); }
 
-    /* Secret Comm Message - Moved down to avoid emoji overlap */
+    /* Secret Comm Message */
     #secret-comm {
-        position: fixed; top: 35%; left: 0; width: 100%; text-align: center;
-        font-style: italic; color: var(--accent); opacity: 0; pointer-events: none;
-        transition: opacity 0.8s; font-size: 16px; letter-spacing: 1px; text-shadow: 0 0 15px var(--accent);
-        z-index: 1000; padding: 0 20px; box-sizing: border-box;
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        width: 85%; text-align: center; font-style: italic; color: #ff007f;
+        opacity: 0; pointer-events: none; transition: opacity 0.8s ease-in-out;
+        font-size: 20px; font-weight: 300; letter-spacing: 2px;
+        text-shadow: 0 0 20px #8a2be2, 0 0 40px #ff007f; z-index: 999;
     }
 
     .scroller { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
     .scroller::-webkit-scrollbar { display: none; }
     .pill { background: var(--pill-bg); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; transition: 0.2s; }
     .pill:active { background: var(--accent); color: #fff; }
+    .util { font-weight: bold; border-color: var(--accent); color: var(--accent); }
 
     .input-wrap { position: relative; margin-top: 10px; }
     textarea {
         width: 100%; height: 180px; background: var(--input-bg); color: var(--text);
         border: 1px solid var(--border); border-radius: 4px; padding: 15px; font-size: 16px;
         outline: none; box-sizing: border-box; resize: none; -webkit-appearance: none;
-        box-shadow: 0 0 20px var(--heat); transition: box-shadow 0.2s ease;
+        box-shadow: 0 0 20px var(--heat); transition: box-shadow 0.2s ease, border-color 0.2s;
+        font-family: inherit;
     }
 
     button#publish-btn {
@@ -70,37 +73,60 @@
     }
     button#publish-btn:active { background: var(--accent); color: #000; }
 
-    /* System Log (History) */
     .history-section { margin-top: 40px; }
     .log-header { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 15px; }
     .history-item { color: var(--muted); font-size: 13px; margin-bottom: 12px; line-height: 1.4; border-left: 2px solid var(--accent); padding-left: 10px; }
-</style>
+
+    @media (min-width: 768px) {
+        .container {
+            margin-top: 50px; border: 1px solid var(--border); border-radius: 20px;
+            background: rgba(28, 28, 30, 0.5); backdrop-filter: blur(10px);
+            box-shadow: 0 0 40px rgba(0,0,0,0.8);
+        }
+        body::before {
+            content: " "; display: block; position: fixed; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            z-index: 9999; pointer-events: none; background-size: 100% 4px, 3px 100%;
+        }
+    }
+    </style>
 </head>
 <body>
-    <body>
-    <div id="secret-comm">"INITIALIZING LINK..."</div>
+    <div id="secret-comm">INITIALIZING LINK...</div>
 
     <div class="container" id="main-cockpit">
         <div class="status-bar">
             <div class="systems-group">
                 <div class="dot {{ git_status if git_status else 'online' }}"></div>
-
                 <div class="shield-meter">
                     SHIELDS <div class="shield-bar"><div id="shield-fill" class="shield-fill"></div></div>
                 </div>
             </div>
             <div style="display: flex; gap: 15px;">
-                <button style="background:none; border:none; color:var(--muted); font-size:12px; font-family:inherit;" onclick="toggleTheme()">THEME</button>
+                <button style="background:none; border:none; color:var(--muted); font-size:12px; font-family:inherit; cursor:pointer;" onclick="toggleTheme()">THEME</button>
                 <a href="/logout" style="color:var(--muted); text-decoration:none; font-size:12px;">OFF</a>
             </div>
         </div>
 
         <div class="scroller">
             <button class="pill" onclick="insertText('🚀')">🚀</button>
-            <button class="pill" ontouchstart="startSecret()" ontouchend="endSecret()" onclick="insertText('🛰️')">🛰️</button>
+            <button class="pill"
+                onclick="insertText('🛰️')"
+                ontouchstart="startSecret()"
+                ontouchend="endSecret()"
+                oncontextmenu="event.preventDefault(); triggerDesktopSecret(); return false;">
+                🛰️
+            </button>
             <button class="pill" onclick="insertText('☕️')">☕️</button>
             <button class="pill" onclick="insertText('💻')">💻</button>
             <button class="pill" onclick="insertText('🛠️')">🛠️</button>
+        </div>
+
+        <div class="scroller utility-belt">
+            <button class="pill util" onclick="wrapText('**', '**')">B</button>
+            <button class="pill util" onclick="wrapText('*', '*')">I</button>
+            <button class="pill util" onclick="smartURL()">🔗 Link</button>
         </div>
 
         <div class="input-wrap">
@@ -123,81 +149,82 @@
         const tx = document.getElementById('status-input');
         const secretDisplay = document.getElementById('secret-comm');
 
-        const transmissions = [
-            "Signal received, Commander. I'm waiting in the nebula...",
-            "Sensors picking up a heat signature in your sector. Is that you?",
-            "Keep your shields up, Aaron. I'd hate to see you take a hit.",
-            "The dark looks good on you. Let's stay off the radar.",
-            "Frequency locked. I'm all yours for this transmission.",
-            "System check complete. You're looking... fully operational.",
-            "Coordinates received. Meet me at the event horizon.",
-            "Careful with that hyperdrive, I need you in one piece.",
-            "I've cleared the channel. Tell me everything.",
-            "Data stream is peaking. You always did have a strong signal.",
-            "Locked onto your position. Don't keep me waiting in the dark.",
-            "Warning: Life signs increasing. Are we alone on this channel?",
-            "Is it getting hot in the cockpit, or is it just your reactor?",
-            "I like the way you handle the controls. Smooth and steady.",
-            "Transmission confirmed. I can feel your pulse from here.",
-            "The stars are quiet tonight. Just you, me, and the void.",
-            "You're pushing the redline, Aaron. I like a man who takes risks.",
-            "I'm tracking your telemetry... and I like what I see.",
-            "The connection is intimate. Don't break the link yet."
+        // Backup messages if comms.txt is unavailable
+        let transmissions = [
+            "Signal interference detected. Encryption holding...",
+            "The nebula is thick tonight. Keep the link open.",
+            "Waiting for your signal, Commander.",
+            "Telemetric link established. Proceed with caution."
         ];
 
-        // Heat Logic: Glow intensifies as you type
+        // Fetch private messages
+        fetch('/static/comms.txt')
+            .then(response => {
+                if (!response.ok) throw new Error('Data restricted');
+                return response.text();
+            })
+            .then(data => {
+                const lines = data.split('\n').filter(line => line.trim() !== "");
+                if (lines.length > 0) transmissions = lines;
+            })
+            .catch(err => {
+                console.log("Comms file offline. Falling back to local encrypted cache.");
+                // Error visual cue: glitch the secret display briefly
+                secretDisplay.innerText = "ERROR: SUB-SPACE LINK OFFLINE";
+                secretDisplay.style.color = "#ff4500";
+            });
+
         function updateHeat() {
-            const length = tx.value.length;
-            const intensity = Math.min(length / 280, 1);
+            const intensity = Math.min(tx.value.length / 280, 1);
             tx.style.setProperty('--heat', `rgba(10, 132, 255, ${intensity * 0.4})`);
             tx.style.borderColor = `rgba(10, 132, 255, ${0.2 + (intensity * 0.8)})`;
         }
 
-        // Shield Logic
+        function wrapText(before, after) {
+            const start = tx.selectionStart, end = tx.selectionEnd;
+            const selected = tx.value.substring(start, end);
+            tx.value = tx.value.substring(0, start) + before + selected + after + tx.value.substring(end);
+            tx.focus();
+            tx.setSelectionRange(start + before.length, start + before.length + selected.length);
+        }
+
+        async function smartURL() {
+            const start = tx.selectionStart, end = tx.selectionEnd;
+            const selected = tx.value.substring(start, end) || "link text";
+            try {
+                const clipboard = await navigator.clipboard.readText();
+                tx.value = tx.value.substring(0, start) + `[${selected}](${clipboard})` + tx.value.substring(end);
+            } catch (e) { wrapText('[', '](url)'); }
+        }
+
         if (navigator.getBattery) {
             navigator.getBattery().then(battery => {
-                const updateSystems = () => {
+                const update = () => {
                     const level = battery.level * 100;
-                    const fill = document.getElementById('shield-fill');
-                    fill.style.width = level + '%';
-                    if (level < 20) fill.style.background = '#ff4500';
-                    else if (level < 50) fill.style.background = '#ffd700';
-                    else fill.style.background = '#4bb543';
-
-                    if (level > 90) tx.placeholder = "SHIELDS MAXIMIZED. ENGAGE?";
-                    else tx.placeholder = "READY FOR INPUT...";
+                    document.getElementById('shield-fill').style.width = level + '%';
+                    tx.placeholder = level > 90 ? "SHIELDS MAXIMIZED. ENGAGE?" : "READY FOR INPUT...";
                 };
-                updateSystems();
-                battery.addEventListener('levelchange', updateSystems);
+                update();
+                battery.addEventListener('levelchange', update);
             });
         }
 
-        // Easter Egg Logic
-        let secretTimer;
-        function startSecret() {
-            secretTimer = setTimeout(() => {
-                if ("vibrate" in navigator) navigator.vibrate([50, 100, 50]);
-
-                // Trigger the message
-                const msg = transmissions[Math.floor(Math.random() * transmissions.length)];
-                secretDisplay.innerText = `"${msg}"`;
-                secretDisplay.style.opacity = "1";
-
-                // Sexy Easter Egg: The UI "Breaths"
-                document.body.style.transition = "background 2s ease";
-                document.body.style.background = "radial-gradient(circle, #050520 0%, #000 100%)";
-
-                // Inside your startSecret() function...
-                tx.style.boxShadow = "0 0 40px rgba(10, 132, 255, 0.8)"; // The Flare
-                setTimeout(() => { updateHeat(); }, 1000); // Fade back to normal heat
-
-                setTimeout(() => {
-                    secretDisplay.style.opacity = "0";
-                    document.body.style.background = "var(--bg)"; // Return to normal
-                }, 4000);
-            }, 1500);
+        function showSecret() {
+            if ("vibrate" in navigator) navigator.vibrate([30, 80, 30, 80]);
+            const msg = transmissions[Math.floor(Math.random() * transmissions.length)];
+            secretDisplay.innerText = msg;
+            secretDisplay.style.opacity = "1";
+            document.body.style.boxShadow = "inset 0 0 100px rgba(138, 43, 226, 0.4)";
+            setTimeout(() => {
+                secretDisplay.style.opacity = "0";
+                document.body.style.boxShadow = "none";
+            }, 4000);
         }
+
+        let secretTimer;
+        function startSecret() { secretTimer = setTimeout(showSecret, 1500); }
         function endSecret() { clearTimeout(secretTimer); }
+        function triggerDesktopSecret() { showSecret(); }
 
         function toggleTheme() {
             const target = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
@@ -214,8 +241,8 @@
         document.getElementById('status-form').addEventListener('submit', (e) => {
             if ("vibrate" in navigator) navigator.vibrate([30, 50, 30]);
             cockpit.classList.add('hyperspace');
-            e.preventDefault();
             setTimeout(() => e.target.submit(), 450);
+            e.preventDefault();
         });
 
         const savedTheme = localStorage.getItem('cockpit-theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
