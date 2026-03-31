@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2026-03-31 00:01:54 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+🔬 sometimes, after a long work day and an evening full of family time, staying up to tinker is a nice way to wind down.
