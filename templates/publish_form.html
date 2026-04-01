@@ -14,7 +14,7 @@
     :root {
         --bg: #000; --text: #eee; --input-bg: #0a0a0a; --accent: #0a84ff; --border: #333;
         --pill-bg: #111; --shield: #4bb543; --heat: rgba(10, 132, 255, 0);
-        --muted: #aaa;
+        --muted: #aaa; --secret-neon: #ff00ff;
     }
 
     [data-theme="light"] {
@@ -29,7 +29,7 @@
         transition: background 0.3s ease;
     }
 
-    /* Scanline Drift Animation - The "Global Layer" */
+    /* Scanline Drift Animation */
     @keyframes scanline-drift {
         0% { transform: translateY(0); }
         100% { transform: translateY(100%); }
@@ -61,6 +61,17 @@
     .shield-bar { width: 50px; height: 4px; background: #111; border-radius: 2px; overflow: hidden; border: 1px solid #333; }
     .shield-fill { height: 100%; width: 0%; background: var(--shield); transition: width 0.5s, background 0.5s; box-shadow: 0 0 8px var(--shield); }
 
+    /* Secret Comms Overlay */
+    #secret-comm {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.95); z-index: 10000;
+        display: none; flex-direction: column; align-items: center; justify-content: center;
+        opacity: 0; transition: opacity 0.5s ease; padding: 40px; text-align: center;
+    }
+    #secret-text { color: var(--secret-neon); font-size: 18px; text-shadow: 0 0 15px var(--secret-neon); letter-spacing: 2px; margin-bottom: 10px; }
+    .terminal-cursor { display: inline-block; width: 10px; height: 20px; background: var(--secret-neon); animation: blink 1s infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+
     /* UI Elements */
     .scroller { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
     .scroller::-webkit-scrollbar { display: none; }
@@ -77,17 +88,12 @@
         font-family: inherit;
     }
 
-    /* Redline HUD Stress */
     @keyframes redline-pulse {
         0% { box-shadow: 0 0 10px rgba(255, 69, 0, 0.2); }
         50% { box-shadow: 0 0 30px rgba(255, 69, 0, 0.6); }
         100% { box-shadow: 0 0 10px rgba(255, 69, 0, 0.2); }
     }
-
-    .redline {
-        animation: redline-pulse 1.5s infinite ease-in-out;
-        border-color: #ff4500 !important;
-    }
+    .redline { animation: redline-pulse 1.5s infinite ease-in-out; border-color: #ff4500 !important; }
 
     button#publish-btn {
         width: 100%; background: none; border: 1px solid var(--accent); color: var(--accent);
@@ -107,12 +113,11 @@
             background: rgba(28, 28, 30, 0.5); backdrop-filter: blur(10px);
             box-shadow: 0 0 40px rgba(0,0,0,0.8);
         }
-        /* body::before removed from here to prevent override issues */
     }
 </style>
 </head>
 <body>
-    <div id="secret-comm" onclick="closeSecret()">
+    <div id="secret-comm">
         <div id="secret-text"></div>
         <span class="terminal-cursor"></span>
     </div>
@@ -175,7 +180,6 @@
         const secretDisplay = document.getElementById('secret-comm');
         const charCount = document.getElementById('char-count');
 
-        // --- Sub-Space Comms Setup ---
         let transmissions = [
             "Signal interference detected. Encryption holding...",
             "The nebula is thick tonight. Keep the link open.",
@@ -194,21 +198,16 @@
             })
             .catch(err => {
                 console.log("Comms file offline. Using local encrypted cache.");
-                secretDisplay.innerText = "ERROR: SUB-SPACE LINK OFFLINE";
-                secretDisplay.style.color = "#ff4500";
+                const st = document.getElementById('secret-text');
+                st.innerText = "ERROR: SUB-SPACE LINK OFFLINE";
+                st.style.color = "#ff4500";
             });
 
-        // --- HUD & Heat Logic ---
-        // Dynamic HUD: Character Count, Heat, and Redline
         function updateHUD() {
             const length = tx.value.length;
             charCount.innerText = length;
-
-            // Calculate intensity for blue heat
             const intensity = Math.min(length / 280, 1);
             tx.style.setProperty('--heat', `rgba(10, 132, 255, ${intensity * 0.4})`);
-
-            // REDLINE: If you're pushing the character limit, the cockpit "stresses"
             if (length > 250) {
                 tx.classList.add('redline');
                 charCount.style.color = "#ff4500";
@@ -217,11 +216,7 @@
                 charCount.style.color = "var(--muted)";
             }
         }
-        tx.addEventListener('input', updateHUD);
 
-        // --- Signal Integrity (Shields) ---
-        // Pivoting from Battery to Server Latency for a "Space Lady" vibe
-        // Signal-Driven Scanlines
         function updateSignalIntegrity() {
             const start = Date.now();
             fetch('/static/comms.txt', { method: 'HEAD', cache: 'no-store' })
@@ -230,15 +225,11 @@
                     const fill = document.getElementById('shield-fill');
                     let integrity = Math.max(10, 100 - (latency / 5));
                     fill.style.width = integrity + '%';
-
-                    // Adjust scanline speed based on signal
-                    // Worse signal = Faster, "noisier" scanlines
                     const scanSpeed = Math.max(2, (latency / 50));
                     document.body.style.setProperty('--scan-speed', `${scanSpeed}s`);
-
                     if (latency > 300) {
                         fill.style.background = '#ff4500';
-                        document.body.style.filter = "contrast(1.2) brightness(0.8)"; // Signal degradation visual
+                        document.body.style.filter = "contrast(1.2) brightness(0.8)";
                     } else {
                         fill.style.background = integrity < 50 ? '#ffd700' : '#4bb543';
                         document.body.style.filter = "none";
@@ -248,20 +239,16 @@
         setInterval(updateSignalIntegrity, 30000);
         updateSignalIntegrity();
 
-        // --- Secret Terminal Logic ---
-                function showSecret() {
-            // Keep your existing vibration for haptic feedback
+        function showSecret() {
             if ("vibrate" in navigator) navigator.vibrate([30, 80, 30, 80]);
-
-            // TRIGGER THE CHIRP: High-pitched 'square' wave sounds like a data burst
             playChirp(880, 'square');
-
             const msg = transmissions[Math.floor(Math.random() * transmissions.length)];
-            secretDisplay.innerText = msg;
-            secretDisplay.style.display = 'flex';
-            secretDisplay.style.opacity = "1";
+            const textTarget = document.getElementById('secret-text');
+            textTarget.innerText = msg;
 
-            // Add listener to close on next tap/click
+            secretDisplay.style.display = 'flex';
+            setTimeout(() => { secretDisplay.style.opacity = "1"; }, 10);
+
             setTimeout(() => {
                 window.addEventListener('click', closeSecret, { once: true });
                 window.addEventListener('touchstart', closeSecret, { once: true });
@@ -270,9 +257,7 @@
 
         function closeSecret() {
             secretDisplay.style.opacity = "0";
-            setTimeout(() => {
-                secretDisplay.style.display = 'none';
-            }, 500);
+            setTimeout(() => { secretDisplay.style.display = 'none'; }, 500);
         }
 
         let secretTimer;
@@ -280,7 +265,6 @@
         function endSecret() { clearTimeout(secretTimer); }
         function triggerDesktopSecret() { showSecret(); }
 
-        // --- System Utilities ---
         function wrapText(before, after) {
             const start = tx.selectionStart, end = tx.selectionEnd;
             const selected = tx.value.substring(start, end);
@@ -307,7 +291,7 @@
         }
 
         function insertText(val) {
-            playChirp(440, 'sine'); // Soft, tactile feedback chirp
+            playChirp(440, 'sine');
             tx.value += (tx.value.length > 0 && !tx.value.endsWith(' ') ? ' ' : '') + val;
             updateHUD();
             tx.focus();
@@ -320,30 +304,22 @@
             e.preventDefault();
         });
 
-        // --- Initialization & Audio Engine ---
         const savedTheme = localStorage.getItem('cockpit-theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
         document.documentElement.setAttribute('data-theme', savedTheme);
         updateHUD();
 
-        // Global Audio Context (Wakes up on first user interaction)
         let audioCtx;
-
         function playChirp(freq = 440, type = 'sine') {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
-
             oscillator.type = type;
             oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
             oscillator.frequency.exponentialRampToValueAtTime(freq * 2, audioCtx.currentTime + 0.1);
-
-            gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime); // Lowered to 5% for subtle feedback
+            gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
             gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
-
             oscillator.start();
             oscillator.stop(audioCtx.currentTime + 0.1);
         }
