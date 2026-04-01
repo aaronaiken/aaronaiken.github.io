@@ -86,6 +86,23 @@
         line-height: 1.5;
     }
 
+    /* The Pulsing Terminal Cursor */
+    .terminal-cursor {
+        display: inline-block;
+        width: 10px;
+        height: 1.2rem; /* Matches your secret-text font size */
+        background: var(--secret-neon);
+        margin-left: 8px;
+        vertical-align: middle;
+        box-shadow: 0 0 8px var(--secret-neon);
+        animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0; }
+    }
+
     /* UI Elements */
     .scroller { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
     .scroller::-webkit-scrollbar { display: none; }
@@ -133,7 +150,6 @@
 <body>
     <div id="secret-comm">
         <div id="secret-text"></div>
-        <span class="terminal-cursor"></span>
     </div>
 
     <div class="container" id="main-cockpit">
@@ -255,20 +271,30 @@
         updateSignalIntegrity();
 
         function showSecret() {
-            // Cancel any lingering selection from the long-press
+            // 1. Cancel any lingering selection from the long-press
             window.getSelection().removeAllRanges();
 
+            // 2. Feedback
             if ("vibrate" in navigator) navigator.vibrate([30, 80, 30, 80]);
             playChirp(880, 'square');
 
+            // 3. Get message
             const msg = transmissions[Math.floor(Math.random() * transmissions.length)];
             const textTarget = document.getElementById('secret-text');
+
+            // 4. Update text while preserving the cursor
+            // We clear the text, add the new message, then re-append the cursor span
             textTarget.innerText = msg;
 
+            const cursor = document.createElement('span');
+            cursor.className = 'terminal-cursor';
+            textTarget.appendChild(cursor);
+
+            // 5. Display logic
             secretDisplay.style.display = 'flex';
             setTimeout(() => { secretDisplay.style.opacity = "1"; }, 10);
 
-            // Listener to close on tap
+            // 6. Listener to close on tap
             setTimeout(() => {
                 window.addEventListener('click', closeSecret, { once: true });
                 window.addEventListener('touchstart', closeSecret, { once: true });
