@@ -61,18 +61,29 @@
     .shield-bar { width: 50px; height: 4px; background: #111; border-radius: 2px; overflow: hidden; border: 1px solid #333; }
     .shield-fill { height: 100%; width: 0%; background: var(--shield); transition: width 0.5s, background 0.5s; box-shadow: 0 0 8px var(--shield); }
 
-    /* Secret Comms Overlay */
+    /* Secret Comms Overlay - Fixed Centering & No Selection */
     #secret-comm {
-        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        position: fixed; top: 0; left: 0;
+        width: 100vw; height: 100vh;
         background: rgba(0,0,0,0.98); z-index: 10000;
-        display: none; flex-direction: column; align-items: center; justify-content: center;
+        display: none; flex-direction: column;
+        align-items: center; justify-content: center;
         opacity: 0; transition: opacity 0.5s ease;
-        padding: 20px; box-sizing: border-box; /* Prevents edge cutout */
+        padding: 30px; box-sizing: border-box; /* Keeps content inside edges */
+        user-select: none; -webkit-user-select: none; /* Prevents long-press highlight */
+        touch-action: none; /* Prevents scrolling while secret is open */
     }
+
     #secret-text {
-        color: var(--secret-neon); font-size: 1.2rem; text-shadow: 0 0 15px var(--secret-neon);
-        letter-spacing: 2px; text-align: center; max-width: 90%;
-        word-wrap: break-word; overflow-wrap: break-word; /* Fixes the right-side cutoff */
+        color: var(--secret-neon);
+        font-size: 1.2rem;
+        text-shadow: 0 0 15px var(--secret-neon);
+        letter-spacing: 2px;
+        text-align: center;
+        max-width: 100%;
+        word-wrap: break-word;
+        overflow-wrap: break-word; /* Forces wrap on mobile */
+        line-height: 1.5;
     }
 
     /* UI Elements */
@@ -142,6 +153,7 @@
         <div class="scroller">
             <button class="pill" onclick="insertText('🚀')">🚀</button>
             <button class="pill"
+                style="user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;"
                 onclick="insertText('🛰️')"
                 ontouchstart="startSecret()"
                 ontouchend="endSecret()"
@@ -243,8 +255,12 @@
         updateSignalIntegrity();
 
         function showSecret() {
+            // Cancel any lingering selection from the long-press
+            window.getSelection().removeAllRanges();
+
             if ("vibrate" in navigator) navigator.vibrate([30, 80, 30, 80]);
             playChirp(880, 'square');
+
             const msg = transmissions[Math.floor(Math.random() * transmissions.length)];
             const textTarget = document.getElementById('secret-text');
             textTarget.innerText = msg;
@@ -252,10 +268,11 @@
             secretDisplay.style.display = 'flex';
             setTimeout(() => { secretDisplay.style.opacity = "1"; }, 10);
 
+            // Listener to close on tap
             setTimeout(() => {
                 window.addEventListener('click', closeSecret, { once: true });
                 window.addEventListener('touchstart', closeSecret, { once: true });
-            }, 100);
+            }, 300);
         }
 
         function closeSecret() {
