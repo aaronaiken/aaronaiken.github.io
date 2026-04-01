@@ -63,14 +63,17 @@
 
     /* Secret Comms Overlay */
     #secret-comm {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.95); z-index: 10000;
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.98); z-index: 10000;
         display: none; flex-direction: column; align-items: center; justify-content: center;
-        opacity: 0; transition: opacity 0.5s ease; padding: 40px; text-align: center;
+        opacity: 0; transition: opacity 0.5s ease;
+        padding: 20px; box-sizing: border-box; /* Prevents edge cutout */
     }
-    #secret-text { color: var(--secret-neon); font-size: 18px; text-shadow: 0 0 15px var(--secret-neon); letter-spacing: 2px; margin-bottom: 10px; }
-    .terminal-cursor { display: inline-block; width: 10px; height: 20px; background: var(--secret-neon); animation: blink 1s infinite; }
-    @keyframes blink { 50% { opacity: 0; } }
+    #secret-text {
+        color: var(--secret-neon); font-size: 1.2rem; text-shadow: 0 0 15px var(--secret-neon);
+        letter-spacing: 2px; text-align: center; max-width: 90%;
+        word-wrap: break-word; overflow-wrap: break-word; /* Fixes the right-side cutoff */
+    }
 
     /* UI Elements */
     .scroller { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
