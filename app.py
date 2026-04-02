@@ -1,9 +1,17 @@
 from flask import Flask, request, render_template, make_response, redirect, url_for
+from werkzeug.utils import secure_filename # Correct way to get this
+from PIL import Image # Correct way to get Image
 import datetime, os, subprocess, pytz, requests, emoji, glob
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY')
 PASSWORD = os.environ.get('FLASK_PASSWORD')
+
+# Point this to your local clone of the GitHub Pages repo on PythonAnywhere
+UPLOAD_FOLDER = '/home/aaronaiken/status_update/assets/img/status/'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def is_authenticated():
     return request.cookies.get('auth_token') == 'authenticated_user'
@@ -47,23 +55,80 @@ def perform_git_ops(filename):
     subprocess.run(["git", "commit", "-m", "update from cockpit"], check=True)
     subprocess.run(["git", "push", "origin", "main"], check=True)
 
+def optimize_image(input_path, max_width=1200):
+    with Image.open(input_path) as img:
+        # Convert to RGB if it's a PNG/WebP with transparency to ensure JPEG compatibility
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+
+        # Calculate aspect ratio
+        w_percent = (max_width / float(img.size[0]))
+        if w_percent < 1.0: # Only downscale, never upscale
+            h_size = int((float(img.size[1]) * float(w_percent)))
+            img = img.resize((max_width, h_size), Image.Resampling.LANCZOS)
+
+        # Save with optimization and 85% quality (sweet spot for web)
+        img.save(input_path, "JPEG", optimize=True, quality=85)
+
 @app.route("/publish", methods=['GET', 'POST'])
 def publish_status():
     if not is_authenticated(): return redirect(url_for('login'))
+
     if request.method == 'POST':
         txt = request.form['status']
+        image_file = request.files.get('image')  # Grab the payload
+
         now = datetime.datetime.now(pytz.timezone('America/New_York'))
         fn = now.strftime("_status_updates/%Y-%m-%d-%H%M%S.markdown")
+
+        # 1. Process Image Payload (if exists)
+        image_markdown = ""
+        has_image = False
+
+        if image_file and image_file.filename != '':
+            has_image = True
+
+            # Ensure your assets directory exists
+            img_dir = "assets/img/status"
+            os.makedirs(img_dir, exist_ok=True)
+
+            # Secure filename and add timestamp to prevent overwrites
+            img_name = secure_filename(image_file.filename)
+            img_path_fs = os.path.join(img_dir, f"{now.strftime('%Y%m%d%H%M%S')}-{img_name}")
+
+            # Save the actual file to your local Jekyll repo clone
+            image_file.save(img_path_fs)
+
+            # ADD THIS LINE: Run the optimization/resize
+            optimize_image(img_path_fs)
+
+            # Prepare the Markdown string (relative to your site root)
+            image_markdown = f"\n\n![Status Image](/{img_path_fs})"
+
+        # 2. Build Front Matter
         tags = [t for t in ["movie", "book", "music", "idea", "coffee"] if f"#{t}" in txt.lower()]
         fm = f"---\ntitle: Status\ndate: {now.strftime('%Y-%m-%d %H:%M:%S %z')}\nlayout: status_update\n"
         if tags: fm += f"tags: {tags}\n"
-        fm += f"---\n{txt}\n"
+
+        # 3. Assemble Full Markdown Content
+        full_markdown = f"{fm}---\n{txt}{image_markdown}\n"
+
+        # 4. Save and Push
         os.makedirs("_status_updates", exist_ok=True)
-        with open(fn, "w") as f: f.write(fm)
+        with open(fn, "w") as f:
+            f.write(full_markdown)
+
+        # This will now push both the .markdown file AND the new image in assets/
         perform_git_ops(fn)
-        post_to_omg_lol(txt)
+
+        # 5. The OMG.lol Fork
+        # Only post to OMG if there is NO image (since OMG won't host the binary)
+        if not has_image:
+            post_to_omg_lol(txt)
+
         return render_template('success.html')
 
+    # GET request remains the same
     files = sorted(glob.glob("_status_updates/*.markdown"), reverse=True)[:3]
     history = [open(f).read().split("---")[-1].strip() for f in files]
     return render_template('publish_form.html', history=history, git_status=get_git_status())
