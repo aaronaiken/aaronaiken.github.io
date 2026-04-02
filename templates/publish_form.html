@@ -145,6 +145,22 @@
             box-shadow: 0 0 40px rgba(0,0,0,0.8);
         }
     }
+
+    #payload-label {
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    }
+
+    #payload-label:hover {
+        background: rgba(255, 0, 255, 0.1); /* Subtle neon glow */
+        box-shadow: 0 0 5px var(--accent);
+    }
+
+    #payload-name {
+        font-weight: bold;
+        text-shadow: 0 0 5px var(--secret-neon);
+    }
 </style>
 </head>
 <body>
@@ -188,11 +204,21 @@
         </div>
 
         <div class="input-wrap">
-            <form action="/publish" method="post" id="status-form">
+            <form action="/publish" method="post" id="status-form" enctype="multipart/form-data">
                 <textarea name="status" id="status-input" placeholder="READY FOR INPUT..." autofocus oninput="updateHUD()"></textarea>
-                <div class="counter-wrap" style="text-align: right; font-size: 10px; color: var(--muted); margin-top: 5px;">
-                    <span id="char-count">0</span>/280
+
+                <div class="counter-wrap" style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--muted); margin-top: 5px;">
+                    <div class="payload-controls">
+                        <input type="file" name="image" id="image-upload" accept="image/*" style="display: none;" onchange="updatePayloadStatus()">
+                        <label for="image-upload" id="payload-label" style="cursor: pointer; color: var(--accent); border: 1px solid var(--accent); padding: 2px 6px; border-radius: 3px;">
+                            + ATTACH PAYLOAD
+                        </label>
+                        <span id="payload-name" style="margin-left: 8px; color: var(--secret-neon); display: none;">LOADED</span>
+                    </div>
+
+                    <div><span id="char-count">0</span>/280</div>
                 </div>
+
                 <button type="submit" id="publish-btn">Execute Transmission</button>
             </form>
         </div>
@@ -368,6 +394,22 @@
             gainNode.connect(audioCtx.destination);
             oscillator.start();
             oscillator.stop(audioCtx.currentTime + 0.1);
+        }
+
+        function updatePayloadStatus() {
+            const fileInput = document.getElementById('image-upload');
+            const label = document.getElementById('payload-label');
+            const status = document.getElementById('payload-name');
+
+            if (fileInput.files.length > 0) {
+                label.style.borderColor = 'var(--secret-neon)';
+                label.style.color = 'var(--secret-neon)';
+                label.innerText = 'PAYLOAD READY';
+                status.style.display = 'inline';
+
+                // Brief pulse effect when file is selected
+                status.style.animation = 'blink 0.5s step-end 3';
+            }
         }
     </script>
 </body>
