@@ -108,6 +108,8 @@ def publish_status():
         # 2. Build Front Matter
         tags = [t for t in ["movie", "book", "music", "idea", "coffee"] if f"#{t}" in txt.lower()]
         fm = f"---\ntitle: Status\ndate: {now.strftime('%Y-%m-%d %H:%M:%S %z')}\nlayout: status_update\n"
+        fm += "author: aaron\n"
+        fm += "source: web\n"
         if tags: fm += f"tags: {tags}\n"
 
         # 3. Assemble Full Markdown Content
