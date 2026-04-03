@@ -244,22 +244,6 @@
             "Telemetric link established. Proceed with caution."
         ];
 
-        fetch('/static/comms.txt')
-            .then(response => {
-                if (!response.ok) throw new Error('Data restricted');
-                return response.text();
-            })
-            .then(data => {
-                const lines = data.split('\n').filter(line => line.trim() !== "");
-                if (lines.length > 0) transmissions = lines;
-            })
-            .catch(err => {
-                console.log("Comms file offline. Using local encrypted cache.");
-                const st = document.getElementById('secret-text');
-                st.innerText = "ERROR: SUB-SPACE LINK OFFLINE";
-                st.style.color = "#ff4500";
-            });
-
         function updateHUD() {
             const length = tx.value.length;
             charCount.innerText = length;
@@ -297,21 +281,19 @@
         updateSignalIntegrity();
 
         function showSecret() {
-            // 1. Cancel any lingering selection from the long-press
+            // 1. Cancel any lingering selection
             window.getSelection().removeAllRanges();
 
             // 2. Feedback
             if ("vibrate" in navigator) navigator.vibrate([30, 80, 30, 80]);
             playChirp(880, 'square');
 
-            // 3. Get message
-            const msg = transmissions[Math.floor(Math.random() * transmissions.length)];
+            // 3. GET THE MESSAGE FROM PYTHON (The magic line)
+            const msg = "{{ comm|safe }}";
             const textTarget = document.getElementById('secret-text');
 
             // 4. Update text while preserving the cursor
-            // We clear the text, add the new message, then re-append the cursor span
             textTarget.innerText = msg;
-
             const cursor = document.createElement('span');
             cursor.className = 'terminal-cursor';
             textTarget.appendChild(cursor);
