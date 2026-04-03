@@ -36,7 +36,7 @@ def get_git_status():
             return "online"  # Green: All systems go
     except Exception as e:
         print(f"Git Status Error: {e}")
-        return "offline"
+        return False
 
 def get_active_tags():
     pa_tz = pytz.timezone('America/New_York')
@@ -80,11 +80,11 @@ def get_valid_comms():
         with open('static/comms.txt', 'r') as f:
             for line in f:
                 clean_line = line.strip()
-                if not clean_line: continue
+                if not clean_line:
+                    continue
 
                 # --- FIX: These blocks must be INSIDE the for loop ---
                 if "|" not in clean_line:
-                    # Generic lines get added once
                     valid_comms.append(clean_line)
                     continue
 
@@ -147,7 +147,7 @@ def publish_status():
         txt = request.form['status']
         image_file = request.files.get('image')  # Grab the payload
 
-        now = datetime.datetime.now(pytz.timezone('America/New_York'))
+        now = datetime.now(pytz.timezone('America/New_York'))
         fn = now.strftime("_status_updates/%Y-%m-%d-%H%M%S.markdown")
 
         # 1. Process Image Payload (if exists)
