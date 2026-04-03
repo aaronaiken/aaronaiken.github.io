@@ -280,29 +280,32 @@
         setInterval(updateSignalIntegrity, 30000);
         updateSignalIntegrity();
 
-        function showSecret() {
-            // 1. Cancel any lingering selection
-            window.getSelection().removeAllRanges();
+        // 1. Initialize the list from Python
+        const availableComms = {{ comms_list|tojson }};
 
-            // 2. Feedback
-            if ("vibrate" in navigator) navigator.vibrate([30, 80, 30, 80]);
+        function showSecret() {
+            window.getSelection().removeAllRanges();
+            if ("vibrate" in navigator) navigator.vibrate([30, 80]);
             playChirp(880, 'square');
 
-            // 3. GET THE MESSAGE FROM PYTHON (The magic line)
-            const msg = "{{ comm|safe }}";
-            const textTarget = document.getElementById('secret-text');
+            // 2. Pick a NEW random one from the valid list every time
+            let msg = availableComms[Math.floor(Math.random() * availableComms.length)];
 
-            // 4. Update text while preserving the cursor
+            // 3. The "Daddy" Swap (Client-side)
+            if (Math.random() < 0.3) {
+                msg = msg.replace(/Aaron/gi, "Daddy");
+            }
+
+            const textTarget = document.getElementById('secret-text');
             textTarget.innerText = msg;
+
             const cursor = document.createElement('span');
             cursor.className = 'terminal-cursor';
             textTarget.appendChild(cursor);
 
-            // 5. Display logic
             secretDisplay.style.display = 'flex';
             setTimeout(() => { secretDisplay.style.opacity = "1"; }, 10);
 
-            // 6. Listener to close on tap
             setTimeout(() => {
                 window.addEventListener('click', closeSecret, { once: true });
                 window.addEventListener('touchstart', closeSecret, { once: true });
