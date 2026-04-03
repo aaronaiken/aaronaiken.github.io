@@ -1,10 +1,8 @@
 from flask import Flask, request, render_template, make_response, redirect, url_for
 from werkzeug.utils import secure_filename # Correct way to get this
 from PIL import Image # Correct way to get Image
-import datetime, os, subprocess, pytz, requests, emoji, glob
-import random
-import re
 from datetime import datetime
+import os, subprocess, pytz, requests, emoji, glob
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY')
@@ -44,13 +42,24 @@ def get_active_tags():
     pa_tz = pytz.timezone('America/New_York')
     now = datetime.now(pa_tz)
 
+    print(f"DEBUG: Local PA Time is {now.strftime('%H:%M:%S')}")
+
     tags = ["ALL"]
     hour = now.hour
 
-    # Time Phases
-    if 5 <= hour < 12: tags.append("AM")
-    elif 12 <= hour < 18: tags.append("PM")
-    else: tags.append("EVE")
+    tags.append(now.strftime("%A").upper()) # Adds 'THURSDAY', 'FRIDAY', etc.
+
+    # Ensure 24-hour coverage
+    if 5 <= hour < 12:
+        tags.append("AM")
+
+    # PM should be active from Noon until Midnight
+    if 12 <= hour < 24:
+        tags.append("PM")
+
+    # EVE overlaps for the late-night vibe
+    if hour >= 17 or hour < 5:
+        tags.append("EVE")
 
     # Day Type
     day_type = "WEEKEND" if now.weekday() >= 5 else "WEEKDAY"
@@ -63,44 +72,39 @@ def get_active_tags():
 
     return tags
 
-def get_secret_comm():
+def get_valid_comms():
     active_tags = get_active_tags()
     valid_comms = []
 
     try:
-        # Path to your ignored comms file in the static folder
         with open('static/comms.txt', 'r') as f:
             for line in f:
                 clean_line = line.strip()
-                # Skip empty lines
                 if not clean_line: continue
 
-                # If there's no tag, treat it as a universal "ALL" message
+                # --- FIX: These blocks must be INSIDE the for loop ---
                 if "|" not in clean_line:
+                    # Generic lines get added once
                     valid_comms.append(clean_line)
                     continue
 
                 parts = clean_line.split("|")
                 message = parts[-1].strip()
-                required_tags = [p.strip().upper() for p in parts[:-1]]
+                required_tags = [p.strip().upper() for p in parts[:-1] if p.strip()]
 
-                # Logic: Every tag on the line must be active for this to show up
                 if all(tag in active_tags for tag in required_tags):
-                    valid_comms.append(message)
+                    # SPECIFICITY WEIGHTING:
+                    # If it matches specific tags (like PM), add it 10 times
+                    # so it shows up way more often than 'ALL' lines.
+                    weight = 10 ** len(required_tags)
+                    for _ in range(weight):
+                        valid_comms.append(message)
+                # ----------------------------------------------------
 
     except FileNotFoundError:
-        return "Secure channel offline. Over."
+        return ["Secure line cut."]
 
-    if not valid_comms:
-        return "Scanning for signal..."
-
-    selected = random.choice(valid_comms)
-
-    # 30% chance to swap 'Aaron' for 'Daddy'
-    if random.random() < 0.3:
-        selected = re.sub(r'Aaron', 'Daddy', selected, flags=re.IGNORECASE)
-
-    return selected
+    return valid_comms if valid_comms else ["Scanning..."]
 
 def post_to_omg_lol(text):
     api, addr = os.environ.get('OMG_LOL_API_KEY'), os.environ.get('OMG_LOL_ADDRESS')
@@ -198,8 +202,9 @@ def publish_status():
     # GET request remains the same
     files = sorted(glob.glob("_status_updates/*.markdown"), reverse=True)[:3]
     history = [open(f).read().split("---")[-1].strip() for f in files]
-    comm = get_secret_comm()
-    return render_template('publish_form.html', history=history, git_status=get_git_status(), comm=comm)
+    # Pass the whole list to the template
+    comms_list = get_valid_comms()
+    return render_template('publish_form.html', history=history, git_status=get_git_status(), comms_list=comms_list)
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
