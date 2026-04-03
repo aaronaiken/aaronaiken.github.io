@@ -2,6 +2,9 @@ from flask import Flask, request, render_template, make_response, redirect, url_
 from werkzeug.utils import secure_filename # Correct way to get this
 from PIL import Image # Correct way to get Image
 import datetime, os, subprocess, pytz, requests, emoji, glob
+import random
+import re
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY')
@@ -36,6 +39,68 @@ def get_git_status():
     except Exception as e:
         print(f"Git Status Error: {e}")
         return "offline"
+
+def get_active_tags():
+    pa_tz = pytz.timezone('America/New_York')
+    now = datetime.now(pa_tz)
+
+    tags = ["ALL"]
+    hour = now.hour
+
+    # Time Phases
+    if 5 <= hour < 12: tags.append("AM")
+    elif 12 <= hour < 18: tags.append("PM")
+    else: tags.append("EVE")
+
+    # Day Type
+    day_type = "WEEKEND" if now.weekday() >= 5 else "WEEKDAY"
+    tags.append(day_type)
+
+    # Special Dates
+    date_str = now.strftime("%m/%d")
+    if date_str == "12/25": tags.append("CHRISTMAS")
+    if date_str == "03/11": tags.append("BIRTHDAY")
+
+    return tags
+
+def get_secret_comm():
+    active_tags = get_active_tags()
+    valid_comms = []
+
+    try:
+        # Path to your ignored comms file in the static folder
+        with open('static/comms.txt', 'r') as f:
+            for line in f:
+                clean_line = line.strip()
+                # Skip empty lines
+                if not clean_line: continue
+
+                # If there's no tag, treat it as a universal "ALL" message
+                if "|" not in clean_line:
+                    valid_comms.append(clean_line)
+                    continue
+
+                parts = clean_line.split("|")
+                message = parts[-1].strip()
+                required_tags = [p.strip().upper() for p in parts[:-1]]
+
+                # Logic: Every tag on the line must be active for this to show up
+                if all(tag in active_tags for tag in required_tags):
+                    valid_comms.append(message)
+
+    except FileNotFoundError:
+        return "Secure channel offline. Over."
+
+    if not valid_comms:
+        return "Scanning for signal..."
+
+    selected = random.choice(valid_comms)
+
+    # 30% chance to swap 'Aaron' for 'Daddy'
+    if random.random() < 0.3:
+        selected = re.sub(r'Aaron', 'Daddy', selected, flags=re.IGNORECASE)
+
+    return selected
 
 def post_to_omg_lol(text):
     api, addr = os.environ.get('OMG_LOL_API_KEY'), os.environ.get('OMG_LOL_ADDRESS')
@@ -133,7 +198,8 @@ def publish_status():
     # GET request remains the same
     files = sorted(glob.glob("_status_updates/*.markdown"), reverse=True)[:3]
     history = [open(f).read().split("---")[-1].strip() for f in files]
-    return render_template('publish_form.html', history=history, git_status=get_git_status())
+    comm = get_secret_comm()
+    return render_template('publish_form.html', history=history, git_status=get_git_status(), comm=comm)
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
