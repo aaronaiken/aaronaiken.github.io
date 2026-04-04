@@ -69,6 +69,7 @@ def get_active_tags():
     date_str = now.strftime("%m/%d")
     if date_str == "12/25": tags.append("CHRISTMAS")
     if date_str == "03/11": tags.append("BIRTHDAY")
+    if date_str == "04/05": tags.append("EASTER")
 
     return tags
 
