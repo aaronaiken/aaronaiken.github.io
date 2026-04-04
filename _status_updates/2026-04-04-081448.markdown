@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-04-04 08:14:48 -0400
+layout: status_update
+author: aaron
+source: web
+---
+💪 problems lately have been solved by giving them a night to rest, solutions being found readily each morning. 
