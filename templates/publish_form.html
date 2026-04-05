@@ -210,7 +210,7 @@
                 <div class="counter-wrap" style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--muted); margin-top: 5px;">
                     <div class="payload-controls">
                         <input type="file" name="image" id="image-upload" accept="image/*" style="display: none;" onchange="updatePayloadStatus()">
-                        <label for="image-upload" id="payload-label" style="cursor: pointer; color: var(--accent); border: 1px solid var(--accent); padding: 2px 6px; border-radius: 3px;" onclick="playCockpitSound('payload');">
+                        <label for="image-upload" id="payload-label" style="cursor: pointer; color: var(--accent); border: 1px solid var(--accent); padding: 2px 6px; border-radius: 3px;">
                             + ATTACH PAYLOAD
                         </label>
                         <span id="payload-name" style="margin-left: 8px; color: var(--secret-neon); display: none;">LOADED</span>
@@ -219,7 +219,7 @@
                     <div><span id="char-count">0</span>/280</div>
                 </div>
 
-                <button type="submit" id="publish-btn">Execute Transmission</button>
+                <button type="submit" id="publish-btn" onclick="playCockpitSound('success');">Execute Transmission</button>
             </form>
         </div>
 
@@ -232,8 +232,6 @@
     </div>
 
     <script>
-        let cockpitAudioCtx; // Global variable
-
         const cockpit = document.getElementById('main-cockpit');
         const tx = document.getElementById('status-input');
         const secretDisplay = document.getElementById('secret-comm');
@@ -288,7 +286,7 @@
         function showSecret() {
             window.getSelection().removeAllRanges();
             if ("vibrate" in navigator) navigator.vibrate([30, 80]);
-            playCockpitSound('transmission');
+            playChirp(880, 'square');
 
             // 2. Pick a NEW random one from the valid list every time
             let msg = availableComms[Math.floor(Math.random() * availableComms.length)];
@@ -367,69 +365,20 @@
         document.documentElement.setAttribute('data-theme', savedTheme);
         updateHUD();
 
-        function playCockpitSound(type) {
-            // 1. Initialize context only on the first ever click
-            if (!cockpitAudioCtx) {
-                cockpitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-
-            // 2. Wake up the audio if the browser put it to sleep
-            if (cockpitAudioCtx.state === 'suspended') {
-                cockpitAudioCtx.resume();
-            }
-
-            const osc = cockpitAudioCtx.createOscillator();
-            const gain = cockpitAudioCtx.createGain();
-
-            osc.connect(gain);
-            gain.connect(cockpitAudioCtx.destination);
-            const now = cockpitAudioCtx.currentTime;
-
-            // --- WIRE 1: TRANSMISSION (The Satellite Chirp) ---
-            if (type === 'transmission') {
-                osc.type = 'square'; // Grittier, more "tech" than sine
-                // Start high, drop fast to a lower "hum"
-                osc.frequency.setValueAtTime(1600, now);
-                osc.frequency.exponentialRampToValueAtTime(440, now + 0.15);
-
-                // Second "harmonic" oscillator for that 2nd-tone shimmer
-                const osc2 = cockpitAudioCtx.createOscillator();
-                const gain2 = cockpitAudioCtx.createGain();
-                osc2.type = 'sine';
-                osc2.frequency.setValueAtTime(880, now);
-                osc2.frequency.exponentialRampToValueAtTime(110, now + 0.2);
-
-                osc2.connect(gain2);
-                gain2.connect(cockpitAudioCtx.destination);
-                gain2.gain.setValueAtTime(0.05, now);
-                gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-
-                osc2.start(now);
-                osc2.stop(now + 0.2);
-
-                gain.gain.setValueAtTime(0.05, now);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
-            }
-
-            // --- WIRE 2: PAYLOAD (The Mechanical Thunk) ---
-            else if (type === 'payload') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(150, now);
-                osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
-                gain.gain.setValueAtTime(0.15, now);
-            }
-
-            else if (type === 'success') {
-                osc.type = 'sine';
-                // The "Data Linked" ascending blip
-                osc.frequency.setValueAtTime(440, now); // A4
-                osc.frequency.setValueAtTime(880, now + 0.08); // Jump to A5
-                gain.gain.setValueAtTime(0.1, now);
-            }
-
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-            osc.start(now);
-            osc.stop(now + 0.2);
+        let audioCtx;
+        function playChirp(freq = 440, type = 'sine') {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(freq * 2, audioCtx.currentTime + 0.1);
+            gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.1);
         }
 
         function updatePayloadStatus() {
