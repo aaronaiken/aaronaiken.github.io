@@ -1,0 +1,1150 @@
+---
+layout: tool-fullscreen
+title: ASTROMECH // AUDIO LAB
+description: Browser-based synthesizer and sound design tool. 30 sounds, live oscilloscope, Jekyll-ready export.
+permalink: /tools/audio-lab/
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASTROMECH // AUDIO LAB</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+	--green:      #00ff41;
+	--green-dim:  #00a828;
+	--green-glow: rgba(0,255,65,0.12);
+	--amber:      #ffb300;
+	--red:        #ff3b30;
+	--blue:       #00cfff;
+	--purple:     #c084fc;
+	--bg:         #080808;
+	--panel:      #0d0d0d;
+	--border:     #182018;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+	background: var(--bg);
+	color: var(--green);
+	font-family: 'Share Tech Mono', monospace;
+	min-height: 100vh;
+	display: flex; flex-direction: column; align-items: center;
+	padding: 20px 14px 48px;
+	background-image: repeating-linear-gradient(
+	  0deg, transparent, transparent 2px,
+	  rgba(0,0,0,0.13) 2px, rgba(0,0,0,0.13) 4px
+	);
+  }
+
+  header {
+	width: 100%; max-width: 880px;
+	display: flex; align-items: baseline; justify-content: space-between;
+	border-bottom: 1px solid var(--green-dim);
+	padding-bottom: 10px; margin-bottom: 16px;
+  }
+  .logo {
+	font-family: 'Orbitron', monospace; font-weight: 900;
+	font-size: 1.25rem; letter-spacing: 4px;
+	color: var(--green); text-shadow: 0 0 14px var(--green);
+  }
+  .logo span { color: var(--amber); }
+  .tagline { font-size: 0.6rem; color: var(--green-dim); letter-spacing: 2px; }
+
+  /* SCOPE */
+  .scope-wrap {
+	width: 100%; max-width: 880px;
+	border: 1px solid var(--border); background: #050505;
+	margin-bottom: 12px; position: relative; padding: 4px;
+  }
+  .scope-label { position:absolute; top:6px; left:10px; font-size:0.55rem; color:var(--green-dim); letter-spacing:2px; }
+  .scope-readout { position:absolute; top:6px; right:10px; font-size:0.55rem; color:var(--green-dim); letter-spacing:1px; }
+  canvas#scope { display:block; width:100%; height:72px; image-rendering:pixelated; }
+
+  /* CONTROLS */
+  .controls {
+	width:100%; max-width:880px;
+	display:flex; gap:10px; flex-wrap:wrap;
+	margin-bottom:12px;
+	border:1px solid var(--border); background:var(--panel);
+	padding:12px 14px;
+  }
+  .ctrl-group { display:flex; flex-direction:column; gap:5px; flex:1; min-width:120px; }
+  .ctrl-label { font-size:0.55rem; letter-spacing:2px; color:var(--green-dim); }
+  .ctrl-row   { display:flex; align-items:center; gap:8px; }
+  .ctrl-val   { font-size:0.62rem; color:var(--green); min-width:54px; text-align:right; letter-spacing:1px; }
+
+  input[type=range] {
+	-webkit-appearance:none; flex:1; height:3px;
+	background:var(--border); outline:none; border:none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+	-webkit-appearance:none; width:13px; height:13px;
+	background:var(--green); border-radius:0; cursor:pointer;
+	box-shadow:0 0 6px var(--green);
+  }
+  input[type=range]::-moz-range-thumb {
+	width:13px; height:13px; background:var(--green);
+	border-radius:0; cursor:pointer; border:none;
+  }
+
+  /* UNIFIED GRID */
+  #sound-sections {
+	width:100%; max-width:880px;
+	display:grid;
+	grid-template-columns:repeat(auto-fill, minmax(148px, 1fr));
+	gap:8px;
+	margin-bottom:14px;
+  }
+
+  /* Category header spans full grid width */
+  .cat-header {
+	grid-column: 1 / -1;
+	font-size:0.58rem; letter-spacing:3px;
+	padding:5px 0 6px; border-bottom:1px solid var(--border);
+	margin-top:6px;
+	display:flex; align-items:center; gap:8px;
+  }
+  .cat-header:first-child { margin-top:0; }
+  .cat-dot { width:6px; height:6px; border-radius:50%; background:currentColor; box-shadow:0 0 5px currentColor; }
+  .cat-astromech { color:var(--green); }
+  .cat-ship      { color:var(--amber); }
+  .cat-ui        { color:var(--blue); }
+  .cat-env       { color:var(--purple); }
+  .cat-alert     { color:var(--red); }
+
+  /* PAD */
+  .pad {
+	border:1px solid var(--border); background:var(--panel);
+	padding:11px 10px 9px; cursor:pointer; position:relative;
+	transition:background 0.07s, border-color 0.07s;
+	user-select:none; -webkit-tap-highlight-color:transparent;
+  }
+  .pad-key { position:absolute; top:7px; right:8px; font-size:0.5rem; color:#1a2a1a; }
+  .pad-icon { font-size:1.35rem; display:block; margin-bottom:5px; line-height:1; }
+  .pad-name { font-family:'Orbitron',monospace; font-size:0.56rem; font-weight:700; letter-spacing:1px; }
+  .pad-desc { font-size:0.53rem; color:var(--green-dim); margin-top:2px; }
+  .pad-actions { margin-top:9px; }
+  .btn-export {
+	font-family:'Share Tech Mono',monospace; font-size:0.52rem;
+	letter-spacing:1px; background:transparent; border:1px solid #1a2a1a;
+	padding:3px 6px; cursor:pointer; width:100%; text-transform:uppercase; transition:all 0.1s;
+  }
+  @keyframes pad-flash { 0%{filter:brightness(3)} 100%{filter:brightness(1)} }
+  .pad.firing { animation:pad-flash 0.15s ease-out; }
+
+  /* per-category theming */
+  .pad.astromech .pad-name { color:var(--green); }
+  .pad.astromech .btn-export { color:var(--green-dim); }
+  .pad.astromech:hover { border-color:var(--green-dim); background:#101510; }
+  .pad.astromech .btn-export:hover { background:var(--green-dim); color:#000; border-color:var(--green-dim); }
+
+  .pad.ship .pad-name { color:var(--amber); }
+  .pad.ship .btn-export { color:#604800; }
+  .pad.ship:hover { border-color:#604800; background:#131005; }
+  .pad.ship .btn-export:hover { background:var(--amber); color:#000; border-color:var(--amber); }
+
+  .pad.ui .pad-name { color:var(--blue); }
+  .pad.ui .btn-export { color:#005060; }
+  .pad.ui:hover { border-color:#005060; background:#050f13; }
+  .pad.ui .btn-export:hover { background:var(--blue); color:#000; border-color:var(--blue); }
+
+  .pad.env .pad-name { color:var(--purple); }
+  .pad.env .btn-export { color:#4a2a6a; }
+  .pad.env:hover { border-color:#4a2a6a; background:#0d0810; }
+  .pad.env .btn-export:hover { background:var(--purple); color:#000; border-color:var(--purple); }
+
+  .pad.alert .pad-name { color:var(--red); }
+  .pad.alert .btn-export { color:#601510; }
+  .pad.alert:hover { border-color:#601510; background:#130505; }
+  .pad.alert .btn-export:hover { background:var(--red); color:#000; border-color:var(--red); }
+
+  /* STATUS BAR */
+  .status-bar {
+	width:100%; max-width:880px;
+	border-top:1px solid var(--border); padding-top:8px; margin-top:4px;
+	display:flex; align-items:center; gap:10px;
+  }
+  .blinker { width:7px; height:7px; background:var(--green); animation:blink 1.2s step-end infinite; flex-shrink:0; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  #log { font-size:0.6rem; color:var(--green-dim); letter-spacing:1px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ver { font-size:0.55rem; color:#111; }
+
+  .corner { position:fixed; font-size:0.5rem; color:#0f0f0f; letter-spacing:1px; }
+  .corner.tl { top:7px; left:9px; }
+  .corner.br { bottom:7px; right:9px; }
+
+  /* MODAL */
+  #export-modal {
+	display:none; position:fixed; inset:0;
+	background:rgba(0,0,0,0.92); z-index:200;
+	align-items:center; justify-content:center; padding:20px;
+  }
+  #export-modal.open { display:flex; }
+  .modal-box {
+	background:#080808; border:1px solid var(--green-dim);
+	box-shadow:0 0 50px rgba(0,255,65,0.07);
+	width:100%; max-width:720px; max-height:88vh;
+	display:flex; flex-direction:column; overflow:hidden;
+  }
+  .modal-header {
+	display:flex; align-items:center; justify-content:space-between;
+	padding:11px 14px; border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .modal-title { font-family:'Orbitron',monospace; font-size:0.68rem; letter-spacing:2px; }
+  .modal-close {
+	background:none; border:1px solid #1a2a1a; color:var(--green-dim);
+	font-family:'Share Tech Mono',monospace; font-size:0.6rem;
+	padding:3px 8px; cursor:pointer; letter-spacing:1px;
+  }
+  .modal-close:hover { border-color:var(--red); color:var(--red); }
+
+  /* mode toggle */
+  .modal-mode {
+	display:flex; align-items:stretch; gap:0;
+	border-bottom:1px solid var(--border); flex-shrink:0;
+	background:#050505; padding:0 14px;
+  }
+  .mode-label { font-size:0.53rem; color:var(--green-dim); letter-spacing:2px; align-self:center; margin-right:8px; }
+  .mode-btn {
+	font-family:'Share Tech Mono',monospace; font-size:0.58rem; letter-spacing:1px;
+	padding:8px 14px; cursor:pointer; background:none; border:none;
+	color:#2a3a2a; border-bottom:2px solid transparent; text-transform:uppercase;
+  }
+  .mode-btn.active { color:var(--green); border-bottom-color:var(--green); }
+  .mode-btn:not(.active):hover { color:var(--green-dim); }
+  .mode-desc { font-size:0.53rem; color:#1a3a1a; letter-spacing:1px; margin-left:auto; align-self:center; }
+
+  /* bake readout */
+  .bake-summary {
+	display:none; padding:7px 14px; background:#050505;
+	border-bottom:1px solid var(--border); flex-shrink:0; gap:20px; flex-wrap:wrap;
+  }
+  .bake-summary.visible { display:flex; }
+  .bake-val { font-size:0.57rem; }
+  .bake-val span { color:var(--amber); }
+
+  .modal-tabs { display:flex; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .modal-tab {
+	font-family:'Share Tech Mono',monospace; font-size:0.57rem; letter-spacing:2px;
+	padding:7px 13px; cursor:pointer; background:none; border:none;
+	color:var(--green-dim); border-bottom:2px solid transparent; text-transform:uppercase;
+  }
+  .modal-tab.active { color:var(--green); border-bottom-color:var(--green); }
+
+  .modal-body { flex:1; overflow-y:auto; padding:12px 14px; }
+  .modal-body pre {
+	font-family:'Share Tech Mono',monospace; font-size:0.64rem;
+	line-height:1.65; color:#78cc78; white-space:pre-wrap; word-break:break-all; margin:0;
+  }
+  .modal-footer {
+	padding:9px 14px; border-top:1px solid var(--border);
+	display:flex; gap:8px; align-items:center; flex-shrink:0;
+  }
+  .btn-primary {
+	font-family:'Share Tech Mono',monospace; font-size:0.62rem; letter-spacing:2px;
+	background:var(--green-dim); color:#000; border:none;
+	padding:7px 14px; cursor:pointer; text-transform:uppercase; flex-shrink:0;
+  }
+  .btn-primary:hover { background:var(--green); }
+  .modal-hint { font-size:0.57rem; color:#1a3a1a; letter-spacing:1px; flex:1; }
+</style>
+</head>
+<body>
+
+<div class="corner tl">SYS::AUDIO_LAB_v3.0</div>
+<div class="corner br">CLASSIFIED//REBEL-FLEET</div>
+
+<header>
+  <div class="logo">ASTRO<span>MECH</span> // AUDIO</div>
+  <div class="tagline">REFINE → EXPORT // JEKYLL-READY</div>
+</header>
+
+<div class="scope-wrap">
+  <div class="scope-label">OSC // WAVEFORM</div>
+  <div class="scope-readout" id="scope-readout">IDLE</div>
+  <canvas id="scope" width="880" height="72"></canvas>
+</div>
+
+<div class="controls">
+  <div class="ctrl-group">
+	<div class="ctrl-label">// VOLUME</div>
+	<div class="ctrl-row">
+	  <input type="range" id="vol" min="0" max="100" value="72">
+	  <div class="ctrl-val" id="vol-val">72%</div>
+	</div>
+  </div>
+  <div class="ctrl-group">
+	<div class="ctrl-label">// PITCH SHIFT</div>
+	<div class="ctrl-row">
+	  <input type="range" id="pitch" min="-12" max="12" value="0">
+	  <div class="ctrl-val" id="pitch-val">±0 st</div>
+	</div>
+  </div>
+  <div class="ctrl-group">
+	<div class="ctrl-label">// DECAY SPEED</div>
+	<div class="ctrl-row">
+	  <input type="range" id="decay" min="20" max="250" value="100">
+	  <div class="ctrl-val" id="decay-val">1.00×</div>
+	</div>
+  </div>
+</div>
+
+<div id="sound-sections"></div>
+
+<div class="status-bar">
+  <div class="blinker"></div>
+  <div id="log">SYSTEM READY — CLICK PAD TO AUDITION // KEYS 1–0 FOR QUICK FIRE</div>
+  <div class="ver">2026.04</div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div id="export-modal">
+  <div class="modal-box">
+	<div class="modal-header">
+	  <div class="modal-title" id="modal-title">// EXPORT</div>
+	  <button class="modal-close" onclick="closeModal()">[ ESC ]</button>
+	</div>
+	<div class="modal-mode">
+	  <div class="mode-label">MODE:</div>
+	  <button class="mode-btn active" id="mode-bake"  onclick="setMode('bake')">⬡ BAKE</button>
+	  <button class="mode-btn"        id="mode-param" onclick="setMode('param')">◈ PARAMETRIC</button>
+	  <div class="mode-desc" id="mode-desc">Values burned in from current sliders</div>
+	</div>
+	<div class="bake-summary" id="bake-summary">
+	  <div class="bake-val">VOL <span id="bv-vol">—</span></div>
+	  <div class="bake-val">PITCH <span id="bv-pitch">—</span></div>
+	  <div class="bake-val">DECAY <span id="bv-decay">—</span></div>
+	  <div class="bake-val">P_MULT <span id="bv-pmult">—</span></div>
+	</div>
+	<div class="modal-tabs">
+	  <button class="modal-tab active" onclick="switchTab('snippet',this)">SNIPPET</button>
+	  <button class="modal-tab"        onclick="switchTab('module',this)">JEKYLL MODULE</button>
+	  <button class="modal-tab"        onclick="switchTab('usage',this)">USAGE</button>
+	</div>
+	<div class="modal-body"><pre id="modal-code"></pre></div>
+	<div class="modal-footer">
+	  <button class="btn-primary" id="copy-btn" onclick="copyCode()">[ COPY ]</button>
+	  <div class="modal-hint" id="modal-hint"></div>
+	</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SOUND LIBRARY
+// fn(ctx, t, p, d, dest)
+//   t    = AudioContext.currentTime
+//   p    = pitch multiplier  (1.0 = normal)
+//   d    = decay multiplier  (1.0 = normal, 2.0 = twice as long)
+//   dest = output audio node
+// ALL time offsets × d   |   ALL base frequencies × p
+// Returns estimated duration in seconds (already scaled by d)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const CATEGORIES = [
+  {
+	id:'astromech', label:'ASTROMECH // R2-SERIES', cls:'astromech',
+	sounds: [
+	  {
+		id:'r2_happy', icon:'🤖', name:'R2: WHISTLE', desc:'Happy chirp sequence',
+		fn(ctx,t,p,d,dest) {
+		  const freqs=[900,1400,1100,1600,700], times=[0,.06,.12,.18,.26];
+		  freqs.forEach((f,i)=>{
+			const o=_mk(ctx,'sine'),g=_gain(ctx,.09);
+			o.connect(g); g.connect(dest);
+			const s=t+times[i]*d;
+			o.frequency.setValueAtTime(f*p,s);
+			if(i<freqs.length-1) o.frequency.linearRampToValueAtTime(freqs[i+1]*p,s+.05*d);
+			g.gain.setValueAtTime(.09,s); g.gain.exponentialRampToValueAtTime(.0001,s+.09*d);
+			_play(o,s,.1*d);
+		  });
+		  return .45*d;
+		}
+	  },
+	  {
+		id:'r2_curious', icon:'🤔', name:'R2: QUERY', desc:'Questioning uptone',
+		fn(ctx,t,p,d,dest) {
+		  const o=_mk(ctx,'sine'),g=_gain(ctx,.1);
+		  o.connect(g); g.connect(dest);
+		  o.frequency.setValueAtTime(280*p,t);
+		  o.frequency.setValueAtTime(280*p,t+.06*d);
+		  o.frequency.exponentialRampToValueAtTime(1400*p,t+.14*d);
+		  o.frequency.linearRampToValueAtTime(900*p,t+.28*d);
+		  g.gain.setValueAtTime(.1,t); g.gain.exponentialRampToValueAtTime(.0001,t+.3*d);
+		  _play(o,t,.35*d); return .4*d;
+		}
+	  },
+	  {
+		id:'r2_bloop', icon:'😔', name:'R2: BLOOP', desc:'Sad descending tone',
+		fn(ctx,t,p,d,dest) {
+		  const o=_mk(ctx,'sine'),g=_gain(ctx,.12);
+		  o.connect(g); g.connect(dest);
+		  o.frequency.setValueAtTime(750*p,t);
+		  o.frequency.exponentialRampToValueAtTime(120*p,t+.55*d);
+		  g.gain.setValueAtTime(.12,t); g.gain.exponentialRampToValueAtTime(.0001,t+.5*d);
+		  _play(o,t,.6*d); return .65*d;
+		}
+	  },
+	  {
+		id:'r2_scold', icon:'😤', name:'R2: SCOLD', desc:'Rapid angry chatter',
+		fn(ctx,t,p,d,dest) {
+		  const pat=[800,1000,600,1100,500,900,400];
+		  const step=.055*d, nlen=.048*d;
+		  pat.forEach((f,i)=>{
+			const o=_mk(ctx,i%2===0?'sine':'triangle'),g=_gain(ctx,.08);
+			o.connect(g); g.connect(dest);
+			const s=t+i*step;
+			o.frequency.setValueAtTime(f*p,s);
+			g.gain.setValueAtTime(.08,s); g.gain.exponentialRampToValueAtTime(.0001,s+nlen);
+			_play(o,s,nlen+.002);
+		  });
+		  return pat.length*step+.05;
+		}
+	  },
+	  {
+		id:'r2_excited', icon:'🎉', name:'R2: EXCITED', desc:'Rapid trill burst',
+		fn(ctx,t,p,d,dest) {
+		  const step=.042*d, nlen=.038*d; let ct=t;
+		  for(let i=0;i<10;i++){
+			const f=(800+Math.sin(i*1.1)*400)*p;
+			const o=_mk(ctx,'sine'),g=_gain(ctx,.07);
+			o.connect(g); g.connect(dest);
+			o.frequency.setValueAtTime(f,ct);
+			g.gain.setValueAtTime(.07,ct); g.gain.exponentialRampToValueAtTime(.0001,ct+nlen);
+			_play(o,ct,nlen+.002); ct+=step;
+		  }
+		  return (ct-t)+.05;
+		}
+	  },
+	  {
+		id:'r2_alarm', icon:'🚨', name:'R2: ALERT', desc:'Danger warning beeps',
+		fn(ctx,t,p,d,dest) {
+		  [0,.09,.18,.27,.36].forEach((off,idx)=>{
+			const o=_mk(ctx,'square'),g=_gain(ctx,.04);
+			o.connect(g); g.connect(dest);
+			const s=t+off*d;
+			o.frequency.setValueAtTime((idx%2===0?1500:1200)*p,s);
+			g.gain.setValueAtTime(.04,s); g.gain.exponentialRampToValueAtTime(.0001,s+.07*d);
+			_play(o,s,.08*d);
+		  });
+		  return .5*d;
+		}
+	  },
+	  {
+		id:'r2_process', icon:'⚙️', name:'R2: COMPUTE', desc:'Processing burble',
+		fn(ctx,t,p,d,dest) {
+		  const freqs=[440,660,550,770,495,715,528];
+		  const gaps=[0,.07,.13,.21,.26,.33,.39];
+		  freqs.forEach((f,i)=>{
+			const o=_mk(ctx,i%3===0?'square':'sine'),g=_gain(ctx,.05);
+			o.connect(g); g.connect(dest);
+			const s=t+gaps[i]*d;
+			o.frequency.setValueAtTime(f*p,s);
+			o.frequency.linearRampToValueAtTime(f*p*(i%2===0?1.04:.97),s+.04*d);
+			g.gain.setValueAtTime(.05,s); g.gain.exponentialRampToValueAtTime(.0001,s+.05*d);
+			_play(o,s,.06*d);
+		  });
+		  return .5*d;
+		}
+	  },
+	  {
+		id:'r2_confirm', icon:'👍', name:'R2: CONFIRM', desc:'Affirmative double-chirp',
+		fn(ctx,t,p,d,dest) {
+		  [[600,900],[700,1100]].forEach(([lo,hi],i)=>{
+			const o=_mk(ctx,'sine'),g=_gain(ctx,.09);
+			o.connect(g); g.connect(dest);
+			const s=t+i*.18*d;
+			o.frequency.setValueAtTime(lo*p,s);
+			o.frequency.linearRampToValueAtTime(hi*p,s+.07*d);
+			g.gain.setValueAtTime(.09,s); g.gain.exponentialRampToValueAtTime(.0001,s+.12*d);
+			_play(o,s,.14*d);
+		  });
+		  return .38*d;
+		}
+	  },
+	]
+  },
+  {
+	id:'ship', label:'SHIP SYSTEMS // REBEL FLEET', cls:'ship',
+	sounds: [
+	  {
+		id:'transmission', icon:'📡', name:'TRANSMISSION', desc:'Comms downswoop',
+		fn(ctx,t,p,d,dest) {
+		  const o=_mk(ctx,'square'),g=_gain(ctx,.06);
+		  o.connect(g); g.connect(dest);
+		  o.frequency.setValueAtTime(1600*p,t);
+		  o.frequency.exponentialRampToValueAtTime(420*p,t+.18*d);
+		  g.gain.setValueAtTime(.06,t); g.gain.exponentialRampToValueAtTime(.0001,t+.35*d);
+		  _play(o,t,.4*d); return .45*d;
+		}
+	  },
+	  {
+		id:'payload', icon:'📎', name:'PAYLOAD LOCK', desc:'Heavy thunk + click',
+		fn(ctx,t,p,d,dest) {
+		  const o1=_mk(ctx,'triangle'),g1=_gain(ctx,.25);
+		  o1.connect(g1); g1.connect(dest);
+		  o1.frequency.setValueAtTime(140*p,t);
+		  o1.frequency.exponentialRampToValueAtTime(35*p,t+.2*d);
+		  g1.gain.setValueAtTime(.25,t); g1.gain.exponentialRampToValueAtTime(.0001,t+.25*d);
+		  _play(o1,t,.3*d);
+		  const clk=_noise(ctx),g2=_gain(ctx,.3);
+		  const bpf=ctx.createBiquadFilter();
+		  bpf.type='bandpass'; bpf.frequency.value=900*p; bpf.Q.value=1;
+		  clk.connect(bpf); bpf.connect(g2); g2.connect(dest);
+		  g2.gain.setValueAtTime(.3,t); g2.gain.exponentialRampToValueAtTime(.0001,t+.06*d);
+		  _play(clk,t,.07*d); return .35*d;
+		}
+	  },
+	  {
+		id:'jump_confirm', icon:'🚀', name:'JUMP CONFIRM', desc:'Hyperspace blip arp',
+		fn(ctx,t,p,d,dest) {
+		  [440,554,660,880].forEach((f,i)=>{
+			const o=_mk(ctx,'sine'),g=_gain(ctx,.08);
+			o.connect(g); g.connect(dest);
+			const s=t+i*.07*d;
+			o.frequency.setValueAtTime(f*p,s);
+			g.gain.setValueAtTime(.08,s); g.gain.exponentialRampToValueAtTime(.0001,s+.12*d);
+			_play(o,s,.14*d);
+		  });
+		  return .5*d;
+		}
+	  },
+	  {
+		id:'hyperdrive', icon:'⚡', name:'HYPERDRIVE', desc:'Spin-up whoosh',
+		fn(ctx,t,p,d,dest) {
+		  const o=_mk(ctx,'sawtooth'),g=_gain(ctx,0);
+		  const lpf=ctx.createBiquadFilter();
+		  lpf.type='lowpass'; lpf.frequency.setValueAtTime(300,t);
+		  o.connect(lpf); lpf.connect(g); g.connect(dest);
+		  o.frequency.setValueAtTime(50*p,t);
+		  o.frequency.exponentialRampToValueAtTime(3000*p,t+.7*d);
+		  lpf.frequency.exponentialRampToValueAtTime(4000,t+.7*d);
+		  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.12,t+.35*d);
+		  g.gain.exponentialRampToValueAtTime(.0001,t+.82*d);
+		  _play(o,t,.85*d); return .9*d;
+		}
+	  },
+	  {
+		id:'shield_hit', icon:'🛡️', name:'SHIELD HIT', desc:'Impact deflection',
+		fn(ctx,t,p,d,dest) {
+		  const o1=_mk(ctx,'sine'),g1=_gain(ctx,.18);
+		  o1.connect(g1); g1.connect(dest);
+		  o1.frequency.setValueAtTime(120*p,t);
+		  o1.frequency.exponentialRampToValueAtTime(40*p,t+.3*d);
+		  g1.gain.setValueAtTime(.18,t); g1.gain.exponentialRampToValueAtTime(.0001,t+.3*d);
+		  _play(o1,t,.35*d);
+		  const nd=_noise(ctx),g2=_gain(ctx,.06);
+		  const hpf=ctx.createBiquadFilter();
+		  hpf.type='highpass'; hpf.frequency.value=2000;
+		  nd.connect(hpf); hpf.connect(g2); g2.connect(dest);
+		  g2.gain.setValueAtTime(.06,t); g2.gain.exponentialRampToValueAtTime(.0001,t+.15*d);
+		  _play(nd,t,.16*d); return .4*d;
+		}
+	  },
+	  {
+		id:'power_up', icon:'🔋', name:'POWER UP', desc:'System energize swell',
+		fn(ctx,t,p,d,dest) {
+		  const o=_mk(ctx,'sawtooth'),g=_gain(ctx,0);
+		  const lpf=ctx.createBiquadFilter();
+		  lpf.type='lowpass'; lpf.frequency.setValueAtTime(200,t);
+		  o.connect(lpf); lpf.connect(g); g.connect(dest);
+		  o.frequency.setValueAtTime(80*p,t);
+		  o.frequency.linearRampToValueAtTime(320*p,t+.6*d);
+		  lpf.frequency.linearRampToValueAtTime(1200,t+.6*d);
+		  g.gain.linearRampToValueAtTime(.1,t+.1*d);
+		  g.gain.setValueAtTime(.1,t+.55*d);
+		  g.gain.exponentialRampToValueAtTime(.0001,t+.65*d);
+		  _play(o,t,.7*d);
+		  const od=_mk(ctx,'sine'),gd=_gain(ctx,.08);
+		  od.connect(gd); gd.connect(dest);
+		  od.frequency.setValueAtTime(880*p,t+.58*d);
+		  gd.gain.setValueAtTime(.08,t+.58*d);
+		  gd.gain.exponentialRampToValueAtTime(.0001,t+.85*d);
+		  _play(od,t+.58*d,.3*d); return .9*d;
+		}
+	  },
+	  {
+		id:'lock_on', icon:'🎯', name:'LOCK ON', desc:'Target acquired beep',
+		fn(ctx,t,p,d,dest) {
+		  [0,.12,.22].forEach((off,i)=>{
+			const o=_mk(ctx,i===2?'sine':'square'),g=_gain(ctx,i===2?.09:.04);
+			o.connect(g); g.connect(dest);
+			const s=t+off*d, f=i===2?1200:880;
+			o.frequency.setValueAtTime(f*p,s);
+			g.gain.setValueAtTime(i===2?.09:.04,s);
+			g.gain.exponentialRampToValueAtTime(.0001,s+(i===2?.2:.06)*d);
+			_play(o,s,(i===2?.22:.07)*d);
+		  });
+		  return .48*d;
+		}
+	  },
+	]
+  },
+  {
+	id:'ui', label:'UI FEEDBACK // INTERFACE', cls:'ui',
+	sounds: [
+	  {
+		id:'ui_click', icon:'▶', name:'CLICK', desc:'Crisp button press',
+		fn(ctx,t,p,d,dest) {
+		  const o=_mk(ctx,'square'),g=_gain(ctx,.05);
+		  o.connect(g); g.connect(dest);
+		  o.frequency.setValueAtTime(1200*p,t);
+		  o.frequency.exponentialRampToValueAtTime(600*p,t+.04*d);
+		  g.gain.setValueAtTime(.05,t); g.gain.exponentialRampToValueAtTime(.0001,t+.05*d);
+		  _play(o,t,.06*d); return .08*d;
+		}
+	  },
+	  {
+		id:'ui_confirm', icon:'✓', name:'CONFIRM', desc:'Success accepted',
+		fn(ctx,t,p,d,dest) {
+		  [523,659,784].forEach((f,i)=>{
+			const o=_mk(ctx,'sine'),g=_gain(ctx,.07);
+			o.connect(g); g.connect(dest);
+			const s=t+i*.06*d;
+			o.frequency.setValueAtTime(f*p,s);
+			g.gain.setValueAtTime(.07,s); g.gain.exponentialRampToValueAtTime(.0001,s+.1*d);
+			_play(o,s,.12*d);
+		  });
+		  return .32*d;
+		}
+	  },
+	  {
+		id:'ui_deny', icon:'✕', name:'DENY', desc:'Error rejected',
+		fn(ctx,t,p,d,dest) {
+		  [220,196].forEach((f,i)=>{
+			const o=_mk(ctx,'square'),g=_gain(ctx,.05);
+			o.connect(g); g.connect(dest);
+			const s=t+i*.1*d;
+			o.frequency.setValueAtTime(f*p,s);
+			g.gain.setValueAtTime(.05,s); g.gain.exponentialRampToValueAtTime(.0001,s+.09*d);
+			_play(o,s,.1*d);
+		  });
+		  return .28*d;
+		}
+	  },
+	  {
+		id:'ui_notify', icon:'🔔', name:'NOTIFY', desc:'Soft notification ping',
+		fn(ctx,t,p,d,dest) {
+		  const o=_mk(ctx,'sine'),g=_gain(ctx,.09);
+		  o.connect(g); g.connect(dest);
+		  o.frequency.setValueAtTime(1046*p,t);
+		  o.frequency.linearRampToValueAtTime(1318*p,t+.03*d);
+		  g.gain.setValueAtTime(.09,t); g.gain.exponentialRampToValueAtTime(.0001,t+.35*d);
+		  _play(o,t,.38*d); return .4*d;
+		}
+	  },
+	  {
+		id:'ui_hover', icon:'◈', name:'HOVER', desc:'Subtle element hover',
+		fn(ctx,t,p,d,dest) {
+		  const o=_mk(ctx,'sine'),g=_gain(ctx,.03);
+		  o.connect(g); g.connect(dest);
+		  o.frequency.setValueAtTime(880*p,t);
+		  o.frequency.linearRampToValueAtTime(1100*p,t+.025*d);
+		  g.gain.setValueAtTime(.03,t); g.gain.exponentialRampToValueAtTime(.0001,t+.06*d);
+		  _play(o,t,.07*d); return .08*d;
+		}
+	  },
+	  {
+		id:'ui_toggle', icon:'⬡', name:'TOGGLE', desc:'Switch on/off blip',
+		fn(ctx,t,p,d,dest) {
+		  const o=_mk(ctx,'square'),g=_gain(ctx,.04);
+		  o.connect(g); g.connect(dest);
+		  o.frequency.setValueAtTime(660*p,t);
+		  o.frequency.setValueAtTime(990*p,t+.04*d);
+		  g.gain.setValueAtTime(.04,t); g.gain.setValueAtTime(.04,t+.04*d);
+		  g.gain.exponentialRampToValueAtTime(.0001,t+.1*d);
+		  _play(o,t,.11*d); return .13*d;
+		}
+	  },
+	  {
+		id:'ui_sweep', icon:'〰', name:'SWEEP', desc:'Page transition whoosh',
+		fn(ctx,t,p,d,dest) {
+		  const nd=_noise(ctx),g=_gain(ctx,0);
+		  const bpf=ctx.createBiquadFilter();
+		  bpf.type='bandpass'; bpf.frequency.setValueAtTime(200*p,t); bpf.Q.value=.8;
+		  nd.connect(bpf); bpf.connect(g); g.connect(dest);
+		  bpf.frequency.exponentialRampToValueAtTime(3000*p,t+.25*d);
+		  g.gain.linearRampToValueAtTime(.08,t+.05*d);
+		  g.gain.exponentialRampToValueAtTime(.0001,t+.28*d);
+		  _play(nd,t,.3*d); return .32*d;
+		}
+	  },
+	  {
+		id:'ui_open', icon:'◻', name:'OPEN', desc:'Panel / drawer open',
+		fn(ctx,t,p,d,dest) {
+		  const o=_mk(ctx,'sine'),g=_gain(ctx,0);
+		  o.connect(g); g.connect(dest);
+		  o.frequency.setValueAtTime(300*p,t);
+		  o.frequency.linearRampToValueAtTime(600*p,t+.12*d);
+		  g.gain.linearRampToValueAtTime(.07,t+.03*d);
+		  g.gain.exponentialRampToValueAtTime(.0001,t+.2*d);
+		  _play(o,t,.22*d); return .24*d;
+		}
+	  },
+	]
+  },
+  {
+	id:'env', label:'ENVIRONMENT // AMBIENT', cls:'env',
+	sounds: [
+	  {
+		id:'env_hum', icon:'〜', name:'ENGINE HUM', desc:'Steady ship reactor',
+		fn(ctx,t,p,d,dest) {
+		  [60,120,180].forEach((f,i)=>{
+			const o=_mk(ctx,i===0?'sawtooth':'sine'),g=_gain(ctx,i===0?.06:.025);
+			o.connect(g); g.connect(dest);
+			o.frequency.setValueAtTime(f*p,t);
+			o.frequency.linearRampToValueAtTime(f*p*1.005,t+.4*d);
+			o.frequency.linearRampToValueAtTime(f*p,t+.8*d);
+			g.gain.setValueAtTime(i===0?.06:.025,t);
+			g.gain.exponentialRampToValueAtTime(.0001,t+.9*d);
+			_play(o,t,.95*d);
+		  });
+		  return .95*d;
+		}
+	  },
+	  {
+		id:'env_scan', icon:'📻', name:'SCANNER', desc:'Radar sweep ping',
+		fn(ctx,t,p,d,dest) {
+		  const o=_mk(ctx,'sine'),g=_gain(ctx,.07);
+		  o.connect(g); g.connect(dest);
+		  o.frequency.setValueAtTime(400*p,t);
+		  o.frequency.linearRampToValueAtTime(1600*p,t+.08*d);
+		  o.frequency.exponentialRampToValueAtTime(400*p,t+.35*d);
+		  g.gain.setValueAtTime(.07,t+.08*d);
+		  g.gain.exponentialRampToValueAtTime(.0001,t+.5*d);
+		  _play(o,t,.55*d); return .6*d;
+		}
+	  },
+	  {
+		id:'env_static', icon:'📶', name:'COMMS STATIC', desc:'Radio interference burst',
+		fn(ctx,t,p,d,dest) {
+		  const nd=_noise(ctx),g=_gain(ctx,0);
+		  const bpf=ctx.createBiquadFilter();
+		  bpf.type='bandpass'; bpf.frequency.value=1200*p; bpf.Q.value=.5;
+		  nd.connect(bpf); bpf.connect(g); g.connect(dest);
+		  g.gain.linearRampToValueAtTime(.07,t+.02*d);
+		  g.gain.setValueAtTime(.05,t+.1*d); g.gain.setValueAtTime(.08,t+.18*d);
+		  g.gain.exponentialRampToValueAtTime(.0001,t+.3*d);
+		  _play(nd,t,.32*d); return .35*d;
+		}
+	  },
+	  {
+		id:'env_door', icon:'🚪', name:'BLAST DOOR', desc:'Hydraulic hiss + clunk',
+		fn(ctx,t,p,d,dest) {
+		  const nd=_noise(ctx),gh=_gain(ctx,.05);
+		  const lpf=ctx.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=800;
+		  nd.connect(lpf); lpf.connect(gh); gh.connect(dest);
+		  gh.gain.setValueAtTime(.05,t); gh.gain.exponentialRampToValueAtTime(.0001,t+.35*d);
+		  _play(nd,t,.36*d);
+		  const oc=_mk(ctx,'triangle'),gc=_gain(ctx,.2);
+		  oc.connect(gc); gc.connect(dest);
+		  oc.frequency.setValueAtTime(90*p,t+.3*d);
+		  oc.frequency.exponentialRampToValueAtTime(30*p,t+.45*d);
+		  gc.gain.setValueAtTime(.2,t+.3*d); gc.gain.exponentialRampToValueAtTime(.0001,t+.45*d);
+		  _play(oc,t+.3*d,.18*d); return .55*d;
+		}
+	  },
+	]
+  },
+  {
+	id:'alert', label:'ALERTS // CRITICAL', cls:'alert',
+	sounds: [
+	  {
+		id:'alert_red', icon:'🔴', name:'RED ALERT', desc:'Battle stations klaxon',
+		fn(ctx,t,p,d,dest) {
+		  [0,.18,.36,.54].forEach((off,idx)=>{
+			const rising=idx%2===0;
+			const o=_mk(ctx,'square'),g=_gain(ctx,.045);
+			o.connect(g); g.connect(dest);
+			const s=t+off*d;
+			o.frequency.setValueAtTime((rising?600:900)*p,s);
+			o.frequency.linearRampToValueAtTime((rising?900:600)*p,s+.12*d);
+			g.gain.setValueAtTime(.045,s); g.gain.setValueAtTime(.045,s+.12*d);
+			g.gain.exponentialRampToValueAtTime(.0001,s+.16*d);
+			_play(o,s,.17*d);
+		  });
+		  return .75*d;
+		}
+	  },
+	  {
+		id:'alert_warn', icon:'⚠️', name:'WARNING', desc:'Caution tone pulse',
+		fn(ctx,t,p,d,dest) {
+		  [0,.22].forEach(off=>{
+			const o=_mk(ctx,'sine'),g=_gain(ctx,.07);
+			o.connect(g); g.connect(dest);
+			const s=t+off*d;
+			o.frequency.setValueAtTime(880*p,s);
+			g.gain.setValueAtTime(.07,s); g.gain.exponentialRampToValueAtTime(.0001,s+.15*d);
+			_play(o,s,.16*d);
+		  });
+		  return .42*d;
+		}
+	  },
+	  {
+		id:'alert_breach', icon:'💥', name:'HULL BREACH', desc:'Explosive decompression',
+		fn(ctx,t,p,d,dest) {
+		  const nd=_noise(ctx),gn=_gain(ctx,.18);
+		  const lpf=ctx.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=300;
+		  nd.connect(lpf); lpf.connect(gn); gn.connect(dest);
+		  gn.gain.setValueAtTime(.18,t); gn.gain.exponentialRampToValueAtTime(.0001,t+.5*d);
+		  _play(nd,t,.52*d);
+		  const o=_mk(ctx,'sawtooth'),go=_gain(ctx,.12);
+		  o.connect(go); go.connect(dest);
+		  o.frequency.setValueAtTime(180*p,t);
+		  o.frequency.exponentialRampToValueAtTime(30*p,t+.25*d);
+		  go.gain.setValueAtTime(.12,t); go.gain.exponentialRampToValueAtTime(.0001,t+.3*d);
+		  _play(o,t,.35*d); return .6*d;
+		}
+	  },
+	]
+  }
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AUDIO HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+let _ACX=null, _analyser=null;
+
+function _getCtx() {
+  if(!_ACX){
+	_ACX=new (window.AudioContext||window.webkitAudioContext)();
+	_analyser=_ACX.createAnalyser(); _analyser.fftSize=512;
+	_analyser.connect(_ACX.destination);
+  }
+  if(_ACX.state==='suspended') _ACX.resume();
+  return _ACX;
+}
+function _mk(ctx,type)     { const o=ctx.createOscillator(); o.type=type; return o; }
+function _gain(ctx,val)    { const g=ctx.createGain(); g.gain.setValueAtTime(val,ctx.currentTime); return g; }
+function _play(node,s,dur) { node.start(s); node.stop(s+dur+.01); }
+function _noise(ctx) {
+  const buf=ctx.createBuffer(1,ctx.sampleRate*.15,ctx.sampleRate);
+  const ch=buf.getChannelData(0);
+  for(let i=0;i<ch.length;i++) ch[i]=Math.random()*2-1;
+  const src=ctx.createBufferSource(); src.buffer=buf; return src;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// OSCILLOSCOPE
+// ═══════════════════════════════════════════════════════════════════════════
+const scopeCanvas=document.getElementById('scope');
+const scopeCtx=scopeCanvas.getContext('2d');
+const readout=document.getElementById('scope-readout');
+
+function drawScope(){
+  requestAnimationFrame(drawScope);
+  const W=scopeCanvas.width, H=scopeCanvas.height;
+  scopeCtx.fillStyle='#050505'; scopeCtx.fillRect(0,0,W,H);
+  scopeCtx.strokeStyle='#0c160c'; scopeCtx.lineWidth=1;
+  for(let x=0;x<W;x+=W/10){ scopeCtx.beginPath(); scopeCtx.moveTo(x,0); scopeCtx.lineTo(x,H); scopeCtx.stroke(); }
+  for(let y=0;y<H;y+=H/4) { scopeCtx.beginPath(); scopeCtx.moveTo(0,y); scopeCtx.lineTo(W,y); scopeCtx.stroke(); }
+  if(!_analyser){
+	scopeCtx.strokeStyle='#0d1f0d'; scopeCtx.lineWidth=1.5;
+	scopeCtx.beginPath(); scopeCtx.moveTo(0,H/2); scopeCtx.lineTo(W,H/2); scopeCtx.stroke();
+	return;
+  }
+  const buf=new Float32Array(_analyser.fftSize);
+  _analyser.getFloatTimeDomainData(buf);
+  let rms=0; for(let i=0;i<buf.length;i++) rms+=buf[i]*buf[i];
+  rms=Math.sqrt(rms/buf.length);
+  readout.textContent=rms>.005?'RMS '+rms.toFixed(3):'IDLE';
+  scopeCtx.lineWidth=1.5; scopeCtx.strokeStyle='#00ff41';
+  scopeCtx.shadowBlur=5; scopeCtx.shadowColor='#00ff41';
+  scopeCtx.beginPath();
+  for(let i=0;i<buf.length;i++){
+	const x=(i/buf.length)*W, y=(.5-buf[i]*.42)*H;
+	i===0?scopeCtx.moveTo(x,y):scopeCtx.lineTo(x,y);
+  }
+  scopeCtx.stroke(); scopeCtx.shadowBlur=0;
+}
+drawScope();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BUILD PAD UI
+// ═══════════════════════════════════════════════════════════════════════════
+const sectionsEl=document.getElementById('sound-sections');
+const logEl=document.getElementById('log');
+const allSounds=[];
+let padIndex=0;
+
+CATEGORIES.forEach(cat=>{
+  // Category header spans full grid width via CSS grid-column: 1 / -1
+  const header=document.createElement('div');
+  header.className='cat-header cat-'+cat.cls;
+  header.innerHTML='<div class="cat-dot"></div>'+cat.label;
+  sectionsEl.appendChild(header);
+
+  cat.sounds.forEach(s=>{
+	s._cat=cat.cls;
+	allSounds.push(s);
+	const idx=padIndex++;
+	const keyLabel=idx<10?(idx+1)%10:'';
+	const pad=document.createElement('div');
+	pad.className='pad '+cat.cls;
+	pad.dataset.idx=idx;
+	pad.innerHTML=
+	  (keyLabel!==''?'<div class="pad-key">['+keyLabel+']</div>':'')+
+	  '<span class="pad-icon">'+s.icon+'</span>'+
+	  '<div class="pad-name">'+s.name+'</div>'+
+	  '<div class="pad-desc">'+s.desc+'</div>'+
+	  '<div class="pad-actions"><button class="btn-export">{ } EXPORT</button></div>';
+	pad.addEventListener('click',e=>{
+	  if(e.target.classList.contains('btn-export')){ openModal(s); return; }
+	  fireSound(s,pad);
+	});
+	sectionsEl.appendChild(pad);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIRE
+// ═══════════════════════════════════════════════════════════════════════════
+function getSliders(){
+  const vol=document.getElementById('vol').value/100;
+  const pitch=parseFloat(document.getElementById('pitch').value);
+  const decay=document.getElementById('decay').value/100;
+  const p=Math.pow(2,pitch/12);
+  return {vol,pitch,decay,p};
+}
+
+function fireSound(s,padEl){
+  const ctx=_getCtx();
+  const {vol,pitch,decay,p}=getSliders();
+  const master=ctx.createGain();
+  master.gain.value=vol;
+  master.connect(_analyser);
+  const dur=s.fn(ctx,ctx.currentTime,p,decay,master);
+  padEl.classList.remove('firing'); void padEl.offsetWidth; padEl.classList.add('firing');
+  setTimeout(()=>padEl.classList.remove('firing'),Math.min(dur*1000,600));
+  logEl.textContent=`▶ ${s.name} // VOL:${Math.round(vol*100)}% PITCH:${pitch>0?'+':''}${pitch}st DECAY:${decay.toFixed(2)}× P:${p.toFixed(3)}`;
+}
+
+// keyboard shortcuts 1-0
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('export-modal').classList.contains('open')) return;
+  const idx=e.key==='0'?9:parseInt(e.key)-1;
+  if(idx>=0&&idx<allSounds.length){
+	const pad=document.querySelector(`.pad[data-idx="${idx}"]`);
+	if(pad){ fireSound(allSounds[idx],pad); }
+  }
+});
+
+// slider display updates
+document.getElementById('vol').addEventListener('input',()=>{
+  const {vol,pitch,decay}=getSliders();
+  document.getElementById('vol-val').textContent=Math.round(vol*100)+'%';
+});
+document.getElementById('pitch').addEventListener('input',()=>{
+  const {pitch}=getSliders();
+  document.getElementById('pitch-val').textContent=(pitch>0?'+':'')+pitch+' st';
+});
+document.getElementById('decay').addEventListener('input',()=>{
+  const {decay}=getSliders();
+  document.getElementById('decay-val').textContent=decay.toFixed(2)+'×';
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPORT MODAL
+// ═══════════════════════════════════════════════════════════════════════════
+let _exportSound=null, _exportMode='bake', _exportTab='snippet', _exportSliders=null;
+
+function openModal(s){
+  _exportSound=s;
+  _exportTab='snippet';
+  _exportSliders=getSliders(); // ← snapshot sliders RIGHT NOW
+  document.getElementById('modal-title').textContent=`// EXPORT: ${s.icon} ${s.name}`;
+  document.querySelectorAll('.modal-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+  setMode(_exportMode,true);
+  document.getElementById('export-modal').classList.add('open');
+}
+function closeModal(){ document.getElementById('export-modal').classList.remove('open'); }
+
+function setMode(mode,force=false){
+  if(mode===_exportMode&&!force) return;
+  _exportMode=mode;
+  document.getElementById('mode-bake').classList.toggle('active',mode==='bake');
+  document.getElementById('mode-param').classList.toggle('active',mode==='param');
+  document.getElementById('mode-desc').textContent=
+	mode==='bake'
+	  ? 'Slider values burned in — zero-param call on your site'
+	  : 'Slider values become defaults — overridable at call time';
+  const bs=document.getElementById('bake-summary');
+  if(mode==='bake'&&_exportSliders){
+	const sl=_exportSliders;
+	bs.classList.add('visible');
+	document.getElementById('bv-vol').textContent=Math.round(sl.vol*100)+'%';
+	document.getElementById('bv-pitch').textContent=(sl.pitch>0?'+':'')+sl.pitch+' st';
+	document.getElementById('bv-decay').textContent=sl.decay.toFixed(2)+'×';
+	document.getElementById('bv-pmult').textContent=sl.p.toFixed(4);
+  } else { bs.classList.remove('visible'); }
+  refreshCode();
+}
+
+function switchTab(tab,btn){
+  _exportTab=tab;
+  document.querySelectorAll('.modal-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  refreshCode();
+}
+
+function refreshCode(){
+  if(!_exportSound) return;
+  const hints={
+	snippet:'// Drop alongside helpers into any JS file',
+	module: '// Full file → assets/js/audio.js in Jekyll',
+	usage:  '// Paste into your Jekyll template or _includes'
+  };
+  document.getElementById('modal-hint').textContent=hints[_exportTab];
+  let code;
+  if(_exportTab==='snippet') code=buildSnippet(_exportSound,_exportMode,_exportSliders);
+  if(_exportTab==='module')  code=buildModule(_exportSound,_exportMode,_exportSliders);
+  if(_exportTab==='usage')   code=buildUsage(_exportSound,_exportMode,_exportSliders);
+  document.getElementById('modal-code').textContent=code;
+}
+
+
+// ── HELPERS SOURCE ─────────────────────────────────────────────────────────
+// Stored as array to avoid backtick-in-backtick parse errors
+const HELPERS_SRC = [
+  '// -- ASTROMECH AUDIO HELPERS -- include once in assets/js/audio.js',
+  'let _ACX = null;',
+  'function _getCtx() {',
+  "  if (!_ACX) _ACX = new (window.AudioContext || window.webkitAudioContext)();",
+  "  if (_ACX.state === 'suspended') _ACX.resume();",
+  '  return _ACX;',
+  '}',
+  'function _mk(ctx, type)    { const o = ctx.createOscillator(); o.type = type; return o; }',
+  'function _gain(ctx, val)   { const g = ctx.createGain(); g.gain.setValueAtTime(val, ctx.currentTime); return g; }',
+  'function _play(nd, s, dur) { nd.start(s); nd.stop(s + dur + 0.01); }',
+  'function _noise(ctx) {',
+  '  const buf = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);',
+  '  const ch = buf.getChannelData(0);',
+  '  for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;',
+  '  const src = ctx.createBufferSource(); src.buffer = buf; return src;',
+  '}',
+].join('\n');
+
+// ── CODE BUILDERS ───────────────────────────────────────────────────────────
+function buildSnippet(s, mode, sl) {
+  const fnSrc = s.fn.toString();
+  const baked = mode === 'bake';
+  const lines = [];
+  lines.push('// ' + s.icon + ' ' + s.name + ' -- ' + s.desc);
+  if (baked) {
+	lines.push('// BAKED: vol=' + Math.round(sl.vol*100) + '%  pitch=' + (sl.pitch>0?'+':'') + sl.pitch + 'st  decay=' + sl.decay.toFixed(2) + 'x');
+	lines.push('// Requires helpers (JEKYLL MODULE tab). Call: play_' + s.id + '()');
+	lines.push('');
+	lines.push('function play_' + s.id + '() {');
+	lines.push('  const ctx = _getCtx();');
+	lines.push('  const master = ctx.createGain();');
+	lines.push('  master.gain.value = ' + sl.vol.toFixed(4) + ';  // vol baked');
+	lines.push('  master.connect(ctx.destination);');
+	lines.push('  const _p = ' + sl.p.toFixed(6) + ';  // pitch baked (' + (sl.pitch>0?'+':'') + sl.pitch + ' semitones)');
+	lines.push('  const _d = ' + sl.decay.toFixed(4) + ';  // decay baked (' + sl.decay.toFixed(2) + 'x)');
+	lines.push('  const _fn = ' + fnSrc + ';');
+	lines.push('  _fn(ctx, ctx.currentTime, _p, _d, master);');
+	lines.push('}');
+  } else {
+	lines.push('// PARAMETRIC -- defaults from lab sliders at export time.');
+	lines.push('// Requires helpers. Call: play_' + s.id + '()  or  play_' + s.id + '(vol, pitchSt, decayMult)');
+	lines.push('');
+	lines.push('function play_' + s.id + '(');
+	lines.push('  volume         = ' + sl.vol.toFixed(2) + ',   // 0.0 - 1.0');
+	lines.push('  pitchSemitones = ' + sl.pitch + ',           // -12 to +12');
+	lines.push('  decayMult      = ' + sl.decay.toFixed(2) + ' // 0.2 - 2.5x');
+	lines.push(') {');
+	lines.push('  const ctx = _getCtx();');
+	lines.push('  const master = ctx.createGain();');
+	lines.push('  master.gain.value = volume;');
+	lines.push('  master.connect(ctx.destination);');
+	lines.push('  const _p = Math.pow(2, pitchSemitones / 12);');
+	lines.push('  const _d = decayMult;');
+	lines.push('  const _fn = ' + fnSrc + ';');
+	lines.push('  _fn(ctx, ctx.currentTime, _p, _d, master);');
+	lines.push('}');
+  }
+  return lines.join('\n');
+}
+
+function buildModule(s, mode, sl) {
+  const snippet = buildSnippet(s, mode, sl);
+  const regLine = snippet
+	.replace(/^function play_/, 'window.AstroAudio.' + s.id + ' = function ')
+	.replace(/^}$/m, '};');
+  const callSig = mode === 'bake'
+	? 'AstroAudio.' + s.id + '()'
+	: 'AstroAudio.' + s.id + '(volume, pitchSt, decayMult)';
+  return [
+	'---',
+	'# Save as: assets/js/audio.js',
+	'# Jekyll include: script src="{{ "/assets/js/audio.js" | relative_url }}"',
+	'---',
+	HELPERS_SRC,
+	'',
+	'// -- SOUND REGISTRY --------------------------------------------------',
+	'window.AstroAudio = window.AstroAudio || {};',
+	'',
+	'// ' + s.icon + ' ' + s.name + ' -- call: ' + callSig,
+	regLine
+  ].join('\n');
+}
+
+function buildUsage(s, mode, sl) {
+  const baked = mode === 'bake';
+  const call = baked
+	? 'AstroAudio.' + s.id + '()'
+	: 'AstroAudio.' + s.id + '(' + sl.vol.toFixed(2) + ', ' + sl.pitch + ', ' + sl.decay.toFixed(2) + ')';
+  const lines = [];
+  lines.push('<!-- SETUP: once in _includes/head.html or your layout -->');
+  lines.push('<!-- script src="{{ ' + "'" + '/assets/js/audio.js' + "'" + ' | relative_url }}" -->');
+  lines.push('');
+  lines.push('<!-- Button -->');
+  lines.push('<button onclick="' + call + '">' + s.icon + ' ' + s.name + '</button>');
+  lines.push('');
+  lines.push('<!-- Any element -->');
+  lines.push('<span onclick="' + call + '" style="cursor:pointer">' + s.icon + '</span>');
+  lines.push('');
+  lines.push('<!-- On page load -->');
+  lines.push('<script>window.addEventListener("load", () => ' + call + ');<\/script>');
+  lines.push('');
+  if (baked) {
+	lines.push('<!-- Baked: sound is fixed. No params needed. -->');
+  } else {
+	lines.push('<!-- Parametric: override defaults:');
+	lines.push('AstroAudio.' + s.id + '(1.0,  0,   1.0);  // loud, normal');
+	lines.push('AstroAudio.' + s.id + '(0.4, -7,   2.0);  // quiet, lower, slower');
+	lines.push('AstroAudio.' + s.id + '(0.8, +5,   0.6);  // higher, snappier -->');
+  }
+  lines.push('');
+  lines.push('<!-- Jekyll front matter trigger:');
+  lines.push('     Add to page YAML:  play_on_load: ' + s.id);
+  lines.push('     Then in layout: -->');
+  lines.push('{% if page.play_on_load == "' + s.id + '" %}');
+  lines.push('<script>window.addEventListener("load", () => ' + call + ');<\/script>');
+  lines.push('{% endif %}');
+  return lines.join('\n');
+}
+
+function copyCode() {
+  const code = document.getElementById('modal-code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+	const btn = document.getElementById('copy-btn');
+	btn.textContent = '[ COPIED ]';
+	setTimeout(() => btn.textContent = '[ COPY ]', 1800);
+  });
+}
+
+document.getElementById('export-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('export-modal')) closeModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
+</body>
+</html>

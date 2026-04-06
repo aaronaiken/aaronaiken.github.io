@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {%- seo -%}
+  {%- feed_meta -%}
+  <style>
+    /* Minimal reset — the tool brings its own styles */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #080808;
+      min-height: 100vh;
+    }
+
+    /* Slim back bar sitting above the tool */
+    .tool-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      height: 32px;
+      background: rgba(8,8,8,0.92);
+      border-bottom: 1px solid #182018;
+      backdrop-filter: blur(4px);
+      font-family: 'Share Tech Mono', 'Courier New', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .tool-bar__back {
+      color: #7a4e08;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .tool-bar__back:hover { color: #f5b332; }
+
+    .tool-bar__title { color: #2e5038; }
+
+    .tool-bar__home {
+      color: #2e5038;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .tool-bar__home:hover { color: #4dbb6a; }
+
+    /* Push tool content below the bar */
+    .tool-content {
+      padding-top: 32px;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Slim navigation bar — unobtrusive, always accessible -->
+  <div class="tool-bar">
+    <a class="tool-bar__back" href="/tools/">← Tools</a>
+    <span class="tool-bar__title">{{ page.title }}</span>
+    <a class="tool-bar__home" href="/">Home</a>
+  </div>
+
+  <div class="tool-content">
+    {{ content }}
+  </div>
+
+</body>
+</html>
