@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-04-06 07:59:51 -0400
+layout: status_update
+author: aaron
+source: web
+---
+☀️ sun is shining this morning! A welcome sight, now we just need to temps to continue their climb.
