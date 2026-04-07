@@ -1,253 +1,519 @@
-@import url('https://fonts.googleapis.com/css2?family=Fredericka+the+Great&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredericka+the+Great&family=Share+Tech+Mono&family=VT323&family=Crimson+Pro:ital,wght@0,400;1,400&display=swap');
 
-/* Styles for the background of the status page */
+/* =============================================
+   STATUS PAGE
+   View A: 2007 Twitter (default)
+   View B: Terminal Feed (toggle)
+   ============================================= */
+
+/* ---- KILL MINIMA BODY CONSTRAINTS ---- */
 body.status-page {
-  background-color: #9ae4e8; /* Example light blue */
-  background-image: url('/assets/img/status/bg.gif'); /* Path to your cloud image */
-  background-repeat: no-repeat;
-  background-position: top left;
-  /* Other background styles */
+  background-color: #9ae4e8 !important;
+  background-image: url('/assets/img/status/bg.gif') !important;
+  background-repeat: no-repeat !important;
+  background-position: top left !important;
+  font-family: 'Trebuchet MS', Arial, sans-serif !important;
+  font-size: 14px !important;
+  color: #333 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  max-width: 100% !important;
 }
 
 body.status-page #container {
   max-width: 900px;
   margin: 0 auto;
-  padding: 15px 0;
-  text-align: left;
+  padding: 15px 16px;
   position: relative;
 }
 
-body.status-page #content {
-  width: 555px;
-  margin-top: 0px;
-  margin-right: 25px;
-  float: left;
-  padding-bottom: 15px;
-}
-
-/* You can then add more styles for other elements *within* the status page,
-   also using the body.status-page context for specificity if needed */
-body.status-page .updates-container {
-  /* Styles for the main content area of the status page */
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 20px;
-  background-color: white;
-  border: 1px solid #ccc;
-}
-
-/* Or you can target elements directly by their class or ID within the status page */
-.status-update {
-  /* Styles for individual status updates */
-  border-bottom: 1px solid #fff;
-  padding: 5px;
-}
-
+/* ---- HEADER ---- */
 body.status-page h1#header {
-  font-family: "Fredericka the Great", serif;
-  font-weight: 400;
-  font-style: normal;
-  font-size: xxx-large;
+  font-family: "Fredericka the Great", serif !important;
+  font-weight: 400 !important;
+  font-size: 2.6rem !important;
+  color: #14171a !important;
+  margin-bottom: 8px !important;
+  line-height: 1.1 !important;
+  text-decoration: none !important;
 }
 
+/* ---- TWO-COLUMN LAYOUT ---- */
+@media (min-width: 769px) {
+  body.status-page #content {
+    margin-right: 275px;
+    padding-bottom: 15px;
+  }
+  body.status-page #side.desktop-content {
+    /* width: 250px; */
+    position: absolute;
+    top: 60px;
+    right: 16px;
+  }
+}
+
+/* ---- HEADER ROW (title + toggle) ---- */
+.st-header-row {
+  /* display: flex; */
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 16px;
+}
+
+/* Keep h1 styles when inside header row */
+.st-header-row h1#header {
+  margin-bottom: 0 !important;
+}
+
+.st-toggle-btn {
+  display: inline-flex !important;
+  background: rgba(0,0,0,0.08) !important;
+  border: 1px solid rgba(0,0,0,0.25) !important;
+  cursor: pointer !important;
+  padding: 5px 12px !important;
+  font-family: 'Share Tech Mono', monospace !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  color: #444 !important;
+  border-radius: 2px !important;
+  line-height: 1.6 !important;
+  transition: background 0.15s !important;
+}
+
+.st-toggle-btn:hover {
+  background: rgba(0,0,0,0.15) !important;
+  border-color: rgba(0,0,0,0.4) !important;
+}
+
+.st-toggle-inner {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.st-toggle-sep { color: #aaa !important; }
+.st-toggle-opt { color: #aaa !important; transition: color 0.15s; }
+.st-toggle-opt--active { color: #222 !important; font-weight: 700 !important; }
+
+/* ---- PROFILE ---- */
 .profile-header {
-  display: flex; /* To align picture and name horizontally */
-  align-items: center; /* Vertically align items in the flex container */
-  /*margin-bottom: 15px; /* Add some space below */
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 10px;
 }
 
 .profile-pic {
-  width: 50px; /* Example size */
-  height: 50px;
-  margin-right: 10px;
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 4px !important;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(0,0,0,0.1) !important;
+  margin: 0 !important;
 }
 
-.account-info {
-  display: flex;
-  flex-direction: column; /* Stack name and handle vertically */
+.account-info { display: flex; flex-direction: column; gap: 2px; }
+.account-name { font-weight: bold; font-size: 1.1em; color: #14171a; }
+.account-handle { color: #657786; font-size: 0.9em; }
+
+/* Terminal-only elements hidden by default */
+.st-terminal-only { display: none !important; }
+
+/* ---- LATEST UPDATE ---- */
+.latest-update-container {
+  padding-top: 11px;
+  background: url('/assets/img/status/arr2.gif') no-repeat 14px 0px;
+  margin-top: 6px;
+  margin-bottom: 6px;
 }
 
-.account-name {
+.latest-status {
+  display: block;
+  background: #fff;
+  line-height: 1.4;
+  padding: 10px 12px;
   font-weight: bold;
-  font-size: 1.2em;
-  color: #292f33; /* Dark gray text */
+  font-size: 1.05em;
+  border: 1px solid #e1e8ed;
+  border-radius: 2px;
 }
 
-/* Style for the handle if you add it */
-.account-handle {
-  color: #657786; /* Gray text */
-  font-size: 0.9em;
+.latest-content .content { margin-bottom: 4px !important; }
+
+.latest-content .timestamp,
+.latest-content .source {
+  font-size: 0.8em;
+  color: #657786;
+  font-weight: normal;
+  margin: 2px 0 0 !important;
 }
 
+/* ---- OLDER UPDATES ---- */
+.older-updates-container {
+  background: #fff;
+  border: 1px solid #e1e8ed;
+  border-radius: 2px;
+  margin-top: 20px;
+  font-size: 0.88em;
+  overflow: hidden;
+}
+
+ul.older-updates-list {
+  list-style-type: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+li.older-status-item {
+  border-bottom: 1px solid #e1e8ed;
+  padding: 8px 12px;
+  line-height: 1.45;
+  overflow: hidden;
+}
+
+li.older-status-item:last-child { border-bottom: none; }
+li.older-status-item p { margin: 0 0 2px !important; }
+li.older-status-item .source { font-size: 0.82em; color: #657786; margin: 0 !important; }
+
+/* Contain images inside updates */
+li.older-status-item img,
+.latest-content img {
+  max-width: 100% !important;
+  width: auto !important;
+  height: auto !important;
+  display: block;
+  margin: 6px 0 !important;
+  border-radius: 2px;
+}
+
+p.timestamp, a.timestamp-link {
+  font-size: 0.8em;
+  color: #657786;
+  margin-left: 6px;
+  text-decoration: none;
+}
+
+a.timestamp-link:hover { text-decoration: underline; }
+
+/* ---- SIDEBAR ---- */
 body.status-page #side {
-  width: 250px;
   padding: 12px;
-  margin-top: 10px;
-  margin-bottom: 10px;
-  line-height: 1.2;
-  float: right;
   background-color: #e0ff92;
   border: 1px solid #87bc44;
-  font-size: small;
+  font-size: 0.82em;
+  line-height: 1.3;
 }
 
-body.status-page #side h3 {
-  margin-bottom: 0px;
-}
+body.status-page #side h3 { margin: 0 0 6px; font-size: 1em; }
 
 #side div.msg {
   padding: 10px 5px 10px 30px;
   background: url('/assets/img/status/girl.gif') no-repeat 0% 50%;
 }
 
-#side ul#author-details {
-  margin-left: 0px;
-  list-style-type: none;
+#side ul#author-details { margin: 4px 0 0; padding: 0; list-style: none; }
+#side ul#author-details li { margin-bottom: 3px; }
+
+/* ---- LAZY LOAD ---- */
+.older-updates-list .older-status-item {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
 }
 
-body.status-page .site-footer {
-  border-top: none;
-  padding: 0px;
+.older-updates-list .older-status-item.loaded { opacity: 1; }
+
+/* ---- FOOTER ---- */
+body.status-page .site-footer { border-top: none; padding: 0; margin-top: 16px; }
+body.status-page .footer-col-wrapper { margin-left: 0; margin-top: 12px; }
+
+/* ---- BACK LINK (individual update pages) ---- */
+.st-back-link {
+  margin-top: 16px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
 }
 
-.latest-update-container {
-  padding-top: 11px;
-  background: url('/assets/img/status/arr2.gif') no-repeat 14px 0px;
+.st-back-link a { color: #657786; text-decoration: none; }
+.st-back-link a:hover { text-decoration: underline; }
+
+/* ---- MOBILE ---- */
+.mobile-content { display: none; }
+
+@media (max-width: 768px) {
+  .desktop-content { display: none !important; }
+  .mobile-content { display: block; }
+
+  body.status-page #side.mobile-content {
+    float: none;
+    width: 100% !important;
+    margin: 12px 0;
+    position: static;
+  }
+
+  body.status-page h1#header { font-size: 2rem !important; }
+  body.status-page #content { margin-right: 0; }
+}
+
+/* ---- DARK MODE — 2007 view ---- */
+@media (prefers-color-scheme: dark) {
+  body.status-page:not(.st-terminal) {
+    background-color: #1a1f24 !important;
+    background-image: none !important;
+    color: #e0e6eb !important;
+  }
+
+  body.status-page:not(.st-terminal) h1#header { color: #e0e6eb !important; }
+  body.status-page:not(.st-terminal) .account-name { color: #e0e6eb; }
+
+  body.status-page:not(.st-terminal) .latest-status,
+  body.status-page:not(.st-terminal) .older-updates-container {
+    background: #1e2830;
+    border-color: #2d3e4a;
+    color: #c8d8e0;
+  }
+
+  body.status-page:not(.st-terminal) li.older-status-item { border-color: #2d3e4a; }
+
+  body.status-page:not(.st-terminal) #side {
+    background-color: #2a3040;
+    border-color: #3a5028;
+    color: #c8d8c8;
+  }
+
+  body.status-page:not(.st-terminal) p.timestamp,
+  body.status-page:not(.st-terminal) a.timestamp-link,
+  body.status-page:not(.st-terminal) .latest-content .timestamp,
+  body.status-page:not(.st-terminal) .source { color: #8aabb8; }
+
+  body.status-page:not(.st-terminal) .st-toggle-btn {
+    background: rgba(255,255,255,0.06) !important;
+    border-color: rgba(255,255,255,0.2) !important;
+    color: #c8d8e0 !important;
+  }
+
+  body.status-page:not(.st-terminal) .st-toggle-opt { color: #6a8a9a !important; }
+  body.status-page:not(.st-terminal) .st-toggle-opt--active { color: #e0e6eb !important; }
+  body.status-page:not(.st-terminal) .st-toggle-sep { color: #3a5060 !important; }
+}
+
+/* ============================================
+   TERMINAL MODE
+   Activated by body.st-terminal class via JS
+   ============================================ */
+
+/* Grain overlay */
+.st-grain {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 902;
+  pointer-events: none;
+  opacity: 0.055;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+body.st-terminal .st-grain { display: block; }
+
+body.st-terminal {
+  background: #080c08 !important;
+  background-image: none !important;
+  color: #4dbb6a !important;
+  font-family: 'Share Tech Mono', monospace !important;
+}
+
+body.st-terminal::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 3px,
+    rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px
+  );
+  pointer-events: none;
+  z-index: 900;
+}
+
+body.st-terminal::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 40%, transparent 40%, rgba(0,0,0,0.72) 100%);
+  pointer-events: none;
+  z-index: 901;
+}
+
+body.st-terminal h1#header {
+  font-family: 'VT323', monospace !important;
+  font-size: 2.8rem !important;
+  color: #f5b332 !important;
+  text-shadow: 0 0 18px rgba(212,136,10,0.55), 0 0 50px rgba(212,136,10,0.18);
+  animation: st-glow-breathe 5s ease-in-out infinite;
+}
+
+body.st-terminal .st-terminal-only { display: block !important; }
+
+body.st-terminal .profile-pic {
+  border-radius: 2px !important;
+  filter: sepia(0.6) contrast(1.1) brightness(0.85) saturate(0.6);
+  border-color: #2e5038 !important;
+  box-shadow: 0 0 0 3px #080c08, 0 0 0 4px #1a3020;
+}
+
+body.st-terminal .account-name {
+  font-family: 'VT323', monospace !important;
+  font-size: 1.4rem !important;
+  color: #f5b332 !important;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 10px rgba(212,136,10,0.4);
+}
+
+body.st-terminal .account-ident {
+  font-family: 'Share Tech Mono', monospace !important;
+  font-size: 0.6rem !important;
+  letter-spacing: 0.2em;
+  color: #2e5038 !important;
+  text-transform: uppercase;
+}
+
+body.st-terminal .latest-update-container {
+  background: none !important;
+  padding-top: 8px;
   margin-top: 6px;
 }
 
-.latest-status {
-  display: block;
-  background: #fff;
-  /*font-size: 2.12em;*/
-  line-height: 1.2;
-  padding: 7px;
-  font-weight: bold;
+body.st-terminal .latest-status {
+  background: #0d120d !important;
+  border: 1px solid #1a3020 !important;
+  border-left: 2px solid #d4880a !important;
+  border-radius: 0 !important;
+  color: #c8a060 !important;
+  font-family: 'Share Tech Mono', monospace !important;
+  font-size: 0.88rem !important;
+  padding: 12px 14px !important;
+  font-weight: 400 !important;
 }
 
-.older-updates-container {
-  background: #fff;
-  border: 1px inherit;
-  clear: both;
+body.st-terminal .latest-content .content {
+  color: #a06820 !important;
+  font-style: italic;
+  font-family: 'Crimson Pro', Georgia, serif !important;
+  font-size: 1rem !important;
+  line-height: 1.7;
 }
 
-.older-updates-container {
-  margin-top: 25px;
-  font-size: smaller;
+body.st-terminal .latest-content .timestamp,
+body.st-terminal .latest-content .source {
+  color: #3d2804 !important;
+  font-family: 'Share Tech Mono', monospace !important;
+  font-size: 0.62rem !important;
+  letter-spacing: 0.1em;
 }
 
-ul.older-updates-list {
-  list-style-type: none;
-  margin: 0px;
+body.st-terminal .older-updates-container {
+  background: transparent !important;
+  border: none !important;
+  margin-top: 16px !important;
 }
 
-li.older-status-item {
-  border-bottom: solid 1px;
-  padding-left: 5px;
+body.st-terminal ul.older-updates-list {
+  border: 1px solid #1a3020;
+  background: #0a0e0a;
 }
 
-li.older-status-item p {
-  margin-bottom: 0px;
+body.st-terminal li.older-status-item {
+  border-bottom: 1px solid #1a3020 !important;
+  padding: 10px 14px !important;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
 }
 
-p.timestamp, a.timestamp-link {
-  font-size: small;
+body.st-terminal .st-line-prefix {
+  color: #2e5038;
+  flex-shrink: 0;
+  font-size: 0.85rem;
 }
 
-body.status-page .footer-col-wrapper {
-  margin-left: 0px;
-  color: inherit;
-  margin-top: 15px;
+body.st-terminal li.older-status-item .content {
+  color: #7a5828 !important;
+  font-family: 'Share Tech Mono', monospace !important;
+  font-size: 0.78rem !important;
+  line-height: 1.6 !important;
+  margin: 0 !important;
+  flex: 1;
 }
 
-body.status-page .footer-col-wrapper hr {
-  margin: 0px;
+body.st-terminal li.older-status-item .source {
+  color: #2e5038 !important;
+  font-family: 'Share Tech Mono', monospace !important;
+  font-size: 0.62rem !important;
 }
 
-.older-updates-list .older-status-item {
-  opacity: 0; /* Initially hide the items */
-  transition: opacity 0.3s ease-in-out; /* Optional: Add a fade-in effect */
+body.st-terminal p.timestamp,
+body.st-terminal a.timestamp-link {
+  color: #3d2804 !important;
+  font-family: 'Share Tech Mono', monospace !important;
+  font-size: 0.6rem !important;
+  letter-spacing: 0.08em;
 }
 
-.older-updates-list .older-status-item.loaded {
-  opacity: 1; /* Make them visible when loaded */
+body.st-terminal a.timestamp-link:hover { color: #7a4e08 !important; }
+
+body.st-terminal #side {
+  background: #0d120d !important;
+  border: 1px solid #1a3020 !important;
+  color: #3d6048 !important;
+  font-family: 'Share Tech Mono', monospace !important;
+  font-size: 0.72rem !important;
 }
 
-@media (prefers-color-scheme: dark) {
-body.status-page {
-  background-color: #1F2937;
-  background-image: none;
-  color: color(display-p3 0.69 0.898 0.537);
-}  
-
-.latest-status, .older-updates-container {
-  background: color(display-p3 0.11 0.114 0.122);
-  border: solid 1px color(display-p3 0.69 0.898 0.537);
-}
-.account-name {
- color: color(display-p3 0.69 0.898 0.537);
+body.st-terminal #side h3 {
+  font-family: 'Share Tech Mono', monospace !important;
+  font-size: 0.65rem !important;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #2e5038 !important;
 }
 
-body.status-page #side {
-  background-color: #363535;
-  border: 1px solid #87bc44;
-}
+body.st-terminal #side div.msg { background-image: none !important; padding-left: 5px; }
+body.st-terminal #side a { color: #4dbb6a !important; }
+
+/* Terminal toggle */
+body.st-terminal .st-toggle-btn {
+  background: rgba(77,187,106,0.08) !important;
+  border-color: #1a3020 !important;
+  color: #4dbb6a !important;
 }
 
-/* for the smaller screens */
-.mobile-content {
-  display: none; /* Hidden by default */
+body.st-terminal .st-toggle-btn:hover {
+  background: rgba(77,187,106,0.15) !important;
 }
 
-@media (max-width: 768px) {
-  .desktop-content {
-    display: none; /* Hide on smaller screens */
-  }
-  .mobile-content {
-    display: block; /* Show on smaller screens */
-  }
-}
+body.st-terminal .st-toggle-opt { color: #1a3020 !important; }
+body.st-terminal .st-toggle-opt--active { color: #4dbb6a !important; }
+body.st-terminal .st-toggle-sep { color: #1a3020 !important; }
 
-body.status-page #side.mobile-content {
-  float: none;
-}
+/* Terminal nav */
+body.st-terminal nav a { color: #4dbb6a !important; background: none !important; }
+body.st-terminal nav a:hover { background: #1a3020 !important; color: #4dbb6a !important; }
 
-/* site footer status display */
-.site-footer #content {
-  background-color: #9ae4e8; /* Example light blue */
-  background-image: url('/assets/img/status/bg.gif'); /* Path to your cloud image */
-}
+/* Terminal footer */
+body.st-terminal .site-footer { color: #2e5038 !important; background: transparent !important; }
+body.st-terminal .site-footer a { color: #4dbb6a !important; }
+body.st-terminal .site-footer .svg-icon { fill: #2e5038 !important; }
+body.st-terminal .fine-print { color: #2e5038 !important; }
+body.st-terminal .fine-print a { color: #4dbb6a !important; }
+body.st-terminal .st-back-link a { color: #2e5038 !important; }
+body.st-terminal .st-back-link a:hover { color: #4dbb6a !important; }
 
-.site-footer .profile-header {
-  padding: 7px;
-}
-
-.site-footer .latest-update-container {
-  padding-top: 0px;
-  margin-top: 0px;
-  background: none;
-}
-
-.site-footer .latest-status {
-  display: block;
-  background: none;
-  /*font-size: 2.12em;*/
-  line-height: 1.2;
-  padding: 7px;
-  font-weight: bold;
-}
-
-/* site header status display */
-nav .latest-content {
-  max-width: 50%;
-  float: right;
-  font-size: 9pt;
-  border: 1px dashed gray;
-  padding: 3px;
-  text-align: right;
-}
-
-nav .latest-content p.timestamp, nav .latest-content p {
-  margin-bottom: 0px;
-  font-size: 9pt;
+/* ---- ANIMATIONS ---- */
+@keyframes st-glow-breathe {
+  0%,100% { text-shadow: 0 0 18px rgba(212,136,10,0.55), 0 0 50px rgba(212,136,10,0.18); }
+  50%     { text-shadow: 0 0 28px rgba(245,179,50,0.8), 0 0 80px rgba(212,136,10,0.3); }
 }

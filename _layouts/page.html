@@ -1,14 +1,79 @@
----
-layout: default
----
-<article class="post">
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600&family=Lora:ital,wght@0,400;0,500;1,400&family=Share+Tech+Mono&display=swap');
 
-  <header class="post-header">
-    <h1 class="post-title">{{ page.title | escape }}</h1>
-  </header>
+body.page-layout {
+  --nav-link: #a06820; --nav-link-hover: #f5b332;
+  --ident-color: #5a3c10; --ident-border: #2a1c08;
+  --footer-border: #2a1c08; --footer-label: #5a3c10;
+  --footer-link: #7a5020; --footer-link-hover: #d4880a; --footer-dim: #4a3010;
 
-  <div class="post-content">
-    {{ content }}
-  </div>
+  background: #0a0806 !important; color: #c89040 !important;
+  font-family: 'Lora', Georgia, serif !important;
+  margin: 0 !important; padding: 0 !important; max-width: 100% !important;
+  font-size: 18px;
+}
 
-</article>
+body.page-layout * { box-sizing: border-box; }
+
+body.page-layout::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0px, transparent 4px, rgba(0,0,0,0.1) 4px, rgba(0,0,0,0.1) 5px); pointer-events: none; z-index: 900; }
+
+.pl__wrap { max-width: 700px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 10; }
+
+.pl__header { margin-bottom: 32px; }
+
+.pl__title { font-family: 'Fraunces', Georgia, serif !important; font-size: clamp(2rem, 4vw, 2.6rem) !important; font-weight: 600 !important; color: #f0d090 !important; line-height: 1.15 !important; letter-spacing: -0.01em !important; margin: 0 0 16px !important; text-decoration: none !important; }
+
+.pl__rule { height: 1px; background: linear-gradient(to right, #4a3010, transparent); }
+
+.pl__content { font-size: 1.15rem; line-height: 1.85; color: #c89040; }
+
+.pl__content p { margin-bottom: 1.5em !important; color: #c89040 !important; }
+.pl__content h2 { font-family: 'Fraunces', serif !important; font-size: 1.55rem !important; font-weight: 600 !important; color: #f0d090 !important; margin: 2em 0 0.7em !important; text-decoration: none !important; }
+.pl__content h3 { font-family: 'Fraunces', serif !important; font-size: 1.25rem !important; font-style: italic !important; font-weight: 400 !important; color: #d4a860 !important; margin: 1.8em 0 0.6em !important; }
+.pl__content h4 { font-family: 'Share Tech Mono', monospace !important; font-size: 0.75rem !important; letter-spacing: 0.2em !important; text-transform: uppercase !important; color: #7a5828 !important; margin: 1.6em 0 0.5em !important; font-weight: 400 !important; text-decoration: none !important; }
+.pl__content a { color: #d4880a !important; text-decoration: none !important; border-bottom: 1px solid #6a4010; transition: color 0.15s, border-color 0.15s; background: none !important; }
+.pl__content a:hover { color: #f5b332 !important; border-color: #d4880a; background: none !important; }
+.pl__content strong { color: #f0d090; font-weight: 600; }
+.pl__content ul, .pl__content ol { padding-left: 1.4em !important; margin-bottom: 1.5em !important; }
+.pl__content li { margin-bottom: 0.4em !important; color: #c89040 !important; line-height: 1.7 !important; font-size: 1.1rem !important; }
+.pl__content hr { border: none; border-top: 1px solid #2a1c08; margin: 2.5em 0 !important; }
+.pl__content blockquote { border-left: 2px solid #5a3c10; padding: 4px 0 4px 20px; margin: 1.8em 0 !important; font-style: italic; color: #8a6030 !important; }
+.pl__content img { max-width: 100% !important; height: auto; display: block; margin: 1.5em auto; border-radius: 2px; filter: sepia(0.2) contrast(1.05) brightness(0.88); }
+
+@media (max-width: 480px) { .pl__title { font-size: 1.7rem !important; } .pl__content { font-size: 1.05rem; } }
+
+@media (prefers-color-scheme: light) {
+  body.page-layout { background: #faf6ef !important; color: #3a2e1a !important; --nav-link: #a06020; --nav-link-hover: #7a3e00; --footer-border: #c8bfad; --footer-label: #8a7858; --footer-link: #a06020; --footer-link-hover: #7a3e00; --footer-dim: #8a7858; }
+  body.page-layout::before { display: none; }
+  .pl__title { color: #1a1208 !important; }
+  .pl__rule { background: linear-gradient(to right, #a89878, transparent); }
+  .pl__content { color: #3a2e1a; }
+  .pl__content p { color: #3a2e1a !important; }
+  .pl__content h2 { color: #1a1208 !important; }
+  .pl__content h3 { color: #4a3818 !important; }
+  .pl__content h4 { color: #8a7858 !important; }
+  .pl__content a { color: #7a3e00 !important; border-color: #c4a060; }
+  .pl__content a:hover { color: #a06020 !important; border-color: #7a3e00; }
+  .pl__content strong { color: #1a1208; }
+  .pl__content li { color: #3a2e1a !important; }
+  .pl__content blockquote { color: #6a5838 !important; border-color: #a89878; }
+  .pl__content img { filter: none; }
+}
+</style>
+<body class="page-layout">
+  <main class="pl__wrap">
+    {% include nav.html %}
+    <article class="pl__article">
+      <header class="pl__header">
+        <h1 class="pl__title">{{ page.title | escape }}</h1>
+        <div class="pl__rule"></div>
+      </header>
+      <div class="pl__content">{{ content }}</div>
+    </article>
+    {% include footer.html %}
+  </main>
+</body>
+</html>

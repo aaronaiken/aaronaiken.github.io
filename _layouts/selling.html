@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Crimson+Pro:ital,wght@0,400;1,400&family=Share+Tech+Mono&display=swap');
+
+body.selling-layout {
+  --nav-link: #a06820; --nav-link-hover: #f5b332;
+  --ident-color: #5a3c10; --ident-border: #2e1e08;
+  --footer-border: #2e1e08; --footer-label: #5a3c10;
+  --footer-link: #7a5020; --footer-link-hover: #d4880a; --footer-dim: #4a3010;
+
+  background: #080a06 !important; color: #d4880a !important;
+  font-family: 'Share Tech Mono', monospace !important;
+  min-height: 100vh; overflow-x: hidden;
+  margin: 0 !important; max-width: 100% !important; padding: 0 !important;
+  font-size: 17px;
+}
+
+body.selling-layout * { box-sizing: border-box; }
+body.selling-layout::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px); pointer-events: none; z-index: 900; }
+body.selling-layout::after { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 40%, transparent 40%, rgba(0,0,0,0.65) 100%); pointer-events: none; z-index: 901; }
+
+.sl__wrap { max-width: 700px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 10; }
+
+.sl__header { margin-bottom: 24px; }
+
+.sl__topbar { display: flex; justify-content: space-between; align-items: center; font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: #5a3c10; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+.sl__topbar-left { display: flex; align-items: center; gap: 8px; }
+.sl__ident { color: #7a5020; }
+.sl__divider { color: #2e1e08; }
+.sl__ship { color: #5a3c10; }
+.sl__topbar-right { display: flex; align-items: center; gap: 6px; }
+.sl__status-dot { width: 5px; height: 5px; border-radius: 50%; background: #d4880a; box-shadow: 0 0 6px rgba(212,136,10,0.6); animation: sl-pulse 2.5s ease-in-out infinite; }
+.sl__status-label { color: #7a5020; font-size: 0.62rem; letter-spacing: 0.2em; }
+
+.sl__title { font-family: 'VT323', monospace !important; font-size: 2.8rem !important; font-weight: 400 !important; color: #f5b332 !important; text-shadow: 0 0 18px rgba(212,136,10,0.55); letter-spacing: 0.04em !important; line-height: 1 !important; margin: 0 0 14px !important; text-decoration: none !important; animation: sl-glow 5s ease-in-out infinite; }
+.sl__rule { height: 1px; background: linear-gradient(to right, #6a4010, transparent); margin-bottom: 28px; }
+
+.sl__content > p:first-child { font-family: 'Crimson Pro', Georgia, serif !important; font-size: 1.15rem !important; color: #c89040 !important; line-height: 1.8 !important; margin-bottom: 1.5em !important; }
+.sl__content p { font-family: 'Crimson Pro', Georgia, serif !important; font-size: 1.05rem !important; color: #c89040 !important; line-height: 1.75 !important; margin-bottom: 1.4em !important; }
+
+.sl__content h2 { font-family: 'Share Tech Mono', monospace !important; font-size: 0.72rem !important; letter-spacing: 0.25em !important; text-transform: uppercase !important; color: #7a5020 !important; margin: 2em 0 1em !important; font-weight: 400 !important; text-decoration: none !important; padding-bottom: 6px; border-bottom: 1px solid #2e1e08; }
+.sl__content h2::before { content: '// '; color: #5a3c10; }
+
+.sl__content ul { list-style: none !important; padding: 0 !important; margin: 0 0 1.5em !important; border: 1px solid #2e1e08; background: #050602; }
+.sl__content ul li { padding: 11px 14px; font-family: 'Share Tech Mono', monospace !important; font-size: 0.85rem !important; color: #a06820 !important; border-bottom: 1px solid #2e1e08; line-height: 1.5 !important; margin: 0 !important; display: flex; align-items: baseline; gap: 8px; }
+.sl__content ul li:last-child { border-bottom: none; }
+.sl__content ul li::before { content: '›'; color: #5a3c10; flex-shrink: 0; }
+
+.sl__content a { color: #d4880a !important; text-decoration: none !important; border-bottom: 1px solid #6a4010; background: none !important; transition: color 0.15s, border-color 0.15s; }
+.sl__content a:hover { color: #f5b332 !important; border-color: #d4880a; background: none !important; }
+.sl__content hr { border: none; border-top: 1px solid #2e1e08; margin: 2em 0 !important; }
+
+@keyframes sl-glow { 0%,100% { text-shadow: 0 0 18px rgba(212,136,10,0.55), 0 0 50px rgba(212,136,10,0.18); } 50% { text-shadow: 0 0 28px rgba(245,179,50,0.8); } }
+@keyframes sl-pulse { 0%,100% { opacity: 1; box-shadow: 0 0 6px rgba(212,136,10,0.6); } 50% { opacity: 0.4; box-shadow: none; } }
+
+@media (max-width: 480px) { .sl__title { font-size: 2.2rem !important; } .sl__topbar { flex-direction: column; align-items: flex-start; } }
+
+@media (prefers-color-scheme: light) {
+  body.selling-layout { background: #faf6ef !important; color: #7a3e00 !important; --nav-link: #a06020; --nav-link-hover: #7a3e00; --footer-border: #c8bfad; --footer-label: #8a7858; --footer-link: #a06020; --footer-link-hover: #7a3e00; --footer-dim: #8a7858; }
+  body.selling-layout::before, body.selling-layout::after { display: none; }
+  .sl__topbar { color: #a89878; }
+  .sl__ident { color: #a06020; }
+  .sl__ship { color: #c8bfad; }
+  .sl__status-dot { background: #a06020; box-shadow: none; }
+  .sl__status-label { color: #a06020; }
+  .sl__title { color: #5a2e00 !important; text-shadow: none !important; animation: none !important; }
+  .sl__rule { background: linear-gradient(to right, #a89878, transparent); }
+  .sl__content p, .sl__content > p:first-child { color: #4a3818 !important; }
+  .sl__content h2 { color: #7a3e00 !important; border-color: #c8bfad; }
+  .sl__content h2::before { color: #a89878; }
+  .sl__content ul { background: #f0ead8; border-color: #c8bfad; }
+  .sl__content ul li { color: #4a3818 !important; border-color: #c8bfad; }
+  .sl__content ul li::before { color: #a89878; }
+  .sl__content a { color: #7a3e00 !important; border-color: #c4a060; }
+  .sl__content a:hover { color: #a06020 !important; }
+  .sl__content hr { border-color: #c8bfad; }
+}
+</style>
+<body class="selling-layout">
+  <main class="sl__wrap">
+    {% include nav.html %}
+    <article class="sl__article">
+      <header class="sl__header">
+        <div class="sl__topbar">
+          <div class="sl__topbar-left">
+            <span class="sl__ident">CARGO MANIFEST</span>
+            <span class="sl__divider">·</span>
+            <span class="sl__ship">YT-1300F</span>
+          </div>
+          <div class="sl__topbar-right">
+            <span class="sl__status-dot"></span>
+            <span class="sl__status-label">OPEN FOR BUSINESS</span>
+          </div>
+        </div>
+        <h1 class="sl__title">{{ page.title | escape }}</h1>
+        <div class="sl__rule"></div>
+      </header>
+      <div class="sl__content">{{ content }}</div>
+    </article>
+    {% include footer.html %}
+  </main>
+</body>
+</html>
