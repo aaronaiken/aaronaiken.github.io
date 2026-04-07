@@ -1,19 +1,211 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>COCKPIT // ACCESS</title>
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <style>
-        body { background: #000; color: #fff; font-family: -apple-system; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        input { padding: 16px; border-radius: 12px; border: 1px solid #333; background: #1c1c1e; color: #fff; font-size: 18px; width: 80%; max-width: 300px; outline: none; -webkit-appearance: none; }
+    :root {
+        --bg:        #080a06;
+        --bg2:       #0d1008;
+        --amber:     #d4880a;
+        --amber-hi:  #f5b332;
+        --amber-lo:  #9a6018;
+        --amber-dim: #3d2804;
+        --green:     #4dbb6a;
+        --red:       #cc3322;
+        --text:      #d4880a;
+        --text-dim:  #7a5020;
+        --border:    #2e1e08;
+        --border-hi: #5a3c18;
+        --scan:      rgba(0,0,0,0.18);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Share Tech Mono', 'Courier New', monospace;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        overflow: hidden;
+        padding: env(safe-area-inset-top, 20px) 24px;
+    }
+
+    /* CRT scanlines */
+    body::before {
+        content: " ";
+        position: fixed; inset: 0;
+        background: repeating-linear-gradient(
+            to bottom,
+            transparent 0px, transparent 3px,
+            var(--scan) 3px, var(--scan) 4px
+        );
+        pointer-events: none; z-index: 900;
+        opacity: 0.6;
+    }
+
+    /* Vignette */
+    body::after {
+        content: '';
+        position: fixed; inset: 0;
+        background: radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0,0,0,0.75) 100%);
+        pointer-events: none; z-index: 901;
+    }
+
+    /* ---- LOGIN CARD ---- */
+    .login {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 28px;
+        position: relative;
+        z-index: 10;
+        opacity: 0;
+        animation: login-arrive 0.6s ease-out 0.1s forwards;
+    }
+
+    @keyframes login-arrive {
+        from { opacity: 0; transform: translateY(16px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Logo */
+    .login__logo {
+        font-family: 'VT323', monospace;
+        font-size: 2.6rem;
+        color: var(--amber-hi);
+        text-shadow: 0 0 18px rgba(212,136,10,0.55), 0 0 50px rgba(212,136,10,0.18);
+        letter-spacing: 0.04em;
+        text-align: center;
+        animation: logo-glow 5s ease-in-out infinite;
+        line-height: 1;
+    }
+
+    .login__logo span { color: var(--amber-lo); }
+
+    @keyframes logo-glow {
+        0%,100% { text-shadow: 0 0 18px rgba(212,136,10,0.55), 0 0 50px rgba(212,136,10,0.18); }
+        50%      { text-shadow: 0 0 28px rgba(245,179,50,0.8), 0 0 80px rgba(212,136,10,0.3); }
+    }
+
+    /* Prompt */
+    .login__prompt {
+        font-size: 0.65rem;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+    }
+
+    /* Input */
+    .login__input {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        color: var(--amber-hi);
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 1.2rem;
+        letter-spacing: 0.3em;
+        padding: 14px 18px;
+        width: 280px;
+        max-width: 90vw;
+        outline: none;
+        -webkit-appearance: none;
+        border-radius: 0;
+        text-align: center;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        caret-color: var(--amber-hi);
+    }
+
+    .login__input:focus {
+        border-color: var(--amber-lo);
+        box-shadow: 0 0 16px rgba(212,136,10,0.2);
+    }
+
+    .login__input::placeholder {
+        color: var(--border-hi);
+        letter-spacing: 0.2em;
+        font-size: 0.8rem;
+    }
+
+    /* Error state */
+    {% if error %}
+    .login__input {
+        border-color: var(--red);
+        animation: shake 0.4s ease;
+    }
+
+    @keyframes shake {
+        0%,100% { transform: translateX(0); }
+        20%     { transform: translateX(-6px); }
+        40%     { transform: translateX(6px); }
+        60%     { transform: translateX(-4px); }
+        80%     { transform: translateX(4px); }
+    }
+    {% endif %}
+
+    /* Error message */
+    .login__error {
+        font-size: 0.62rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--red);
+        text-shadow: 0 0 8px rgba(204,51,34,0.4);
+    }
+
+    /* Footer ident */
+    .login__ident {
+        font-size: 0.55rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--border-hi);
+        text-align: center;
+        margin-top: 8px;
+    }
+
+    /* Light mode */
+    @media (prefers-color-scheme: light) {
+        body { background: #f7f3ec; }
+        body::before, body::after { display: none; }
+        .login__logo { text-shadow: none; animation: none; color: #5a2e00; }
+        .login__logo span { color: #a06020; }
+        .login__input { background: #fff; border-color: #c8bfad; color: #3a2a10; }
+        .login__input:focus { border-color: #a06020; box-shadow: 0 0 12px rgba(139,78,0,0.15); }
+        .login__input::placeholder { color: #c8bfad; }
+        .login__prompt { color: #9a8060; }
+        .login__ident { color: #c8bfad; }
+    }
     </style>
 </head>
 <body>
-    <form method="post">
-        <input type="password" name="password" placeholder="Passkey" autofocus>
+    <form class="login" method="post">
+
+        <div class="login__logo">COCK<span>PIT</span></div>
+
+        <div class="login__prompt">// AUTHENTICATION REQUIRED</div>
+
+        <input
+            class="login__input"
+            type="password"
+            name="password"
+            placeholder="PASSKEY"
+            autofocus
+        >
+
+        {% if error %}
+        <div class="login__error">⌇ ACCESS DENIED</div>
+        {% endif %}
+
+        <div class="login__ident">YT-1300F · RESTRICTED ACCESS</div>
+
     </form>
 </body>
 </html>
