@@ -105,7 +105,7 @@
         .container {
             margin-top: 40px;
             border: 1px solid var(--border);
-            background: rgba(8,10,6,0.7);
+            /* background: rgba(8,10,6,0.7); */
             backdrop-filter: blur(8px);
         }
     }
@@ -354,6 +354,41 @@
         text-transform: none; letter-spacing: 0;
         font-size: 0.78rem; color: var(--amber-lo); opacity: 0.6;
     }
+    /* ---- LIGHT MODE ---- */
+    @media (prefers-color-scheme: light) {
+        :root {
+            --bg:        #fdf9f3;
+            --bg2:       #faf4e8;
+            --amber:     #7a3e00;
+            --amber-hi:  #5a2e00;
+            --amber-lo:  #a06020;
+            --amber-dim: #f0e6d0;
+            --text:      #3a2a10;
+            --text-body: #4a3818;
+            --text-dim:  #8a7858;
+            --border:    #ddd0b8;
+            --border-hi: #c4b090;
+            --muted:     #8a7858;
+            --pill-bg:   #f0e8d8;
+            --input-bg:  #faf4e8;
+            --accent:    #7a3e00;
+            --scan:      transparent;
+            --green:     #2a6e3f;
+            --green-lo:  #4a8c60;
+            --shield:    #2a6e3f;
+        }
+        body::before, body::after { display: none; }
+        .cockpit__logo { text-shadow: none; animation: none; color: #5a2e00; }
+        .cockpit__logo span { color: #a06020; }
+        .shield-fill { box-shadow: none; }
+        textarea { color: #3a2a10; }
+        textarea::placeholder { color: #c4b090; }
+        button#publish-btn { background: #3a2a10; border-color: #3a2a10; color: #fdf9f3; }
+        button#publish-btn:hover { background: #4a3818; }
+        button#publish-btn:active { background: #7a3e00; color: #fdf9f3; }
+        .history-item { border-left-color: #ddd0b8; }
+        .history-item::before { color: #ddd0b8; }
+    }
     </style>
 </head>
 <body>
@@ -571,17 +606,10 @@
             updateHUD(); tx.focus();
         }
 
-        // ---- THEME ----
-        function toggleTheme() {
-            const current = document.documentElement.getAttribute('data-theme');
-            const next = current === 'light' ? 'dark' : 'light';
-            document.documentElement.setAttribute('data-theme', next);
-            localStorage.setItem('cockpit-theme', next);
-        }
-
-        const savedTheme = localStorage.getItem('cockpit-theme') ||
-            (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-        document.documentElement.setAttribute('data-theme', savedTheme);
+        // ---- THEME — follows system preference ----
+        // No manual override needed; CSS media queries handle light/dark automatically.
+        // toggleTheme() kept as no-op for any residual calls.
+        function toggleTheme() {}
 
         // ---- HYPERSPACE SUBMIT ----
         document.getElementById('status-form').addEventListener('submit', (e) => {
