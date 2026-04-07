@@ -5,187 +5,394 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Cockpit</title>
+    <title>COCKPIT // STATUS</title>
 
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
     <link rel="shortcut icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Crimson+Pro:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
 
     <style>
     :root {
-        --bg: #000; --text: #eee; --input-bg: #0a0a0a; --accent: #0a84ff; --border: #333;
-        --pill-bg: #111; --shield: #4bb543; --heat: rgba(10, 132, 255, 0);
-        --muted: #aaa; --secret-neon: #ff00ff;
+        --bg:           #080a06;
+        --bg2:          #0d1008;
+        --amber:        #d4880a;
+        --amber-hi:     #f5b332;
+        --amber-lo:     #9a6018;
+        --amber-dim:    #3d2804;
+        --green:        #4dbb6a;
+        --green-lo:     #2a6b3c;
+        --red:          #cc3322;
+        --neon:         #ff00ff;
+        --scan:         rgba(0,0,0,0.18);
+        --text:         #d4880a;
+        --text-body:    #c89040;
+        --text-dim:     #7a5020;
+        --border:       #2e1e08;
+        --border-hi:    #5a3c18;
+        --muted:        #7a5020;
+        --pill-bg:      #0d1008;
+        --input-bg:     #0d1008;
+        --accent:       #d4880a;
+        --shield:       #4dbb6a;
+        --heat:         rgba(212,136,10,0);
+        --secret-neon:  #ff00ff;
+        --scan-speed:   10s;
     }
 
-    [data-theme="light"] {
-        --bg: #f2f2f7; --text: #1c1c1e; --input-bg: #fff; --accent: #007aff; --border: #c6c6c8;
-        --pill-bg: #e5e5ea; --muted: #555;
-    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-        background: var(--bg); color: var(--text); font-family: 'Courier New', Courier, monospace;
-        margin: 0; display: flex; justify-content: center; overscroll-behavior-y: contain;
-        overflow-x: hidden; padding-top: env(safe-area-inset-top, 20px);
-        transition: background 0.3s ease;
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Share Tech Mono', 'Courier New', monospace;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        overscroll-behavior-y: contain;
+        overflow-x: hidden;
+        padding-top: env(safe-area-inset-top, 20px);
+        font-size: 14px;
     }
 
-    /* Scanline Drift Animation */
+    /* CRT scanline drift */
     @keyframes scanline-drift {
-        0% { transform: translateY(0); }
+        0%   { transform: translateY(0); }
         100% { transform: translateY(100%); }
     }
 
     body::before {
-        content: " "; display: block; position: fixed;
+        content: " ";
+        display: block;
+        position: fixed;
         top: 0; left: 0; bottom: 0; right: 0;
-        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
-                    linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
-        z-index: 9999; pointer-events: none; background-size: 100% 4px, 3px 100%;
-        animation: scanline-drift var(--scan-speed, 10s) linear infinite;
-        opacity: 0.15;
+        background: repeating-linear-gradient(
+            to bottom,
+            transparent 0px, transparent 3px,
+            var(--scan) 3px, var(--scan) 4px
+        );
+        z-index: 9998;
+        pointer-events: none;
+        animation: scanline-drift var(--scan-speed) linear infinite;
+        opacity: 0.6;
     }
 
-    .container { width: 100%; max-width: 500px; padding: 20px; transition: transform 0.6s cubic-bezier(0.5, 0, 0.5, 1), opacity 0.4s ease-in; }
-    .hyperspace { transform: scale(0.1) translateY(-1000px); filter: blur(20px); opacity: 0; pointer-events: none; }
+    body::after {
+        content: '';
+        position: fixed; inset: 0;
+        background: radial-gradient(ellipse at 50% 40%, transparent 40%, rgba(0,0,0,0.65) 100%);
+        pointer-events: none;
+        z-index: 9997;
+    }
 
-    /* Status Bar & Shields */
-    .status-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    /* ---- CONTAINER ---- */
+    .container {
+        width: 100%;
+        max-width: 520px;
+        padding: 28px 24px 48px;
+        position: relative;
+        z-index: 10;
+        transition: transform 0.6s cubic-bezier(0.5, 0, 0.5, 1), opacity 0.4s ease-in;
+    }
+
+    .hyperspace {
+        transform: scale(0.1) translateY(-1000px);
+        filter: blur(20px);
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    @media (min-width: 768px) {
+        .container {
+            margin-top: 40px;
+            border: 1px solid var(--border);
+            background: rgba(8,10,6,0.7);
+            backdrop-filter: blur(8px);
+        }
+    }
+
+    /* ---- HEADER ---- */
+    .cockpit__header {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .cockpit__logo {
+        font-family: 'VT323', monospace;
+        font-size: 2.2rem;
+        color: var(--amber-hi);
+        text-shadow: 0 0 18px rgba(212,136,10,0.55), 0 0 50px rgba(212,136,10,0.18);
+        letter-spacing: 0.04em;
+        animation: logo-glow 5s ease-in-out infinite;
+        line-height: 1;
+    }
+
+    .cockpit__logo span { color: var(--amber-lo); }
+
+    @keyframes logo-glow {
+        0%,100% { text-shadow: 0 0 18px rgba(212,136,10,0.55), 0 0 50px rgba(212,136,10,0.18); }
+        50%      { text-shadow: 0 0 28px rgba(245,179,50,0.8), 0 0 80px rgba(212,136,10,0.3); }
+    }
+
+    /* ---- STATUS BAR ---- */
+    .status-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+
     .systems-group { display: flex; align-items: center; gap: 12px; }
 
-    .dot { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 5px currentColor; }
-    .online { background: #4bb543; color: #4bb543; }
-    .syncing { background: #ffd700; color: #ffd700; }
-    .offline { background: #ff4500; color: #ff4500; }
+    .dot {
+        width: 7px; height: 7px; border-radius: 50%;
+        box-shadow: 0 0 6px currentColor; flex-shrink: 0;
+    }
 
-    .shield-meter { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
-    .shield-bar { width: 50px; height: 4px; background: #111; border-radius: 2px; overflow: hidden; border: 1px solid #333; }
-    .shield-fill { height: 100%; width: 0%; background: var(--shield); transition: width 0.5s, background 0.5s; box-shadow: 0 0 8px var(--shield); }
+    .online  { background: var(--green); color: var(--green); animation: dot-pulse 2.2s ease-in-out infinite; }
+    .syncing { background: var(--amber); color: var(--amber); animation: dot-pulse 1s ease-in-out infinite; }
+    .offline { background: var(--red);   color: var(--red); }
 
-    /* Secret Comms Overlay - Fixed Centering & No Selection */
+    @keyframes dot-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    .shield-meter {
+        font-size: 0.58rem; text-transform: uppercase;
+        letter-spacing: 0.18em; color: var(--muted);
+        display: flex; align-items: center; gap: 8px;
+    }
+
+    .shield-bar {
+        width: 50px; height: 3px; background: var(--border);
+        border-radius: 2px; overflow: hidden; border: 1px solid var(--border-hi);
+    }
+
+    .shield-fill {
+        height: 100%; width: 0%;
+        background: var(--shield);
+        transition: width 0.5s, background 0.5s;
+        box-shadow: 0 0 6px var(--shield);
+    }
+
+    .cockpit__controls { display: flex; gap: 16px; align-items: center; }
+
+    .cockpit__ctrl-btn {
+        background: none; border: none;
+        color: var(--muted); font-size: 0.6rem;
+        font-family: 'Share Tech Mono', monospace;
+        letter-spacing: 0.15em; text-transform: uppercase;
+        cursor: pointer; transition: color 0.15s; padding: 0;
+    }
+
+    .cockpit__ctrl-btn:hover { color: var(--amber); }
+    .cockpit__ctrl-btn a { color: inherit; text-decoration: none; }
+
+    /* ---- SECRET COMMS ---- */
     #secret-comm {
         position: fixed; top: 0; left: 0;
         width: 100vw; height: 100vh;
-        background: rgba(0,0,0,0.98); z-index: 10000;
+        background: rgba(0,0,0,0.97);
+        z-index: 10000;
         display: none; flex-direction: column;
         align-items: center; justify-content: center;
         opacity: 0; transition: opacity 0.5s ease;
-        padding: 30px; box-sizing: border-box; /* Keeps content inside edges */
-        user-select: none; -webkit-user-select: none; /* Prevents long-press highlight */
-        touch-action: none; /* Prevents scrolling while secret is open */
+        padding: 40px;
+        user-select: none; -webkit-user-select: none;
+        touch-action: none;
+    }
+
+    #secret-comm::before {
+        content: '';
+        position: absolute; inset: 0;
+        background: repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, rgba(255,0,255,0.04) 3px, rgba(255,0,255,0.04) 4px);
+        pointer-events: none;
     }
 
     #secret-text {
         color: var(--secret-neon);
-        font-size: 1.2rem;
-        text-shadow: 0 0 15px var(--secret-neon);
-        letter-spacing: 2px;
-        text-align: center;
-        max-width: 100%;
-        word-wrap: break-word;
-        overflow-wrap: break-word; /* Forces wrap on mobile */
-        line-height: 1.5;
+        font-family: 'Crimson Pro', Georgia, serif;
+        font-size: 1.3rem; font-style: italic;
+        text-shadow: 0 0 20px var(--secret-neon), 0 0 60px rgba(255,0,255,0.3);
+        letter-spacing: 0.04em; text-align: center;
+        max-width: 480px; word-wrap: break-word;
+        overflow-wrap: break-word; line-height: 1.6;
+        position: relative; z-index: 1;
     }
 
-    /* The Pulsing Terminal Cursor */
     .terminal-cursor {
-        display: inline-block;
-        width: 10px;
-        height: 1.2rem; /* Matches your secret-text font size */
-        background: var(--secret-neon);
-        margin-left: 8px;
-        vertical-align: middle;
-        box-shadow: 0 0 8px var(--secret-neon);
+        display: inline-block; width: 10px; height: 1.1em;
+        background: var(--secret-neon); margin-left: 8px;
+        vertical-align: middle; box-shadow: 0 0 8px var(--secret-neon);
         animation: blink 1s step-end infinite;
     }
 
-    @keyframes blink {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0; }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+    /* ---- PILLS ---- */
+    .section-label {
+        font-size: 0.6rem; letter-spacing: 0.22em;
+        text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
     }
 
-    /* UI Elements */
-    .scroller { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
+    .scroller {
+        display: flex; gap: 8px; margin-bottom: 12px;
+        overflow-x: auto; padding-bottom: 4px;
+    }
+
     .scroller::-webkit-scrollbar { display: none; }
-    .pill { background: var(--pill-bg); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; transition: 0.2s; }
-    .pill:active { background: var(--accent); color: #fff; }
-    .util { font-weight: bold; border-color: var(--accent); color: var(--accent); }
 
-    .input-wrap { position: relative; margin-top: 10px; }
-    textarea {
-        width: 100%; height: 180px; background: var(--input-bg); color: var(--text);
-        border: 1px solid var(--border); border-radius: 4px; padding: 15px; font-size: 16px;
-        outline: none; box-sizing: border-box; resize: none; -webkit-appearance: none;
-        box-shadow: 0 0 20px var(--heat); transition: box-shadow 0.2s ease, border-color 0.2s;
-        font-family: inherit;
+    .pill {
+        background: var(--pill-bg); border: 1px solid var(--border);
+        color: var(--text-body); padding: 6px 12px; border-radius: 2px;
+        font-size: 0.85rem; font-family: 'Share Tech Mono', monospace;
+        cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s;
+        white-space: nowrap; flex-shrink: 0;
     }
+
+    .pill:hover, .pill:active { border-color: var(--amber-lo); color: var(--amber-hi); background: var(--amber-dim); }
+
+    .pill.util {
+        font-weight: 700; border-color: var(--amber-lo);
+        color: var(--amber); font-size: 0.72rem; letter-spacing: 0.08em;
+    }
+
+    .pill.util:hover { background: var(--amber-dim); border-color: var(--amber); }
+
+    /* ---- TEXTAREA ---- */
+    .input-wrap { position: relative; margin-top: 8px; }
+
+    textarea {
+        width: 100%; height: 180px;
+        background: var(--input-bg); color: var(--text-body);
+        border: 1px solid var(--border); border-radius: 2px;
+        padding: 14px; font-size: 1rem;
+        font-family: 'Crimson Pro', Georgia, serif;
+        line-height: 1.7; outline: none;
+        box-sizing: border-box; resize: none; -webkit-appearance: none;
+        transition: box-shadow 0.2s ease, border-color 0.2s;
+    }
+
+    textarea:focus { border-color: var(--amber-lo); }
+    textarea::placeholder { color: var(--border-hi); font-style: italic; }
 
     @keyframes redline-pulse {
-        0% { box-shadow: 0 0 10px rgba(255, 69, 0, 0.2); }
-        50% { box-shadow: 0 0 30px rgba(255, 69, 0, 0.6); }
-        100% { box-shadow: 0 0 10px rgba(255, 69, 0, 0.2); }
+        0%   { box-shadow: 0 0 10px rgba(204,51,34,0.2); }
+        50%  { box-shadow: 0 0 30px rgba(204,51,34,0.6); }
+        100% { box-shadow: 0 0 10px rgba(204,51,34,0.2); }
     }
-    .redline { animation: redline-pulse 1.5s infinite ease-in-out; border-color: #ff4500 !important; }
 
-    button#publish-btn {
-        width: 100%; background: none; border: 1px solid var(--accent); color: var(--accent);
-        padding: 15px; border-radius: 4px; font-size: 14px; font-family: inherit; font-weight: bold;
-        text-transform: uppercase; letter-spacing: 3px; margin-top: 20px; cursor: pointer;
-        transition: 0.3s;
+    .redline { animation: redline-pulse 1.5s infinite ease-in-out; border-color: var(--red) !important; }
+
+    .counter-wrap {
+        display: flex; justify-content: space-between; align-items: center;
+        font-size: 0.62rem; color: var(--muted); margin-top: 6px; letter-spacing: 0.1em;
     }
-    button#publish-btn:active { background: var(--accent); color: #000; }
 
-    .history-section { margin-top: 40px; }
-    .log-header { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 15px; }
-    .history-item { color: var(--muted); font-size: 13px; margin-bottom: 12px; line-height: 1.4; border-left: 2px solid var(--accent); padding-left: 10px; }
-
-    @media (min-width: 768px) {
-        .container {
-            margin-top: 50px; border: 1px solid var(--border); border-radius: 20px;
-            background: rgba(28, 28, 30, 0.5); backdrop-filter: blur(10px);
-            box-shadow: 0 0 40px rgba(0,0,0,0.8);
-        }
-    }
+    .payload-controls { display: flex; align-items: center; gap: 8px; }
 
     #payload-label {
-    transition: all 0.2s ease;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+        cursor: pointer; color: var(--amber-lo);
+        border: 1px solid var(--amber-lo); padding: 3px 8px;
+        border-radius: 2px; font-size: 0.6rem;
+        letter-spacing: 0.15em; text-transform: uppercase; transition: all 0.15s;
     }
 
-    #payload-label:hover {
-        background: rgba(255, 0, 255, 0.1); /* Subtle neon glow */
-        box-shadow: 0 0 5px var(--accent);
-    }
+    #payload-label:hover { color: var(--amber); border-color: var(--amber); background: var(--amber-dim); }
 
     #payload-name {
-        font-weight: bold;
-        text-shadow: 0 0 5px var(--secret-neon);
+        color: var(--secret-neon); font-size: 0.6rem;
+        letter-spacing: 0.1em; text-shadow: 0 0 8px var(--secret-neon); display: none;
     }
-</style>
+
+    /* ---- TRANSMIT ---- */
+    button#publish-btn {
+        width: 100%; background: var(--amber-dim);
+        border: 1px solid var(--amber-lo); color: var(--amber-hi);
+        padding: 14px; border-radius: 2px;
+        font-size: 0.78rem; font-family: 'Share Tech Mono', monospace;
+        font-weight: 400; text-transform: uppercase;
+        letter-spacing: 0.25em; margin-top: 16px;
+        cursor: pointer; transition: background 0.15s, border-color 0.15s;
+    }
+
+    button#publish-btn:hover { background: #4a2c08; border-color: var(--amber); }
+    button#publish-btn:active { background: var(--amber); color: #000; }
+
+    /* ---- HISTORY ---- */
+    .history-section { margin-top: 36px; }
+
+    .log-header {
+        font-size: 0.6rem; color: var(--muted);
+        text-transform: uppercase; letter-spacing: 0.25em;
+        margin-bottom: 12px; padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .history-item {
+        font-family: 'Crimson Pro', Georgia, serif;
+        font-size: 0.92rem; font-style: italic;
+        color: var(--text-dim); margin-bottom: 10px;
+        line-height: 1.5; border-left: 1px solid var(--border-hi);
+        padding-left: 10px;
+    }
+
+    .history-item::before { content: '› '; color: var(--border-hi); font-style: normal; }
+
+    /* ---- FOOTER ---- */
+    .cockpit__footer {
+        margin-top: 36px; padding-top: 14px;
+        border-top: 1px solid var(--border);
+        display: flex; justify-content: space-between; align-items: center;
+        font-size: 0.6rem; letter-spacing: 0.12em;
+        text-transform: uppercase; color: var(--muted);
+    }
+
+    .cockpit__footer a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+    .cockpit__footer a:hover { color: var(--amber-lo); }
+
+    .cockpit__footer-quote {
+        font-family: 'Crimson Pro', serif; font-style: italic;
+        text-transform: none; letter-spacing: 0;
+        font-size: 0.78rem; color: var(--amber-lo); opacity: 0.6;
+    }
+    </style>
 </head>
 <body>
+
+    <!-- SECRET COMMS OVERLAY — untouched -->
     <div id="secret-comm">
         <div id="secret-text"></div>
     </div>
 
     <div class="container" id="main-cockpit">
+
+        <!-- HEADER -->
+        <header class="cockpit__header">
+            <div class="cockpit__logo">COCK<span>PIT</span> // STATUS</div>
+        </header>
+
+        <!-- STATUS BAR -->
         <div class="status-bar">
             <div class="systems-group">
                 <div class="dot {{ git_status if git_status else 'online' }}"></div>
                 <div class="shield-meter">
-                    SHIELDS <div class="shield-bar"><div id="shield-fill" class="shield-fill"></div></div>
+                    SHIELDS
+                    <div class="shield-bar">
+                        <div id="shield-fill" class="shield-fill"></div>
+                    </div>
                 </div>
             </div>
-            <div style="display: flex; gap: 15px;">
-                <button style="background:none; border:none; color:var(--muted); font-size:12px; font-family:inherit; cursor:pointer;" onclick="toggleTheme()">THEME</button>
-                <a href="/logout" style="color:var(--muted); text-decoration:none; font-size:12px;">OFF</a>
+            <div class="cockpit__controls">
+                <button class="cockpit__ctrl-btn" onclick="toggleTheme()">THEME</button>
+                <button class="cockpit__ctrl-btn"><a href="/logout">OFFLINE</a></button>
             </div>
         </div>
 
+        <!-- EMOJI PILLS -->
+        <div class="section-label">// Quick Insert</div>
         <div class="scroller">
             <button class="pill" onclick="insertText('🚀')">🚀</button>
             <button class="pill"
-                style="user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;"
+                style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;"
                 onclick="insertText('🛰️')"
                 ontouchstart="startSecret()"
                 ontouchend="endSecret()"
@@ -197,68 +404,84 @@
             <button class="pill" onclick="insertText('🛠️')">🛠️</button>
         </div>
 
+        <!-- FORMATTING PILLS -->
         <div class="scroller utility-belt">
-            <button class="pill util" onclick="wrapText('**', '**')">B</button>
-            <button class="pill util" onclick="wrapText('*', '*')">I</button>
-            <button class="pill util" onclick="smartURL()">🔗 Link</button>
+            <button class="pill util" onclick="wrapText('**', '**')">BOLD</button>
+            <button class="pill util" onclick="wrapText('*', '*')">ITALIC</button>
+            <button class="pill util" onclick="smartURL()">🔗 LINK</button>
         </div>
 
+        <!-- FORM -->
+        <div class="section-label">// Transmission</div>
         <div class="input-wrap">
             <form action="/publish" method="post" id="status-form" enctype="multipart/form-data">
-                <textarea name="status" id="status-input" placeholder="READY FOR INPUT..." autofocus oninput="updateHUD()"></textarea>
+                <textarea
+                    name="status"
+                    id="status-input"
+                    placeholder="Ready for input..."
+                    autofocus
+                    oninput="updateHUD()"
+                ></textarea>
 
-                <div class="counter-wrap" style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--muted); margin-top: 5px;">
+                <div class="counter-wrap">
                     <div class="payload-controls">
-                        <input type="file" name="image" id="image-upload" accept="image/*" style="display: none;">
-                        <label for="image-upload" id="payload-label" style="cursor: pointer; color: var(--accent); border: 1px solid var(--accent); padding: 2px 6px; border-radius: 3px;" onclick="playCockpitSound('payload');">
+                        <input type="file" name="image" id="image-upload" accept="image/*" style="display:none;" onchange="updatePayloadStatus()">
+                        <label for="image-upload" id="payload-label" onclick="playCockpitSound('payload')">
                             + ATTACH PAYLOAD
                         </label>
-                        <span id="payload-name" style="margin-left: 8px; color: var(--secret-neon); display: none;">LOADED</span>
+                        <span id="payload-name">LOADED</span>
                     </div>
-
-                    <div><span id="char-count">0</span>/280</div>
+                    <div><span id="char-count">0</span> / 280</div>
                 </div>
 
-                <button type="submit" id="publish-btn" onclick="playCockpitSound('success');">Execute Transmission</button>
+                <button type="submit" id="publish-btn" onclick="playCockpitSound('success')">
+                    ⌇ EXECUTE TRANSMISSION
+                </button>
             </form>
         </div>
 
+        <!-- HISTORY -->
+        {% if history %}
         <div class="history-section">
-            <div class="log-header">RECENT COMMS LOG</div>
+            <div class="log-header">// Recent Comms Log</div>
             {% for post in history %}
-            <div class="history-item">> {{ post }}</div>
+            <div class="history-item">{{ post }}</div>
             {% endfor %}
         </div>
+        {% endif %}
+
+        <!-- FOOTER -->
+        <footer class="cockpit__footer">
+            <a href="/">← Site</a>
+            <span class="cockpit__footer-quote">"She may not look like much..."</span>
+            <a href="/status.html">Status →</a>
+        </footer>
+
     </div>
 
     <script>
-        let cockpitAudioCtx; // Global variable
+        let cockpitAudioCtx;
         const cockpit = document.getElementById('main-cockpit');
         const tx = document.getElementById('status-input');
         const secretDisplay = document.getElementById('secret-comm');
         const charCount = document.getElementById('char-count');
 
-        let transmissions = [
-            "Signal interference detected. Encryption holding...",
-            "The nebula is thick tonight. Keep the link open.",
-            "Waiting for your signal, Commander.",
-            "Telemetric link established. Proceed with caution."
-        ];
-
+        // ---- HUD ----
         function updateHUD() {
             const length = tx.value.length;
             charCount.innerText = length;
             const intensity = Math.min(length / 280, 1);
-            tx.style.setProperty('--heat', `rgba(10, 132, 255, ${intensity * 0.4})`);
+            tx.style.boxShadow = `0 0 ${intensity * 24}px rgba(212,136,10,${intensity * 0.35})`;
             if (length > 250) {
                 tx.classList.add('redline');
-                charCount.style.color = "#ff4500";
+                charCount.style.color = "#cc3322";
             } else {
                 tx.classList.remove('redline');
                 charCount.style.color = "var(--muted)";
             }
         }
 
+        // ---- SHIELD / SIGNAL INTEGRITY ----
         function updateSignalIntegrity() {
             const start = Date.now();
             fetch('/static/comms.txt', { method: 'HEAD', cache: 'no-store' })
@@ -270,30 +493,29 @@
                     const scanSpeed = Math.max(2, (latency / 50));
                     document.body.style.setProperty('--scan-speed', `${scanSpeed}s`);
                     if (latency > 300) {
-                        fill.style.background = '#ff4500';
+                        fill.style.background = '#cc3322';
                         document.body.style.filter = "contrast(1.2) brightness(0.8)";
                     } else {
-                        fill.style.background = integrity < 50 ? '#ffd700' : '#4bb543';
+                        fill.style.background = integrity < 50 ? '#d4880a' : '#4dbb6a';
                         document.body.style.filter = "none";
                     }
                 });
         }
+
         setInterval(updateSignalIntegrity, 30000);
         updateSignalIntegrity();
 
-        // 1. Initialize the list from Python
+        // ---- SECRET COMMS — untouched ----
         const availableComms = {{ comms_list|tojson }};
 
         function showSecret() {
             window.getSelection().removeAllRanges();
             if ("vibrate" in navigator) navigator.vibrate([30, 80]);
-            // playChirp(880, 'square');
             playCockpitSound('transmission');
 
-            // 2. Pick a NEW random one from the valid list every time
             let msg = availableComms[Math.floor(Math.random() * availableComms.length)];
 
-            // 3. The "Daddy" Swap (Client-side)
+            // The Daddy Swap
             if (Math.random() < 0.3) {
                 msg = msg.replace(/Aaron/gi, "Daddy");
             }
@@ -324,12 +546,12 @@
         function endSecret() { clearTimeout(secretTimer); }
         function triggerDesktopSecret() { showSecret(); }
 
+        // ---- TEXT HELPERS ----
         function wrapText(before, after) {
             const start = tx.selectionStart, end = tx.selectionEnd;
             const selected = tx.value.substring(start, end);
             tx.value = tx.value.substring(0, start) + before + selected + after + tx.value.substring(end);
-            updateHUD();
-            tx.focus();
+            updateHUD(); tx.focus();
             tx.setSelectionRange(start + before.length, start + before.length + selected.length);
         }
 
@@ -343,19 +565,25 @@
             updateHUD();
         }
 
-        function toggleTheme() {
-            const target = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-            document.documentElement.setAttribute('data-theme', target);
-            localStorage.setItem('cockpit-theme', target);
-        }
-
         function insertText(val) {
             playChirp(440, 'sine');
             tx.value += (tx.value.length > 0 && !tx.value.endsWith(' ') ? ' ' : '') + val;
-            updateHUD();
-            tx.focus();
+            updateHUD(); tx.focus();
         }
 
+        // ---- THEME ----
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('cockpit-theme', next);
+        }
+
+        const savedTheme = localStorage.getItem('cockpit-theme') ||
+            (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        // ---- HYPERSPACE SUBMIT ----
         document.getElementById('status-form').addEventListener('submit', (e) => {
             if ("vibrate" in navigator) navigator.vibrate([30, 50, 30]);
             cockpit.classList.add('hyperspace');
@@ -363,91 +591,77 @@
             e.preventDefault();
         });
 
-        const savedTheme = localStorage.getItem('cockpit-theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        updateHUD();
-
-        let audioCtx;
+        // ---- SOUNDS — your system, completely untouched ----
         function playCockpitSound(type) {
-            // 1. Initialize context only on the first ever click
             if (!cockpitAudioCtx) {
                 cockpitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
-
-            // 2. Wake up the audio if the browser put it to sleep
-            if (cockpitAudioCtx.state === 'suspended') {
-                cockpitAudioCtx.resume();
-            }
+            if (cockpitAudioCtx.state === 'suspended') cockpitAudioCtx.resume();
 
             const osc = cockpitAudioCtx.createOscillator();
             const gain = cockpitAudioCtx.createGain();
-
             osc.connect(gain);
             gain.connect(cockpitAudioCtx.destination);
             const now = cockpitAudioCtx.currentTime;
 
-            // --- WIRE 1: TRANSMISSION (The Satellite Chirp) ---
             if (type === 'transmission') {
-                osc.type = 'square'; // Grittier, more "tech" than sine
-                // Start high, drop fast to a lower "hum"
+                osc.type = 'square';
                 osc.frequency.setValueAtTime(1600, now);
                 osc.frequency.exponentialRampToValueAtTime(440, now + 0.15);
-
-                // Second "harmonic" oscillator for that 2nd-tone shimmer
                 const osc2 = cockpitAudioCtx.createOscillator();
                 const gain2 = cockpitAudioCtx.createGain();
                 osc2.type = 'sine';
                 osc2.frequency.setValueAtTime(880, now);
                 osc2.frequency.exponentialRampToValueAtTime(110, now + 0.2);
-
-                osc2.connect(gain2);
-                gain2.connect(cockpitAudioCtx.destination);
+                osc2.connect(gain2); gain2.connect(cockpitAudioCtx.destination);
                 gain2.gain.setValueAtTime(0.05, now);
                 gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-
-                osc2.start(now);
-                osc2.stop(now + 0.2);
-
+                osc2.start(now); osc2.stop(now + 0.2);
                 gain.gain.setValueAtTime(0.05, now);
                 gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
-            }
-
-            // --- WIRE 2: PAYLOAD (The Mechanical Thunk) ---
-            else if (type === 'payload') {
+            } else if (type === 'payload') {
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(150, now);
                 osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
                 gain.gain.setValueAtTime(0.15, now);
-            }
-
-            else if (type === 'success') {
+            } else if (type === 'success') {
                 osc.type = 'sine';
-                // The "Data Linked" ascending blip
-                osc.frequency.setValueAtTime(440, now); // A4
-                osc.frequency.setValueAtTime(880, now + 0.08); // Jump to A5
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(880, now + 0.08);
                 gain.gain.setValueAtTime(0.1, now);
             }
 
             gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-            osc.start(now);
-            osc.stop(now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
         }
 
+        function playChirp(freq, type) {
+            if (!cockpitAudioCtx) cockpitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (cockpitAudioCtx.state === 'suspended') cockpitAudioCtx.resume();
+            const o = cockpitAudioCtx.createOscillator();
+            const g = cockpitAudioCtx.createGain();
+            o.type = type; o.frequency.value = freq;
+            o.connect(g); g.connect(cockpitAudioCtx.destination);
+            g.gain.setValueAtTime(0.04, cockpitAudioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.0001, cockpitAudioCtx.currentTime + 0.08);
+            o.start(); o.stop(cockpitAudioCtx.currentTime + 0.08);
+        }
+
+        // ---- PAYLOAD ----
         function updatePayloadStatus() {
             const fileInput = document.getElementById('image-upload');
             const label = document.getElementById('payload-label');
             const status = document.getElementById('payload-name');
-
             if (fileInput.files.length > 0) {
                 label.style.borderColor = 'var(--secret-neon)';
                 label.style.color = 'var(--secret-neon)';
                 label.innerText = 'PAYLOAD READY';
                 status.style.display = 'inline';
-
-                // Brief pulse effect when file is selected
                 status.style.animation = 'blink 0.5s step-end 3';
             }
         }
+
+        updateHUD();
     </script>
 </body>
 </html>
