@@ -1,46 +1,175 @@
----
-layout: default
----
-<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Share+Tech+Mono&display=swap');
 
-  <header class="post-header">
-    {% if page.source %}
-      <a href="{{ page.source }}" title="{{ page.title }}" target="_blank"><h1 class="post-title p-name" itemprop="name headline">{{ page.title | escape }}</h1></a>
+body.post-page {
+  --nav-link: #a06820; --nav-link-hover: #f5b332;
+  --ident-color: #5a3c10; --ident-border: #2a1c08;
+  --footer-border: #2a1c08; --footer-label: #5a3c10;
+  --footer-link: #7a5020; --footer-link-hover: #d4880a; --footer-dim: #4a3010;
+
+  --pp-bg: #0a0806; --pp-bg2: #110e08;
+  --pp-amber: #d4880a; --pp-amber-hi: #f5b332; --pp-amber-lo: #9a6018;
+  --pp-scan: rgba(0,0,0,0.12);
+  --pp-text-head: #f0d090;
+  --pp-text-body: #c89848;
+  --pp-text-dim:  #7a5828;
+  --pp-border:    #2a1c08;
+  --pp-border-hi: #4a3010;
+  --pp-link:      #d4880a;
+  --pp-link-hover:#f5b332;
+
+  background: var(--pp-bg) !important; color: var(--pp-text-body);
+  font-family: 'Lora', Georgia, serif;
+  min-height: 100vh; overflow-x: hidden;
+  margin: 0 !important; max-width: 100% !important; padding: 0 !important;
+  font-size: 18px;
+}
+
+body.post-page * { box-sizing: border-box; }
+body.post-page::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0px, transparent 4px, var(--pp-scan) 4px, var(--pp-scan) 5px); pointer-events: none; z-index: 900; }
+body.post-page::after { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 30%, transparent 50%, rgba(0,0,0,0.5) 100%); pointer-events: none; z-index: 901; }
+
+.post-grain { position: fixed; inset: 0; z-index: 902; pointer-events: none; opacity: 0.035; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 180px 180px; }
+
+.post__wrap { max-width: 660px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 10; }
+
+.post__header { margin-bottom: 32px; opacity: 0; animation: pp-rise 0.5s ease-out 0.1s forwards; }
+
+.post__title { font-family: 'Fraunces', Georgia, serif !important; font-size: clamp(2rem, 4vw, 2.8rem) !important; font-weight: 600 !important; color: var(--pp-text-head) !important; line-height: 1.2 !important; letter-spacing: -0.01em !important; margin: 0 0 16px !important; text-decoration: none !important; }
+
+.post__title-link { text-decoration: none !important; background: none !important; color: inherit !important; }
+
+.post__meta { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pp-text-dim); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.post__meta-sep { color: var(--pp-border-hi); }
+.post__author-link { color: var(--pp-amber-lo) !important; text-decoration: none !important; background: none !important; transition: color 0.15s; }
+.post__author-link:hover { color: var(--pp-amber) !important; background: none !important; }
+
+.post__rule { height: 1px; background: linear-gradient(to right, var(--pp-border-hi), transparent); margin-bottom: 36px; opacity: 0; animation: pp-rise 0.3s ease-out 0.18s forwards; }
+
+.post__content { opacity: 0; animation: pp-rise 0.5s ease-out 0.22s forwards; }
+
+.post__content p { font-size: 1.2rem !important; line-height: 1.9 !important; color: var(--pp-text-body) !important; margin-bottom: 1.6em !important; }
+.post__content p:last-child { margin-bottom: 0 !important; }
+
+.post__content h2 { font-family: 'Fraunces', serif !important; font-size: 1.65rem !important; font-weight: 600 !important; color: var(--pp-text-head) !important; margin: 2.2em 0 0.8em !important; line-height: 1.25 !important; text-decoration: none !important; }
+.post__content h3 { font-family: 'Fraunces', serif !important; font-size: 1.3rem !important; font-style: italic !important; font-weight: 400 !important; color: var(--pp-text-head) !important; margin: 2em 0 0.7em !important; }
+.post__content h4 { font-family: 'Share Tech Mono', monospace !important; font-size: 0.75rem !important; letter-spacing: 0.2em !important; text-transform: uppercase !important; color: var(--pp-text-dim) !important; margin: 1.8em 0 0.6em !important; font-weight: 400 !important; text-decoration: none !important; }
+
+.post__content a { color: var(--pp-link) !important; text-decoration: none !important; border-bottom: 1px solid var(--pp-amber-lo); transition: color 0.15s, border-color 0.15s; background: none !important; }
+.post__content a:hover { color: var(--pp-link-hover) !important; border-color: var(--pp-amber); background: none !important; }
+.post__content strong { color: var(--pp-text-head); font-weight: 600; }
+
+.post__content img { max-width: 100%; height: auto; display: block; margin: 2em auto; border-radius: 2px; box-shadow: 0 4px 32px rgba(0,0,0,0.5); filter: sepia(0.2) contrast(1.05) brightness(0.92); transition: filter 0.3s ease; }
+.post__content img:hover { filter: sepia(0.05) contrast(1.02) brightness(0.97); }
+
+.post__content blockquote { border-left: 2px solid var(--pp-amber-lo); padding: 4px 0 4px 20px; margin: 1.8em 0 !important; font-style: italic; }
+.post__content blockquote p { color: var(--pp-text-dim) !important; font-size: 1.1rem !important; margin-bottom: 0 !important; }
+
+.post__content ul, .post__content ol { padding-left: 1.4em !important; margin-bottom: 1.6em !important; }
+.post__content li { font-size: 1.15rem !important; line-height: 1.8 !important; color: var(--pp-text-body) !important; margin-bottom: 0.4em !important; }
+
+.post__content hr { border: none; border-top: 1px solid var(--pp-border-hi); margin: 2.5em 0 !important; }
+
+.post__content pre, .post__content code { font-family: 'Share Tech Mono', monospace !important; background: #050402 !important; color: #4dbb6a !important; font-size: 0.9rem !important; border-radius: 2px; }
+.post__content pre { padding: 16px 18px !important; overflow-x: auto; margin: 1.6em 0 !important; border: 1px solid var(--pp-border); }
+.post__content code { padding: 2px 5px !important; }
+
+.post__author-block { margin-top: 48px; padding: 20px; background: var(--pp-bg2); border: 1px solid var(--pp-border); border-left: 2px solid var(--pp-amber-lo); opacity: 0; animation: pp-rise 0.5s ease-out 0.35s forwards; }
+.post__author-block-inner { display: flex; gap: 18px; align-items: flex-start; }
+.post__author-img { width: 64px !important; height: 64px !important; border-radius: 2px; object-fit: cover; flex-shrink: 0; filter: sepia(0.4) contrast(1.05) brightness(0.88) saturate(0.7); border: 1px solid var(--pp-border-hi); }
+.post__author-text { flex: 1; }
+.post__author-byline { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pp-text-dim); margin: 0 0 8px !important; }
+.post__author-byline a { color: var(--pp-amber-lo) !important; text-decoration: none !important; background: none !important; transition: color 0.15s; }
+.post__author-byline a:hover { color: var(--pp-amber) !important; background: none !important; }
+.post__author-byline strong { font-weight: 400; }
+.post__author-bio { font-family: 'Lora', serif; font-size: 0.95rem !important; font-style: italic; color: var(--pp-text-dim) !important; line-height: 1.7 !important; margin: 0 0 10px !important; }
+.post__author-reply { font-family: 'Share Tech Mono', monospace; font-size: 0.68rem !important; color: var(--pp-text-dim) !important; letter-spacing: 0.06em; margin: 0 !important; }
+.post__author-reply a { color: var(--pp-amber-lo) !important; text-decoration: none !important; border-bottom: 1px solid var(--pp-border-hi); background: none !important; transition: color 0.15s; }
+.post__author-reply a:hover { color: var(--pp-amber) !important; background: none !important; }
+
+.post__nav { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--pp-border); display: flex; justify-content: space-between; align-items: center; font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0; animation: pp-rise 0.4s ease-out 0.45s forwards; }
+.post__nav-link { color: var(--pp-text-dim) !important; text-decoration: none !important; background: none !important; transition: color 0.15s; }
+.post__nav-link:hover { color: var(--pp-amber-lo) !important; background: none !important; }
+
+@keyframes pp-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 480px) {
+  .post__title { font-size: 1.8rem !important; }
+  .post__content p { font-size: 1.1rem !important; }
+  .post__author-block-inner { flex-direction: column; }
+}
+
+@media (prefers-color-scheme: light) {
+  body.post-page {
+    --pp-bg: #faf6ef; --pp-bg2: #f0ead8;
+    --pp-amber: #7a3e00; --pp-amber-hi: #5a2e00; --pp-amber-lo: #a06020;
+    --pp-text-head: #1a1208; --pp-text-body: #3a2e1a; --pp-text-dim: #7a6848;
+    --pp-border: #c8bfad; --pp-border-hi: #a89878;
+    --pp-link: #7a3e00; --pp-link-hover: #a06020;
+    --nav-link: #a06020; --nav-link-hover: #7a3e00;
+    --footer-border: #c8bfad; --footer-label: #8a7858; --footer-link: #a06020; --footer-link-hover: #7a3e00; --footer-dim: #8a7858;
+    background: var(--pp-bg) !important;
+  }
+  body.post-page::before, body.post-page::after { display: none; }
+  .post-grain { display: none; }
+  .post__content img { filter: none; box-shadow: 0 2px 20px rgba(0,0,0,0.12); }
+  .post__content img:hover { filter: none; }
+  .post__content pre, .post__content code { background: #f0ece0 !important; color: #2a6e3f !important; border-color: var(--pp-border) !important; }
+  .post__author-block { background: var(--pp-bg2); border-color: var(--pp-border); border-left-color: var(--pp-amber-lo); }
+  .post__author-img { filter: sepia(0.1) contrast(1.02) brightness(0.97); }
+}
+</style>
+<body class="post-page">
+  <div class="post-grain"></div>
+  <article class="post__wrap h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+    {% include nav.html %}
+    <header class="post__header">
+      {% if page.source %}
+      <a href="{{ page.source }}" title="{{ page.title }}" target="_blank" rel="noopener noreferrer" class="post__title-link">
+        <h1 class="post__title p-name" itemprop="name headline"><span class="post__linked-icon">🔗</span> {{ page.title | escape }}</h1>
+      </a>
       {% else %}
-      <h1 class="post-title p-name" itemprop="name headline">{{ page.title | escape }}</h1>
-    {% endif %}
-    <p class="post-meta">
-      <time class="dt-published" datetime="{{ page.date | date_to_xmlschema }}" itemprop="datePublished">
-        {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
-        {{ page.date | date: date_format }}
-      </time>
-      {%- if page.author -%}
-        {% assign author = site.data.people[page.author] %}
-        • <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name"><a href="{{ author.author-page }}" title="About {{ author.name }}">{{ author.name }}</a></span></span>
-      {%- endif -%}</p>
-  </header>
-
-  <div class="post-content e-content" itemprop="articleBody">
-    {% if page.image %}
-      <img class="featured-image" src="{{ page.image }}" />
-    {% endif %}
-    {{ content }}
-    {% if page.source %}
-      <p><a href="{{ page.source }}" title="{{ page.title }}" target="_blank">Source</a></p>
-    {% endif %}
-  </div>
-
-  {%- if site.disqus.shortname -%}
-    {%- include disqus_comments.html -%}
-  {%- endif -%}
-
-  <a class="u-url" href="{{ page.url | relative_url }}" hidden></a>
-  
-  
-  <div class="post-author-about">
-    <img src="{{ author.img }}" class="post-author-img" title="{{ author.name }}" alt="{{author.img-alt}}" />
-    <p class="post-author">This post was written by <strong><a href="{{ author.author-page }}">{{ author.name }}</a></strong></p>
-    <p>{{ author.post-bio }}</p>
-    <p>Have something to say about this post? <a href="mailto:{{ author.email }}?subject=Re: {{ page.title }}&body={{ site.url }}{{ page.url }}">Send me an email</a>.</p>
-  </div>
-</article>
+      <h1 class="post__title p-name" itemprop="name headline">{{ page.title | escape }}</h1>
+      {% endif %}
+      <div class="post__meta">
+        <time class="post__date dt-published" datetime="{{ page.date | date_to_xmlschema }}" itemprop="datePublished">{{ page.date | date: "%B %-d, %Y" }}</time>
+        {%- if page.author -%}
+        {%- assign author = site.data.people[page.author] -%}
+        <span class="post__meta-sep">·</span>
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <a class="post__author-link p-author h-card" href="{{ author.author-page }}" itemprop="name">{{ author.name }}</a>
+        </span>
+        {%- endif -%}
+      </div>
+    </header>
+    <div class="post__rule"></div>
+    <div class="post__content e-content" itemprop="articleBody">
+      {% if page.image %}<img class="post__featured-image" src="{{ page.image }}" alt="{{ page.title }}" />{% endif %}
+      {{ content }}
+      {% if page.source %}<p class="post__source-link"><a href="{{ page.source }}" title="{{ page.title }}" target="_blank" rel="noopener noreferrer">↗ Original Source</a></p>{% endif %}
+    </div>
+    <a class="u-url" href="{{ page.url | relative_url }}" hidden></a>
+    {%- if page.author -%}
+    {%- assign author = site.data.people[page.author] -%}
+    <div class="post__author-block">
+      <div class="post__author-block-inner">
+        <img src="{{ author.img }}" class="post__author-img" title="{{ author.name }}" alt="{{ author.img-alt }}" />
+        <div class="post__author-text">
+          <p class="post__author-byline">Written by <strong><a href="{{ author.author-page }}">{{ author.name }}</a></strong></p>
+          <p class="post__author-bio">{{ author.post-bio }}</p>
+          <p class="post__author-reply">Have something to say? <a href="mailto:{{ author.email }}?subject=Re: {{ page.title | uri_escape }}&body={{ site.url }}{{ page.url }}">Send me an email</a>.</p>
+        </div>
+      </div>
+    </div>
+    {%- endif -%}
+    <nav class="post__nav">
+      <a href="/blog/" class="post__nav-link">← All posts</a>
+      <a href="{{ '/feed.xml' | relative_url }}" class="post__nav-link">RSS ⌇</a>
+    </nav>
+    {% include footer.html %}
+  </article>
+</body>
+</html>

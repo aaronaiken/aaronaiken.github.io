@@ -1,16 +1,115 @@
----
-layout: default
-author: aaron
----
-<article class="post">
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=Crimson+Pro:ital,wght@0,400;1,400&family=Share+Tech+Mono&display=swap');
 
-  <header class="post-header">
-    <h1 class="post-title">{{ page.title | escape }}</h1>
-  </header>
+body.about-layout {
+  --nav-link: #a06820; --nav-link-hover: #f5b332;
+  --ident-color: #5a3c10; --ident-border: #2a1c08;
+  --footer-border: #2a1c08; --footer-label: #5a3c10;
+  --footer-link: #7a5020; --footer-link-hover: #d4880a; --footer-dim: #4a3010;
 
-  <div class="post-content">
-    {{ content }}
-    {{ site.description }}
-  </div>
+  background: #0a0806 !important; color: #c89040 !important;
+  font-family: 'Crimson Pro', Georgia, serif !important;
+  min-height: 100vh; overflow-x: hidden;
+  margin: 0 !important; max-width: 100% !important; padding: 0 !important;
+  font-size: 18px;
+}
 
-</article>
+body.about-layout * { box-sizing: border-box; }
+
+body.about-layout::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0px, transparent 4px, rgba(0,0,0,0.1) 4px, rgba(0,0,0,0.1) 5px); pointer-events: none; z-index: 900; }
+body.about-layout::after { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 30%, transparent 50%, rgba(0,0,0,0.5) 100%); pointer-events: none; z-index: 901; }
+
+.al__wrap { max-width: 700px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 10; }
+
+.al__identity { display: flex; align-items: flex-start; gap: 28px; margin-bottom: 32px; opacity: 0; animation: al-rise 0.6s ease-out 0.05s forwards; }
+.al__avatar-wrap { flex-shrink: 0; }
+.al__avatar { width: 120px !important; height: 120px !important; border-radius: 3px; object-fit: cover; display: block; filter: sepia(0.35) contrast(1.1) brightness(0.9) saturate(0.75); border: 1px solid #4a3010; box-shadow: 0 0 0 3px #0a0806, 0 0 0 4px #2a1c08, 0 8px 32px rgba(0,0,0,0.6); }
+.al__identity-text { padding-top: 8px; }
+.al__name { font-family: 'Fraunces', Georgia, serif !important; font-size: 2.4rem !important; font-weight: 600 !important; color: #f0d090 !important; line-height: 1.1 !important; letter-spacing: -0.02em !important; margin: 0 0 8px !important; text-decoration: none !important; }
+.al__handle { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; letter-spacing: 0.15em; text-transform: uppercase; color: #7a5020; margin: 0 !important; }
+
+.al__rule { height: 1px; background: linear-gradient(to right, #4a3010, transparent); margin-bottom: 28px; opacity: 0; animation: al-rise 0.4s ease-out 0.15s forwards; }
+
+.al__bio { font-size: 1.15rem; line-height: 1.85; color: #c89040; margin-bottom: 24px; padding-left: 14px; border-left: 1px solid #3a2808; opacity: 0; animation: al-rise 0.5s ease-out 0.2s forwards; }
+.al__bio p { margin: 0 !important; color: #c89040 !important; }
+
+.al__content { font-size: 1.1rem; line-height: 1.85; color: #c89040; margin-bottom: 36px; opacity: 0; animation: al-rise 0.5s ease-out 0.25s forwards; }
+.al__content p { margin-bottom: 1.4em !important; color: #c89040 !important; }
+.al__content a { color: #d4880a !important; text-decoration: none !important; border-bottom: 1px solid #6a4010; background: none !important; transition: color 0.15s, border-color 0.15s; }
+.al__content a:hover { color: #f5b332 !important; border-color: #d4880a; background: none !important; }
+.al__content strong { color: #f0d090; }
+
+.al__posts { opacity: 0; animation: al-rise 0.5s ease-out 0.35s forwards; }
+.al__posts-label { font-family: 'Share Tech Mono', monospace; font-size: 0.68rem; letter-spacing: 0.22em; text-transform: uppercase; color: #7a5020; margin-bottom: 14px; }
+.al__post-list { list-style: none !important; margin: 0 !important; padding: 0 !important; }
+.al__post-item { display: grid; grid-template-columns: 110px 1fr; gap: 14px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid #1e1408; }
+.al__post-item:last-child { border-bottom: none; }
+.al__post-date { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; letter-spacing: 0.06em; color: #5a3c10; white-space: nowrap; }
+.al__post-link { font-family: 'Crimson Pro', serif; font-size: 1.1rem; color: #a87030 !important; text-decoration: none !important; background: none !important; transition: color 0.15s; line-height: 1.4; }
+.al__post-link:hover { color: #d4880a !important; background: none !important; }
+.al__post-link--linked { color: #9a6018 !important; }
+
+@keyframes al-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 480px) { .al__identity { gap: 18px; } .al__avatar { width: 88px !important; height: 88px !important; } .al__name { font-size: 1.8rem !important; } .al__post-item { grid-template-columns: 1fr; gap: 3px; } }
+
+@media (prefers-color-scheme: light) {
+  body.about-layout { background: #faf6ef !important; color: #3a2e1a !important; --nav-link: #a06020; --nav-link-hover: #7a3e00; --footer-border: #c8bfad; --footer-label: #8a7858; --footer-link: #a06020; --footer-link-hover: #7a3e00; --footer-dim: #8a7858; }
+  body.about-layout::before, body.about-layout::after { display: none; }
+  .al__avatar { filter: sepia(0.1) contrast(1.02) brightness(0.97); border-color: #c8bfad; box-shadow: 0 2px 20px rgba(0,0,0,0.12), 0 0 0 1px #c8bfad; }
+  .al__name { color: #1a1208 !important; }
+  .al__handle { color: #8a7858; }
+  .al__rule { background: linear-gradient(to right, #a89878, transparent); }
+  .al__bio { color: #4a3818; border-color: #c8bfad; }
+  .al__bio p { color: #4a3818 !important; }
+  .al__content { color: #3a2e1a; }
+  .al__content p { color: #3a2e1a !important; }
+  .al__content a { color: #7a3e00 !important; border-color: #c4a060; }
+  .al__content a:hover { color: #a06020 !important; border-color: #7a3e00; }
+  .al__content strong { color: #1a1208; }
+  .al__posts-label { color: #8a7858; }
+  .al__post-item { border-color: #e4ddd0; }
+  .al__post-date { color: #a89878; }
+  .al__post-link { color: #4a3818 !important; }
+  .al__post-link:hover { color: #7a3e00 !important; }
+}
+</style>
+<body class="about-layout">
+  <main class="al__wrap">
+    {% include nav.html %}
+    {% assign author = site.data.people[page.author] %}
+    <article class="al__article">
+      <div class="al__identity">
+        <div class="al__avatar-wrap">
+          <img class="al__avatar" src="{{ author.img }}" alt="{{ author.img-alt }}" title="{{ author.name }}"/>
+        </div>
+        <div class="al__identity-text">
+          <h1 class="al__name">{{ author.name }}</h1>
+          <p class="al__handle">{{ author.location }}</p>
+        </div>
+      </div>
+      <div class="al__rule"></div>
+      <div class="al__bio"><p>{{ author.short-about }}</p></div>
+      <div class="al__content">{{ content }}</div>
+      {% assign filtered_posts = site.posts | where: 'author', author.short-name %}
+      {% if filtered_posts.size > 0 %}
+      <div class="al__posts">
+        <div class="al__posts-label">// Writing</div>
+        <ul class="al__post-list">
+          {% for post in filtered_posts %}
+          <li class="al__post-item">
+            <time class="al__post-date">{{ post.date | date: "%b %-d, %Y" }}</time>
+            <a class="al__post-link {% if post.source %}al__post-link--linked{% endif %}" href="{{ post.url | relative_url }}">{% if post.source %}🔗 {% endif %}{{ post.title | escape }}</a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </article>
+    {% include footer.html %}
+  </main>
+</body>
+</html>

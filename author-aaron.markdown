@@ -1,5 +1,5 @@
 ---
-layout: author
+layout: about
 title: About Aaron Aiken
 permalink: /about/aaronaiken
 author: aaron
