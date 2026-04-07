@@ -84,8 +84,29 @@ hr {
   margin-top: 15px;
 }
 
-nav {
+.site-nav {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
   margin-bottom: 10px;
+
+  a { text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a.nav-active { text-decoration: underline; opacity: 1; }
+}
+
+.page-ident {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  opacity: 0.45;
+  margin-bottom: 1.5em;
+}
+
+.site-nav {
+  float: none;
+  line-height: 54px;
 }
 
 .post-link {
@@ -146,6 +167,17 @@ pre, code {
   display: none;
   overflow: hidden;
   background-color: inherit;
+}
+
+@media screen and (max-width: 600px) {
+  .site-nav {
+    position: static;
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+    text-align: left;
+    font-size: 0.72rem;
+  }
 }
 
 /* In support of Dark Mode */
