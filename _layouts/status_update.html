@@ -1,35 +1,104 @@
 <!doctype html>
 <html lang="en">
-  {% include head.html %}
-  <body class="status-page">
-    <div id="container">
-      {% include nav.html %}
+{% include head.html %}
+<body class="status-page" id="status-body">
+
+  <div class="st-grain"></div>
+
+  <div id="container">
+    {% include nav.html %}
+
+    <div class="st-header-row">
       <h1 id="header">{{ page.title }}</h1>
-      <div id="content">
+      <button class="st-toggle-btn" id="st-toggle" aria-label="Toggle view mode" title="Switch between 2007 and Terminal view" style="display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border:1px solid #888;background:#f0f0f0;color:#222;font-family:'Share Tech Mono',monospace;font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;border-radius:2px;white-space:nowrap;flex-shrink:0;">
+        <span id="st-opt-twitter">📺 '07</span>
+        <span style="color:#aaa;">⌇</span>
+        <span id="st-opt-terminal" style="color:#aaa;">⌨ TERMINAL</span>
+      </button>
+    </div>
+
+    <div id="content">
+
       <div class="profile-header">
         <img src="/assets/img/aaron_profile.jpeg" alt="Aaron Aiken's profile picture" class="profile-pic">
         <div class="account-info">
-        <span class="account-name">aaronaiken</span>
+          <span class="account-name">aaronaiken</span>
+          <span class="st-terminal-only account-ident">SIGNAL ACTIVE · HARRISBURG PA</span>
         </div>
       </div>
+
       <div class="latest-update-container">
         <div class="latest-status">
           <div class="latest-content">
             <p class="content">{{ content }}</p>
-            <p class="timestamp"><a href="{{ latest.url }}" target="_blank">{{ page.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a></p>
+            <p class="timestamp">
+              <a href="{{ page.url | relative_url }}">{{ page.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a>
+            </p>
             {% if page.source %}
               <p class="source">via {{ page.source }}</p>
             {% endif %}
           </div>
         </div>
       </div>
+
+      <div class="st-back-link">
+        <a href="/status.html">← All status updates</a>
+      </div>
+
       <div id="side" class="mobile-content">
         {% include twitter-bio.html %}
       </div>
+
       {% include footer.html %}
     </div>
+
     <div id="side" class="desktop-content">
-    {% include twitter-bio.html %}
+      {% include twitter-bio.html %}
     </div>
-  </body>
+
+  </div>
+
   <a class="u-url" href="{{ page.url | relative_url }}" hidden></a>
+
+  <script>
+  (function() {
+    var STORAGE_KEY = 'status-view-mode';
+    var body = document.getElementById('status-body');
+    var btn = document.getElementById('st-toggle');
+    var optTwitter = document.getElementById('st-opt-twitter');
+    var optTerminal = document.getElementById('st-opt-terminal');
+
+    if (!body || !btn) return;
+
+    function setMode(mode, save) {
+      if (mode === 'terminal') {
+        body.classList.add('st-terminal');
+        optTerminal.style.color = '#222';
+        optTerminal.style.fontWeight = '700';
+        optTwitter.style.color = '#aaa';
+        optTwitter.style.fontWeight = '400';
+      } else {
+        body.classList.remove('st-terminal');
+        optTwitter.style.color = '#222';
+        optTwitter.style.fontWeight = '700';
+        optTerminal.style.color = '#aaa';
+        optTerminal.style.fontWeight = '400';
+      }
+      if (save) {
+        try { localStorage.setItem(STORAGE_KEY, mode); } catch(e) {}
+      }
+    }
+
+    var saved = 'twitter';
+    try { saved = localStorage.getItem(STORAGE_KEY) || 'twitter'; } catch(e) {}
+    setMode(saved, false);
+
+    btn.addEventListener('click', function() {
+      var current = body.classList.contains('st-terminal') ? 'terminal' : 'twitter';
+      setMode(current === 'terminal' ? 'twitter' : 'terminal', true);
+    });
+  })();
+  </script>
+
+</body>
+</html>

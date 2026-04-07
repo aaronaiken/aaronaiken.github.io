@@ -1,57 +1,118 @@
 <!doctype html>
 <html lang="en">
-  {% include head.html %}
-  <body class="status-page">
-	<div id="container">
-		{% include nav.html %}
-	  <h1 id="header">{{ page.title }}</h1>
-	  <div id="content">
-		<div class="profile-header">
-		  <img src="/assets/img/aaron_profile.jpeg" alt="Aaron Aiken's profile picture" class="profile-pic">
-		  <div class="account-info">
-			<span class="account-name">aaronaiken</span>
-		  </div>
-		</div>
-		<div class="latest-update-container">
-		  {% assign latest = site.status_updates | sort: 'date' | reverse | first %}
-		  {% if latest %}
-			<div class="latest-status">
-			  <div class="latest-content">
-				<p class="content">{{ latest.content | markdownify | truncate: 300 }}</p>
-				<p class="timestamp" data-timestamp="{{ latest.date | date: '%s' }}">{{ latest.date | date: "%I:%M %p %B %-d, %Y %Z" }}</p>
-				{% if latest.source %}
-				  <p class="source">via {{ latest.source }} - <a href="{{ latest.url }}">🔗</a></p>
-				{% endif %}
-			  </div>
-			</div>
-		  {% endif %}
-		</div>
-		<div id="side" class="mobile-content">
-			{% include twitter-bio.html %}
-		</div>
-		<div class="older-updates-container">
-		  <!--<h3>...previously</h3>-->
-		  <ul class="older-updates-list">
-			{% assign sorted_older_updates = site.status_updates | sort: 'date' | reverse %}
-			{% for status in sorted_older_updates %}
-			  {% unless forloop.first %}
-				<li class="older-status-item">
-				  <p class="content">{{ status.content | markdownify | truncate: 300 }}<a href="{{ status.url }}" target="_blank" class="timestamp-link">{{ status.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a></p>
-				  {% if status.source %}
-					<p class="source">via {{ status.source }}</p>
-				  {% endif %}
-				</li>
-			  {% endunless %}
-			{% endfor %}
-		  </ul>
-		  <script src="/js/lazy-load-posts.js"></script>
-		  <script src="/js/dynamic-timestamp.js"></script>
-		</div>
-		{% include footer.html %}
-	  </div>
-	  <div id="side" class="desktop-content">
-		{% include twitter-bio.html %}
-	  </div>
-	</div>
-  </body>
+{% include head.html %}
+<body class="status-page" id="status-body">
+
+  <div class="st-grain"></div>
+
+  <div id="container">
+    {% include nav.html %}
+
+    <div class="st-header-row">
+      <h1 id="header">{{ page.title }}</h1>
+      <button class="st-toggle-btn" id="st-toggle" aria-label="Toggle view mode" title="Switch between 2007 and Terminal view" style="display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border:1px solid #888;background:#f0f0f0;color:#222;font-family:'Share Tech Mono',monospace;font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;border-radius:2px;white-space:nowrap;flex-shrink:0;">
+        <span id="st-opt-twitter">📺 '07</span>
+        <span style="color:#aaa;">⌇</span>
+        <span id="st-opt-terminal" style="color:#aaa;">⌨ TERMINAL</span>
+      </button>
+    </div>
+
+    <div id="content">
+
+      <div class="profile-header">
+        <img src="/assets/img/aaron_profile.jpeg" alt="Aaron Aiken's profile picture" class="profile-pic">
+        <div class="account-info">
+          <span class="account-name">aaronaiken</span>
+          <span class="st-terminal-only account-ident">SIGNAL ACTIVE · HARRISBURG PA</span>
+        </div>
+      </div>
+
+      {% assign latest = site.status_updates | sort: 'date' | reverse | first %}
+      {% if latest %}
+      <div class="latest-update-container">
+        <div class="latest-status">
+          <div class="latest-content">
+            <p class="content">{{ latest.content | markdownify | truncate: 300 }}</p>
+            <p class="timestamp" data-timestamp="{{ latest.date | date: '%s' }}">{{ latest.date | date: "%I:%M %p %B %-d, %Y %Z" }}</p>
+            {% if latest.source %}
+              <p class="source">via {{ latest.source }} - <a href="{{ latest.url }}">🔗</a></p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div id="side" class="mobile-content">
+        {% include twitter-bio.html %}
+      </div>
+
+      <div class="older-updates-container">
+        <ul class="older-updates-list">
+          {% assign sorted_older_updates = site.status_updates | sort: 'date' | reverse %}
+          {% for status in sorted_older_updates %}
+            {% unless forloop.first %}
+            <li class="older-status-item">
+              <span class="st-terminal-only st-line-prefix">›</span>
+              <p class="content">{{ status.content | markdownify | truncate: 300 }}<a href="{{ status.url }}" target="_blank" class="timestamp-link">{{ status.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a></p>
+              {% if status.source %}
+                <p class="source">via {{ status.source }}</p>
+              {% endif %}
+            </li>
+            {% endunless %}
+          {% endfor %}
+        </ul>
+        <script src="/js/lazy-load-posts.js"></script>
+        <script src="/js/dynamic-timestamp.js"></script>
+      </div>
+
+      {% include footer.html %}
+    </div>
+
+    <div id="side" class="desktop-content">
+      {% include twitter-bio.html %}
+    </div>
+
+  </div>
+
+  <script>
+  (function() {
+    var STORAGE_KEY = 'status-view-mode';
+    var body = document.getElementById('status-body');
+    var btn = document.getElementById('st-toggle');
+    var optTwitter = document.getElementById('st-opt-twitter');
+    var optTerminal = document.getElementById('st-opt-terminal');
+
+    if (!body || !btn) return;
+
+    function setMode(mode, save) {
+      if (mode === 'terminal') {
+        body.classList.add('st-terminal');
+        optTerminal.style.color = '#222';
+        optTerminal.style.fontWeight = '700';
+        optTwitter.style.color = '#aaa';
+        optTwitter.style.fontWeight = '400';
+      } else {
+        body.classList.remove('st-terminal');
+        optTwitter.style.color = '#222';
+        optTwitter.style.fontWeight = '700';
+        optTerminal.style.color = '#aaa';
+        optTerminal.style.fontWeight = '400';
+      }
+      if (save) {
+        try { localStorage.setItem(STORAGE_KEY, mode); } catch(e) {}
+      }
+    }
+
+    var saved = 'twitter';
+    try { saved = localStorage.getItem(STORAGE_KEY) || 'twitter'; } catch(e) {}
+    setMode(saved, false);
+
+    btn.addEventListener('click', function() {
+      var current = body.classList.contains('st-terminal') ? 'terminal' : 'twitter';
+      setMode(current === 'terminal' ? 'twitter' : 'terminal', true);
+    });
+  })();
+  </script>
+
+</body>
 </html>
