@@ -32,7 +32,7 @@ tinylytics:
 rss: Subscribe to blog posts via RSS 👍
 rss_status: Status updates in your reader 📡
 timezone: America/New_York
-tools_count: 2
+tools_count: 3
 
 defaults:
 - scope:
