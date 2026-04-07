@@ -1,8 +1,9 @@
 ---
-layout: page
+layout: selling
 title: stuff i'm selling
 permalink: /selling
 author: aaron
+page_ident: "CARGO MANIFEST · YT-1300F"
 ---
 If you see anything you'd like, or have questions, just use the form below to shoot me an email (or send me a text if you have my number). 
 
