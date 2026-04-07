@@ -6,110 +6,220 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Transmission Sent</title>
-
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Crimson+Pro:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg: #000;
-            --text: #fff;
-            --accent: #4bb543; /* Green for success */
-            --button-bg: #1c1c1e;
-        }
+    :root {
+        --bg:        #080a06;
+        --bg2:       #0d1008;
+        --amber:     #d4880a;
+        --amber-hi:  #f5b332;
+        --amber-lo:  #9a6018;
+        --amber-dim: #3d2804;
+        --green:     #4dbb6a;
+        --green-lo:  #2a6b3c;
+        --green-dim: #163d22;
+        --text:      #d4880a;
+        --text-body: #c89040;
+        --text-dim:  #7a5020;
+        --border:    #2e1e08;
+        --border-hi: #5a3c18;
+        --scan:      rgba(0,0,0,0.18);
+    }
 
-        [data-theme="light"] {
-            --bg: #f2f2f7;
-            --text: #000;
-            --accent: #34c759;
-            --button-bg: #e5e5ea;
-        }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: -apple-system, sans-serif;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            overflow: hidden;
-            padding-top: env(safe-area-inset-top, 20px);
-            transition: background 0.3s ease;
-        }
+    body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Share Tech Mono', 'Courier New', monospace;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        overflow: hidden;
+        padding: env(safe-area-inset-top, 20px) 24px;
+    }
 
-        .success-container {
-            text-align: center;
-            animation: arrive 0.6s cubic-bezier(0.2, 0, 0.2, 1);
-        }
+    /* CRT scanlines */
+    body::before {
+        content: " ";
+        position: fixed; inset: 0;
+        background: repeating-linear-gradient(
+            to bottom,
+            transparent 0px, transparent 3px,
+            var(--scan) 3px, var(--scan) 4px
+        );
+        pointer-events: none; z-index: 900;
+        opacity: 0.6;
+    }
 
-        @keyframes arrive {
-            0% { transform: scale(3); filter: blur(20px); opacity: 0; }
-            100% { transform: scale(1); filter: blur(0); opacity: 1; }
-        }
+    /* Vignette */
+    body::after {
+        content: '';
+        position: fixed; inset: 0;
+        background: radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0,0,0,0.75) 100%);
+        pointer-events: none; z-index: 901;
+    }
 
-        .check-circle {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: var(--accent);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            box-shadow: 0 0 30px rgba(75, 181, 67, 0.4);
-        }
+    /* ---- SUCCESS UI ---- */
+    .success-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        text-align: center;
+        position: relative;
+        z-index: 10;
+        animation: arrive 0.6s cubic-bezier(0.2, 0, 0.2, 1);
+    }
 
-        h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px; }
-        p { color: #888; font-size: 16px; margin-bottom: 40px; }
+    @keyframes arrive {
+        0%   { transform: scale(3); filter: blur(20px); opacity: 0; }
+        100% { transform: scale(1); filter: blur(0); opacity: 1; }
+    }
 
-        .back-btn {
-            background: var(--button-bg);
-            color: var(--text);
-            border: none;
-            padding: 14px 28px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: transform 0.2s, opacity 0.2s;
-            display: inline-block;
-            -webkit-appearance: none;
-        }
+    /* Transmission confirmed ring */
+    .check-circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--green-dim);
+        border: 2px solid var(--green-lo);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 24px rgba(77,187,106,0.35), 0 0 60px rgba(77,187,106,0.1);
+        animation: ring-pulse 2s ease-in-out infinite;
+    }
 
-        .back-btn:active { transform: scale(0.95); opacity: 0.8; }
+    @keyframes ring-pulse {
+        0%,100% { box-shadow: 0 0 24px rgba(77,187,106,0.35), 0 0 60px rgba(77,187,106,0.1); }
+        50%      { box-shadow: 0 0 36px rgba(77,187,106,0.55), 0 0 90px rgba(77,187,106,0.2); }
+    }
 
-        /* Exit Animation */
-        .exit-hyperspace {
-            animation: depart 0.4s forwards cubic-bezier(0.5, 0, 0.5, 1);
-        }
+    .check-circle svg { stroke: var(--green); }
 
-        @keyframes depart {
-            to { transform: scale(0.1) translateY(-1000px); filter: blur(20px); opacity: 0; }
-        }
+    /* Title */
+    .success__title {
+        font-family: 'VT323', monospace;
+        font-size: 2.4rem;
+        color: var(--amber-hi);
+        text-shadow: 0 0 18px rgba(212,136,10,0.55);
+        letter-spacing: 0.04em;
+        line-height: 1;
+        animation: title-glow 4s ease-in-out infinite;
+    }
+
+    @keyframes title-glow {
+        0%,100% { text-shadow: 0 0 18px rgba(212,136,10,0.55); }
+        50%      { text-shadow: 0 0 28px rgba(245,179,50,0.8), 0 0 60px rgba(212,136,10,0.3); }
+    }
+
+    /* Subtitle */
+    .success__sub {
+        font-family: 'Crimson Pro', serif;
+        font-style: italic;
+        font-size: 1rem;
+        color: var(--text-body);
+        letter-spacing: 0.02em;
+    }
+
+    /* Countdown */
+    .success__countdown {
+        font-size: 0.6rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-top: 4px;
+    }
+
+    /* Back button */
+    .back-btn {
+        background: var(--amber-dim);
+        color: var(--amber-hi);
+        border: 1px solid var(--amber-lo);
+        padding: 12px 28px;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.75rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 8px;
+        transition: background 0.15s, border-color 0.15s;
+        -webkit-appearance: none;
+    }
+
+    .back-btn:hover { background: #4a2c08; border-color: var(--amber); }
+    .back-btn:active { background: var(--amber); color: #000; transform: scale(0.97); }
+
+    /* Exit animation */
+    .exit-hyperspace {
+        animation: depart 0.4s forwards cubic-bezier(0.5, 0, 0.5, 1);
+    }
+
+    @keyframes depart {
+        to { transform: scale(0.1) translateY(-1000px); filter: blur(20px); opacity: 0; }
+    }
+
+    /* Light mode */
+    @media (prefers-color-scheme: light) {
+        body { background: #f7f3ec; }
+        body::before, body::after { display: none; }
+        .check-circle { background: #e4f0e8; border-color: #4a8c60; box-shadow: 0 2px 20px rgba(42,110,63,0.15); animation: none; }
+        .check-circle svg { stroke: #2a6e3f; }
+        .success__title { color: #5a2e00; text-shadow: none; animation: none; }
+        .success__sub { color: #4a3818; }
+        .success__countdown { color: #9a8060; }
+        .back-btn { background: #e8dcc8; border-color: #a89878; color: #5a2e00; }
+        .back-btn:hover { background: #d4c8b0; border-color: #7a3e00; }
+    }
     </style>
 </head>
 <body>
 
     <div class="success-container" id="success-ui">
+
         <div class="check-circle">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
         </div>
-        <h1>Transmission Sent</h1>
-        <p>Your status is now live.</p>
 
-        <a href="/publish" class="back-btn" onclick="returnToCockpit(event)">Return to Cockpit</a>
+        <div class="success__title">TRANSMISSION SENT</div>
+
+        <p class="success__sub">Your status is now live.</p>
+
+        <div class="success__countdown" id="countdown">Returning to Cockpit in 3s</div>
+
+        <a href="/publish" class="back-btn" onclick="returnToCockpit(event)">
+            ← Return to Cockpit
+        </a>
+
     </div>
 
     <script>
-        // Apply saved theme immediately
+        // Apply saved theme on load
         const savedTheme = localStorage.getItem('cockpit-theme') ||
             (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
         document.documentElement.setAttribute('data-theme', savedTheme);
+
+        // Countdown display
+        let remaining = 3;
+        const countdownEl = document.getElementById('countdown');
+
+        const tick = setInterval(() => {
+            remaining--;
+            if (remaining > 0) {
+                countdownEl.textContent = `Returning to Cockpit in ${remaining}s`;
+            } else {
+                countdownEl.textContent = 'Returning...';
+                clearInterval(tick);
+            }
+        }, 1000);
 
         function triggerHaptic(type) {
             if ("vibrate" in navigator) {
@@ -120,15 +230,15 @@
         function returnToCockpit(e) {
             e.preventDefault();
             triggerHaptic('tap');
+            clearInterval(tick);
             const ui = document.getElementById('success-ui');
             ui.classList.add('exit-hyperspace');
-
             setTimeout(() => {
                 window.location.href = e.target.href;
             }, 350);
         }
 
-        // Auto-return after 3 seconds if user does nothing
+        // Auto-return after 3 seconds
         setTimeout(() => {
             const ui = document.getElementById('success-ui');
             if (!ui.classList.contains('exit-hyperspace')) {
