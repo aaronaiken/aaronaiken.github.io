@@ -1,0 +1,542 @@
+---
+layout: tool-fullscreen
+title: ASTROMECH // BREW LAB
+description: French press calculator and steep timer. Dial in your ratio, hit start, let R2 tell you when it's done.
+permalink: /tools/brew/
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASTROMECH // BREW LAB</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+    --green:      #00ff41;
+    --green-dim:  #00a828;
+    --green-glow: rgba(0,255,65,0.12);
+    --amber:      #ffb300;
+    --red:        #ff3b30;
+    --blue:       #00cfff;
+    --bg:         #080808;
+    --panel:      #0d0d0d;
+    --border:     #182018;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 20px 14px 48px;
+    background-image: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,0,0,0.13) 2px, rgba(0,0,0,0.13) 4px
+    );
+  }
+
+  header {
+    width: 100%; max-width: 600px;
+    display: flex; align-items: baseline; justify-content: space-between;
+    border-bottom: 1px solid var(--green-dim);
+    padding-bottom: 10px; margin-bottom: 20px;
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace; font-weight: 900;
+    font-size: 1.25rem; letter-spacing: 4px;
+    color: var(--green); text-shadow: 0 0 14px var(--green);
+  }
+  .logo span { color: var(--amber); }
+  .tagline { font-size: 0.6rem; color: var(--green-dim); letter-spacing: 2px; }
+
+  .corner { position: fixed; font-size: 0.5rem; color: #0f0f0f; letter-spacing: 1px; }
+  .corner.tl { top: 7px; left: 9px; }
+  .corner.br { bottom: 7px; right: 9px; }
+
+  /* MAIN PANEL */
+  .panel {
+    width: 100%; max-width: 600px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 20px;
+    margin-bottom: 12px;
+  }
+
+  .section-label {
+    font-size: 0.55rem; letter-spacing: 3px;
+    color: var(--green-dim); margin-bottom: 12px;
+    border-bottom: 1px solid var(--border); padding-bottom: 6px;
+  }
+
+  /* COFFEE SLIDER */
+  .slider-row {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
+  }
+
+  .slider-label {
+    font-size: 0.6rem; color: var(--green-dim);
+    letter-spacing: 1px; min-width: 90px;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none; flex: 1; height: 3px;
+    background: var(--border); outline: none; border: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    background: var(--amber); border-radius: 0; cursor: pointer;
+    box-shadow: 0 0 8px var(--amber);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; background: var(--amber);
+    border-radius: 0; cursor: pointer; border: none;
+  }
+
+  .slider-val {
+    font-size: 0.75rem; color: var(--amber);
+    min-width: 60px; text-align: right; letter-spacing: 1px;
+    font-family: 'Orbitron', monospace; font-weight: 700;
+  }
+
+  /* RATIO SELECTOR */
+  .ratio-row {
+    display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;
+  }
+  .ratio-btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem; letter-spacing: 1px;
+    background: transparent; border: 1px solid #1a2a1a;
+    color: var(--green-dim); padding: 5px 10px;
+    cursor: pointer; text-transform: uppercase; transition: all 0.1s;
+  }
+  .ratio-btn:hover { border-color: var(--green-dim); color: var(--green); }
+  .ratio-btn.active {
+    background: var(--green-dim); color: #000;
+    border-color: var(--green-dim); font-weight: bold;
+  }
+
+  /* READOUT */
+  .readout-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin: 16px 0;
+  }
+
+  .readout-card {
+    border: 1px solid var(--border); background: #050505;
+    padding: 12px 14px;
+  }
+
+  .readout-unit {
+    font-size: 0.5rem; color: var(--green-dim);
+    letter-spacing: 2px; margin-bottom: 4px;
+  }
+
+  .readout-value {
+    font-family: 'Orbitron', monospace; font-weight: 700;
+    font-size: 1.6rem; color: var(--amber);
+    text-shadow: 0 0 12px rgba(255,179,0,0.4);
+    letter-spacing: 2px;
+  }
+
+  .readout-value.green {
+    color: var(--green);
+    text-shadow: 0 0 12px var(--green-glow);
+  }
+
+  .readout-sub {
+    font-size: 0.5rem; color: #1a3a1a; margin-top: 3px; letter-spacing: 1px;
+  }
+
+  /* TIMER */
+  .timer-display {
+    text-align: center; margin: 16px 0;
+    border: 1px solid var(--border); background: #050505;
+    padding: 20px;
+  }
+
+  .timer-label {
+    font-size: 0.55rem; letter-spacing: 3px;
+    color: var(--green-dim); margin-bottom: 10px;
+  }
+
+  .timer-clock {
+    font-family: 'Orbitron', monospace; font-weight: 900;
+    font-size: 4rem; color: var(--green);
+    text-shadow: 0 0 20px var(--green), 0 0 40px rgba(0,255,65,0.3);
+    letter-spacing: 6px; line-height: 1;
+    transition: color 0.3s;
+  }
+
+  .timer-clock.warning { color: var(--amber); text-shadow: 0 0 20px var(--amber); }
+  .timer-clock.done    { color: var(--green); animation: done-pulse 0.5s ease-in-out 3; }
+
+  @keyframes done-pulse {
+    0%,100% { text-shadow: 0 0 20px var(--green); }
+    50%      { text-shadow: 0 0 50px var(--green), 0 0 80px rgba(0,255,65,0.6); }
+  }
+
+  .progress-bar-wrap {
+    width: 100%; height: 4px; background: var(--border); margin: 12px 0 0;
+  }
+  .progress-bar {
+    height: 100%; background: var(--green);
+    transition: width 1s linear, background 0.3s;
+  }
+  .progress-bar.warning { background: var(--amber); }
+
+  /* BUTTONS */
+  .btn-row {
+    display: flex; gap: 8px; margin-top: 14px;
+  }
+
+  .btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.68rem; letter-spacing: 2px;
+    background: transparent; border: 1px solid var(--green-dim);
+    color: var(--green); padding: 10px 18px;
+    cursor: pointer; text-transform: uppercase;
+    transition: all 0.1s; flex: 1;
+  }
+  .btn:hover { background: var(--green-dim); color: #000; }
+  .btn:active { transform: scale(0.98); }
+  .btn.primary { background: var(--green-dim); color: #000; font-weight: bold; }
+  .btn.primary:hover { background: var(--green); }
+
+  .btn.danger { border-color: var(--red); color: var(--red); }
+  .btn.danger:hover { background: var(--red); color: #000; }
+
+  /* STEPS */
+  .steps {
+    margin-top: 14px;
+    border: 1px solid var(--border); background: #050505; padding: 12px;
+  }
+  .steps-title {
+    font-size: 0.52rem; letter-spacing: 3px; color: var(--green-dim);
+    margin-bottom: 10px;
+  }
+  .step {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 6px 0; border-bottom: 1px solid #0a100a;
+    font-size: 0.6rem; color: #2a4a2a;
+    transition: color 0.3s;
+  }
+  .step:last-child { border-bottom: none; }
+  .step.active { color: var(--green); }
+  .step.done { color: var(--green-dim); }
+
+  .step-time {
+    font-family: 'Orbitron', monospace; font-size: 0.55rem;
+    color: var(--amber); min-width: 42px; flex-shrink: 0;
+    opacity: 0.4; transition: opacity 0.3s;
+  }
+  .step.active .step-time, .step.done .step-time { opacity: 1; }
+
+  .step-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #1a2a1a; flex-shrink: 0; margin-top: 3px;
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+  .step.active .step-dot {
+    background: var(--green); box-shadow: 0 0 6px var(--green);
+    animation: step-blink 0.8s step-end infinite;
+  }
+  .step.done .step-dot { background: var(--green-dim); }
+  @keyframes step-blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* STATUS BAR */
+  .status-bar {
+    width: 100%; max-width: 600px;
+    border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .blinker { width: 7px; height: 7px; background: var(--green); animation: blink 1.2s step-end infinite; flex-shrink: 0; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  #log { font-size: 0.6rem; color: var(--green-dim); letter-spacing: 1px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ver { font-size: 0.55rem; color: #111; }
+</style>
+</head>
+<body>
+
+<div class="corner tl">SYS::BREW_LAB_v1.0</div>
+<div class="corner br">FRENCH_PRESS//PROTOCOL</div>
+
+<header>
+  <div class="logo">ASTRO<span>MECH</span> // BREW</div>
+  <div class="tagline">COFFEE RATIO + STEEP TIMER</div>
+</header>
+
+<!-- CONFIGURE -->
+<div class="panel">
+  <div class="section-label">// INPUT PARAMETERS</div>
+
+  <div class="slider-row">
+    <div class="slider-label">// COFFEE</div>
+    <input type="range" id="coffee-slider" min="10" max="80" value="30" step="1">
+    <div class="slider-val" id="coffee-val">30g</div>
+  </div>
+
+  <div class="section-label" style="margin-top:14px;">// BREW RATIO</div>
+  <div class="ratio-row" id="ratio-btns">
+    <button class="ratio-btn" data-ratio="14">1:14 STRONG</button>
+    <button class="ratio-btn active" data-ratio="15">1:15 STANDARD</button>
+    <button class="ratio-btn" data-ratio="16">1:16 MILD</button>
+    <button class="ratio-btn" data-ratio="17">1:17 LIGHT</button>
+  </div>
+
+  <div class="readout-grid">
+    <div class="readout-card">
+      <div class="readout-unit">// COFFEE</div>
+      <div class="readout-value" id="display-coffee">30<span style="font-size:1rem">g</span></div>
+      <div class="readout-sub">GROUNDS</div>
+    </div>
+    <div class="readout-card">
+      <div class="readout-unit">// WATER</div>
+      <div class="readout-value green" id="display-water">450<span style="font-size:1rem">g</span></div>
+      <div class="readout-sub" id="display-water-ml">450 ml approx</div>
+    </div>
+  </div>
+</div>
+
+<!-- TIMER -->
+<div class="panel">
+  <div class="section-label">// STEEP TIMER — 4:00 PROTOCOL</div>
+
+  <div class="timer-display">
+    <div class="timer-label">ELAPSED TIME</div>
+    <div class="timer-clock" id="clock">4:00</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progress" style="width:100%"></div>
+    </div>
+  </div>
+
+  <div class="steps" id="steps-panel">
+    <div class="steps-title">// BREW PROTOCOL</div>
+    <div class="step" data-at="240" id="step-0">
+      <div class="step-time">0:00</div>
+      <div class="step-dot"></div>
+      <span>Pour all <span class="water-ref">450g</span> water. Stir gently. Start plunger on lid.</span>
+    </div>
+    <div class="step" data-at="180" id="step-1">
+      <div class="step-time">1:00</div>
+      <div class="step-dot"></div>
+      <span>Give it a gentle swirl if desired.</span>
+    </div>
+    <div class="step" data-at="60" id="step-2">
+      <div class="step-time">3:00</div>
+      <div class="step-dot"></div>
+      <span>Begin slow, steady plunge. 30 sec to bottom.</span>
+    </div>
+    <div class="step" data-at="0" id="step-3">
+      <div class="step-time">4:00</div>
+      <div class="step-dot"></div>
+      <span>⚡ POUR IMMEDIATELY — don't let it sit and over-extract.</span>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn primary" id="start-btn" onclick="startTimer()">[ START ]</button>
+    <button class="btn danger" id="reset-btn" onclick="resetTimer()">[ RESET ]</button>
+  </div>
+</div>
+
+<div class="status-bar">
+  <div class="blinker"></div>
+  <div id="log">READY — SET COFFEE AMOUNT, SELECT RATIO, THEN START BREW</div>
+  <div class="ver">2026.04</div>
+</div>
+
+<script>
+'use strict';
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+let coffeeG    = 30;
+let ratio      = 15;
+let timerSecs  = 240;
+let totalSecs  = 240;
+let running    = false;
+let interval   = null;
+let brewDone   = false;
+
+// ── AUDIO (R2-D2 happy whistle, identical to Audio Lab) ─────────────────────
+let _ACX = null;
+
+function _getCtx() {
+  if (!_ACX) _ACX = new (window.AudioContext || window.webkitAudioContext)();
+  if (_ACX.state === 'suspended') _ACX.resume();
+  return _ACX;
+}
+function _mk(ctx, type)    { const o = ctx.createOscillator(); o.type = type; return o; }
+function _gain(ctx, val)   { const g = ctx.createGain(); g.gain.setValueAtTime(val, ctx.currentTime); return g; }
+function _play(nd, s, dur) { nd.start(s); nd.stop(s + dur + 0.01); }
+
+function r2_happy() {
+  const ctx  = _getCtx();
+  const t    = ctx.currentTime;
+  const p    = 1.0;   // normal pitch
+  const d    = 1.0;   // normal decay
+  const master = ctx.createGain();
+  master.gain.value = 0.72;
+  master.connect(ctx.destination);
+
+  const freqs = [900,1400,1100,1600,700];
+  const times = [0,.06,.12,.18,.26];
+  freqs.forEach((f,i) => {
+    const o = _mk(ctx,'sine'), g = _gain(ctx,.09);
+    o.connect(g); g.connect(master);
+    const s = t + times[i]*d;
+    o.frequency.setValueAtTime(f*p, s);
+    if (i < freqs.length-1) o.frequency.linearRampToValueAtTime(freqs[i+1]*p, s+.05*d);
+    g.gain.setValueAtTime(.09, s); g.gain.exponentialRampToValueAtTime(.0001, s+.09*d);
+    _play(o, s, .1*d);
+  });
+}
+
+// Play 3 happy chirps in sequence to really celebrate
+function brewComplete() {
+  r2_happy();
+  setTimeout(r2_happy, 600);
+  setTimeout(r2_happy, 1100);
+}
+
+// ── CALCULATIONS ─────────────────────────────────────────────────────────────
+function waterG() { return coffeeG * ratio; }
+
+function updateDisplay() {
+  const w = waterG();
+  document.getElementById('display-coffee').innerHTML = coffeeG + '<span style="font-size:1rem">g</span>';
+  document.getElementById('display-water').innerHTML  = w + '<span style="font-size:1rem">g</span>';
+  document.getElementById('display-water-ml').textContent = w + ' ml approx';
+  document.querySelectorAll('.water-ref').forEach(el => el.textContent = w + 'g');
+  coffee_val.textContent = coffeeG + 'g';
+}
+
+// ── SLIDER ──────────────────────────────────────────────────────────────────
+const coffeeSlider = document.getElementById('coffee-slider');
+const coffee_val   = document.getElementById('coffee-val');
+
+coffeeSlider.addEventListener('input', () => {
+  coffeeG = parseInt(coffeeSlider.value);
+  updateDisplay();
+  setLog('COFFEE: ' + coffeeG + 'g // WATER: ' + waterG() + 'g // RATIO 1:' + ratio);
+});
+
+// ── RATIO BUTTONS ────────────────────────────────────────────────────────────
+document.getElementById('ratio-btns').addEventListener('click', e => {
+  if (!e.target.dataset.ratio) return;
+  ratio = parseInt(e.target.dataset.ratio);
+  document.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  updateDisplay();
+  setLog('RATIO SET: 1:' + ratio + ' // WATER: ' + waterG() + 'g');
+});
+
+// ── TIMER ────────────────────────────────────────────────────────────────────
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return m + ':' + String(sec).padStart(2,'0');
+}
+
+function setClock(secs) {
+  const clock = document.getElementById('clock');
+  const prog  = document.getElementById('progress');
+  clock.textContent = formatTime(secs);
+  const pct = (secs / totalSecs) * 100;
+  prog.style.width = pct + '%';
+
+  clock.className = 'timer-clock';
+  prog.className  = 'progress-bar';
+  if (secs <= 60 && secs > 0) {
+    clock.classList.add('warning');
+    prog.classList.add('warning');
+  }
+  if (secs === 0) {
+    clock.classList.add('done');
+  }
+}
+
+function updateSteps(secsLeft) {
+  // data-at holds the seconds-remaining threshold for "active"
+  const steps = document.querySelectorAll('.step');
+  steps.forEach(step => {
+    const at = parseInt(step.dataset.at);
+    step.classList.remove('active','done');
+    if (secsLeft < at) {
+      step.classList.add('done');
+    } else if (secsLeft === at || (at === 240 && secsLeft <= 240 && secsLeft > 180)) {
+      // first step is always active while running
+    }
+  });
+  // active = the current step
+  for (let i = steps.length-1; i >= 0; i--) {
+    const at = parseInt(steps[i].dataset.at);
+    if (secsLeft >= at) {
+      steps[i].classList.remove('done');
+      steps[i].classList.add('active');
+      break;
+    }
+  }
+}
+
+function startTimer() {
+  if (running) return;
+
+  // Warm up audio context on first user gesture
+  _getCtx();
+
+  running = true;
+  brewDone = false;
+  document.getElementById('start-btn').textContent = '[ BREWING... ]';
+  setLog('BREW STARTED // STEEPING ' + coffeeG + 'g @ 1:' + ratio + ' — ' + waterG() + 'g WATER');
+
+  // Mark step 0 active
+  updateSteps(timerSecs);
+
+  interval = setInterval(() => {
+    timerSecs--;
+    setClock(timerSecs);
+    updateSteps(timerSecs);
+
+    if (timerSecs === 60) {
+      setLog('60 SECONDS REMAINING — BEGIN PLUNGE NOW');
+    }
+
+    if (timerSecs === 0) {
+      clearInterval(interval);
+      running = false;
+      brewDone = true;
+      document.getElementById('start-btn').textContent = '[ DONE ]';
+      setLog('⚡ BREW COMPLETE — POUR IMMEDIATELY');
+      brewComplete();
+    }
+  }, 1000);
+}
+
+function resetTimer() {
+  clearInterval(interval);
+  running  = false;
+  brewDone = false;
+  timerSecs = totalSecs;
+  setClock(timerSecs);
+  document.getElementById('start-btn').textContent = '[ START ]';
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active','done'));
+  setLog('RESET — READY FOR NEXT BREW');
+}
+
+function setLog(msg) {
+  document.getElementById('log').textContent = msg;
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+updateDisplay();
+setClock(timerSecs);
+</script>
+</body>
+</html>
