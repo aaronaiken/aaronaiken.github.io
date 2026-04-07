@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Crimson+Pro:ital,wght@0,400;1,400&family=Share+Tech+Mono&display=swap');
+
+body.colophon-layout {
+  --nav-link: #4a8c60; --nav-link-hover: #4dbb6a;
+  --ident-color: #1a5028; --ident-border: #1a3020;
+  --footer-border: #1a3020; --footer-label: #1a5028;
+  --footer-link: #2a6e3f; --footer-link-hover: #4dbb6a; --footer-dim: #1a5028;
+
+  background: #070a07 !important; color: #4dbb6a !important;
+  font-family: 'Share Tech Mono', monospace !important;
+  min-height: 100vh; overflow-x: hidden;
+  margin: 0 !important; max-width: 100% !important; padding: 0 !important;
+  font-size: 17px;
+}
+
+body.colophon-layout * { box-sizing: border-box; }
+body.colophon-layout::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.15) 4px); pointer-events: none; z-index: 900; }
+body.colophon-layout::after { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 40%, transparent 45%, rgba(0,0,0,0.6) 100%); pointer-events: none; z-index: 901; }
+
+.cl__wrap { max-width: 700px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 10; }
+
+.cl__header { margin-bottom: 32px; opacity: 0; animation: cl-rise 0.5s ease-out 0.05s forwards; }
+.cl__eyebrow { font-size: 0.68rem; letter-spacing: 0.25em; color: #1a5028; margin-bottom: 8px; }
+.cl__title { font-family: 'VT323', monospace !important; font-size: 3rem !important; font-weight: 400 !important; color: #7ddd96 !important; text-shadow: 0 0 20px rgba(77,187,106,0.5); letter-spacing: 0.04em !important; line-height: 1 !important; margin: 0 0 16px !important; text-decoration: none !important; animation: cl-glow 5s ease-in-out infinite; }
+.cl__cursor { display: inline-block; width: 2px; height: 0.75em; background: #7ddd96; vertical-align: middle; margin-left: 4px; animation: cl-blink 1.1s steps(1) infinite; }
+.cl__rule { height: 1px; background: linear-gradient(to right, #2e5038, transparent); }
+
+.cl__content { opacity: 0; animation: cl-rise 0.5s ease-out 0.15s forwards; }
+
+.cl__content p { font-family: 'Crimson Pro', Georgia, serif !important; font-size: 1.1rem !important; line-height: 1.85 !important; color: #4dbb6a !important; margin-bottom: 1.5em !important; }
+
+.cl__content h2 { font-family: 'Share Tech Mono', monospace !important; font-size: 0.75rem !important; letter-spacing: 0.25em !important; text-transform: uppercase !important; color: #2a6e3f !important; margin: 2.2em 0 1em !important; font-weight: 400 !important; text-decoration: none !important; display: flex; align-items: center; gap: 10px; }
+.cl__content h2::before { content: '//'; color: #1a5028; }
+.cl__content h2::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, #1a3020, transparent); }
+
+.cl__content h3 { font-family: 'Share Tech Mono', monospace !important; font-size: 0.68rem !important; letter-spacing: 0.18em !important; text-transform: uppercase !important; color: #2a6e3f !important; margin: 1.8em 0 0.6em !important; font-weight: 400 !important; }
+
+.cl__content a { color: #4dbb6a !important; text-decoration: none !important; border-bottom: 1px solid #1a3020; background: none !important; transition: color 0.15s, border-color 0.15s; }
+.cl__content a:hover { color: #7ddd96 !important; border-color: #2e5038; background: none !important; }
+.cl__content strong { color: #7ddd96; font-weight: 600; }
+.cl__content em { font-style: italic; color: #4dbb6a; }
+
+.cl__content ul { list-style: none !important; padding: 0 !important; margin: 0 0 1.5em !important; border: 1px solid #1a3020; background: #050705; }
+.cl__content ul li { padding: 9px 14px; font-family: 'Share Tech Mono', monospace !important; font-size: 0.82rem !important; color: #4dbb6a !important; border-bottom: 1px solid #1a3020; line-height: 1.5 !important; margin: 0 !important; }
+.cl__content ul li:last-child { border-bottom: none; }
+.cl__content ul li::before { content: '› '; color: #1a5028; }
+.cl__content ul li strong { color: #7ddd96; }
+.cl__content hr { border: none; border-top: 1px solid #1a3020; margin: 2.5em 0 !important; }
+
+@keyframes cl-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes cl-glow { 0%,100% { text-shadow: 0 0 18px rgba(77,187,106,0.5), 0 0 50px rgba(77,187,106,0.15); } 50% { text-shadow: 0 0 28px rgba(125,221,150,0.75), 0 0 80px rgba(77,187,106,0.28); } }
+@keyframes cl-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+
+@media (max-width: 480px) { .cl__title { font-size: 2.4rem !important; } }
+
+@media (prefers-color-scheme: light) {
+  body.colophon-layout { background: #f5f0e8 !important; color: #2a6e3f !important; --nav-link: #4a8c60; --nav-link-hover: #1a4f2e; --footer-border: #c8d8c8; --footer-label: #7a9e88; --footer-link: #4a8c60; --footer-link-hover: #1a4f2e; --footer-dim: #7a9e88; }
+  body.colophon-layout::before, body.colophon-layout::after { display: none; }
+  .cl__eyebrow { color: #8ab89a; }
+  .cl__title { color: #1a4f2e !important; text-shadow: none !important; animation: cl-rise 0.5s ease-out 0.05s forwards !important; }
+  .cl__cursor { background: #2a6e3f; }
+  .cl__rule { background: linear-gradient(to right, #8ab89a, transparent); }
+  .cl__content p { color: #2d5c3f !important; }
+  .cl__content h2 { color: #1a4f2e !important; }
+  .cl__content h2::before { color: #8ab89a; }
+  .cl__content h2::after { background: linear-gradient(to right, #c8d8c8, transparent); }
+  .cl__content h3 { color: #4a8c60 !important; }
+  .cl__content a { color: #1a4f2e !important; border-color: #8ab89a; }
+  .cl__content a:hover { color: #2a6e3f !important; border-color: #4a8c60; }
+  .cl__content strong { color: #1a4f2e; }
+  .cl__content ul { background: #ece6d8; border-color: #c8d8c8; }
+  .cl__content ul li { color: #2d5c3f !important; border-color: #c8d8c8; }
+  .cl__content ul li::before { color: #8ab89a; }
+  .cl__content ul li strong { color: #1a4f2e; }
+  .cl__content hr { border-color: #c8d8c8; }
+}
+</style>
+<body class="colophon-layout">
+  <main class="cl__wrap">
+    {% include nav.html %}
+    <article class="cl__article">
+      <header class="cl__header">
+        <div class="cl__eyebrow">// COLOPHON</div>
+        <h1 class="cl__title">{{ page.title | escape }}<span class="cl__cursor"></span></h1>
+        <div class="cl__rule"></div>
+      </header>
+      <div class="cl__content">{{ content }}</div>
+    </article>
+    {% include footer.html %}
+  </main>
+</body>
+</html>
