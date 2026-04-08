@@ -7,5 +7,12 @@
   <a href="/tools/" title="Tools &amp; experiments">Tools</a>
 </nav>
 {% if page.page_ident %}
-<div class="page-ident">{{ page.page_ident }}</div>
+  {% assign ident_parts = page.page_ident | split: " · " %}
+  <div class="page-ident">
+    <span class="page-ident__label">{{ ident_parts[0] }}</span>
+    {% if ident_parts[1] %}
+      <span class="page-ident__divider">·</span>
+      <span class="page-ident__sub">{{ ident_parts[1] }}</span>
+    {% endif %}
+  </div>
 {% endif %}
