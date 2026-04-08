@@ -58,6 +58,32 @@
     .tool-content {
       padding-top: 32px;
     }
+    
+    /* ---- LIGHT MODE — tool bar ---- */
+    @media (prefers-color-scheme: light) {
+      body {
+        background: #faf6ef;
+      }
+    
+      .tool-bar {
+        background: rgba(245,240,232,0.95);
+        border-bottom: 1px solid #c8bfad;
+      }
+    
+      .tool-bar__back {
+        color: #a06020;
+      }
+    
+      .tool-bar__back:hover { color: #7a3e00; }
+    
+      .tool-bar__title { color: #6a5a40; }
+    
+      .tool-bar__home {
+        color: #4a7a58;
+      }
+    
+      .tool-bar__home:hover { color: #2a5a3a; }
+    }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
 </head>
