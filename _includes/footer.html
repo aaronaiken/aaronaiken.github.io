@@ -54,7 +54,39 @@
     <span class="site-footer__sep">·</span>
     <a href="/colophon/">colophon</a>
   </div>
-
+<!-- HAN SOLO QUOTE — rotates on every page load -->
+  <div class="site-footer__quote-row">
+    <span class="site-footer__quote" id="han-quote">Never tell me the odds.</span>
+  </div>
+  
+  <script>
+  (function () {
+    var quotes = [
+      "Never tell me the odds.",
+      "I know.",
+      "Laugh it up, fuzzball.",
+      "Sorry about the mess.",
+      "Boring conversation anyway.",
+      "It's not my fault.",
+      "You know, sometimes I amaze even myself.",
+      "Don't everybody thank me at once.",
+      "Who's scruffy-looking?",
+      "Chewie, we're home.",
+      "Great shot, kid. That was one in a million.",
+      "I have a bad feeling about this.",
+      "Hey, Luke. May the Force be with you.",
+      "Yes, your Highnessness?",
+      "Traveling through hyperspace ain't like dusting crops, boy.",
+      "Hokey religions and ancient weapons are no match for a good blaster at your side, kid.",
+      "Look, I ain't in this for your revolution. I'm in it for the money.",
+      "And I thought they smelled bad on the outside."
+    ];
+    var el = document.getElementById('han-quote');
+    if (el) {
+      el.textContent = quotes[Math.floor(Math.random() * quotes.length)];
+    }
+  })();
+  </script>
 </footer>
 
 <style>
@@ -78,6 +110,20 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 24px;
   margin-bottom: 20px;
+}
+
+.site-footer__quote-row {
+  padding-top: 12px;
+  text-align: center;
+}
+
+.site-footer__quote {
+  font-family: 'Crimson Pro', serif;
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--footer-dim, #3a2808);
+  opacity: 0.65;
+  letter-spacing: 0;
 }
 
 @media (max-width: 540px) {
