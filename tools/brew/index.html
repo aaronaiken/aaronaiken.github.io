@@ -260,6 +260,136 @@ permalink: /tools/brew/
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
   #log { font-size: 0.6rem; color: var(--green-dim); letter-spacing: 1px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ver { font-size: 0.55rem; color: #111; }
+  
+  /* ==============================
+     LIGHT MODE — BREW LAB
+     Same room, lights on.
+     ============================== */
+  @media (prefers-color-scheme: light) {
+    :root {
+      --green:      #1e6e3a;
+      --green-dim:  #4a8c60;
+      --green-glow: rgba(30,110,58,0.08);
+      --amber:      #8a4e00;
+      --red:        #b82a20;
+      --blue:       #1a6a8a;
+      --bg:         #faf6ef;
+      --panel:      #f0ead8;
+      --border:     #c8bfad;
+    }
+  
+    body {
+      background: var(--bg);
+      color: var(--green);
+      /* Remove scanlines */
+      background-image: none;
+    }
+  
+    /* Header */
+    header {
+      border-bottom-color: var(--green-dim);
+    }
+  
+    .logo {
+      color: var(--green);
+      text-shadow: none;
+    }
+  
+    .logo span { color: var(--amber); }
+  
+    .tagline { color: var(--green-dim); }
+  
+    /* Corner labels — barely visible, like watermark */
+    .corner { color: #d8d0c0; }
+  
+    /* Panels */
+    .panel {
+      background: var(--panel);
+      border-color: var(--border);
+    }
+  
+    .section-label {
+      color: var(--green-dim);
+      border-bottom-color: var(--border);
+    }
+  
+    /* Inputs */
+    input[type="number"],
+    select {
+      background: #faf6ef;
+      border-color: var(--border);
+      color: var(--green);
+    }
+  
+    input[type="number"]:focus,
+    select:focus {
+      border-color: var(--green-dim);
+      box-shadow: none;
+    }
+  
+    /* Ratio buttons */
+    .ratio-btn {
+      background: #ece6d8;
+      border-color: var(--border);
+      color: var(--green-dim);
+    }
+  
+    .ratio-btn.active,
+    .ratio-btn:hover {
+      background: var(--green);
+      border-color: var(--green);
+      color: #faf6ef;
+      box-shadow: none;
+    }
+    
+    .readout-card, .steps {
+      background: transparent;
+    }
+  
+    /* Timer display */
+    .timer-display {
+      color: var(--green);
+      text-shadow: none;
+      background: #ece6d8;
+      border-color: var(--border);
+    }
+  
+    /* Start/stop button */
+    .btn-start {
+      background: var(--green);
+      border-color: var(--green);
+      color: #faf6ef;
+      box-shadow: none;
+    }
+  
+    .btn-start:hover {
+      background: #1a5c30;
+      box-shadow: none;
+    }
+  
+    .btn-start.running {
+      background: var(--red);
+      border-color: var(--red);
+    }
+  
+    /* Status/live dot */
+    .status-dot {
+      box-shadow: none;
+    }
+  
+    /* Result/output text */
+    .result-label,
+    .result-value {
+      color: var(--green);
+    }
+  
+    /* Any glow text — kill it */
+    * {
+      text-shadow: none !important;
+    }
+  
+    /* Orbitron logo override — already covered by .logo above */
+  }
 </style>
 </head>
 <body>
