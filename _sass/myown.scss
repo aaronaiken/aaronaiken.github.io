@@ -96,12 +96,18 @@ hr {
 }
 
 .page-ident {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-family: 'Share Tech Mono', monospace;
   font-size: 0.65rem;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  opacity: 0.45;
   margin-bottom: 1.5em;
+
+  &__label { color: var(--nav-link, #7a5020); }
+  &__divider { opacity: 0.3; }
+  &__sub { opacity: 0.45; }
 }
 
 .site-nav {
