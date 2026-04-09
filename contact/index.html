@@ -1,0 +1,263 @@
+---
+layout: none
+title: Contact
+permalink: /contact/
+page_ident: "CONTACT · Send a transmission"
+---
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=Crimson+Pro:ital,wght@0,400;1,400&family=Share+Tech+Mono&display=swap');
+
+body.contact-layout {
+  --nav-link: #a06820; --nav-link-hover: #f5b332;
+  --ident-color: #5a3c10; --ident-border: #2a1c08;
+  --footer-border: #2a1c08; --footer-label: #5a3c10;
+  --footer-link: #7a5020; --footer-link-hover: #d4880a; --footer-dim: #4a3010;
+
+  background: #0a0806 !important; color: #c89040 !important;
+  font-family: 'Crimson Pro', Georgia, serif !important;
+  min-height: 100vh; overflow-x: hidden;
+  margin: 0 !important; max-width: 100% !important; padding: 0 !important;
+  font-size: 18px;
+}
+
+body.contact-layout * { box-sizing: border-box; }
+body.contact-layout::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0px, transparent 4px, rgba(0,0,0,0.1) 4px, rgba(0,0,0,0.1) 5px); pointer-events: none; z-index: 900; }
+body.contact-layout::after { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 30%, transparent 50%, rgba(0,0,0,0.5) 100%); pointer-events: none; z-index: 901; }
+
+.cl__wrap { max-width: 700px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 10; }
+
+/* Header */
+.cl__header { margin-bottom: 28px; opacity: 0; animation: cl-rise 0.6s ease-out 0.05s forwards; }
+.cl__title { font-family: 'Fraunces', Georgia, serif !important; font-size: 2.6rem !important; font-weight: 600 !important; color: #f0d090 !important; line-height: 1.1 !important; letter-spacing: -0.02em !important; margin: 0 0 12px !important; }
+.cl__subtitle { font-family: 'Crimson Pro', serif; font-size: 1.1rem; font-style: italic; color: #a87030; line-height: 1.7; margin: 0 !important; }
+
+.cl__rule { height: 1px; background: linear-gradient(to right, #4a3010, transparent); margin-bottom: 32px; opacity: 0; animation: cl-rise 0.4s ease-out 0.15s forwards; }
+
+/* Form */
+.cl__form { opacity: 0; animation: cl-rise 0.5s ease-out 0.2s forwards; }
+
+.cl__row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media (max-width: 520px) { .cl__row { grid-template-columns: 1fr; } }
+
+.cl__field { margin-bottom: 16px; }
+.cl__field--row { margin-bottom: 0; }
+
+.cl__label {
+  display: block;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #7a5020;
+  margin-bottom: 7px;
+}
+
+.cl__input,
+.cl__textarea {
+  width: 100%;
+  background: #06040200;
+  background-color: rgba(20, 12, 4, 0.6);
+  border: 1px solid #3a2808;
+  border-bottom-color: #5a3c10;
+  color: #c89040;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 1.05rem;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+  border-radius: 0;
+}
+.cl__input:focus,
+.cl__textarea:focus {
+  border-color: #7a5020;
+  border-bottom-color: #d4880a;
+  box-shadow: 0 2px 0 0 rgba(212,136,10,0.2);
+}
+.cl__input::placeholder,
+.cl__textarea::placeholder { color: #4a3010; font-style: italic; }
+
+.cl__textarea { height: 180px; resize: vertical; line-height: 1.7; }
+
+/* Submit */
+.cl__submit-wrap { margin-top: 24px; display: flex; align-items: center; gap: 20px; }
+
+.cl__submit {
+  background: transparent;
+  border: 1px solid #7a5020;
+  color: #d4880a;
+  padding: 12px 28px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+.cl__submit:hover { background: rgba(212,136,10,0.08); border-color: #d4880a; color: #f5b332; }
+.cl__submit:active { background: rgba(212,136,10,0.18); }
+.cl__submit:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Status */
+.cl__status {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  display: none;
+}
+.cl__status--ok { color: #4dbb6a; display: block; }
+.cl__status--err { color: #e05c40; display: block; }
+
+/* Fine print */
+.cl__note {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #1e1408;
+  font-size: 0.95rem;
+  font-style: italic;
+  color: #5a3c10;
+  line-height: 1.7;
+  opacity: 0;
+  animation: cl-rise 0.5s ease-out 0.35s forwards;
+}
+
+/* Animations */
+@keyframes cl-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Light mode */
+@media (prefers-color-scheme: light) {
+  body.contact-layout {
+	background: #faf6ef !important; color: #3a2e1a !important;
+	--nav-link: #a06020; --nav-link-hover: #7a3e00;
+	--footer-border: #c8bfad; --footer-label: #8a7858;
+	--footer-link: #a06020; --footer-link-hover: #7a3e00; --footer-dim: #8a7858;
+  }
+  body.contact-layout::before, body.contact-layout::after { display: none; }
+  .cl__title { color: #1a1208 !important; }
+  .cl__subtitle { color: #7a5020; }
+  .cl__rule { background: linear-gradient(to right, #a89878, transparent); }
+  .cl__label { color: #8a7858; }
+  .cl__input, .cl__textarea {
+	background-color: #f0ead8;
+	border-color: #c8bfad;
+	border-bottom-color: #a89878;
+	color: #3a2e1a;
+  }
+  .cl__input:focus, .cl__textarea:focus {
+	border-color: #a89878;
+	border-bottom-color: #a06020;
+	box-shadow: 0 2px 0 0 rgba(160,96,32,0.2);
+  }
+  .cl__input::placeholder, .cl__textarea::placeholder { color: #c4b8a0; }
+  .cl__submit { border-color: #a89878; color: #7a3e00; }
+  .cl__submit:hover { background: rgba(160,96,32,0.08); border-color: #7a3e00; color: #5a2e00; }
+  .cl__note { color: #a89878; border-top-color: #e4ddd0; }
+}
+</style>
+<body class="contact-layout">
+  <main class="cl__wrap">
+	{% include nav.html %}
+
+	<div class="cl__header">
+	  <h1 class="cl__title">Say hello.</h1>
+	  <p class="cl__subtitle">No contact form fatigue intended — this just keeps my email off the open web. I read everything and reply when I can.</p>
+	</div>
+
+	<div class="cl__rule"></div>
+
+	<div class="cl__form">
+	  <div class="cl__row">
+		<div class="cl__field cl__field--row">
+		  <label class="cl__label" for="ct-name">// Name</label>
+		  <input class="cl__input" type="text" id="ct-name" placeholder="Han Solo" autocomplete="name" />
+		</div>
+		<div class="cl__field cl__field--row">
+		  <label class="cl__label" for="ct-email">// Email</label>
+		  <input class="cl__input" type="email" id="ct-email" placeholder="you@somewhere.com" autocomplete="email" autocapitalize="none" />
+		</div>
+	  </div>
+
+	  <div class="cl__field">
+		<label class="cl__label" for="ct-subject">// Subject</label>
+		<input class="cl__input" type="text" id="ct-subject" placeholder="What's on your mind" />
+	  </div>
+
+	  <div class="cl__field">
+		<label class="cl__label" for="ct-message">// Message</label>
+		<textarea class="cl__textarea" id="ct-message" placeholder="I've got a bad feeling about this..."></textarea>
+	  </div>
+
+	  <div class="cl__submit-wrap">
+		<button class="cl__submit" id="ct-btn" onclick="handleContact()">Send it →</button>
+		<span class="cl__status" id="ct-status"></span>
+	  </div>
+	</div>
+
+	<p class="cl__note">
+	  Your message goes directly to me — no middleman, no CRM, no ticket system. 
+	  Just a person reading email.
+	</p>
+
+	{% include footer.html %}
+  </main>
+
+  <script>
+	async function handleContact() {
+	  const btn    = document.getElementById('ct-btn');
+	  const status = document.getElementById('ct-status');
+	  const name    = document.getElementById('ct-name').value.trim();
+	  const email   = document.getElementById('ct-email').value.trim();
+	  const subject = document.getElementById('ct-subject').value.trim();
+	  const message = document.getElementById('ct-message').value.trim();
+
+	  if (!name) { showStatus('err', '⚠ name required'); return; }
+	  if (!email || !email.includes('@')) { showStatus('err', '⚠ valid email required'); return; }
+	  if (!subject) { showStatus('err', '⚠ subject required'); return; }
+	  if (!message) { showStatus('err', '⚠ message required'); return; }
+
+	  btn.disabled = true;
+	  btn.textContent = 'Sending...';
+
+	  try {
+		const resp = await fetch('https://email.aaronaiken.me/contact', {
+		  method: 'POST',
+		  headers: { 'Content-Type': 'application/json' },
+		  body: JSON.stringify({ name, email, subject, message })
+		});
+
+		if (resp.ok) {
+		  showStatus('ok', '✓ message received — thanks');
+		  btn.textContent = 'Sent';
+		  document.getElementById('ct-name').value = '';
+		  document.getElementById('ct-email').value = '';
+		  document.getElementById('ct-subject').value = '';
+		  document.getElementById('ct-message').value = '';
+		} else {
+		  throw new Error('server error');
+		}
+	  } catch (e) {
+		showStatus('err', '⚠ something went wrong — try again');
+		btn.disabled = false;
+		btn.textContent = 'Send it →';
+	  }
+	}
+
+	function showStatus(type, msg) {
+	  const el = document.getElementById('ct-status');
+	  el.textContent = msg;
+	  el.className = 'cl__status cl__status--' + type;
+	}
+
+	// Enter in any field except textarea submits
+	['ct-name','ct-email','ct-subject'].forEach(id => {
+	  document.getElementById(id).addEventListener('keydown', e => {
+		if (e.key === 'Enter') handleContact();
+	  });
+	});
+  </script>
+</body>
+</html>
