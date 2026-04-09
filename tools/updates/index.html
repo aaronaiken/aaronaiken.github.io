@@ -1,0 +1,407 @@
+---
+layout: tool-fullscreen
+title: ASTROMECH // UPDATES
+description: Get a message when something new ships. No newsletters. No noise. Just a heads-up when a tool gets better.
+permalink: /tools/updates/
+page_ident: Don't worry, she'll hold together · You hear me, baby? Hold together!
+---
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Crimson+Pro:ital,wght@0,400;1,400&family=Share+Tech+Mono&display=swap');
+
+body.tools-page {
+  --nav-link: #a06820; --nav-link-hover: #f5b332;
+  --ident-color: #5a3c10; --ident-border: #1a2e20;
+  --footer-border: #1a2e20; --footer-label: #2a5030;
+  --footer-link: #4a8060; --footer-link-hover: #4dbb6a; --footer-dim: #2a5030;
+
+  --tp-bg: #080c0a; --tp-bg2: #0c1210; --tp-bg3: #101a16;
+  --tp-amber: #d4880a; --tp-amber-hi: #f5b332; --tp-amber-lo: #9a6018;
+  --tp-green: #4dbb6a; --tp-green-lo: #2a6b3c; --tp-green-dim: #163d22;
+  --tp-scan: rgba(0,0,0,0.2); --tp-text: #4dbb6a;
+  --tp-text-body: #3daa58; --tp-text-dim: #2a6b3c;
+  --tp-border: #1a2e20; --tp-border-hi: #2e5038;
+
+  background: var(--tp-bg) !important; color: var(--tp-text);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh; overflow-x: hidden;
+  margin: 0 !important; max-width: 100% !important; padding: 0 !important;
+  font-size: 17px;
+}
+
+body.tools-page * { box-sizing: border-box; }
+body.tools-page::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, var(--tp-scan) 3px, var(--tp-scan) 4px); pointer-events: none; z-index: 900; }
+body.tools-page::after { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 40%, transparent 40%, rgba(0,0,0,0.72) 100%); pointer-events: none; z-index: 901; }
+.tools-grain { position: fixed; inset: 0; z-index: 902; pointer-events: none; opacity: 0.055; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 180px 180px; }
+
+.tools__wrap { max-width: 760px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 10; }
+
+/* Title */
+.tools__title-block { margin-bottom: 20px; opacity: 0; animation: tp-rise 0.5s ease-out 0.1s forwards; }
+.tools__title { font-family: 'VT323', monospace !important; font-size: 3.2rem !important; font-weight: 400 !important; color: var(--tp-amber-hi) !important; text-shadow: 0 0 20px rgba(212,136,10,0.5); letter-spacing: 0.05em !important; line-height: 1 !important; margin: 0 0 10px !important; text-decoration: none !important; animation: tp-amber-breathe 5s ease-in-out infinite; }
+.tools__title-prefix { color: var(--tp-amber-lo); font-size: 2rem; }
+.tools__cursor { display: inline-block; width: 2px; height: 0.75em; background: var(--tp-amber-hi); vertical-align: middle; margin-left: 4px; animation: tp-cursor-blink 1.1s steps(1) infinite; }
+.tools__subtitle { font-family: 'Crimson Pro', serif; font-size: 1rem; font-style: italic; color: var(--tp-text-body); letter-spacing: 0; margin: 0 !important; line-height: 1.6; }
+
+.tools__rule { display: flex; align-items: center; gap: 10px; margin: 22px 0 28px; opacity: 0; animation: tp-rise 0.4s ease-out 0.18s forwards; }
+.tools__rule::before, .tools__rule::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--tp-border-hi), transparent); }
+.tools__rule-glyph { font-size: 0.6rem; color: var(--tp-amber-lo); letter-spacing: 0.1em; }
+
+/* Form card */
+.sub__card {
+  background: var(--tp-bg2);
+  border: 1px solid var(--tp-border-hi);
+  padding: 28px 28px 32px;
+  opacity: 0;
+  animation: tp-rise 0.5s ease-out 0.25s forwards;
+  position: relative;
+  overflow: hidden;
+}
+.sub__card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(to right, var(--tp-amber-lo), transparent);
+}
+
+.sub__section-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--tp-text-dim);
+  margin: 0 0 8px;
+}
+
+.sub__email-wrap { margin-bottom: 28px; }
+
+.sub__input {
+  width: 100%;
+  background: #060a08;
+  border: 1px solid var(--tp-border-hi);
+  color: var(--tp-green);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.95rem;
+  padding: 12px 14px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  -webkit-appearance: none;
+  border-radius: 0;
+}
+.sub__input:focus {
+  border-color: var(--tp-amber-lo);
+  box-shadow: 0 0 12px rgba(212,136,10,0.15);
+}
+.sub__input::placeholder { color: var(--tp-text-dim); font-style: italic; }
+
+/* Checkboxes */
+.sub__checks-wrap { margin-bottom: 28px; }
+.sub__checks-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+@media (max-width: 480px) { .sub__checks-grid { grid-template-columns: 1fr; } }
+
+.sub__check-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #060a08;
+  border: 1px solid var(--tp-border);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative;
+}
+.sub__check-label:hover {
+  border-color: var(--tp-amber-lo);
+  background: #0e1a10;
+}
+.sub__check-label input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0; height: 0;
+}
+.sub__check-box {
+  width: 14px; height: 14px;
+  border: 1px solid var(--tp-border-hi);
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.15s, background 0.15s;
+  font-size: 0.6rem;
+  color: transparent;
+}
+.sub__check-label input:checked ~ .sub__check-body .sub__check-box,
+.sub__check-label:has(input:checked) .sub__check-box {
+  border-color: var(--tp-amber-lo);
+  background: rgba(212,136,10,0.12);
+  color: var(--tp-amber);
+}
+.sub__check-label:has(input:checked) {
+  border-color: var(--tp-amber-lo);
+  background: #0e1a10;
+}
+.sub__check-body { display: flex; flex-direction: column; gap: 2px; }
+.sub__check-icon { font-size: 1rem; line-height: 1; }
+.sub__check-name {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--tp-text-body);
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+.sub__check-label:has(input:checked) .sub__check-name { color: var(--tp-amber-hi); }
+.sub__check-sub {
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--tp-text-dim);
+  line-height: 1.4;
+}
+
+/* General updates — spans full width */
+.sub__check-label--general {
+  grid-column: 1 / -1;
+  border-color: var(--tp-amber-lo);
+  background: rgba(212,136,10,0.04);
+}
+.sub__check-label--general .sub__check-name { color: var(--tp-amber-lo); }
+.sub__check-label--general:has(input:checked) { background: rgba(212,136,10,0.1); }
+
+/* Submit */
+.sub__submit {
+  width: 100%;
+  background: rgba(212,136,10,0.08);
+  border: 1px solid var(--tp-amber-lo);
+  color: var(--tp-amber-hi);
+  padding: 14px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.sub__submit:hover { background: rgba(212,136,10,0.18); border-color: var(--tp-amber); }
+.sub__submit:active { background: var(--tp-amber); color: #000; }
+.sub__submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Status message */
+.sub__status {
+  margin-top: 14px;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  min-height: 1.2em;
+  display: none;
+  text-align: center;
+}
+.sub__status--ok { color: var(--tp-green); display: block; }
+.sub__status--err { color: #e05c40; display: block; }
+
+.sub__fine-print {
+  margin-top: 20px;
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--tp-text-dim);
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* Back link */
+.sub__back {
+  display: inline-block;
+  margin-bottom: 20px;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--tp-text-dim);
+  text-decoration: none;
+  opacity: 0;
+  animation: tp-rise 0.4s ease-out 0.05s forwards;
+  transition: color 0.15s;
+}
+.sub__back:hover { color: var(--tp-amber-lo); }
+
+/* Animations */
+@keyframes tp-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes tp-amber-breathe { 0%,100% { text-shadow: 0 0 18px rgba(212,136,10,0.5); } 50% { text-shadow: 0 0 28px rgba(245,179,50,0.75); } }
+@keyframes tp-cursor-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+
+/* Light mode */
+@media (prefers-color-scheme: light) {
+  body.tools-page { --tp-bg: #f5f0e8; --tp-bg2: #ece6d8; --tp-bg3: #e4ddd0; --tp-amber: #7a3e00; --tp-amber-hi: #5a2e00; --tp-amber-lo: #a06020; --tp-green: #2a6e3f; --tp-green-lo: #4a8c60; --tp-green-dim: #8ab89a; --tp-text: #2a6e3f; --tp-text-body: #3a5a40; --tp-text-dim: #7a9e8a; --tp-border: #c4b8a0; --tp-border-hi: #a89878; background: var(--tp-bg) !important; }
+  body.tools-page::before, body.tools-page::after { display: none; }
+  .tools-grain { display: none; }
+  .tools__title { text-shadow: none !important; animation: tp-rise 0.5s ease-out 0.1s forwards !important; color: #5a2e00 !important; }
+  .tools__cursor { background: #7a3e00; }
+  .sub__card { background: var(--tp-bg2); }
+  .sub__input { background: #f0ead8; color: #3a5a40; }
+  .sub__check-label { background: #f0ead8; }
+  .sub__check-label:hover { background: var(--tp-bg3); }
+  .sub__check-label--general { background: rgba(160,96,32,0.06); }
+}
+</style>
+<body class="tools-page">
+  <div class="tools-grain"></div>
+  <main class="tools__wrap">
+    {% include nav.html %}
+
+    <a href="/tools/" class="sub__back">← back to tools</a>
+
+    <div class="tools__title-block">
+      <h1 class="tools__title"><span class="tools__title-prefix">// </span>SIGNAL LIST<span class="tools__cursor"></span></h1>
+      <p class="tools__subtitle">Get a message when something new ships. No newsletters. No noise. Just a heads-up when a tool gets better.</p>
+    </div>
+
+    <div class="tools__rule"><span class="tools__rule-glyph">◈ ◈ ◈</span></div>
+
+    <div class="sub__card">
+
+      <div class="sub__email-wrap">
+        <p class="sub__section-label">// Transmission address</p>
+        <input
+          type="email"
+          id="sub-email"
+          class="sub__input"
+          placeholder="your@email.com"
+          autocomplete="email"
+          autocapitalize="none"
+        />
+      </div>
+
+      <div class="sub__checks-wrap">
+        <p class="sub__section-label">// Channels — pick what you want to hear about</p>
+        <div class="sub__checks-grid">
+
+          <!-- General — full width, top -->
+          <label class="sub__check-label sub__check-label--general">
+            <input type="checkbox" name="tools" value="general" checked />
+            <div class="sub__check-body">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="sub__check-icon">📡</span>
+                <div class="sub__check-box">✓</div>
+                <span class="sub__check-name">General Tool Updates</span>
+              </div>
+              <span class="sub__check-sub">Anything new across the workshop — new tools, big releases, experiments.</span>
+            </div>
+          </label>
+
+          <!-- Audio Lab -->
+          <label class="sub__check-label">
+            <input type="checkbox" name="tools" value="audio-lab" />
+            <div class="sub__check-body">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="sub__check-icon">🔊</span>
+                <div class="sub__check-box">✓</div>
+                <span class="sub__check-name">Astromech // Audio Lab</span>
+              </div>
+              <span class="sub__check-sub">Synthesizer &amp; sound design tool updates.</span>
+            </div>
+          </label>
+
+          <!-- Brew Lab -->
+          <label class="sub__check-label">
+            <input type="checkbox" name="tools" value="brew-lab" />
+            <div class="sub__check-body">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="sub__check-icon">☕️</span>
+                <div class="sub__check-box">✓</div>
+                <span class="sub__check-name">Astromech // Brew Lab</span>
+              </div>
+              <span class="sub__check-sub">French press calculator &amp; timer improvements.</span>
+            </div>
+          </label>
+
+          <!-- Cockpit -->
+          <label class="sub__check-label">
+            <input type="checkbox" name="tools" value="cockpit" />
+            <div class="sub__check-body">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="sub__check-icon">🛸</span>
+                <div class="sub__check-box">✓</div>
+                <span class="sub__check-name">The Cockpit</span>
+              </div>
+              <span class="sub__check-sub">Status publishing system &amp; pipeline changes.</span>
+            </div>
+          </label>
+
+        </div>
+      </div>
+
+      <button class="sub__submit" id="sub-btn" onclick="handleSubscribe()">
+        ⌇ OPEN CHANNEL
+      </button>
+
+      <p class="sub__status" id="sub-status"></p>
+
+      <p class="sub__fine-print">
+        No tracking. No third parties. Just me and a list in a text file on PythonAnywhere. Unsubscribe anytime by replying to any message.
+      </p>
+
+    </div>
+
+    {% include footer.html %}
+  </main>
+
+  <script>
+    async function handleSubscribe() {
+      const btn = document.getElementById('sub-btn');
+      const status = document.getElementById('sub-status');
+      const email = document.getElementById('sub-email').value.trim();
+
+      // Basic validation
+      if (!email || !email.includes('@')) {
+        showStatus('err', '⚠ enter a valid email address first');
+        return;
+      }
+
+      const checked = [...document.querySelectorAll('input[name="tools"]:checked')]
+        .map(cb => cb.value);
+
+      if (checked.length === 0) {
+        showStatus('err', '⚠ select at least one channel');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '⌇ TRANSMITTING...';
+
+      try {
+        const resp = await fetch('https://email.aaronaiken.me/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, tools: checked })
+        });
+
+        if (resp.ok) {
+          showStatus('ok', '✓ signal received — you\'re on the list');
+          btn.textContent = '✓ CHANNEL OPEN';
+        } else {
+          throw new Error('server error');
+        }
+      } catch (e) {
+        showStatus('err', '⚠ transmission failed — try again or email me directly');
+        btn.disabled = false;
+        btn.textContent = '⌇ OPEN CHANNEL';
+      }
+    }
+
+    function showStatus(type, msg) {
+      const el = document.getElementById('sub-status');
+      el.textContent = msg;
+      el.className = 'sub__status sub__status--' + type;
+    }
+
+    // Allow enter key on email field
+    document.getElementById('sub-email').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') handleSubscribe();
+    });
+  </script>
+</body>
+</html>

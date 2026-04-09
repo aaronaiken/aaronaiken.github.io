@@ -84,6 +84,20 @@ body.tools-page::after { content: ''; position: fixed; inset: 0; background: rad
   .tools__card { background: var(--tp-bg2); }
   .tools__card:hover { background: var(--tp-bg3) !important; }
 }
+.tools__card--signal {
+  grid-column: 1 / -1;
+  border-color: var(--tp-amber-lo);
+  background: rgba(212,136,10,0.04);
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+}
+.tools__card--signal:hover { background: rgba(212,136,10,0.10) !important; }
+.tools__card--signal .tools__card-name { font-size: 1.15rem !important; }
+.tools__card--signal-body { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 480px) {
+  .tools__card--signal { flex-direction: column; align-items: flex-start; }
+}
 </style>
 <body class="tools-page">
   <div class="tools-grain"></div>
@@ -148,6 +162,20 @@ body.tools-page::after { content: ''; position: fixed; inset: 0; background: rad
         <p class="tools__card-desc">More tools being assembled in the workshop. Check back.</p>
         <div class="tools__card-meta"><span class="tools__card-tag tools__card-tag--dim">TBD</span></div>
       </div>
+      <a class="tools__card tools__card--signal" href="/tools/updates/">
+        <span class="tools__card-icon" style="font-size:1.8rem;flex-shrink:0;">📡</span>
+        <div class="tools__card--signal-body">
+          <div class="tools__card-header" style="margin:0;padding:0;">
+            <h2 class="tools__card-name">SIGNAL LIST</h2>
+            <span class="tools__card-status">
+              <span class="tools__card-dot"></span>
+              OPEN
+            </span>
+          </div>
+          <p class="tools__card-desc" style="flex:none;">Get a heads-up when something ships. Pick your channels, drop your email, done. No newsletters.</p>
+        </div>
+        <div class="tools__card-cta" style="flex-shrink:0;">SIGN UP <span class="tools__card-arrow">→</span></div>
+      </a>
     </div>
     {% include footer.html %}
   </main>
