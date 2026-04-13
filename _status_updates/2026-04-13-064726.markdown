@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-04-13 06:47:26 -0400
+layout: status_update
+author: aaron
+source: web
+---
+☕️ Building this morning, connecting things. FastMail, PythonAnywhere, Stripe, Pirate Ship, Jekyll, GitHub, etc etc etc. Hello Monday!
