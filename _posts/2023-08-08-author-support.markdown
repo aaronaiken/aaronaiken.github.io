@@ -2,7 +2,11 @@
 layout: post
 title:  "Author Support"
 date:  2023-08-08 10:37 PM
-categories: release_notes
+categories: [release_notes]
+version: v0.1.0
+rn_added: true
+rn_changed: false
+rn_fixed: false
 author: aaron
 img:
 source:

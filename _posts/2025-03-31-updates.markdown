@@ -1,8 +1,12 @@
 ---
-layout: post
+layout: release-notes-post
 title:  "Website Updates and Such"
 date:  2025-03-31 7:14 AM
-categories: release_notes
+categories: [release_notes]
+version: v1.0.1
+rn_added: true
+rn_changed: false
+rn_fixed: false
 author: aaron
 image: /assets/img/IMG_7643.jpeg
 source:

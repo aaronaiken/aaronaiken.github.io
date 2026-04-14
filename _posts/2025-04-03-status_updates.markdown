@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: release-notes-post
 title:  "Status Updates"
 date:  2025-04-03 8:15 AM
 categories: 

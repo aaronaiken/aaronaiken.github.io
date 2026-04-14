@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Fira+Code:wght@400;500&display=swap');
+
+body.rn-index-page {
+  --nav-link: #3a9a5c; --nav-link-hover: #4dbb6a;
+  --ident-color: #1a5c30; --ident-border: #0a2c18;
+  --footer-border: #0a2c18; --footer-label: #1a5c30;
+  --footer-link: #2a7a40; --footer-link-hover: #4dbb6a; --footer-dim: #1a4028;
+
+  --rn-bg: #020904; --rn-bg2: #071410;
+  --rn-green: #4dbb6a; --rn-green-hi: #80e896; --rn-green-lo: #2a6e40;
+  --rn-green-dim: #1a4028; --rn-green-glow: rgba(77,187,106,0.15);
+  --rn-amber: #d4880a; --rn-amber-lo: #7a4a08;
+  --rn-scan: rgba(0,0,0,0.2);
+  --rn-text: #4dbb6a; --rn-text-body: #3a9a5c;
+  --rn-text-dim: #1a5c30; --rn-text-bright: #80e896;
+  --rn-border: #0a2c18; --rn-border-hi: #1a4a28;
+
+  background: var(--rn-bg) !important; color: var(--rn-text);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh; overflow-x: hidden;
+  margin: 0 !important; max-width: 100% !important; padding: 0 !important;
+  font-size: 18px;
+}
+
+body.rn-index-page * { box-sizing: border-box; }
+body.rn-index-page::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, var(--rn-scan) 3px, var(--rn-scan) 4px); pointer-events: none; z-index: 900; }
+body.rn-index-page::after { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 30%, transparent 40%, rgba(0,0,0,0.75) 100%); pointer-events: none; z-index: 901; }
+
+.rn-grain { position: fixed; inset: 0; z-index: 902; pointer-events: none; opacity: 0.04; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 180px 180px; }
+
+.rn__wrap { max-width: 740px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 10; }
+
+/* ── System header ── */
+.rn__header { margin-bottom: 8px; opacity: 0; animation: rn-rise 0.5s ease-out 0.05s forwards; }
+
+.rn__back { display: inline-flex; align-items: center; gap: 6px; font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--rn-text-dim) !important; text-decoration: none !important; background: none !important; transition: color 0.15s; margin-bottom: 20px; }
+.rn__back:hover { color: var(--rn-green-lo) !important; background: none !important; }
+
+.rn__system-bar { border: 1px solid var(--rn-border-hi); border-bottom: none; padding: 8px 14px; display: flex; align-items: center; justify-content: space-between; background: var(--rn-bg2); }
+.rn__system-bar-left { display: flex; align-items: center; gap: 12px; }
+.rn__system-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--rn-green); box-shadow: 0 0 6px var(--rn-green); animation: rn-pulse 2.5s ease-in-out infinite; flex-shrink: 0; }
+.rn__system-label { font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--rn-text-dim); }
+.rn__system-id { font-size: 0.6rem; letter-spacing: 0.15em; color: var(--rn-green-lo); }
+
+.rn__title-block { border: 1px solid var(--rn-border-hi); padding: 20px 14px 16px; background: var(--rn-bg2); margin-bottom: 0; opacity: 0; animation: rn-rise 0.5s ease-out 0.1s forwards; }
+
+.rn__title { font-family: 'VT323', monospace !important; font-size: 3.4rem !important; font-weight: 400 !important; color: var(--rn-green-hi) !important; text-shadow: 0 0 24px rgba(77,187,106,0.6); letter-spacing: 0.06em !important; line-height: 1 !important; margin: 0 0 10px !important; text-decoration: none !important; animation: rn-green-breathe 4s ease-in-out infinite; }
+.rn__title-prefix { color: var(--rn-green-lo); }
+.rn__cursor { display: inline-block; width: 2px; height: 0.75em; background: var(--rn-green-hi); vertical-align: middle; margin-left: 4px; animation: rn-cursor-blink 1.1s steps(1) infinite; }
+.rn__subtitle { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--rn-text-dim); letter-spacing: 0.1em; margin: 0 !important; line-height: 1.6; }
+
+.rn__status-bar { border: 1px solid var(--rn-border-hi); border-top: 1px solid var(--rn-border); padding: 6px 14px; display: flex; gap: 24px; background: #030b05; margin-bottom: 28px; opacity: 0; animation: rn-rise 0.4s ease-out 0.18s forwards; }
+.rn__status-item { font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--rn-text-dim); }
+.rn__status-item span { color: var(--rn-green); margin-left: 6px; }
+
+/* ── Release list ── */
+.rn__releases { opacity: 0; animation: rn-rise 0.5s ease-out 0.25s forwards; }
+
+.rn__release-item { margin-bottom: 2px; border: 1px solid var(--rn-border); background: var(--rn-bg2); transition: border-color 0.15s, background 0.15s; }
+.rn__release-item:hover { border-color: var(--rn-border-hi); background: #0a1a0e; }
+
+.rn__release-link { display: grid; grid-template-columns: 90px 80px 1fr auto; gap: 16px; align-items: center; padding: 14px 16px; text-decoration: none !important; background: none !important; }
+
+.rn__release-version { font-family: 'Fira Code', 'Share Tech Mono', monospace; font-size: 0.95rem; color: var(--rn-green-hi) !important; letter-spacing: 0.05em; white-space: nowrap; text-shadow: 0 0 8px rgba(77,187,106,0.4); }
+.rn__release-date { font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--rn-text-dim); white-space: nowrap; }
+.rn__release-title { font-family: 'Share Tech Mono', monospace; font-size: 0.82rem; color: var(--rn-text-body) !important; letter-spacing: 0.05em; line-height: 1.4; transition: color 0.15s; }
+.rn__release-item:hover .rn__release-title { color: var(--rn-green) !important; }
+
+.rn__release-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.rn__release-tag { font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; padding: 2px 6px; border: 1px solid var(--rn-border-hi); color: var(--rn-text-dim); white-space: nowrap; }
+.rn__release-tag--added { border-color: var(--rn-green-lo); color: var(--rn-green-lo); }
+.rn__release-tag--changed { border-color: var(--rn-amber-lo); color: var(--rn-amber-lo); }
+.rn__release-tag--fixed { border-color: #4a1a6a; color: #8a4aaa; }
+
+/* ── Year group ── */
+.rn__year-group { margin-bottom: 28px; }
+.rn__year-label { font-family: 'VT323', monospace; font-size: 1.4rem; color: var(--rn-green-lo); letter-spacing: 0.12em; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--rn-border); display: flex; align-items: center; gap: 10px; }
+.rn__year-label::before { content: '//'; color: var(--rn-border-hi); font-size: 1rem; }
+
+/* ── Empty state ── */
+.rn__empty { font-size: 0.75rem; letter-spacing: 0.15em; color: var(--rn-text-dim); padding: 24px 0; }
+.rn__empty::before { content: '> '; color: var(--rn-green-lo); }
+
+/* ── Footer nav ── */
+.rn__footer-nav { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--rn-border); display: flex; justify-content: space-between; align-items: center; opacity: 0; animation: rn-rise 0.4s ease-out 0.4s forwards; }
+.rn__footer-nav-link { display: inline-flex; align-items: center; gap: 8px; font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--rn-text-dim) !important; text-decoration: none !important; background: none !important; transition: color 0.15s; }
+.rn__footer-nav-link:hover { color: var(--rn-green-lo) !important; background: none !important; }
+
+/* ── Animations ── */
+@keyframes rn-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes rn-green-breathe { 0%,100% { text-shadow: 0 0 20px rgba(77,187,106,0.5); } 50% { text-shadow: 0 0 32px rgba(128,232,150,0.8); } }
+@keyframes rn-cursor-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+@keyframes rn-pulse { 0%,100% { opacity: 1; box-shadow: 0 0 6px var(--rn-green); } 50% { opacity: 0.5; box-shadow: 0 0 2px var(--rn-green); } }
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .rn__release-link { grid-template-columns: 70px 1fr; grid-template-rows: auto auto; gap: 6px 12px; }
+  .rn__release-date { display: none; }
+  .rn__release-tags { justify-content: flex-start; grid-column: 1 / -1; }
+  .rn__title { font-size: 2.6rem !important; }
+  .rn__status-bar { flex-wrap: wrap; gap: 10px; }
+  .rn__footer-nav { flex-direction: column; align-items: flex-start; gap: 12px; }
+}
+
+/* ── Light mode ── */
+@media (prefers-color-scheme: light) {
+  body.rn-index-page {
+    --rn-bg: #f2f7f3; --rn-bg2: #e4f0e8;
+    --rn-green: #1a6b30; --rn-green-hi: #0d4a20; --rn-green-lo: #2a8a48;
+    --rn-text: #1a4028; --rn-text-body: #2a5c38; --rn-text-dim: #6a9a78;
+    --rn-text-bright: #0d4a20;
+    --rn-border: #b8d4c0; --rn-border-hi: #8ab8a0;
+    --rn-amber: #7a3e00; --rn-amber-lo: #a06020;
+    --nav-link: #2a8a48; --nav-link-hover: #1a6b30;
+    --footer-border: #b8d4c0; --footer-label: #6a9a78; --footer-link: #2a8a48; --footer-link-hover: #1a6b30; --footer-dim: #6a9a78;
+    background: var(--rn-bg) !important;
+  }
+  body.rn-index-page::before, body.rn-index-page::after { display: none; }
+  .rn-grain { display: none; }
+  .rn__title { text-shadow: none !important; animation: rn-rise 0.5s ease-out 0.1s forwards !important; color: #0d4a20 !important; }
+  .rn__cursor { background: #1a6b30; }
+  .rn__system-dot { box-shadow: none; }
+  .rn__release-version { text-shadow: none !important; }
+  .rn__release-item { background: var(--rn-bg2); border-color: var(--rn-border); }
+  .rn__release-item:hover { background: #d4e8da; border-color: var(--rn-border-hi); }
+}
+</style>
+<body class="rn-index-page">
+  <div class="rn-grain"></div>
+  <main class="rn__wrap">
+    {% include nav.html %}
+    <div class="rn__header">
+      <a href="/blog/" class="rn__back">← All posts</a>
+      <div class="rn__system-bar">
+        <div class="rn__system-bar-left">
+          <span class="rn__system-dot"></span>
+          <span class="rn__system-label">System · aaronaiken.me</span>
+        </div>
+        <span class="rn__system-id">ENG-DECK // CHANGELOG</span>
+      </div>
+      <div class="rn__title-block">
+        <h1 class="rn__title"><span class="rn__title-prefix">$ </span>RELEASE NOTES<span class="rn__cursor"></span></h1>
+        <p class="rn__subtitle">UNIT: aaronaiken.me &nbsp;·&nbsp; STATUS: OPERATIONAL &nbsp;·&nbsp; TRACKING: SITE + TOOLS</p>
+      </div>
+      <div class="rn__status-bar">
+        {% assign rn_posts = site.posts | where_exp: "post", "post.categories contains 'release_notes'" %}
+        <span class="rn__status-item">RELEASES<span>{{ rn_posts.size }}</span></span>
+        <span class="rn__status-item">LATEST<span>{{ rn_posts.first.date | date: "%Y-%m-%d" }}</span></span>
+        <span class="rn__status-item">SYSTEM<span>NOMINAL</span></span>
+      </div>
+    </div>
+
+    <div class="rn__releases">
+      {% assign rn_posts = site.posts | where_exp: "post", "post.categories contains 'release_notes'" %}
+      {% if rn_posts.size > 0 %}
+        {% assign posts_by_year = rn_posts | group_by_exp: "post", "post.date | date: '%Y'" %}
+        {% for year_group in posts_by_year %}
+        <div class="rn__year-group">
+          <div class="rn__year-label">{{ year_group.name }}</div>
+          {% for post in year_group.items %}
+          <div class="rn__release-item">
+            <a class="rn__release-link" href="{{ post.url | relative_url }}">
+              <span class="rn__release-version">{{ post.version | default: "v—" }}</span>
+              <time class="rn__release-date">{{ post.date | date: "%Y-%m-%d" }}</time>
+              <span class="rn__release-title">{{ post.title | escape }}</span>
+              <span class="rn__release-tags">
+                {% if post.rn_added %}<span class="rn__release-tag rn__release-tag--added">+added</span>{% endif %}
+                {% if post.rn_changed %}<span class="rn__release-tag rn__release-tag--changed">~changed</span>{% endif %}
+                {% if post.rn_fixed %}<span class="rn__release-tag rn__release-tag--fixed">✕fixed</span>{% endif %}
+              </span>
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      {% else %}
+      <p class="rn__empty">No releases logged yet. First deployment incoming.</p>
+      {% endif %}
+    </div>
+
+    <div class="rn__footer-nav">
+      <a href="/blog/" class="rn__footer-nav-link">← All posts</a>
+      <a href="{{ '/feed.xml' | relative_url }}" class="rn__footer-nav-link">◉ Subscribe via RSS</a>
+    </div>
+    {% include footer.html %}
+  </main>
+</body>
+</html>
