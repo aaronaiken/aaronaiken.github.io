@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Fira+Code:wght@400;500&display=swap');
+
+body.rn-post-page {
+  --nav-link: #3a9a5c; --nav-link-hover: #4dbb6a;
+  --ident-color: #1a5c30; --ident-border: #0a2c18;
+  --footer-border: #0a2c18; --footer-label: #1a5c30;
+  --footer-link: #2a7a40; --footer-link-hover: #4dbb6a; --footer-dim: #1a4028;
+
+  --rn-bg: #020904; --rn-bg2: #071410;
+  --rn-green: #4dbb6a; --rn-green-hi: #80e896; --rn-green-lo: #2a6e40;
+  --rn-green-dim: #1a4028; --rn-green-glow: rgba(77,187,106,0.15);
+  --rn-amber: #d4880a; --rn-amber-lo: #7a4a08;
+  --rn-purple: #8a4aaa; --rn-purple-lo: #4a1a6a;
+  --rn-scan: rgba(0,0,0,0.2);
+  --rn-text: #4dbb6a; --rn-text-body: #3a9a5c;
+  --rn-text-dim: #1a5c30; --rn-text-bright: #80e896;
+  --rn-border: #0a2c18; --rn-border-hi: #1a4a28;
+
+  background: var(--rn-bg) !important; color: var(--rn-text-body);
+  font-family: 'Fira Code', 'Share Tech Mono', monospace;
+  min-height: 100vh; overflow-x: hidden;
+  margin: 0 !important; max-width: 100% !important; padding: 0 !important;
+  font-size: 17px;
+}
+
+body.rn-post-page * { box-sizing: border-box; }
+body.rn-post-page::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, var(--rn-scan) 3px, var(--rn-scan) 4px); pointer-events: none; z-index: 900; }
+body.rn-post-page::after { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 30%, transparent 40%, rgba(0,0,0,0.75) 100%); pointer-events: none; z-index: 901; }
+
+.rn-grain { position: fixed; inset: 0; z-index: 902; pointer-events: none; opacity: 0.04; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 180px 180px; }
+
+.rnp__wrap { max-width: 720px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 10; }
+
+/* ── System bar ── */
+.rnp__system-bar { border: 1px solid var(--rn-border-hi); border-bottom: none; padding: 7px 14px; display: flex; align-items: center; justify-content: space-between; background: var(--rn-bg2); opacity: 0; animation: rnp-rise 0.4s ease-out 0.05s forwards; }
+.rnp__system-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--rn-green); box-shadow: 0 0 6px var(--rn-green); animation: rnp-pulse 2.5s ease-in-out infinite; display: inline-block; margin-right: 10px; }
+.rnp__system-label { font-family: 'Share Tech Mono', monospace; font-size: 0.58rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--rn-text-dim); }
+.rnp__system-id { font-family: 'Share Tech Mono', monospace; font-size: 0.58rem; letter-spacing: 0.15em; color: var(--rn-green-lo); }
+
+/* ── Header ── */
+.rnp__header { border: 1px solid var(--rn-border-hi); padding: 24px 20px 20px; background: var(--rn-bg2); margin-bottom: 0; opacity: 0; animation: rnp-rise 0.5s ease-out 0.1s forwards; }
+
+.rnp__back { display: inline-flex; align-items: center; gap: 6px; font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--rn-text-dim) !important; text-decoration: none !important; background: none !important; transition: color 0.15s; margin-bottom: 16px; }
+.rnp__back:hover { color: var(--rn-green-lo) !important; background: none !important; }
+
+.rnp__version { font-family: 'Fira Code', monospace; font-size: 3.6rem; font-weight: 500; color: var(--rn-green-hi); text-shadow: 0 0 28px rgba(77,187,106,0.65); line-height: 1; margin: 0 0 12px !important; letter-spacing: -0.02em; animation: rnp-green-breathe 4s ease-in-out infinite; }
+.rnp__version-none { font-family: 'Share Tech Mono', monospace; font-size: 1.2rem; color: var(--rn-text-dim); margin: 0 0 12px !important; }
+
+.rnp__title { font-family: 'Share Tech Mono', monospace !important; font-size: 1.1rem !important; font-weight: 400 !important; color: var(--rn-text-bright) !important; letter-spacing: 0.06em !important; line-height: 1.4 !important; margin: 0 0 16px !important; text-decoration: none !important; }
+
+.rnp__meta { font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--rn-text-dim); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rnp__meta-sep { color: var(--rn-border-hi); }
+.rnp__meta-tags { display: flex; gap: 6px; }
+.rnp__meta-tag { font-size: 0.55rem; letter-spacing: 0.15em; padding: 2px 7px; border: 1px solid; }
+.rnp__meta-tag--added { border-color: var(--rn-green-lo); color: var(--rn-green-lo); }
+.rnp__meta-tag--changed { border-color: var(--rn-amber-lo); color: var(--rn-amber-lo); }
+.rnp__meta-tag--fixed { border-color: var(--rn-purple-lo); color: var(--rn-purple); }
+
+/* ── Changelog sections ── */
+.rnp__changelog { border: 1px solid var(--rn-border); border-top: none; background: #030b05; padding: 20px; margin-bottom: 0; opacity: 0; animation: rnp-rise 0.5s ease-out 0.2s forwards; }
+
+.rnp__section { margin-bottom: 20px; }
+.rnp__section:last-child { margin-bottom: 0; }
+
+.rnp__section-header { font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; letter-spacing: 0.25em; text-transform: uppercase; padding: 4px 10px; display: inline-block; margin-bottom: 10px; }
+.rnp__section-header--added { color: var(--rn-green); border-left: 2px solid var(--rn-green); background: rgba(77,187,106,0.06); }
+.rnp__section-header--changed { color: var(--rn-amber); border-left: 2px solid var(--rn-amber-lo); background: rgba(212,136,10,0.06); }
+.rnp__section-header--fixed { color: var(--rn-purple); border-left: 2px solid var(--rn-purple-lo); background: rgba(138,74,170,0.06); }
+
+.rnp__section-list { list-style: none !important; margin: 0 !important; padding: 0 !important; }
+.rnp__section-item { font-family: 'Fira Code', monospace; font-size: 0.88rem; line-height: 1.7; color: var(--rn-text-body); padding: 3px 0 3px 16px; position: relative; }
+.rnp__section-item::before { content: '›'; position: absolute; left: 0; color: var(--rn-text-dim); }
+
+/* ── Rule ── */
+.rnp__rule { height: 1px; background: linear-gradient(to right, var(--rn-border-hi), transparent); margin-bottom: 28px; opacity: 0; animation: rnp-rise 0.3s ease-out 0.28s forwards; }
+
+/* ── Body content ── */
+.rnp__content { opacity: 0; animation: rnp-rise 0.5s ease-out 0.32s forwards; }
+
+.rnp__content p { font-family: 'Fira Code', monospace; font-size: 0.95rem !important; line-height: 1.85 !important; color: var(--rn-text-body) !important; margin-bottom: 1.4em !important; }
+.rnp__content p:last-child { margin-bottom: 0 !important; }
+.rnp__content p::before { content: '// '; color: var(--rn-text-dim); font-size: 0.8em; }
+
+.rnp__content h2 { font-family: 'Share Tech Mono', monospace !important; font-size: 0.75rem !important; font-weight: 400 !important; letter-spacing: 0.25em !important; text-transform: uppercase !important; color: var(--rn-green) !important; margin: 2em 0 0.8em !important; padding-bottom: 6px; border-bottom: 1px solid var(--rn-border); }
+.rnp__content h3 { font-family: 'Share Tech Mono', monospace !important; font-size: 0.68rem !important; font-weight: 400 !important; letter-spacing: 0.2em !important; text-transform: uppercase !important; color: var(--rn-text-dim) !important; margin: 1.6em 0 0.6em !important; }
+
+.rnp__content a { color: var(--rn-green) !important; text-decoration: none !important; border-bottom: 1px solid var(--rn-green-lo); transition: color 0.15s, border-color 0.15s; background: none !important; }
+.rnp__content a:hover { color: var(--rn-green-hi) !important; border-color: var(--rn-green); background: none !important; }
+.rnp__content strong { color: var(--rn-text-bright); font-weight: 500; }
+
+.rnp__content pre, .rnp__content code { font-family: 'Fira Code', monospace !important; background: #010602 !important; color: var(--rn-green) !important; font-size: 0.85rem !important; border-radius: 2px; }
+.rnp__content pre { padding: 16px 18px !important; overflow-x: auto; margin: 1.4em 0 !important; border: 1px solid var(--rn-border-hi); }
+.rnp__content code { padding: 2px 6px !important; }
+
+.rnp__content blockquote { border-left: 2px solid var(--rn-green-lo); padding: 4px 0 4px 16px; margin: 1.6em 0 !important; }
+.rnp__content blockquote p { color: var(--rn-text-dim) !important; }
+.rnp__content blockquote p::before { display: none; }
+
+.rnp__content hr { border: none; border-top: 1px solid var(--rn-border-hi); margin: 2em 0 !important; }
+
+.rnp__content ul, .rnp__content ol { padding-left: 0 !important; margin-bottom: 1.4em !important; list-style: none !important; }
+.rnp__content li { font-size: 0.95rem !important; line-height: 1.8 !important; color: var(--rn-text-body) !important; margin-bottom: 0.3em !important; padding-left: 16px; position: relative; }
+.rnp__content li::before { content: '›'; position: absolute; left: 0; color: var(--rn-text-dim); }
+
+/* ── Nav ── */
+.rnp__nav { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--rn-border); display: flex; justify-content: space-between; align-items: center; font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0; animation: rnp-rise 0.4s ease-out 0.45s forwards; }
+.rnp__nav-link { color: var(--rn-text-dim) !important; text-decoration: none !important; background: none !important; transition: color 0.15s; }
+.rnp__nav-link:hover { color: var(--rn-green-lo) !important; background: none !important; }
+
+/* ── Animations ── */
+@keyframes rnp-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes rnp-green-breathe { 0%,100% { text-shadow: 0 0 24px rgba(77,187,106,0.55); } 50% { text-shadow: 0 0 36px rgba(128,232,150,0.85); } }
+@keyframes rnp-pulse { 0%,100% { opacity: 1; box-shadow: 0 0 6px var(--rn-green); } 50% { opacity: 0.4; box-shadow: 0 0 2px var(--rn-green); } }
+
+/* ── Mobile ── */
+@media (max-width: 480px) {
+  .rnp__version { font-size: 2.6rem; }
+  .rnp__title { font-size: 0.95rem !important; }
+  .rnp__meta { gap: 6px; }
+}
+
+/* ── Light mode ── */
+@media (prefers-color-scheme: light) {
+  body.rn-post-page {
+    --rn-bg: #f2f7f3; --rn-bg2: #e4f0e8;
+    --rn-green: #1a6b30; --rn-green-hi: #0d4a20; --rn-green-lo: #2a8a48;
+    --rn-text: #1a4028; --rn-text-body: #2a5c38; --rn-text-dim: #6a9a78;
+    --rn-text-bright: #0d4a20;
+    --rn-border: #b8d4c0; --rn-border-hi: #8ab8a0;
+    --rn-amber: #7a3e00; --rn-amber-lo: #a06020;
+    --rn-purple: #6a2a8a; --rn-purple-lo: #8a4aaa;
+    --nav-link: #2a8a48; --nav-link-hover: #1a6b30;
+    --footer-border: #b8d4c0; --footer-label: #6a9a78; --footer-link: #2a8a48; --footer-link-hover: #1a6b30; --footer-dim: #6a9a78;
+    background: var(--rn-bg) !important;
+  }
+  body.rn-post-page::before, body.rn-post-page::after { display: none; }
+  .rn-grain { display: none; }
+  .rnp__version { text-shadow: none !important; animation: rnp-rise 0.5s ease-out 0.1s forwards !important; }
+  .rnp__system-dot { box-shadow: none; }
+  .rnp__changelog { background: var(--rn-bg2); }
+  .rnp__content pre, .rnp__content code { background: #d4e8da !important; }
+}
+</style>
+<body class="rn-post-page">
+  <div class="rn-grain"></div>
+  <article class="rnp__wrap h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+    {% include nav.html %}
+
+    <div class="rnp__system-bar">
+      <span><span class="rnp__system-dot"></span><span class="rnp__system-label">aaronaiken.me // Engineering Deck</span></span>
+      <span class="rnp__system-id">{{ page.date | date: "%Y-%m-%d" }}</span>
+    </div>
+
+    <header class="rnp__header">
+      <a href="/blog/release-notes/" class="rnp__back">← Release Notes</a>
+      {% if page.version %}
+      <p class="rnp__version">{{ page.version }}</p>
+      {% else %}
+      <p class="rnp__version-none">// no version specified</p>
+      {% endif %}
+      <h1 class="rnp__title p-name" itemprop="name headline">{{ page.title | escape }}</h1>
+      <div class="rnp__meta">
+        <time class="dt-published" datetime="{{ page.date | date_to_xmlschema }}" itemprop="datePublished">{{ page.date | date: "%B %-d, %Y" }}</time>
+        {%- if page.author -%}
+        {%- assign author = site.data.people[page.author] -%}
+        <span class="rnp__meta-sep">·</span>
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person" itemprop="name">{{ author.name }}</span>
+        {%- endif -%}
+        {% assign has_tags = false %}
+        {% if page.rn_added or page.rn_changed or page.rn_fixed %}{% assign has_tags = true %}{% endif %}
+        {% if has_tags %}
+        <span class="rnp__meta-sep">·</span>
+        <span class="rnp__meta-tags">
+          {% if page.rn_added %}<span class="rnp__meta-tag rnp__meta-tag--added">+added</span>{% endif %}
+          {% if page.rn_changed %}<span class="rnp__meta-tag rnp__meta-tag--changed">~changed</span>{% endif %}
+          {% if page.rn_fixed %}<span class="rnp__meta-tag rnp__meta-tag--fixed">✕fixed</span>{% endif %}
+        </span>
+        {% endif %}
+      </div>
+    </header>
+
+    {% assign has_changelog = false %}
+    {% if page.added or page.changed or page.fixed %}{% assign has_changelog = true %}{% endif %}
+    {% if has_changelog %}
+    <div class="rnp__changelog">
+      {% if page.added %}
+      <div class="rnp__section">
+        <div class="rnp__section-header rnp__section-header--added">+ Added</div>
+        <ul class="rnp__section-list">
+          {% for item in page.added %}<li class="rnp__section-item">{{ item }}</li>{% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      {% if page.changed %}
+      <div class="rnp__section">
+        <div class="rnp__section-header rnp__section-header--changed">~ Changed</div>
+        <ul class="rnp__section-list">
+          {% for item in page.changed %}<li class="rnp__section-item">{{ item }}</li>{% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      {% if page.fixed %}
+      <div class="rnp__section">
+        <div class="rnp__section-header rnp__section-header--fixed">✕ Fixed</div>
+        <ul class="rnp__section-list">
+          {% for item in page.fixed %}<li class="rnp__section-item">{{ item }}</li>{% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="rnp__rule"></div>
+
+    {% if content != "" and content != "<p></p>" %}
+    <div class="rnp__content e-content" itemprop="articleBody">
+      {{ content }}
+    </div>
+    {% endif %}
+
+    <a class="u-url" href="{{ page.url | relative_url }}" hidden></a>
+
+    <nav class="rnp__nav">
+      <a href="/blog/release-notes/" class="rnp__nav-link">← Release Notes</a>
+      <a href="/blog/" class="rnp__nav-link">All posts</a>
+      <a href="{{ '/feed.xml' | relative_url }}" class="rnp__nav-link">RSS ⌇</a>
+    </nav>
+    {% include footer.html %}
+  </article>
+</body>
+</html>

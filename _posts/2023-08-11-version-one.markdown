@@ -1,8 +1,12 @@
 ---
-layout: post
+layout: release-notes-post
 title:  "Version One"
 date:  2023-08-11 11:08 PM
-categories: release_notes
+categories: [release_notes]
+version: v1.0.0
+rn_added: true
+rn_changed: false
+rn_fixed: false
 author: aaron
 img:
 source:
