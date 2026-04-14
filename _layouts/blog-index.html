@@ -53,7 +53,9 @@ body.blog-index-page::after { content: ''; position: fixed; inset: 0; background
 .bi__post-link { font-family: 'Crimson Pro', serif; font-size: 1.2rem; color: var(--bi-text-body) !important; text-decoration: none !important; background: none !important; line-height: 1.4; transition: color 0.15s; }
 .bi__post-link:hover { color: var(--bi-amber-hi) !important; background: none !important; }
 .bi__post-link--linked { color: var(--bi-amber-lo) !important; }
-
+.bi__post-category { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--bi-text-dim); text-decoration: none !important; background: none !important; transition: color 0.15s; margin-left: 8px; white-space: nowrap; }
+.bi__post-category:hover { color: var(--bi-amber-lo) !important; background: none !important; }
+.bi__post-title-group { display: flex; align-items: baseline; gap: 0; flex-wrap: wrap; }
 .bi__subscribe { margin-top: 8px; padding-top: 24px; opacity: 0; animation: bi-rise 0.4s ease-out 0.4s forwards; }
 .bi__subscribe-link { display: inline-flex; align-items: center; gap: 8px; font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bi-text-dim) !important; text-decoration: none !important; background: none !important; transition: color 0.15s; }
 .bi__subscribe-link:hover { color: var(--bi-amber-lo) !important; background: none !important; }
@@ -104,7 +106,9 @@ body.blog-index-page::after { content: ''; position: fixed; inset: 0; background
           {% for post in year_group.items %}
           <li class="bi__post-item">
             <time class="bi__post-date">{{ post.date | date: "%b %-d" }}</time>
-            <a class="bi__post-link {% if post.source %}bi__post-link--linked{% endif %}" href="{{ post.url | relative_url }}">{% if post.source %}🔗 {% endif %}{{ post.title | escape }}</a>
+            <span class="bi__post-title-group">
+              <a class="bi__post-link {% if post.source %}bi__post-link--linked{% endif %}" href="{{ post.url | relative_url }}">{% if post.source %}🔗 {% endif %}{{ post.title | escape }}</a>{% if post.categories.size > 0 %}{% assign cat = post.categories.first %}<a href="/blog/{{ cat }}/" class="bi__post-category">[{{ cat | upcase }}]</a>{% endif %}
+            </span>
           </li>
           {% endfor %}
         </ul>
