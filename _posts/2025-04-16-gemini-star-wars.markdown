@@ -2,7 +2,7 @@
 layout: post
 title:  "Gemini's Favorite Star Wars Character"
 date:  2025-04-16 5:50 PM
-categories: 
+categories: [cwa]
 tags: [AI, Gemini, Star Wars]
 author: aaron
 image: /assets/img/r2d2.jpeg
