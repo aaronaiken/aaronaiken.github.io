@@ -44,6 +44,8 @@ body.post-page::after { content: ''; position: fixed; inset: 0; background: radi
 
 .post__meta { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pp-text-dim); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .post__meta-sep { color: var(--pp-border-hi); }
+.post__category-label { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pp-amber-lo); text-decoration: none !important; background: none !important; margin: 0 0 12px !important; display: inline-block; transition: color 0.15s; }
+.post__category-label:hover { color: var(--pp-amber) !important; background: none !important; }
 .post__author-link { color: var(--pp-amber-lo) !important; text-decoration: none !important; background: none !important; transition: color 0.15s; }
 .post__author-link:hover { color: var(--pp-amber) !important; background: none !important; }
 
@@ -132,6 +134,10 @@ body.post-page::after { content: ''; position: fixed; inset: 0; background: radi
         <h1 class="post__title p-name" itemprop="name headline"><span class="post__linked-icon">🔗</span> {{ page.title | escape }}</h1>
       </a>
       {% else %}
+      {% if page.categories.size > 0 %}
+      {% assign cat = page.categories.first %}
+      <a href="/blog/{{ cat }}/" class="post__category-label">{{ cat | upcase }}</a>
+      {% endif %}
       <h1 class="post__title p-name" itemprop="name headline">{{ page.title | escape }}</h1>
       {% endif %}
       <div class="post__meta">
