@@ -123,7 +123,18 @@ def post_to_omg_lol(text):
     requests.post(url, json=payload, headers={"Authorization": f"Bearer {api}"})
 
 def perform_git_ops(filename):
+    # Stash any uncommitted changes so the pull never fails on a dirty tree
+    stash = subprocess.run(
+        ["git", "stash"], capture_output=True, encoding='utf-8'
+    )
+    stashed = "No local changes" not in stash.stdout
+
     subprocess.run(["git", "pull", "--rebase", "origin", "main"], check=True)
+
+    # Restore stashed changes on top of the fresh pull
+    if stashed:
+        subprocess.run(["git", "stash", "pop"], check=True)
+
     subprocess.run(["git", "add", "."], check=True)
     subprocess.run(["git", "commit", "-m", "update from cockpit"], check=True)
     subprocess.run(["git", "push", "origin", "main"], check=True)
@@ -163,7 +174,7 @@ def post_task_status(title):
     """Fire a status update + omg.lol post announcing a new task."""
     now = datetime.now(pytz.timezone('America/New_York'))
     fn = now.strftime("_status_updates/%Y-%m-%d-%H%M%S.markdown")
-    text = f"📋 New task logged: {title} → https://aaronaiken.me/tools/tasks/"
+    text = f"📋 New task logged: {title} → [aaronaiken.me/tools/tasks/](https://aaronaiken.me/tools/tasks/)"
     fm = (
         f"---\ntitle: Status\ndate: {now.strftime('%Y-%m-%d %H:%M:%S %z')}\n"
         f"layout: status_update\nauthor: aaron\nsource: web\n---\n"
