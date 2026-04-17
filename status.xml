@@ -21,11 +21,10 @@ layout: null
   {% comment %} Loop through the reversed updates, newest first, applying the limit {% endcomment %}
   {% for update in reversed_updates limit:20 %}
   <entry>
-	<title>Status Update - {{ update.date | date: "%Y-%m-%d %H:%M:%S %Z" }}</title>
 	<link href="{{ update.url | absolute_url }}"/>
 	<updated>{{ update.date | date_to_xmlschema }}</updated>
 	<id>{{ update.id | default: update.url | absolute_url }}</id>
-	<content type="html">{{ update.content | xml_escape }}</content>
+	<content type="html"><![CDATA[{{ update.content | markdownify | strip }}]]></content>
 	<author>
 	  <name>{{ site.webmaster | default: site.author.name | default: site.title | xml_escape }}</name>
 	</author>
