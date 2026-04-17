@@ -478,6 +478,18 @@
         margin: 14px 0 10px; opacity: 0.6;
     }
 
+    .tasks-add-btn.is-working { opacity: 0.6; }
+        .tasks-add-btn.is-success {
+        border-color: var(--green);
+        color: var(--green);
+        background: rgba(77,187,106,0.08);
+    }
+    .tasks-add-btn.is-error {
+        border-color: var(--red);
+        color: var(--red);
+        background: rgba(204,51,34,0.08);
+    }
+
     /* ---- LIGHT MODE ---- */
     @media (prefers-color-scheme: light) {
         :root {
@@ -871,33 +883,54 @@
         let _lastCompletedTitle = '';
 
         function addTask() {
-            const input = document.getElementById('task-input');
-            const btn = document.getElementById('task-add-btn');
-            const title = input.value.trim();
-            if (!title) return;
+        const input = document.getElementById('task-input');
+        const btn = document.getElementById('task-add-btn');
+        const title = input.value.trim();
+        if (!title) return;
 
-            btn.disabled = true;
-            btn.textContent = 'LOGGING...';
-            playChirp(660, 'square');
+        // Clear immediately — feels responsive
+        input.value = '';
 
-            const fd = new FormData();
-            fd.append('title', title);
+        // Working state
+        btn.disabled = true;
+        btn.textContent = 'LOGGING...';
+        btn.className = 'tasks-add-btn is-working';
+        playChirp(660, 'square');
 
-            fetch('/tasks/add', { method: 'POST', body: fd })
-                .then(r => r.json())
-                .then(data => {
-                    if (!data.ok) throw new Error(data.error);
-                    input.value = '';
-                    prependTaskItem(data.task);
-                    removeEmptyMsg();
-                    playChirp(880, 'sine');
-                })
-                .catch(() => playChirp(220, 'sawtooth'))
-                .finally(() => {
-                    btn.disabled = false;
+        const fd = new FormData();
+        fd.append('title', title);
+
+        fetch('/tasks/add', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.ok) throw new Error(data.error);
+                prependTaskItem(data.task);
+                removeEmptyMsg();
+                playChirp(880, 'sine');
+                // Success state
+                btn.textContent = 'LOGGED ✓';
+                btn.className = 'tasks-add-btn is-success';
+                setTimeout(() => {
                     btn.textContent = '+ LOG';
-                });
-        }
+                    btn.className = 'tasks-add-btn';
+                    btn.disabled = false;
+                    input.focus();
+                }, 1800);
+            })
+            .catch(() => {
+                // Put the title back so nothing is lost
+                input.value = title;
+                playChirp(220, 'sawtooth');
+                btn.textContent = 'FAILED — TRY AGAIN';
+                btn.className = 'tasks-add-btn is-error';
+                setTimeout(() => {
+                    btn.textContent = '+ LOG';
+                    btn.className = 'tasks-add-btn';
+                    btn.disabled = false;
+                    input.focus();
+                }, 2500);
+            });
+    }
 
         function completeTask(id, title) {
             const li = document.querySelector(`.task-item[data-id="${id}"]`);
