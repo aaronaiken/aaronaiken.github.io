@@ -12,7 +12,7 @@
   </author>
   <id>{{ site.url }}{{ site.baseurl }}/status_updates.xml</id>
 
-  {% assign sorted_updates = site.status_updates | sort: 'date' | reverse %}
+{% assign sorted_updates = site.status_updates | where_exp: "item", "item.date != nil" | sort: 'date' | reverse %}
   {% for post in sorted_updates %}
 	<entry>
 	  <link href="{{ site.url }}{{ site.baseurl }}{{ post.url }}" rel="alternate" type="text/html"/>
