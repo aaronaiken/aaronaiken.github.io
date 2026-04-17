@@ -490,6 +490,64 @@
         background: rgba(204,51,34,0.08);
     }
 
+    /* Collapsible toggle */
+    .tasks-toggle {
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    .tasks-toggle-arrow {
+        font-size: 0.55rem;
+        color: var(--muted);
+        transition: transform 0.2s ease;
+        letter-spacing: 0;
+    }
+
+    .tasks-toggle-arrow.is-collapsed { transform: rotate(-90deg); }
+
+    .tasks-body { overflow: hidden; transition: opacity 0.2s ease; }
+    .tasks-body.is-collapsed { display: none; }
+
+    /* Scratch pad */
+    .scratch-section { margin-top: 36px; }
+
+    .scratch-textarea {
+        width: 100%;
+        height: 120px;
+        background: var(--input-bg);
+        color: var(--text-body);
+        border: 1px solid var(--border);
+        border-radius: 2px;
+        padding: 12px 14px;
+        font-size: 0.88rem;
+        font-family: 'Crimson Pro', Georgia, serif;
+        font-style: italic;
+        line-height: 1.7;
+        outline: none;
+        resize: none;
+        -webkit-appearance: none;
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+    }
+
+    .scratch-textarea:focus { border-color: var(--amber-lo); }
+    .scratch-textarea::placeholder { color: var(--border-hi); }
+
+    .scratch-status {
+        font-size: 0.55rem;
+        color: var(--muted);
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        margin-top: 5px;
+        min-height: 1em;
+        text-align: right;
+        transition: opacity 0.3s;
+    }
+
     /* ---- LIGHT MODE ---- */
     @media (prefers-color-scheme: light) {
         :root {
@@ -530,6 +588,8 @@
         .tasks-add-btn:hover { background: #4a3818; }
         .tasks-add-btn:active { background: #7a3e00; color: #fdf9f3; }
         .task-log-prompt { background: #f0e8d8; }
+        .scratch-textarea { color: #3a2a10; }
+        .scratch-textarea::placeholder { color: #c4b090; }
     }
     </style>
 </head>
@@ -629,7 +689,10 @@
 
         <!-- TASKS -->
         <div class="tasks-section">
-            <div class="log-header">// Mission Log</div>
+            <div class="log-header tasks-toggle" onclick="toggleTasks()">
+                // Mission Log
+                <span class="tasks-toggle-arrow" id="tasks-arrow">▾</span>
+            </div>
 
             <div class="tasks-add-row">
                 <input type="text" id="task-input" placeholder="New task..." maxlength="140">
@@ -672,6 +735,23 @@
                     <button class="task-log-btn" onclick="logAsBlogDraft()">BLOG DRAFT</button>
                     <button class="task-log-btn dismiss" onclick="dismissLogPrompt()">DISMISS</button>
                 </div>
+            </div>
+        </div><!-- end tasks-section -->
+
+        <!-- SCRATCH PAD -->
+        <div class="scratch-section">
+            <div class="log-header tasks-toggle" onclick="toggleScratch()">
+                // Scratch
+                <span class="tasks-toggle-arrow" id="scratch-arrow">▾</span>
+            </div>
+            <div class="tasks-body" id="scratch-body">
+                <textarea
+                    class="scratch-textarea"
+                    id="scratch-input"
+                    placeholder="Notes, links, half-baked ideas..."
+                    oninput="saveScratch()"
+                ></textarea>
+                <div class="scratch-status" id="scratch-status"></div>
             </div>
         </div>
 
@@ -1040,6 +1120,69 @@
         });
 
         updateHUD();
+
+        // ---- COLLAPSIBLE SECTIONS ----
+        function toggleTasks() {
+            const body  = document.getElementById('tasks-list').closest('.tasks-section').querySelector('.tasks-body, ul, .tasks-add-row, .task-log-prompt');
+            // Toggle the whole inner content
+            const inner = document.querySelector('.tasks-add-row, .tasks-list, .task-log-prompt');
+            const arrow = document.getElementById('tasks-arrow');
+            const isCollapsed = arrow.classList.contains('is-collapsed');
+
+            document.querySelectorAll('.tasks-section > *:not(.log-header)').forEach(el => {
+                el.style.display = isCollapsed ? '' : 'none';
+            });
+
+            arrow.classList.toggle('is-collapsed');
+            localStorage.setItem('cockpit-tasks-collapsed', isCollapsed ? '0' : '1');
+        }
+
+        function toggleScratch() {
+            const body  = document.getElementById('scratch-body');
+            const arrow = document.getElementById('scratch-arrow');
+            const isCollapsed = arrow.classList.contains('is-collapsed');
+
+            body.classList.toggle('is-collapsed');
+            arrow.classList.toggle('is-collapsed');
+            localStorage.setItem('cockpit-scratch-collapsed', isCollapsed ? '0' : '1');
+        }
+
+        // ---- SCRATCH PAD ----
+        let scratchTimer;
+
+        function saveScratch() {
+            const val = document.getElementById('scratch-input').value;
+            localStorage.setItem('cockpit-scratch', val);
+            const status = document.getElementById('scratch-status');
+            status.textContent = 'SAVED';
+            clearTimeout(scratchTimer);
+            scratchTimer = setTimeout(() => { status.textContent = ''; }, 1500);
+        }
+
+        function initScratch() {
+            const saved = localStorage.getItem('cockpit-scratch');
+            if (saved) document.getElementById('scratch-input').value = saved;
+        }
+
+        // ---- RESTORE COLLAPSED STATE ON LOAD ----
+        function initCollapsedStates() {
+            // Tasks
+            if (localStorage.getItem('cockpit-tasks-collapsed') === '1') {
+                document.querySelectorAll('.tasks-section > *:not(.log-header)').forEach(el => {
+                    el.style.display = 'none';
+                });
+                document.getElementById('tasks-arrow').classList.add('is-collapsed');
+            }
+
+            // Scratch
+            if (localStorage.getItem('cockpit-scratch-collapsed') === '1') {
+                document.getElementById('scratch-body').classList.add('is-collapsed');
+                document.getElementById('scratch-arrow').classList.add('is-collapsed');
+            }
+        }
+
+        initScratch();
+        initCollapsedStates();
     </script>
 </body>
 </html>
