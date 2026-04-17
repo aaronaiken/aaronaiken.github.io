@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-04-17 17:51:51 -0400
+layout: status_update
+author: aaron
+source: web
+---
+🧹 cleaned out the inner workings (coils, fan, etc) of the refrigerator...hoping by later tonight it is apparent (via an ice cube forming) that the freezer is fixed...
