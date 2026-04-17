@@ -1,6 +1,13 @@
 {
   "tasks": [
     {
+      "id": "1776436968",
+      "title": "fix the kitchen drawer",
+      "status": "open",
+      "created": "2026-04-17T10:42:48.163924-04:00",
+      "completed": null
+    },
+    {
       "id": "1776435561",
       "title": "Fix the freezer",
       "status": "open",
