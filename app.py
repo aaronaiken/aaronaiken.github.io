@@ -1,8 +1,8 @@
-from flask import Flask, request, render_template, make_response, redirect, url_for
+from flask import Flask, request, render_template, make_response, redirect, url_for, jsonify
 from werkzeug.utils import secure_filename # Correct way to get this
 from PIL import Image # Correct way to get Image
 from datetime import datetime
-import os, subprocess, pytz, requests, emoji, glob
+import os, subprocess, pytz, requests, emoji, glob, json, time
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY')
@@ -13,6 +13,9 @@ UPLOAD_FOLDER = '/home/aaronaiken/status_update/assets/img/status/'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Path to tasks.json inside the Jekyll repo clone
+TASKS_FILE = 'assets/data/tasks.json'
 
 def is_authenticated():
     return request.cookies.get('auth_token') == 'authenticated_user'
@@ -140,6 +143,39 @@ def optimize_image(input_path, max_width=1200):
         # Save with optimization and 85% quality (sweet spot for web)
         img.save(input_path, "JPEG", optimize=True, quality=85)
 
+# ---- TASKS HELPERS ----
+
+def load_tasks():
+    """Read tasks.json from the Jekyll repo. Returns dict with 'tasks' list."""
+    try:
+        with open(TASKS_FILE, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {"tasks": []}
+
+def save_tasks(data):
+    """Write tasks.json back to the Jekyll repo."""
+    os.makedirs(os.path.dirname(TASKS_FILE), exist_ok=True)
+    with open(TASKS_FILE, 'w') as f:
+        json.dump(data, f, indent=2)
+
+def post_task_status(title):
+    """Fire a status update + omg.lol post announcing a new task."""
+    now = datetime.now(pytz.timezone('America/New_York'))
+    fn = now.strftime("_status_updates/%Y-%m-%d-%H%M%S.markdown")
+    text = f"📋 New task logged: {title} → https://aaronaiken.me/tools/tasks/"
+    fm = (
+        f"---\ntitle: Status\ndate: {now.strftime('%Y-%m-%d %H:%M:%S %z')}\n"
+        f"layout: status_update\nauthor: aaron\nsource: web\n---\n"
+    )
+    os.makedirs("_status_updates", exist_ok=True)
+    with open(fn, "w") as f:
+        f.write(fm + text + "\n")
+    return fn, text
+
+
+# ---- EXISTING ROUTES — untouched ----
+
 @app.route("/publish", methods=['GET', 'POST'])
 def publish_status():
     if not is_authenticated(): return redirect(url_for('login'))
@@ -205,7 +241,14 @@ def publish_status():
     history = [open(f).read().split("---")[-1].strip() for f in files]
     # Pass the whole list to the template
     comms_list = get_valid_comms()
-    return render_template('publish_form.html', history=history, git_status=get_git_status(), comms_list=comms_list)
+    tasks_data = load_tasks()
+    return render_template(
+        'publish_form.html',
+        history=history,
+        git_status=get_git_status(),
+        comms_list=comms_list,
+        tasks=tasks_data.get('tasks', [])
+    )
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
@@ -219,5 +262,88 @@ def login():
 def logout():
     r = make_response(redirect(url_for('login')))
     r.set_cookie('auth_token', '', expires=0); return r
+
+
+# ---- TASKS ROUTES ----
+
+@app.route("/tasks/add", methods=['POST'])
+def tasks_add():
+    """Add a new task. Writes JSON, fires a status update, git pushes."""
+    if not is_authenticated():
+        return jsonify({"error": "unauthorized"}), 401
+
+    title = request.form.get('title', '').strip()
+    if not title:
+        return jsonify({"error": "title required"}), 400
+
+    data = load_tasks()
+    task = {
+        "id": str(int(time.time())),
+        "title": title,
+        "status": "open",
+        "created": datetime.now(pytz.timezone('America/New_York')).isoformat(),
+        "completed": None
+    }
+    data['tasks'].insert(0, task)  # newest first
+    save_tasks(data)
+
+    # Fire the status update announcing the new task
+    fn, status_text = post_task_status(title)
+
+    # Single git push — picks up both tasks.json and the new status update
+    perform_git_ops(fn)
+
+    # Mirror to omg.lol
+    post_to_omg_lol(status_text)
+
+    return jsonify({"ok": True, "task": task})
+
+
+@app.route("/tasks/complete", methods=['POST'])
+def tasks_complete():
+    """Mark a task complete. Returns the task title for the optional log prompt."""
+    if not is_authenticated():
+        return jsonify({"error": "unauthorized"}), 401
+
+    task_id = request.form.get('id', '').strip()
+    if not task_id:
+        return jsonify({"error": "id required"}), 400
+
+    data = load_tasks()
+    target = next((t for t in data['tasks'] if t['id'] == task_id), None)
+    if not target:
+        return jsonify({"error": "task not found"}), 404
+
+    target['status'] = 'complete'
+    target['completed'] = datetime.now(pytz.timezone('America/New_York')).isoformat()
+    save_tasks(data)
+
+    # Push the updated tasks.json — no status update here, that's the user's choice
+    perform_git_ops(TASKS_FILE)
+
+    return jsonify({"ok": True, "task": target})
+
+
+@app.route("/tasks/delete", methods=['POST'])
+def tasks_delete():
+    """Hard delete a task. No status update — just housekeeping."""
+    if not is_authenticated():
+        return jsonify({"error": "unauthorized"}), 401
+
+    task_id = request.form.get('id', '').strip()
+    if not task_id:
+        return jsonify({"error": "id required"}), 400
+
+    data = load_tasks()
+    before = len(data['tasks'])
+    data['tasks'] = [t for t in data['tasks'] if t['id'] != task_id]
+    if len(data['tasks']) == before:
+        return jsonify({"error": "task not found"}), 404
+
+    save_tasks(data)
+    perform_git_ops(TASKS_FILE)
+
+    return jsonify({"ok": True})
+
 
 if __name__ == "__main__": app.run(debug=True)
