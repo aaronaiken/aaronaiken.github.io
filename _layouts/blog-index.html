@@ -107,7 +107,7 @@ body.blog-index-page::after { content: ''; position: fixed; inset: 0; background
           <li class="bi__post-item">
             <time class="bi__post-date">{{ post.date | date: "%b %-d" }}</time>
             <span class="bi__post-title-group">
-              <a class="bi__post-link {% if post.source %}bi__post-link--linked{% endif %}" href="{{ post.url | relative_url }}">{% if post.source %}🔗 {% endif %}{{ post.title | escape }}</a>{% if post.categories.size > 0 %}{% assign cat = post.categories.first %}<a href="/blog/{{ cat }}/" class="bi__post-category">[{{ cat | upcase }}]</a>{% endif %}
+              <a class="bi__post-link {% if post.source %}bi__post-link--linked{% endif %}" href="{{ post.url | relative_url }}">{% if post.source %}🔗 {% endif %}{{ post.title | escape }}</a>{% if post.categories.size > 0 %}{% assign cat = post.categories.first %}<a href="/blog/{{ cat | replace: '_', '-' }}/" class="bi__post-category">[{{ cat | upcase }}]</a>{% endif %}
             </span>
           </li>
           {% endfor %}
