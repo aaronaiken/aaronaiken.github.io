@@ -1,0 +1,407 @@
+---
+layout: tool-fullscreen
+title: Mission Log
+page_ident: WORKSHOP · MISSION LOG
+---
+
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Crimson+Pro:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+
+<style>
+/* ---- TOKENS — mirrors the site design system ---- */
+:root {
+	--bg:        #080a06;
+	--bg2:       #0d1008;
+	--amber:     #d4880a;
+	--amber-hi:  #f5b332;
+	--amber-lo:  #9a6018;
+	--amber-dim: #3d2804;
+	--green:     #4dbb6a;
+	--green-lo:  #2a6b3c;
+	--red:       #cc3322;
+	--border:    #2e1e08;
+	--border-hi: #5a3c18;
+	--muted:     #7a5020;
+	--text-body: #c89040;
+	--text-dim:  #7a5020;
+	--scan:      rgba(0,0,0,0.18);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* CRT scanlines — same as Cockpit */
+body::before {
+	content: " ";
+	display: block;
+	position: fixed;
+	top: 0; left: 0; bottom: 0; right: 0;
+	background: repeating-linear-gradient(
+		to bottom,
+		transparent 0px, transparent 3px,
+		var(--scan) 3px, var(--scan) 4px
+	);
+	z-index: 9998;
+	pointer-events: none;
+	animation: scanline-drift 12s linear infinite;
+	opacity: 0.5;
+}
+
+body::after {
+	content: '';
+	position: fixed; inset: 0;
+	background: radial-gradient(ellipse at 50% 40%, transparent 40%, rgba(0,0,0,0.6) 100%);
+	pointer-events: none;
+	z-index: 9997;
+}
+
+@keyframes scanline-drift {
+	0%   { transform: translateY(0); }
+	100% { transform: translateY(100%); }
+}
+
+/* ---- LAYOUT ---- */
+.ml-wrap {
+	max-width: 560px;
+	margin: 0 auto;
+	padding: 48px 24px 80px;
+	position: relative;
+	z-index: 10;
+}
+
+/* ---- HEADER ---- */
+.ml-header {
+	margin-bottom: 36px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid var(--border);
+}
+
+.ml-title {
+	font-family: 'VT323', monospace;
+	font-size: 2.4rem;
+	color: var(--amber-hi);
+	text-shadow: 0 0 18px rgba(212,136,10,0.55), 0 0 50px rgba(212,136,10,0.18);
+	letter-spacing: 0.04em;
+	line-height: 1;
+	animation: logo-glow 5s ease-in-out infinite;
+}
+
+.ml-title span { color: var(--amber-lo); }
+
+@keyframes logo-glow {
+	0%,100% { text-shadow: 0 0 18px rgba(212,136,10,0.55), 0 0 50px rgba(212,136,10,0.18); }
+	50%      { text-shadow: 0 0 28px rgba(245,179,50,0.8), 0 0 80px rgba(212,136,10,0.3); }
+}
+
+.ml-meta {
+	margin-top: 8px;
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 0.6rem;
+	color: var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.2em;
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+
+.ml-dot {
+	width: 6px; height: 6px; border-radius: 50%;
+	background: var(--green);
+	box-shadow: 0 0 6px var(--green);
+	animation: dot-pulse 2.2s ease-in-out infinite;
+	flex-shrink: 0;
+}
+
+@keyframes dot-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* ---- SECTION LABEL ---- */
+.ml-section-label {
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 0.6rem;
+	color: var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.25em;
+	margin-bottom: 12px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--border);
+}
+
+/* ---- TASK LIST ---- */
+.ml-list {
+	list-style: none;
+	margin-bottom: 40px;
+}
+
+.ml-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 12px 0;
+	border-bottom: 1px solid var(--border);
+	opacity: 0;
+	transform: translateY(6px);
+	animation: item-in 0.3s ease forwards;
+}
+
+@keyframes item-in {
+	to { opacity: 1; transform: translateY(0); }
+}
+
+.ml-item-icon {
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 0.7rem;
+	color: var(--amber-lo);
+	margin-top: 2px;
+	flex-shrink: 0;
+	width: 16px;
+	text-align: center;
+}
+
+.ml-item.is-open .ml-item-icon  { color: var(--amber); }
+.ml-item.is-complete .ml-item-icon { color: var(--green); }
+
+.ml-item-title {
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 0.9rem;
+	color: var(--text-body);
+	line-height: 1.5;
+	flex: 1;
+}
+
+.ml-item.is-complete .ml-item-title {
+	text-decoration: line-through;
+	color: var(--text-dim);
+	opacity: 0.6;
+}
+
+.ml-item-date {
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 0.58rem;
+	color: var(--muted);
+	margin-top: 3px;
+	letter-spacing: 0.08em;
+	flex-shrink: 0;
+	align-self: center;
+}
+
+/* ---- EMPTY STATE ---- */
+.ml-empty {
+	padding: 32px 0;
+	text-align: center;
+	font-family: 'Crimson Pro', Georgia, serif;
+	font-style: italic;
+	font-size: 1rem;
+	color: var(--text-dim);
+	opacity: 0.6;
+}
+
+/* ---- STATS ROW ---- */
+.ml-stats {
+	display: flex;
+	gap: 24px;
+	margin-bottom: 32px;
+}
+
+.ml-stat {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.ml-stat-val {
+	font-family: 'VT323', monospace;
+	font-size: 2rem;
+	color: var(--amber-hi);
+	line-height: 1;
+}
+
+.ml-stat-label {
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 0.55rem;
+	color: var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.2em;
+}
+
+/* ---- LOADING ---- */
+.ml-loading {
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 0.75rem;
+	color: var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.2em;
+	padding: 40px 0;
+	text-align: center;
+}
+
+.ml-loading::after {
+	content: '...';
+	animation: ellipsis 1.2s steps(4, end) infinite;
+}
+
+@keyframes ellipsis {
+	0%   { content: ''; }
+	25%  { content: '.'; }
+	50%  { content: '..'; }
+	75%  { content: '...'; }
+}
+
+/* ---- FOOTER ---- */
+.ml-footer {
+	margin-top: 48px;
+	padding-top: 14px;
+	border-top: 1px solid var(--border);
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 0.58rem;
+	color: var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.15em;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.ml-footer a {
+	color: var(--muted);
+	text-decoration: none;
+	transition: color 0.15s;
+}
+
+.ml-footer a:hover { color: var(--amber-lo); }
+
+/* ---- LIGHT MODE ---- */
+@media (prefers-color-scheme: light) {
+	:root {
+		--bg:        #faf6ef;
+		--bg2:       #f4ede0;
+		--amber:     #7a3e00;
+		--amber-hi:  #5a2e00;
+		--amber-lo:  #a06020;
+		--amber-dim: #f0e6d0;
+		--text-body: #4a3818;
+		--text-dim:  #8a7858;
+		--border:    #ddd0b8;
+		--border-hi: #c4b090;
+		--muted:     #8a7858;
+		--green:     #2a6e3f;
+		--scan:      transparent;
+	}
+
+	body::before, body::after { display: none; }
+	.ml-title { text-shadow: none; animation: none; color: #5a2e00; }
+	.ml-title span { color: #a06020; }
+	.ml-stat-val { color: #5a2e00; }
+	.ml-dot { box-shadow: none; animation: none; }
+}
+</style>
+
+<div class="ml-wrap">
+
+	<header class="ml-header">
+		<div class="ml-title">MISSION<span> //</span> LOG</div>
+		<div class="ml-meta">
+			<div class="ml-dot"></div>
+			<span>aaronaiken.me · working in public</span>
+		</div>
+	</header>
+
+	<div id="ml-stats" class="ml-stats" style="display:none;">
+		<div class="ml-stat">
+			<div class="ml-stat-val" id="stat-open">—</div>
+			<div class="ml-stat-label">Active</div>
+		</div>
+		<div class="ml-stat">
+			<div class="ml-stat-val" id="stat-done">—</div>
+			<div class="ml-stat-label">Shipped</div>
+		</div>
+	</div>
+
+	<div id="ml-content">
+		<div class="ml-loading">Pulling mission data</div>
+	</div>
+
+	<footer class="ml-footer">
+		<a href="/tools/">← Workshop</a>
+		<span>"Never tell me the odds."</span>
+		<a href="/status">Status →</a>
+	</footer>
+
+</div>
+
+<script>
+(function () {
+	const content = document.getElementById('ml-content');
+	const statsEl = document.getElementById('ml-stats');
+
+	function formatDate(iso) {
+		if (!iso) return '';
+		const d = new Date(iso);
+		return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+	}
+
+	function buildItem(task, isComplete) {
+		const delay = Math.random() * 0.15; // stagger the entrance
+		const icon  = isComplete ? '✓' : '›';
+		const cls   = isComplete ? 'ml-item is-complete' : 'ml-item is-open';
+		const date  = isComplete
+			? (task.completed ? formatDate(task.completed) : '')
+			: (task.created   ? formatDate(task.created)   : '');
+
+		return `
+			<li class="${cls}" style="animation-delay:${delay.toFixed(2)}s">
+				<div class="ml-item-icon">${icon}</div>
+				<div class="ml-item-title">${escHtml(task.title)}</div>
+				${date ? `<div class="ml-item-date">${date}</div>` : ''}
+			</li>`;
+	}
+
+	function escHtml(str) {
+		return str
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;');
+	}
+
+	function render(tasks) {
+		const open     = tasks.filter(t => t.status === 'open');
+		const complete = tasks.filter(t => t.status === 'complete');
+
+		// Stats
+		document.getElementById('stat-open').textContent = open.length;
+		document.getElementById('stat-done').textContent = complete.length;
+		statsEl.style.display = 'flex';
+
+		let html = '';
+
+		// Open tasks
+		html += `<div class="ml-section-label">// Active</div>`;
+		html += `<ul class="ml-list">`;
+		if (open.length) {
+			open.forEach(t => { html += buildItem(t, false); });
+		} else {
+			html += `<li class="ml-empty">All clear, captain. No active tasks.</li>`;
+		}
+		html += `</ul>`;
+
+		// Completed tasks
+		if (complete.length) {
+			html += `<div class="ml-section-label">// Shipped</div>`;
+			html += `<ul class="ml-list">`;
+			complete.forEach(t => { html += buildItem(t, true); });
+			html += `</ul>`;
+		}
+
+		content.innerHTML = html;
+	}
+
+	fetch('/assets/data/tasks.json')
+		.then(r => {
+			if (!r.ok) throw new Error('no data');
+			return r.json();
+		})
+		.then(data => render(data.tasks || []))
+		.catch(() => {
+			content.innerHTML = `<div class="ml-empty">Transmission error. No data received.</div>`;
+		});
+}());
+</script>
