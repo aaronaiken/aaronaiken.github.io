@@ -13,14 +13,13 @@
   {% assign sorted_updates = site.status_updates | sort: 'date', reverse: true %}
   {% for post in sorted_updates %}
 	<entry>
-	  <title>{{ post.title | xml_escape }}</title>
 	  <link href="{{ site.url }}{{ site.baseurl }}{{ post.url }}" rel="alternate" type="text/html"/>
 	  <published>{{ post.date | date_to_xmlschema }}</published>
 	  <updated>{{ post.date | date_to_xmlschema }}</updated>
 	  <id>{{ site.url }}{{ site.baseurl }}{{ post.id }}</id>
-	  <content type="html" xml:lang="en">
-		{{ post.content | markdownify | strip | xml_escape }}
-	  </content>
+	  <content type="html" xml:lang="en"><![CDATA[
+		{{ post.content | markdownify | strip }}
+	  ]]></content>
 	</entry>
   {% endfor %}
 </feed>
