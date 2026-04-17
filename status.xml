@@ -19,7 +19,7 @@ layout: null
   {% assign reversed_updates = site.status_updates | reverse %}
 
   {% comment %} Loop through the reversed updates, newest first, applying the limit {% endcomment %}
-  {% for update in reversed_updates limit:2 %}
+  {% for update in reversed_updates limit:20 %}
   <entry>
 	<link href="{{ update.url | absolute_url }}"/>
 	<updated>{{ update.date | date_to_xmlschema }}</updated>
