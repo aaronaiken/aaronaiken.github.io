@@ -355,6 +355,129 @@
         text-transform: none; letter-spacing: 0;
         font-size: 0.78rem; color: var(--amber-lo); opacity: 0.6;
     }
+    /* ---- TASKS ---- */
+    .tasks-section { margin-top: 36px; }
+
+    .tasks-add-row {
+        display: flex; gap: 8px; margin-bottom: 16px;
+    }
+
+    .tasks-add-row input[type="text"] {
+        flex: 1;
+        background: var(--input-bg); color: var(--text-body);
+        border: 1px solid var(--border); border-radius: 2px;
+        padding: 8px 12px; font-size: 0.85rem;
+        font-family: 'Share Tech Mono', monospace;
+        outline: none; transition: border-color 0.15s;
+        -webkit-appearance: none;
+    }
+
+    .tasks-add-row input[type="text"]:focus { border-color: var(--amber-lo); }
+    .tasks-add-row input[type="text"]::placeholder { color: var(--border-hi); }
+
+    .tasks-add-btn {
+        background: var(--amber-dim); border: 1px solid var(--amber-lo);
+        color: var(--amber-hi); padding: 8px 14px; border-radius: 2px;
+        font-size: 0.68rem; font-family: 'Share Tech Mono', monospace;
+        text-transform: uppercase; letter-spacing: 0.18em;
+        cursor: pointer; transition: background 0.15s, border-color 0.15s;
+        white-space: nowrap; flex-shrink: 0;
+    }
+
+    .tasks-add-btn:hover { background: #4a2c08; border-color: var(--amber); }
+    .tasks-add-btn:active { background: var(--amber); color: #000; }
+    .tasks-add-btn:disabled { opacity: 0.4; cursor: default; }
+
+    .tasks-list { list-style: none; }
+
+    .task-item {
+        display: flex; align-items: center; gap: 10px;
+        padding: 9px 0; border-bottom: 1px solid var(--border);
+        transition: opacity 0.3s;
+    }
+
+    .task-item.is-complete { opacity: 0.4; }
+
+    .task-check {
+        width: 14px; height: 14px; flex-shrink: 0;
+        border: 1px solid var(--amber-lo); border-radius: 2px;
+        background: none; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.15s, border-color 0.15s;
+        color: var(--green); font-size: 10px; line-height: 1;
+    }
+
+    .task-check:hover { border-color: var(--green); }
+    .task-item.is-complete .task-check {
+        background: var(--green-lo); border-color: var(--green);
+    }
+
+    .task-title {
+        flex: 1; font-size: 0.88rem; color: var(--text-body);
+        font-family: 'Share Tech Mono', monospace;
+        line-height: 1.4;
+    }
+
+    .task-item.is-complete .task-title {
+        text-decoration: line-through; color: var(--text-dim);
+    }
+
+    .task-delete {
+        background: none; border: none; color: var(--border-hi);
+        font-size: 0.7rem; cursor: pointer; padding: 2px 4px;
+        font-family: 'Share Tech Mono', monospace;
+        letter-spacing: 0.1em; transition: color 0.15s;
+        flex-shrink: 0;
+    }
+
+    .task-delete:hover { color: var(--red); }
+
+    /* Completion prompt — slides in below the task */
+    .task-log-prompt {
+        display: none;
+        background: var(--bg2); border: 1px solid var(--amber-lo);
+        border-radius: 2px; padding: 12px 14px; margin-top: 8px;
+        margin-bottom: 4px;
+    }
+
+    .task-log-prompt.visible { display: block; }
+
+    .task-log-label {
+        font-size: 0.6rem; color: var(--amber-lo);
+        text-transform: uppercase; letter-spacing: 0.2em;
+        margin-bottom: 10px;
+    }
+
+    .task-log-actions {
+        display: flex; gap: 8px; flex-wrap: wrap;
+    }
+
+    .task-log-btn {
+        background: none; border: 1px solid var(--border-hi);
+        color: var(--text-dim); padding: 5px 10px; border-radius: 2px;
+        font-size: 0.62rem; font-family: 'Share Tech Mono', monospace;
+        text-transform: uppercase; letter-spacing: 0.15em;
+        cursor: pointer; transition: all 0.15s;
+    }
+
+    .task-log-btn:hover { border-color: var(--amber-lo); color: var(--amber); }
+    .task-log-btn.primary { border-color: var(--amber-lo); color: var(--amber); }
+    .task-log-btn.primary:hover { background: var(--amber-dim); }
+    .task-log-btn.dismiss { opacity: 0.5; }
+    .task-log-btn.dismiss:hover { opacity: 1; color: var(--text-dim); }
+
+    .tasks-empty {
+        font-size: 0.78rem; color: var(--text-dim);
+        font-family: 'Crimson Pro', serif; font-style: italic;
+        padding: 10px 0; text-align: center; opacity: 0.6;
+    }
+
+    .tasks-divider {
+        font-size: 0.58rem; color: var(--muted);
+        text-transform: uppercase; letter-spacing: 0.2em;
+        margin: 14px 0 10px; opacity: 0.6;
+    }
+
     /* ---- LIGHT MODE ---- */
     @media (prefers-color-scheme: light) {
         :root {
@@ -389,6 +512,12 @@
         button#publish-btn:active { background: #7a3e00; color: #fdf9f3; }
         .history-item { border-left-color: #ddd0b8; }
         .history-item::before { color: #ddd0b8; }
+        .tasks-add-row input[type="text"] { color: #3a2a10; }
+        .tasks-add-row input[type="text"]::placeholder { color: #c4b090; }
+        .tasks-add-btn { background: #3a2a10; border-color: #3a2a10; color: #fdf9f3; }
+        .tasks-add-btn:hover { background: #4a3818; }
+        .tasks-add-btn:active { background: #7a3e00; color: #fdf9f3; }
+        .task-log-prompt { background: #f0e8d8; }
     }
     </style>
 </head>
@@ -485,6 +614,54 @@
             {% endfor %}
         </div>
         {% endif %}
+
+        <!-- TASKS -->
+        <div class="tasks-section">
+            <div class="log-header">// Mission Log</div>
+
+            <div class="tasks-add-row">
+                <input type="text" id="task-input" placeholder="New task..." maxlength="140">
+                <button class="tasks-add-btn" id="task-add-btn" onclick="addTask()">+ LOG</button>
+            </div>
+
+            <ul class="tasks-list" id="tasks-list">
+                {% set open_tasks = tasks | selectattr('status', 'equalto', 'open') | list %}
+                {% set done_tasks = tasks | selectattr('status', 'equalto', 'complete') | list %}
+
+                {% if open_tasks %}
+                    {% for task in open_tasks %}
+                    <li class="task-item" data-id="{{ task.id }}" data-title="{{ task.title | e }}">
+                        <button class="task-check" onclick="completeTask('{{ task.id }}', '{{ task.title | e }}')" title="Mark complete"></button>
+                        <span class="task-title">{{ task.title }}</span>
+                        <button class="task-delete" onclick="deleteTask('{{ task.id }}')" title="Delete">✕</button>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    <li class="tasks-empty" id="tasks-empty-msg">No active tasks. Good work, captain.</li>
+                {% endif %}
+
+                {% if done_tasks %}
+                    <li class="tasks-divider">// Completed</li>
+                    {% for task in done_tasks %}
+                    <li class="task-item is-complete" data-id="{{ task.id }}">
+                        <div class="task-check" style="cursor:default;">✓</div>
+                        <span class="task-title">{{ task.title }}</span>
+                        <button class="task-delete" onclick="deleteTask('{{ task.id }}')" title="Delete">✕</button>
+                    </li>
+                    {% endfor %}
+                {% endif %}
+            </ul>
+
+            <!-- Completion prompt — shown inline after marking done -->
+            <div class="task-log-prompt" id="task-log-prompt">
+                <div class="task-log-label">// Log this one?</div>
+                <div class="task-log-actions">
+                    <button class="task-log-btn primary" onclick="logAsStatus()">STATUS UPDATE</button>
+                    <button class="task-log-btn" onclick="logAsBlogDraft()">BLOG DRAFT</button>
+                    <button class="task-log-btn dismiss" onclick="dismissLogPrompt()">DISMISS</button>
+                </div>
+            </div>
+        </div>
 
         <!-- FOOTER -->
         <footer class="cockpit__footer">
@@ -689,6 +866,145 @@
                 status.style.animation = 'blink 0.5s step-end 3';
             }
         }
+
+        // ---- TASKS ----
+        let _lastCompletedTitle = '';
+
+        function addTask() {
+            const input = document.getElementById('task-input');
+            const btn = document.getElementById('task-add-btn');
+            const title = input.value.trim();
+            if (!title) return;
+
+            btn.disabled = true;
+            btn.textContent = 'LOGGING...';
+            playChirp(660, 'square');
+
+            const fd = new FormData();
+            fd.append('title', title);
+
+            fetch('/tasks/add', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.ok) throw new Error(data.error);
+                    input.value = '';
+                    prependTaskItem(data.task);
+                    removeEmptyMsg();
+                    playChirp(880, 'sine');
+                })
+                .catch(() => playChirp(220, 'sawtooth'))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.textContent = '+ LOG';
+                });
+        }
+
+        function completeTask(id, title) {
+            const li = document.querySelector(`.task-item[data-id="${id}"]`);
+            if (!li) return;
+
+            playChirp(550, 'sine');
+            _lastCompletedTitle = title;
+
+            const fd = new FormData();
+            fd.append('id', id);
+
+            fetch('/tasks/complete', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.ok) throw new Error(data.error);
+                    // Move to completed visually
+                    li.classList.add('is-complete');
+                    li.querySelector('.task-check').textContent = '✓';
+                    li.querySelector('.task-check').style.cursor = 'default';
+                    li.querySelector('.task-check').onclick = null;
+                    // Show the log prompt
+                    showLogPrompt();
+                    playChirp(880, 'sine');
+                })
+                .catch(() => playChirp(220, 'sawtooth'));
+        }
+
+        function deleteTask(id) {
+            const li = document.querySelector(`.task-item[data-id="${id}"]`);
+            if (!li) return;
+
+            const fd = new FormData();
+            fd.append('id', id);
+
+            fetch('/tasks/delete', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.ok) throw new Error(data.error);
+                    li.style.opacity = '0';
+                    li.style.transition = 'opacity 0.3s';
+                    setTimeout(() => li.remove(), 300);
+                    playChirp(330, 'triangle');
+                })
+                .catch(() => playChirp(220, 'sawtooth'));
+        }
+
+        function prependTaskItem(task) {
+            const list = document.getElementById('tasks-list');
+            const li = document.createElement('li');
+            li.className = 'task-item';
+            li.dataset.id = task.id;
+            li.dataset.title = task.title;
+            li.innerHTML = `
+                <button class="task-check" onclick="completeTask('${task.id}', '${task.title.replace(/'/g, "\\'")}')" title="Mark complete"></button>
+                <span class="task-title">${escapeHtml(task.title)}</span>
+                <button class="task-delete" onclick="deleteTask('${task.id}')" title="Delete">✕</button>
+            `;
+            // Insert before any divider or completed items
+            const divider = list.querySelector('.tasks-divider');
+            divider ? list.insertBefore(li, divider) : list.prepend(li);
+        }
+
+        function removeEmptyMsg() {
+            const msg = document.getElementById('tasks-empty-msg');
+            if (msg) msg.remove();
+        }
+
+        function showLogPrompt() {
+            document.getElementById('task-log-prompt').classList.add('visible');
+        }
+
+        function dismissLogPrompt() {
+            document.getElementById('task-log-prompt').classList.remove('visible');
+            _lastCompletedTitle = '';
+        }
+
+        function logAsStatus() {
+            // Pre-fill the status composer with a completion note
+            const statusInput = document.getElementById('status-input');
+            statusInput.value = `✅ Shipped: ${_lastCompletedTitle}`;
+            updateHUD();
+            statusInput.focus();
+            dismissLogPrompt();
+            // Scroll up to the composer
+            statusInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function logAsBlogDraft() {
+            // Build a minimal draft and copy to clipboard
+            const draft = `---\ntitle: "${_lastCompletedTitle}"\ndate: ${new Date().toISOString().split('T')[0]}\nlayout: post\nauthor: aaron\n---\n\n`;
+            navigator.clipboard.writeText(draft)
+                .then(() => {
+                    const btn = document.querySelector('.task-log-btn:nth-child(2)');
+                    if (btn) { btn.textContent = 'COPIED ✓'; setTimeout(() => btn.textContent = 'BLOG DRAFT', 2000); }
+                })
+                .catch(() => {});
+            dismissLogPrompt();
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // Allow Enter key in task input
+        document.getElementById('task-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); addTask(); }
+        });
 
         updateHUD();
     </script>
