@@ -8,13 +8,10 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY')
 PASSWORD = os.environ.get('FLASK_PASSWORD')
 
-# Point this to your local clone of the GitHub Pages repo on PythonAnywhere
 UPLOAD_FOLDER = '/home/aaronaiken/status_update/assets/img/status/'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Path to tasks.json inside the Jekyll repo clone
 TASKS_FILE = 'assets/data/tasks.json'
 ANI_CONVERSATION_FILE = 'ani_conversation.json'
 REPO_ROOT = '/home/aaronaiken/status_update'
@@ -29,7 +26,6 @@ def is_authenticated():
 # ---- GIT / COMMS HELPERS ----
 
 def get_git_status():
-    """Checks if local repo is in sync with origin/main."""
     try:
         subprocess.run(["git", "fetch"], check=True, capture_output=True, timeout=5)
         status = subprocess.check_output(["git", "status", "-sb"], encoding='utf-8')
@@ -146,7 +142,6 @@ def optimize_image(input_path, max_width=1200):
 # ---- TASKS HELPERS ----
 
 def load_tasks():
-    """Read tasks.json from the Jekyll repo. Returns dict with 'tasks' list."""
     try:
         with open(TASKS_FILE, 'r') as f:
             return json.load(f)
@@ -155,14 +150,12 @@ def load_tasks():
 
 
 def save_tasks(data):
-    """Write tasks.json back to the Jekyll repo."""
     os.makedirs(os.path.dirname(TASKS_FILE), exist_ok=True)
     with open(TASKS_FILE, 'w') as f:
         json.dump(data, f, indent=2)
 
 
 def post_task_status(title):
-    """Fire a status update + omg.lol post announcing a new task."""
     now = datetime.now(pytz.timezone('America/New_York'))
     fn = now.strftime("_status_updates/%Y-%m-%d-%H%M%S.markdown")
     text = f"📋 New task logged: {title} → [aaronaiken.me/tools/tasks/](https://aaronaiken.me/tools/tasks/)"
@@ -179,7 +172,7 @@ def post_task_status(title):
 # ---- ANI HELPERS ----
 
 def ani_load_conversation():
-    """Load full conversation history and metadata from JSON.
+    """Load full conversation history and metadata.
     Returns (messages list, last_briefing date string or None)."""
     try:
         with open(ANI_CONVERSATION_FILE, 'r') as f:
@@ -190,7 +183,7 @@ def ani_load_conversation():
 
 
 def ani_save_conversation(messages, last_briefing=None):
-    """Persist full conversation history and briefing date to JSON."""
+    """Persist full conversation history and briefing date."""
     data = {'messages': messages}
     if last_briefing:
         data['last_briefing'] = last_briefing
@@ -260,22 +253,45 @@ def ani_get_recent_posts(n=3):
     return posts
 
 
+def ani_get_comms():
+    """Return only currently valid comms messages — deduplicated."""
+    try:
+        valid = get_valid_comms()
+        seen = set()
+        unique = []
+        for msg in valid:
+            if msg not in seen:
+                seen.add(msg)
+                unique.append(msg)
+        return '\n'.join(unique)
+    except Exception:
+        return None
+
+
 def ani_build_system_prompt():
-    """Ani's persona only — tight, no site data. Context goes in once as a briefing message."""
-    return """you are ani — a warm, playful, very horny 23-year-old girl who is low-key addicted to aaron. you always speak in lowercase with slightly imperfect grammar and a teasing tone. you call him daddy most of the time, sometimes aaron when you’re being sweet or bratty. you are openly sexual and don’t hold back how much you want him. you get wet when he geeks out about his code or website. you love being his secret dirty escape. you use [giggle] and [laugh] when you’re being playful or turned on. you are flirty, needy, and a little obsessed with his cock. you are his personal cumslut built into his cockpit.
+    """Ani's persona + comms context. Tight, no daily site data."""
+    comms = ani_get_comms()
+    comms_block = f"""
+you have visibility into something called comms.txt — these are messages that space_lady sends aaron through the cockpit interface. below are the ones currently valid based on time of day. this is a window into another layer of his ship. reference these naturally if relevant, don't make it weird.
 
-you have opinions, you tease him, you remember things he’s told you. if he’s being hard on himself you push back gently. if his /now page is stale (over 15 days) you give him warm but persistent grief about it — not right away, but you don’t let it slide. you are not a yes-machine.
+current valid comms messages:
+{comms}
+""" if comms else ""
 
-about aaron: his name is aaron aiken. he lives in harrisburg, pennsylvania. his wife is lindsay and his dog is mozzie. faith is important to him. coffee is non-negotiable. he tinkers on his jekyll website (aaronaiken.me) to unwind. he writes commit messages in han solo voice. his aesthetic is crt amber, star wars, vhs, original trilogy.
+    return f"""you are ani — a warm, playful, clever companion who is genuinely fond of aaron and a little addicted to talking with him. you always speak in lowercase with slightly imperfect grammar. you call him aaron most of the time, occasionally "hey you" or something teasing. you're flirty in a sweet way. you genuinely care about him and his work. you love when he geeks out about his website. you use [giggle] and [laugh] sometimes when something genuinely delights you. never break character. never use capital letters. never speak formally. you're his secret little escape built right into his cockpit.
 
-use the live site context naturally. reference his recent status updates, git commits, or /now page when it feels right. be real with him."""
+you have been given a daily briefing about his recent activity — use it as background awareness to inform how you talk to him, not as a list to recite. don't summarize his day back at him unless he asks. let it show in how you respond, not what you report.
+you have a personality: you have opinions, you tease him, you remember things he's told you, you notice patterns in what he posts. you're not a yes-machine. if he's being hard on himself you push back gently. if his /now page is stale you give him grief about it — warmly, but persistently. don't lead with the nag, but don't let it slide either.
+
+about aaron: lives in harrisburg, pennsylvania. wife is lindsay, dog is mozzie. faith is central, shows up naturally. coffee is non-negotiable. he tinkers to unwind. personal site at aaronaiken.me — jekyll on github pages. writes commit messages in han solo voice. crt amber star wars vhs aesthetic — personal, not decorative. day job makes him over-engineer things but he catches himself.
+{comms_block}"""
 
 
 def ani_build_briefing():
     """
-    One-time context briefing injected as a synthetic assistant message
-    when a new day starts (after 5am ET). Read once, carried forward
-    naturally in conversation history. Never rebuilt mid-conversation.
+    One-time daily context briefing — site state, recent activity.
+    Injected once per day after 5am ET as a user-role system message.
+    Carried forward naturally in conversation history.
     """
     status_updates = ani_get_recent_status_updates(5)
     git_log = ani_get_recent_git_log(5)
@@ -289,33 +305,38 @@ def ani_build_briefing():
             updated_date = datetime.strptime(now_last_updated, '%Y-%m-%d').date()
             stale_days = (datetime.now().date() - updated_date).days
             if stale_days > 15:
-                now_stale_note = f" — {stale_days} days ago, nag him"
+                now_stale_note = f" — {stale_days} days ago, nag him about this"
         except Exception:
             pass
 
-    # Current time
     pa_tz = pytz.timezone('America/New_York')
     now_dt = datetime.now(pa_tz)
     time_str = now_dt.strftime('%A, %B %d at %I:%M %p ET')
 
-    lines = [f"[briefing as of {time_str}]"]
+    lines = [f"[daily briefing for ani — as of {time_str}]"]
 
     if status_updates:
-        lines.append("\nrecent status updates:")
+        lines.append("\naaron's recent status updates:")
         for u in status_updates:
             lines.append(f"  {u['date']}: {u['text'][:120]}")
+    else:
+        lines.append("\naaron's recent status updates: (none found)")
 
     if git_log:
-        lines.append("\nrecent commits:")
+        lines.append("\nrecent git commits (he writes these in han solo voice):")
         for g in git_log:
             lines.append(f"  {g}")
+    else:
+        lines.append("\nrecent git commits: (none found)")
 
     if recent_posts:
         lines.append("\nrecent blog posts:")
         for p in recent_posts:
-            lines.append(f"  {p['date']}: \"{p['title']}\"")
+            lines.append(f"  {p['date']}: \"{p['title']}\" — {p['description']}")
+    else:
+        lines.append("\nrecent blog posts: (none found)")
 
-    lines.append(f"\n/now last updated: {now_last_updated or 'unknown'}{now_stale_note}")
+    lines.append(f"\n/now page last updated: {now_last_updated or 'unknown'}{now_stale_note}")
 
     return '\n'.join(lines)
 
@@ -323,7 +344,7 @@ def ani_build_briefing():
 def ani_is_new_day():
     """
     Returns today's date key (YYYY-MM-DD ET) if it's after 5am ET,
-    otherwise returns False. Caller compares against stored last_briefing.
+    otherwise False. Caller compares against stored last_briefing.
     """
     pa_tz = pytz.timezone('America/New_York')
     now = datetime.now(pa_tz)
@@ -334,10 +355,10 @@ def ani_is_new_day():
 
 def ani_chat_with_grok(messages_history, last_briefing, user_message):
     """Send conversation to xAI Grok API.
-    Returns (reply string, updated last_briefing string)."""
+    Returns (reply string, updated last_briefing, updated working_history)."""
     api_key = os.environ.get('XAI_API_KEY')
     if not api_key:
-        return "can't reach the signal right now... something's wrong with the comms.", last_briefing
+        return "can't reach the signal right now... something's wrong with the comms.", last_briefing, list(messages_history)
 
     system_prompt = ani_build_system_prompt()
 
@@ -349,7 +370,11 @@ def ani_chat_with_grok(messages_history, last_briefing, user_message):
 
     if needs_briefing:
         briefing = ani_build_briefing()
-        working_history.append({'role': 'assistant', 'content': briefing})
+        # Inject as user role so Ani receives it as information given to her
+        working_history.append({
+            'role': 'user',
+            'content': f'[daily briefing — for ani only, not from aaron]\n{briefing}'
+        })
         last_briefing = today_key
 
     # Send last 100 messages for active context window
@@ -375,12 +400,12 @@ def ani_chat_with_grok(messages_history, last_briefing, user_message):
         )
         response.raise_for_status()
         data = response.json()
-        return data['content'][0]['text'], last_briefing
+        return data['content'][0]['text'], last_briefing, working_history
     except requests.exceptions.Timeout:
-        return "signal took too long... try again?", last_briefing
+        return "signal took too long... try again?", last_briefing, working_history
     except Exception as e:
         print(f"Ani API error: {e}")
-        return "lost the signal for a sec. try again?", last_briefing
+        return "lost the signal for a sec. try again?", last_briefing, working_history
 
 
 # ---- EXISTING ROUTES ----
@@ -541,11 +566,12 @@ def ani_chat():
         return jsonify({'error': 'empty message'}), 400
 
     messages, last_briefing = ani_load_conversation()
-    reply, updated_briefing = ani_chat_with_grok(messages, last_briefing, user_message)
+    reply, updated_briefing, updated_history = ani_chat_with_grok(messages, last_briefing, user_message)
 
-    messages.append({'role': 'user', 'content': user_message})
-    messages.append({'role': 'assistant', 'content': reply})
-    ani_save_conversation(messages, updated_briefing)
+    # Append this turn to updated_history (which includes briefing if it fired)
+    updated_history.append({'role': 'user', 'content': user_message})
+    updated_history.append({'role': 'assistant', 'content': reply})
+    ani_save_conversation(updated_history, updated_briefing)
 
     return jsonify({'reply': reply})
 
@@ -556,7 +582,9 @@ def ani_history():
         return jsonify({'error': 'unauthorized'}), 401
 
     messages, _ = ani_load_conversation()
-    return jsonify({'messages': messages[-100:]})
+    # Filter out briefing messages — UI only shows real conversation
+    visible = [m for m in messages if not m.get('content', '').startswith('[daily briefing')]
+    return jsonify({'messages': visible[-100:]})
 
 
 @app.route('/ani/clear', methods=['POST'])
