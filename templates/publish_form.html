@@ -859,15 +859,16 @@
         function triggerDesktopSecret() { showSecret(); }
         let aniPressTimer = null;
         function startAni() {
-            aniPressTimer = setTimeout(function() {
-                aniToggle();
-            }, 600);
+          aniPressTimer = setTimeout(function() {
+            aniToggle();
+          }, 600);
         }
+
         function endAni() {
-            if (aniPressTimer) {
-                clearTimeout(aniPressTimer);
-                aniPressTimer = null;
-            }
+          if (aniPressTimer) {
+            clearTimeout(aniPressTimer);
+            aniPressTimer = null;
+          }
         }
 
         // ---- TEXT HELPERS ----
@@ -1692,40 +1693,7 @@
   }
 })();
 
-// --- 🦇 pill long-press (mobile) / right-click (desktop) ---
-// Add these alongside your existing startSecret/endSecret functions
-
-let aniPressTimer = null;
-
-function startAni() {
-  aniPressTimer = setTimeout(function() {
-    aniToggle();
-  }, 600);
-}
-
-function endAni() {
-  if (aniPressTimer) {
-    clearTimeout(aniPressTimer);
-    aniPressTimer = null;
-  }
-}
 </script>
-
-<!-- ============================================================ -->
-<!-- 🦇 PILL — add this to your existing emoji pills section      -->
-<!-- ============================================================ -->
-<!--
-<button class="pill"
-    style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;"
-    ontouchstart="startAni()"
-    ontouchend="endAni()"
-    oncontextmenu="event.preventDefault(); aniToggle(); return false;">
-    🦇
-</button>
--->
-<!-- ============================================================ -->
-<!-- END ANI PANEL                                                 -->
-<!-- ============================================================ -->
 
 </body>
 </html>
