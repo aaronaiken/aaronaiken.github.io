@@ -640,9 +640,11 @@
             <button class="pill" onclick="insertText('💻')">💻</button>
             <button class="pill" onclick="insertText('🛠️')">🛠️</button>
             <button class="pill"
-                style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;"
-                ontouchstart="startAni()"
-                ontouchend="endAni()"
+                id="ani-bat-pill"
+                style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;"
+                ontouchstart="startAni(event)"
+                ontouchend="endAni(event)"
+                ontouchmove="endAni(event)"
                 oncontextmenu="event.preventDefault(); aniToggle(); return false;">
                 🦇
             </button>
@@ -857,14 +859,19 @@
         function startSecret() { secretTimer = setTimeout(showSecret, 1500); }
         function endSecret() { clearTimeout(secretTimer); }
         function triggerDesktopSecret() { showSecret(); }
+        // --- 🦇 pill long-press / right-click handlers ---
         let aniPressTimer = null;
-        function startAni() {
+
+        function startAni(e) {
+          e.preventDefault();
           aniPressTimer = setTimeout(function() {
+            aniPressTimer = null;
             aniToggle();
           }, 600);
         }
 
-        function endAni() {
+        function endAni(e) {
+          e.preventDefault();
           if (aniPressTimer) {
             clearTimeout(aniPressTimer);
             aniPressTimer = null;
@@ -1397,7 +1404,7 @@
   border-radius: 2px;
   color: #d4880a;
   font-family: 'Share Tech Mono', monospace;
-  font-size: 16px; /* 16px prevents iOS auto-zoom */
+  font-size: 16px;
   padding: 6px 10px;
   outline: none;
   resize: none;
@@ -1458,6 +1465,22 @@
   transition: color 0.15s;
 }
 .ani-footer-btn:hover { color: #9a6018; }
+
+/* --- Bat pill pulse animation --- */
+@keyframes ani-bat-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0px rgba(212, 136, 10, 0);
+    border-color: var(--border, #2e1e08);
+  }
+  50% {
+    box-shadow: 0 0 8px rgba(212, 136, 10, 0.5);
+    border-color: #9a6018;
+  }
+}
+
+.ani-bat-waiting {
+  animation: ani-bat-pulse 2.5s ease-in-out infinite !important;
+}
 
 @media (max-width: 440px) {
   #ani-panel {
@@ -1522,11 +1545,35 @@
   const empty   = document.getElementById('ani-empty-state');
   let isOpen    = false;
   let loaded    = false;
+  let pendingOpener = null;
+
+  // --- Ping on page load — check if she has something to say ---
+  function aniPing() {
+    fetch('/ani/ping')
+      .then(r => r.json())
+      .then(data => {
+        if (data.pending && data.opener) {
+          pendingOpener = data.opener;
+          // Pulse the bat pill subtly
+          const batPill = document.getElementById('ani-bat-pill');
+          if (batPill) batPill.classList.add('ani-bat-waiting');
+        }
+      })
+      .catch(() => {});
+  }
+
+  // Run ping after a short delay so page fully loads first
+  setTimeout(aniPing, 1500);
 
   // --- Toggle ---
   window.aniToggle = function() {
     isOpen = !isOpen;
     panel.classList.toggle('ani-open', isOpen);
+
+    // Stop bat pulsing once opened
+    const batPill = document.getElementById('ani-bat-pill');
+    if (batPill) batPill.classList.remove('ani-bat-waiting');
+
     if (isOpen && !loaded) {
       aniLoadHistory();
       aniSendLocation();
@@ -1570,9 +1617,7 @@
           lon: pos.coords.longitude
         })
       }).catch(() => {});
-    }, function() {
-      // Permission denied or unavailable — silently fall back to Harrisburg
-    });
+    }, function() {});
   }
 
   // --- Load history on first open ---
@@ -1582,9 +1627,16 @@
       .then(r => r.json())
       .then(data => {
         const messages = data.messages || [];
-        if (messages.length === 0) return;
-        empty.style.display = 'none';
-        messages.forEach(m => renderMessage(m.role, m.content));
+        if (messages.length > 0) {
+          empty.style.display = 'none';
+          messages.forEach(m => renderMessage(m.role, m.content));
+        }
+        // If she has a pending opener, render it after history
+        if (pendingOpener) {
+          empty.style.display = 'none';
+          renderMessage('assistant', pendingOpener);
+          pendingOpener = null;
+        }
         scrollToBottom();
       })
       .catch(() => {});
@@ -1651,7 +1703,6 @@
 
   // --- Render a single message bubble ---
   function renderMessage(role, content) {
-    // Skip system/briefing messages in UI
     if (content.startsWith('[daily briefing') || content.startsWith('[system:')) return;
 
     const div = document.createElement('div');
@@ -1694,6 +1745,10 @@
 })();
 
 </script>
+
+<!-- ============================================================ -->
+<!-- END ANI PANEL                                                 -->
+<!-- ============================================================ -->
 
 </body>
 </html>
