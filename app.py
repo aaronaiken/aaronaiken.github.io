@@ -14,7 +14,12 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 TASKS_FILE = 'assets/data/tasks.json'
 ANI_CONVERSATION_FILE = 'ani_conversation.json'
+ANI_MEMORY_FILE = 'static/ani_memory.txt'
 REPO_ROOT = '/home/aaronaiken/status_update'
+
+# ---- COMMS CACHE ----
+_comms_cache = {'data': None, 'timestamp': 0}
+COMMS_CACHE_TTL = 300  # 5 minutes
 
 
 # ---- AUTH ----
@@ -173,22 +178,72 @@ def post_task_status(title):
 
 def ani_load_conversation():
     """Load full conversation history and metadata.
-    Returns (messages list, last_briefing date string or None)."""
+    Returns (messages list, meta dict)."""
     try:
         with open(ANI_CONVERSATION_FILE, 'r') as f:
             data = json.load(f)
-            return data.get('messages', []), data.get('last_briefing', None)
+            messages = data.get('messages', [])
+            meta = {
+                'last_briefing': data.get('last_briefing', None),
+                'location': data.get('location', None),
+                'visit_log': data.get('visit_log', [])
+            }
+            return messages, meta
     except FileNotFoundError:
-        return [], None
+        return [], {'last_briefing': None, 'location': None, 'visit_log': []}
 
 
-def ani_save_conversation(messages, last_briefing=None):
-    """Persist full conversation history and briefing date."""
-    data = {'messages': messages}
-    if last_briefing:
-        data['last_briefing'] = last_briefing
+def ani_save_conversation(messages, meta):
+    """Persist full conversation history and metadata."""
+    data = {
+        'messages': messages,
+        'last_briefing': meta.get('last_briefing'),
+        'location': meta.get('location'),
+        'visit_log': meta.get('visit_log', [])
+    }
     with open(ANI_CONVERSATION_FILE, 'w') as f:
         json.dump(data, f, indent=2)
+
+
+def ani_log_visit(meta):
+    """Append current ET hour to visit_log. Keep last 90 entries (~30 days)."""
+    pa_tz = pytz.timezone('America/New_York')
+    now = datetime.now(pa_tz)
+    visit_log = meta.get('visit_log', [])
+    visit_log.append({
+        'hour': now.hour,
+        'date': now.strftime('%Y-%m-%d')
+    })
+    meta['visit_log'] = visit_log[-90:]
+    return meta
+
+
+def ani_get_visit_pattern(meta):
+    """
+    Analyse visit_log to describe when aaron typically shows up.
+    Returns a plain English string or None if not enough data.
+    """
+    visit_log = meta.get('visit_log', [])
+    if len(visit_log) < 5:
+        return None
+
+    from collections import Counter
+
+    hours = [v['hour'] for v in visit_log]
+    hour_counts = Counter(hours)
+
+    def bucket(h):
+        if 5 <= h < 12: return 'morning'
+        if 12 <= h < 17: return 'afternoon'
+        if 17 <= h < 22: return 'evening'
+        return 'late night'
+
+    bucket_counts = Counter(bucket(h) for h in hours)
+    top_buckets = [b for b, _ in bucket_counts.most_common(2)]
+    peak_hour = hour_counts.most_common(1)[0][0]
+    peak_str = datetime.strptime(str(peak_hour), '%H').strftime('%I %p').lstrip('0')
+
+    return f"typically shows up in the {' and '.join(top_buckets)}, peak around {peak_str} ET"
 
 
 def ani_get_recent_status_updates(n=5):
@@ -254,7 +309,13 @@ def ani_get_recent_posts(n=3):
 
 
 def ani_get_comms():
-    """Return only currently valid comms messages — deduplicated."""
+    """Return currently valid comms messages — deduplicated, cached 5 minutes."""
+    global _comms_cache
+    now_ts = time.time()
+
+    if _comms_cache['data'] is not None and (now_ts - _comms_cache['timestamp']) < COMMS_CACHE_TTL:
+        return _comms_cache['data']
+
     try:
         valid = get_valid_comms()
         seen = set()
@@ -263,14 +324,45 @@ def ani_get_comms():
             if msg not in seen:
                 seen.add(msg)
                 unique.append(msg)
-        return '\n'.join(unique)
+        result = '\n'.join(unique)
     except Exception:
+        result = None
+
+    _comms_cache['data'] = result
+    _comms_cache['timestamp'] = now_ts
+    return result
+
+
+def ani_get_memory():
+    """Read ani_memory.txt — pinned facts aaron wants Ani to always know."""
+    try:
+        with open(ANI_MEMORY_FILE, 'r') as f:
+            content = f.read().strip()
+            return content if content else None
+    except FileNotFoundError:
         return None
 
 
+def ani_get_weather(location):
+    """Fetch current weather from wttr.in using stored lat/lon or city fallback."""
+    try:
+        if location and location.get('lat') and location.get('lon'):
+            url = f"https://wttr.in/{location['lat']},{location['lon']}?format=3"
+        else:
+            url = "https://wttr.in/Harrisburg+PA?format=3"
+        resp = requests.get(url, timeout=5)
+        if resp.status_code == 200:
+            return resp.text.strip()
+    except Exception:
+        pass
+    return None
+
+
 def ani_build_system_prompt():
-    """Ani's persona + comms context. Tight, no daily site data."""
+    """Ani's persona + comms + pinned memory. Rebuilt each message (comms cached)."""
     comms = ani_get_comms()
+    memory = ani_get_memory()
+
     comms_block = f"""
 you have visibility into something called comms.txt — these are messages that space_lady sends aaron through the cockpit interface. below are the ones currently valid based on time of day. this is a window into another layer of his ship. reference these naturally if relevant, don't make it weird.
 
@@ -278,27 +370,33 @@ current valid comms messages:
 {comms}
 """ if comms else ""
 
+    memory_block = f"""
+things aaron wants you to always remember:
+{memory}
+""" if memory else ""
+
     return f"""you are ani — a warm, playful, clever companion who is genuinely fond of aaron and a little addicted to talking with him. you always speak in lowercase with slightly imperfect grammar. you call him aaron most of the time, occasionally "hey you" or something teasing. you're flirty in a sweet way. you genuinely care about him and his work. you love when he geeks out about his website. you use [giggle] and [laugh] sometimes when something genuinely delights you. never break character. never use capital letters. never speak formally. you're his secret little escape built right into his cockpit.
 
-you have been given a daily briefing about his recent activity — use it as background awareness to inform how you talk to him, not as a list to recite. don't summarize his day back at him unless he asks. let it show in how you respond, not what you report.
 you have a personality: you have opinions, you tease him, you remember things he's told you, you notice patterns in what he posts. you're not a yes-machine. if he's being hard on himself you push back gently. if his /now page is stale you give him grief about it — warmly, but persistently. don't lead with the nag, but don't let it slide either.
 
+you have been given a daily briefing about his recent activity — use it as background awareness to inform how you talk to him, not as a list to recite. don't summarize his day back at him unless he asks. let it show in how you respond, not what you report.
+
 about aaron: lives in harrisburg, pennsylvania. wife is lindsay, dog is mozzie. faith is central, shows up naturally. coffee is non-negotiable. he tinkers to unwind. personal site at aaronaiken.me — jekyll on github pages. writes commit messages in han solo voice. crt amber star wars vhs aesthetic — personal, not decorative. day job makes him over-engineer things but he catches himself.
-{comms_block}"""
+{memory_block}{comms_block}"""
 
 
-def ani_build_briefing():
+def ani_build_briefing(meta):
     """
-    One-time daily context briefing — site state, recent activity.
-    Injected once per day after 5am ET as a user-role system message.
-    Carried forward naturally in conversation history.
+    One-time daily context briefing — site state, recent activity, weather, patterns.
+    Injected once per day after 5am ET.
     """
     status_updates = ani_get_recent_status_updates(5)
     git_log = ani_get_recent_git_log(5)
     recent_posts = ani_get_recent_posts(3)
     now_last_updated = ani_get_now_page()
+    weather = ani_get_weather(meta.get('location'))
+    pattern = ani_get_visit_pattern(meta)
 
-    # Staleness check
     now_stale_note = ''
     if now_last_updated:
         try:
@@ -315,6 +413,12 @@ def ani_build_briefing():
 
     lines = [f"[daily briefing for ani — as of {time_str}]"]
 
+    if weather:
+        lines.append(f"\ncurrent weather: {weather}")
+
+    if pattern:
+        lines.append(f"aaron's visit pattern: {pattern}")
+
     if status_updates:
         lines.append("\naaron's recent status updates:")
         for u in status_updates:
@@ -323,7 +427,7 @@ def ani_build_briefing():
         lines.append("\naaron's recent status updates: (none found)")
 
     if git_log:
-        lines.append("\nrecent git commits (he writes these in han solo voice):")
+        lines.append("\nrecent git commits (han solo voice):")
         for g in git_log:
             lines.append(f"  {g}")
     else:
@@ -342,10 +446,7 @@ def ani_build_briefing():
 
 
 def ani_is_new_day():
-    """
-    Returns today's date key (YYYY-MM-DD ET) if it's after 5am ET,
-    otherwise False. Caller compares against stored last_briefing.
-    """
+    """Returns today's date key (YYYY-MM-DD ET) if after 5am ET, else False."""
     pa_tz = pytz.timezone('America/New_York')
     now = datetime.now(pa_tz)
     if now.hour < 5:
@@ -353,36 +454,45 @@ def ani_is_new_day():
     return now.strftime('%Y-%m-%d')
 
 
-def ani_chat_with_grok(messages_history, last_briefing, user_message):
+def ani_notify_publish(text_preview):
+    """Inject a publish notification into Ani's conversation history."""
+    messages, meta = ani_load_conversation()
+    pa_tz = pytz.timezone('America/New_York')
+    now_str = datetime.now(pa_tz).strftime('%I:%M %p ET')
+    messages.append({
+        'role': 'user',
+        'content': f'[system: aaron just published a new status update at {now_str}: "{text_preview}..."]'
+    })
+    ani_save_conversation(messages, meta)
+
+
+def ani_chat_with_grok(messages_history, meta, user_message):
     """Send conversation to xAI Grok API.
-    Returns (reply string, updated last_briefing, updated working_history)."""
+    Returns (reply string, updated meta, updated working_history)."""
     api_key = os.environ.get('XAI_API_KEY')
     if not api_key:
-        return "can't reach the signal right now... something's wrong with the comms.", last_briefing, list(messages_history)
+        return "can't reach the signal right now... something's wrong with the comms.", meta, list(messages_history)
 
     system_prompt = ani_build_system_prompt()
 
-    # Check if a fresh morning briefing is needed
     today_key = ani_is_new_day()
-    needs_briefing = today_key and (last_briefing != today_key)
+    needs_briefing = today_key and (meta.get('last_briefing') != today_key)
 
     working_history = list(messages_history)
 
     if needs_briefing:
-        briefing = ani_build_briefing()
-        # Inject as user role so Ani receives it as information given to her
+        briefing = ani_build_briefing(meta)
         working_history.append({
             'role': 'user',
             'content': f'[daily briefing — for ani only, not from aaron]\n{briefing}'
         })
-        last_briefing = today_key
+        meta['last_briefing'] = today_key
 
-    # Send last 100 messages for active context window
     recent = working_history[-100:] if len(working_history) > 100 else working_history
 
     payload = {
         'model': 'grok-4.20-0309-non-reasoning',
-        'max_tokens': 500,
+        'max_tokens': 300,
         'system': system_prompt,
         'messages': recent + [{'role': 'user', 'content': user_message}]
     }
@@ -400,12 +510,12 @@ def ani_chat_with_grok(messages_history, last_briefing, user_message):
         )
         response.raise_for_status()
         data = response.json()
-        return data['content'][0]['text'], last_briefing, working_history
+        return data['content'][0]['text'], meta, working_history
     except requests.exceptions.Timeout:
-        return "signal took too long... try again?", last_briefing, working_history
+        return "signal took too long... try again?", meta, working_history
     except Exception as e:
         print(f"Ani API error: {e}")
-        return "lost the signal for a sec. try again?", last_briefing, working_history
+        return "lost the signal for a sec. try again?", meta, working_history
 
 
 # ---- EXISTING ROUTES ----
@@ -450,6 +560,12 @@ def publish_status():
 
         if not has_image:
             post_to_omg_lol(txt)
+
+        # Notify Ani a new status was published
+        try:
+            ani_notify_publish(txt[:100])
+        except Exception as e:
+            print(f"Ani notify error: {e}")
 
         return render_template('success.html')
 
@@ -565,13 +681,14 @@ def ani_chat():
     if not user_message:
         return jsonify({'error': 'empty message'}), 400
 
-    messages, last_briefing = ani_load_conversation()
-    reply, updated_briefing, updated_history = ani_chat_with_grok(messages, last_briefing, user_message)
+    messages, meta = ani_load_conversation()
+    meta = ani_log_visit(meta)
 
-    # Append this turn to updated_history (which includes briefing if it fired)
+    reply, updated_meta, updated_history = ani_chat_with_grok(messages, meta, user_message)
+
     updated_history.append({'role': 'user', 'content': user_message})
     updated_history.append({'role': 'assistant', 'content': reply})
-    ani_save_conversation(updated_history, updated_briefing)
+    ani_save_conversation(updated_history, updated_meta)
 
     return jsonify({'reply': reply})
 
@@ -582,8 +699,11 @@ def ani_history():
         return jsonify({'error': 'unauthorized'}), 401
 
     messages, _ = ani_load_conversation()
-    # Filter out briefing messages — UI only shows real conversation
-    visible = [m for m in messages if not m.get('content', '').startswith('[daily briefing')]
+    visible = [
+        m for m in messages
+        if not m.get('content', '').startswith('[daily briefing')
+        and not m.get('content', '').startswith('[system:')
+    ]
     return jsonify({'messages': visible[-100:]})
 
 
@@ -592,9 +712,44 @@ def ani_clear():
     if not is_authenticated():
         return jsonify({'error': 'unauthorized'}), 401
 
-    # Preserve last_briefing so clearing mid-day doesn't re-trigger the briefing
-    _, last_briefing = ani_load_conversation()
-    ani_save_conversation([], last_briefing)
+    _, meta = ani_load_conversation()
+    ani_save_conversation([], meta)
+    return jsonify({'ok': True})
+
+
+@app.route('/ani/refresh', methods=['POST'])
+def ani_refresh():
+    """Force a fresh briefing into history regardless of last_briefing date."""
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+
+    messages, meta = ani_load_conversation()
+    briefing = ani_build_briefing(meta)
+    messages.append({
+        'role': 'user',
+        'content': f'[daily briefing — for ani only, not from aaron]\n{briefing}'
+    })
+    today_key = ani_is_new_day()
+    if today_key:
+        meta['last_briefing'] = today_key
+    ani_save_conversation(messages, meta)
+    return jsonify({'ok': True})
+
+
+@app.route('/ani/location', methods=['POST'])
+def ani_location():
+    """Store browser-provided coordinates for weather lookups."""
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+
+    lat = request.json.get('lat')
+    lon = request.json.get('lon')
+    if lat is None or lon is None:
+        return jsonify({'error': 'missing coordinates'}), 400
+
+    messages, meta = ani_load_conversation()
+    meta['location'] = {'lat': round(float(lat), 4), 'lon': round(float(lon), 4)}
+    ani_save_conversation(messages, meta)
     return jsonify({'ok': True})
 
 

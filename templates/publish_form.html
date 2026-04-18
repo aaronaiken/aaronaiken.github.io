@@ -1204,13 +1204,12 @@
         initCollapsedStates();
     </script>
 
-    <!-- ============================================================ -->
+<!-- ============================================================ -->
 <!-- ANI PANEL — insert just before </body> in publish_form.html -->
-<!-- Ctrl+Shift+A to open/close                                  -->
+<!-- Ctrl+Shift+A (desktop) or long-press 🦇 pill (mobile)       -->
 <!-- ============================================================ -->
 
 <style>
-/* --- Ani Panel --- */
 #ani-panel {
   position: fixed;
   bottom: 0;
@@ -1298,6 +1297,7 @@
   font-size: 0.82rem;
   line-height: 1.55;
   animation: ani-msg-in 0.18s ease-out;
+  word-break: break-word;
 }
 
 @keyframes ani-msg-in {
@@ -1325,6 +1325,18 @@
   letter-spacing: 0.12em;
   margin-bottom: 4px;
   text-shadow: 0 0 8px rgba(245, 179, 50, 0.3);
+}
+
+.ani-msg-notify {
+  align-self: center;
+  background: transparent;
+  border: none;
+  color: #4a3010;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  padding: 2px 0;
+  max-width: 100%;
+  text-align: center;
 }
 
 .ani-typing {
@@ -1384,7 +1396,7 @@
   border-radius: 2px;
   color: #d4880a;
   font-family: 'Share Tech Mono', monospace;
-  font-size: 0.78rem;
+  font-size: 16px; /* 16px prevents iOS auto-zoom */
   padding: 6px 10px;
   outline: none;
   resize: none;
@@ -1407,6 +1419,7 @@
   border-radius: 2px;
   transition: color 0.15s, border-color 0.15s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 #ani-send-btn:hover { color: #f5b332; border-color: #9a6018; }
 #ani-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -1417,6 +1430,7 @@
   align-items: center;
   padding: 4px 12px 6px;
   background: #0d0f0b;
+  flex-shrink: 0;
 }
 
 #ani-shortcut-hint {
@@ -1425,7 +1439,13 @@
   letter-spacing: 0.1em;
 }
 
-#ani-clear-btn {
+#ani-footer-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.ani-footer-btn {
   background: none;
   border: none;
   color: #3a2010;
@@ -1436,7 +1456,7 @@
   padding: 0;
   transition: color 0.15s;
 }
-#ani-clear-btn:hover { color: #9a6018; }
+.ani-footer-btn:hover { color: #9a6018; }
 
 @media (max-width: 440px) {
   #ani-panel {
@@ -1446,11 +1466,6 @@
     max-width: 100vw;
     border-radius: 4px 4px 0 0;
     box-sizing: border-box;
-    overflow-x: hidden;
-  }
-
-  #ani-input {
-    font-size: 16px;
   }
 }
 </style>
@@ -1488,8 +1503,11 @@
   </div>
 
   <div id="ani-footer-row">
-    <span id="ani-shortcut-hint">CTRL+SHIFT+A TO TOGGLE</span>
-    <button id="ani-clear-btn" onclick="aniClear()" aria-label="Clear conversation history">CLEAR HISTORY</button>
+    <span id="ani-shortcut-hint">CTRL+SHIFT+A · LONG-PRESS 🦇</span>
+    <div id="ani-footer-actions">
+      <button class="ani-footer-btn" onclick="aniRefresh()" aria-label="Refresh briefing">REFRESH</button>
+      <button class="ani-footer-btn" onclick="aniClear()" aria-label="Clear history">CLEAR</button>
+    </div>
   </div>
 </div>
 
@@ -1510,13 +1528,14 @@
     panel.classList.toggle('ani-open', isOpen);
     if (isOpen && !loaded) {
       aniLoadHistory();
+      aniSendLocation();
     }
     if (isOpen) {
       setTimeout(() => input.focus(), 300);
     }
   };
 
-  // --- Keyboard shortcut: Ctrl+Shift+A ---
+  // --- Keyboard shortcut: Ctrl+Shift+A (desktop) ---
   document.addEventListener('keydown', function(e) {
     if (e.ctrlKey && e.shiftKey && e.key === 'A') {
       e.preventDefault();
@@ -1538,6 +1557,23 @@
     }
   });
 
+  // --- Send location to server on panel open ---
+  function aniSendLocation() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      fetch('/ani/location', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude
+        })
+      }).catch(() => {});
+    }, function() {
+      // Permission denied or unavailable — silently fall back to Harrisburg
+    });
+  }
+
   // --- Load history on first open ---
   function aniLoadHistory() {
     loaded = true;
@@ -1547,7 +1583,6 @@
         const messages = data.messages || [];
         if (messages.length === 0) return;
         empty.style.display = 'none';
-        // Render pairs: user then assistant
         messages.forEach(m => renderMessage(m.role, m.content));
         scrollToBottom();
       })
@@ -1590,13 +1625,23 @@
     });
   };
 
+  // --- Refresh briefing ---
+  window.aniRefresh = function() {
+    fetch('/ani/refresh', { method: 'POST' })
+      .then(r => r.json())
+      .then(() => {
+        renderNotify('briefing refreshed — she knows what\'s new');
+        scrollToBottom();
+      })
+      .catch(() => {});
+  };
+
   // --- Clear history ---
   window.aniClear = function() {
     if (!confirm('clear the whole history? this cannot be undone.')) return;
     fetch('/ani/clear', { method: 'POST' })
       .then(() => {
-        // Remove all message elements
-        Array.from(msgs.querySelectorAll('.ani-msg')).forEach(el => el.remove());
+        Array.from(msgs.querySelectorAll('.ani-msg, .ani-msg-notify')).forEach(el => el.remove());
         empty.style.display = 'block';
         loaded = false;
       })
@@ -1605,6 +1650,9 @@
 
   // --- Render a single message bubble ---
   function renderMessage(role, content) {
+    // Skip system/briefing messages in UI
+    if (content.startsWith('[daily briefing') || content.startsWith('[system:')) return;
+
     const div = document.createElement('div');
     div.classList.add('ani-msg');
     if (role === 'user') {
@@ -1615,7 +1663,14 @@
       div.innerHTML = '<div class="ani-name">ANI</div>' +
         escapeHtml(content).replace(/\n/g, '<br>');
     }
-    // Insert before typing indicator
+    msgs.insertBefore(div, typing);
+  }
+
+  // --- Render a subtle notification line ---
+  function renderNotify(text) {
+    const div = document.createElement('div');
+    div.classList.add('ani-msg-notify');
+    div.textContent = '· ' + text + ' ·';
     msgs.insertBefore(div, typing);
   }
 
@@ -1636,9 +1691,40 @@
     msgs.scrollTop = msgs.scrollHeight;
   }
 })();
+
+// --- 🦇 pill long-press (mobile) / right-click (desktop) ---
+// Add these alongside your existing startSecret/endSecret functions
+
+let aniPressTimer = null;
+
+function startAni() {
+  aniPressTimer = setTimeout(function() {
+    aniToggle();
+  }, 600);
+}
+
+function endAni() {
+  if (aniPressTimer) {
+    clearTimeout(aniPressTimer);
+    aniPressTimer = null;
+  }
+}
 </script>
+
 <!-- ============================================================ -->
-<!-- END ANI PANEL                                                -->
+<!-- 🦇 PILL — add this to your existing emoji pills section      -->
+<!-- ============================================================ -->
+<!--
+<button class="pill"
+    style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;"
+    ontouchstart="startAni()"
+    ontouchend="endAni()"
+    oncontextmenu="event.preventDefault(); aniToggle(); return false;">
+    🦇
+</button>
+-->
+<!-- ============================================================ -->
+<!-- END ANI PANEL                                                 -->
 <!-- ============================================================ -->
 
 </body>
