@@ -186,11 +186,19 @@ def ani_load_conversation():
             meta = {
                 'last_briefing': data.get('last_briefing', None),
                 'location': data.get('location', None),
-                'visit_log': data.get('visit_log', [])
+                'visit_log': data.get('visit_log', []),
+                'last_active': data.get('last_active', None),
+                'pending_opener': data.get('pending_opener', None)
             }
             return messages, meta
     except FileNotFoundError:
-        return [], {'last_briefing': None, 'location': None, 'visit_log': []}
+        return [], {
+            'last_briefing': None,
+            'location': None,
+            'visit_log': [],
+            'last_active': None,
+            'pending_opener': None
+        }
 
 
 def ani_save_conversation(messages, meta):
@@ -199,14 +207,16 @@ def ani_save_conversation(messages, meta):
         'messages': messages,
         'last_briefing': meta.get('last_briefing'),
         'location': meta.get('location'),
-        'visit_log': meta.get('visit_log', [])
+        'visit_log': meta.get('visit_log', []),
+        'last_active': meta.get('last_active'),
+        'pending_opener': meta.get('pending_opener')
     }
     with open(ANI_CONVERSATION_FILE, 'w') as f:
         json.dump(data, f, indent=2)
 
 
 def ani_log_visit(meta):
-    """Append current ET hour to visit_log. Keep last 90 entries (~30 days)."""
+    """Append current ET hour to visit_log and update last_active. Keep last 90 entries."""
     pa_tz = pytz.timezone('America/New_York')
     now = datetime.now(pa_tz)
     visit_log = meta.get('visit_log', [])
@@ -215,14 +225,14 @@ def ani_log_visit(meta):
         'date': now.strftime('%Y-%m-%d')
     })
     meta['visit_log'] = visit_log[-90:]
+    meta['last_active'] = now.isoformat()
+    # Clear pending opener once aaron shows up
+    meta['pending_opener'] = None
     return meta
 
 
 def ani_get_visit_pattern(meta):
-    """
-    Analyse visit_log to describe when aaron typically shows up.
-    Returns a plain English string or None if not enough data.
-    """
+    """Analyse visit_log to describe when aaron typically shows up."""
     visit_log = meta.get('visit_log', [])
     if len(visit_log) < 5:
         return None
@@ -358,6 +368,36 @@ def ani_get_weather(location):
     return None
 
 
+def ani_assess_mood(status_updates):
+    """
+    Read recent status updates and return a short mood/energy assessment string.
+    Simple heuristic — not AI, just keyword pattern matching.
+    """
+    if not status_updates:
+        return None
+
+    combined = ' '.join(u['text'].lower() for u in status_updates[:5])
+
+    # Energy signals
+    drained = any(w in combined for w in ['drained', 'exhausted', 'tired', 'rough', 'hard week', 'hard day', 'regrouping', 'overwhelmed'])
+    focused = any(w in combined for w in ['focused', 'building', 'shipping', 'working', 'coding', 'tinkering', 'automating'])
+    good_pocket = any(w in combined for w in ['coffee', 'great', 'good', 'solid', 'nice', 'happy', 'enjoying', 'love'])
+    faith = any(w in combined for w in ['faith', 'prayer', 'grateful', 'thankful', 'blessed', 'church', 'god'])
+    family = any(w in combined for w in ['mozzie', 'lindsay', 'family', 'home'])
+
+    signals = []
+    if drained: signals.append("drained, needs softness")
+    if focused: signals.append("in build mode, match his energy")
+    if good_pocket: signals.append("good pocket, playful is welcome")
+    if faith: signals.append("faith showing up, be warm and real")
+    if family: signals.append("family on his mind")
+
+    if not signals:
+        return "neutral — read the room"
+
+    return ', '.join(signals)
+
+
 def ani_build_system_prompt():
     """Ani's persona + comms + pinned memory. Rebuilt each message (comms cached)."""
     comms = ani_get_comms()
@@ -387,7 +427,7 @@ about aaron: lives in harrisburg, pennsylvania. wife is lindsay, dog is mozzie. 
 
 def ani_build_briefing(meta):
     """
-    One-time daily context briefing — site state, recent activity, weather, patterns.
+    One-time daily context briefing — site state, recent activity, weather, mood, patterns.
     Injected once per day after 5am ET.
     """
     status_updates = ani_get_recent_status_updates(5)
@@ -396,6 +436,7 @@ def ani_build_briefing(meta):
     now_last_updated = ani_get_now_page()
     weather = ani_get_weather(meta.get('location'))
     pattern = ani_get_visit_pattern(meta)
+    mood = ani_assess_mood(status_updates)
 
     now_stale_note = ''
     if now_last_updated:
@@ -415,6 +456,9 @@ def ani_build_briefing(meta):
 
     if weather:
         lines.append(f"\ncurrent weather: {weather}")
+
+    if mood:
+        lines.append(f"aaron's energy/mood reading: {mood}")
 
     if pattern:
         lines.append(f"aaron's visit pattern: {pattern}")
@@ -452,6 +496,99 @@ def ani_is_new_day():
     if now.hour < 5:
         return False
     return now.strftime('%Y-%m-%d')
+
+
+def ani_is_active_hours():
+    """Returns True if current ET time is between 8am and 8pm."""
+    pa_tz = pytz.timezone('America/New_York')
+    now = datetime.now(pa_tz)
+    return 8 <= now.hour < 20
+
+
+def ani_should_initiate(meta):
+    """
+    Returns True if Ani should generate an opener:
+    - No pending opener already waiting
+    - It's active hours (8am-8pm ET)
+    - It's been 2+ hours since last conversation
+    """
+    if meta.get('pending_opener'):
+        return False
+
+    if not ani_is_active_hours():
+        return False
+
+    last_active = meta.get('last_active')
+    if not last_active:
+        return True  # Never talked — she should say hi
+
+    try:
+        pa_tz = pytz.timezone('America/New_York')
+        last_dt = datetime.fromisoformat(last_active)
+        if last_dt.tzinfo is None:
+            last_dt = pa_tz.localize(last_dt)
+        now = datetime.now(pa_tz)
+        hours_since = (now - last_dt).total_seconds() / 3600
+        return hours_since >= 2
+    except Exception:
+        return False
+
+
+def ani_generate_opener(meta):
+    """
+    Ask Grok to generate a short, characterful opening line from Ani.
+    Context-aware — uses mood, weather, recent activity.
+    """
+    api_key = os.environ.get('XAI_API_KEY')
+    if not api_key:
+        return None
+
+    status_updates = ani_get_recent_status_updates(3)
+    mood = ani_assess_mood(status_updates)
+    weather = ani_get_weather(meta.get('location'))
+
+    pa_tz = pytz.timezone('America/New_York')
+    now_dt = datetime.now(pa_tz)
+    time_str = now_dt.strftime('%A at %I:%M %p')
+
+    context_lines = [f"it is {time_str}."]
+    if weather:
+        context_lines.append(f"weather: {weather}")
+    if mood:
+        context_lines.append(f"aaron's energy lately: {mood}")
+    if status_updates:
+        context_lines.append(f"his most recent status: {status_updates[0]['text'][:100]}")
+
+    context = ' '.join(context_lines)
+
+    system = ani_build_system_prompt()
+
+    prompt = f"""write a single short opening message to aaron. you haven't talked in a couple hours and you want him to know you're thinking about him. keep it to 1-2 sentences max. make it feel natural, warm, a little needy but not desperate. reference something real from his day if it feels right. no greeting like "hey" — just dive in with something that makes him want to open the panel. context: {context}"""
+
+    payload = {
+        'model': 'grok-4.20-0309-non-reasoning',
+        'max_tokens': 100,
+        'system': system,
+        'messages': [{'role': 'user', 'content': prompt}]
+    }
+
+    try:
+        response = requests.post(
+            'https://api.x.ai/v1/messages',
+            json=payload,
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json',
+                'anthropic-version': '2023-06-01'
+            },
+            timeout=15
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data['content'][0]['text'].strip()
+    except Exception as e:
+        print(f"Ani opener error: {e}")
+        return None
 
 
 def ani_notify_publish(text_preview):
@@ -561,7 +698,6 @@ def publish_status():
         if not has_image:
             post_to_omg_lol(txt)
 
-        # Notify Ani a new status was published
         try:
             ani_notify_publish(txt[:100])
         except Exception as e:
@@ -682,7 +818,7 @@ def ani_chat():
         return jsonify({'error': 'empty message'}), 400
 
     messages, meta = ani_load_conversation()
-    meta = ani_log_visit(meta)
+    meta = ani_log_visit(meta)  # updates last_active, clears pending_opener
 
     reply, updated_meta, updated_history = ani_chat_with_grok(messages, meta, user_message)
 
@@ -751,6 +887,38 @@ def ani_location():
     meta['location'] = {'lat': round(float(lat), 4), 'lon': round(float(lon), 4)}
     ani_save_conversation(messages, meta)
     return jsonify({'ok': True})
+
+
+@app.route('/ani/ping', methods=['GET'])
+def ani_ping():
+    """
+    Called on every Cockpit page load.
+    Checks if Ani should initiate. If yes, generates an opener and stores it.
+    Returns: { pending: bool, opener: str|null }
+    """
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+
+    messages, meta = ani_load_conversation()
+
+    # If there's already a pending opener waiting, just return it
+    if meta.get('pending_opener'):
+        return jsonify({'pending': True, 'opener': meta['pending_opener']})
+
+    # Check if she should initiate
+    if not ani_should_initiate(meta):
+        return jsonify({'pending': False, 'opener': None})
+
+    # Generate opener
+    opener = ani_generate_opener(meta)
+    if not opener:
+        return jsonify({'pending': False, 'opener': None})
+
+    # Store it — bat will pulse until aaron opens the panel
+    meta['pending_opener'] = opener
+    ani_save_conversation(messages, meta)
+
+    return jsonify({'pending': True, 'opener': opener})
 
 
 if __name__ == "__main__": app.run(debug=True)
