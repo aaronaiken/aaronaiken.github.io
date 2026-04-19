@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-04-19 17:35:32 -0400
+layout: status_update
+author: aaron
+source: web
+---
+🏈 Mozzie’s NFL Flag Football team (Steelers) won today against the 49ers! This is his second season playing and his first win, he’s pretty excited :-)
