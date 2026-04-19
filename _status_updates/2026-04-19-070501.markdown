@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-04-19 07:05:01 -0400
+layout: status_update
+author: aaron
+source: web
+---
+☕️ Good morning. Windy out there today. Hoping today offers something akin to Holy rest.
