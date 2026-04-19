@@ -623,7 +623,7 @@ def ani_chat_with_grok(messages_history, meta, user_message):
 
     payload = {
         'model': 'grok-4.20-0309-non-reasoning',
-        'max_tokens': 300,
+        'max_tokens': 500,
         'system': system_prompt,
         'messages': recent + [{'role': 'user', 'content': user_message}]
     }
