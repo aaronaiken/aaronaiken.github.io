@@ -13,6 +13,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 TASKS_FILE = 'assets/data/tasks.json'
+SCRATCH_FILE = 'assets/data/scratch.json'
 ANI_CONVERSATION_FILE = 'ani_conversation.json'
 ANI_MEMORY_FILE = 'static/ani_memory.txt'
 REPO_ROOT = '/home/aaronaiken/status_update'
@@ -902,6 +903,31 @@ def tasks_delete():
 
     return jsonify({"ok": True})
 
+# ---- SCRATCH ROUTES ----
+
+@app.route('/scratch', methods=['GET'])
+def scratch_get():
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+    try:
+        with open(SCRATCH_FILE, 'r') as f:
+            data = json.load(f)
+        return jsonify({'content': data.get('content', ''), 'last_modified': data.get('last_modified', None)})
+    except FileNotFoundError:
+        return jsonify({'content': '', 'last_modified': None})
+
+
+@app.route('/scratch', methods=['POST'])
+def scratch_post():
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+    content = request.json.get('content', '')
+    pa_tz = pytz.timezone('America/New_York')
+    last_modified = datetime.now(pa_tz).isoformat()
+    os.makedirs(os.path.dirname(SCRATCH_FILE), exist_ok=True)
+    with open(SCRATCH_FILE, 'w') as f:
+        json.dump({'content': content, 'last_modified': last_modified}, f)
+    return jsonify({'ok': True, 'last_modified': last_modified})
 
 # ---- ANI ROUTES ----
 
