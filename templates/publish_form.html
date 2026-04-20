@@ -54,7 +54,6 @@
         font-size: 14px;
     }
 
-    /* CRT scanline drift */
     @keyframes scanline-drift {
         0%   { transform: translateY(0); }
         100% { transform: translateY(100%); }
@@ -84,7 +83,6 @@
         z-index: 9997;
     }
 
-    /* ---- CONTAINER ---- */
     .container {
         width: 100%;
         max-width: 520px;
@@ -106,12 +104,10 @@
         .container {
             margin-top: 40px;
             border: 1px solid var(--border);
-            /* background: rgba(8,10,6,0.7); */
             backdrop-filter: blur(8px);
         }
     }
 
-    /* ---- HEADER ---- */
     .cockpit__header {
         margin-bottom: 20px;
         padding-bottom: 12px;
@@ -135,7 +131,6 @@
         50%      { text-shadow: 0 0 28px rgba(245,179,50,0.8), 0 0 80px rgba(212,136,10,0.3); }
     }
 
-    /* ---- STATUS BAR ---- */
     .status-bar {
         display: flex;
         align-items: center;
@@ -187,7 +182,6 @@
     .cockpit__ctrl-btn:hover { color: var(--amber); }
     .cockpit__ctrl-btn a { color: inherit; text-decoration: none; }
 
-    /* ---- SECRET COMMS ---- */
     #secret-comm {
         position: fixed; top: 0; left: 0;
         width: 100vw; height: 100vh;
@@ -228,7 +222,6 @@
 
     @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
 
-    /* ---- PILLS ---- */
     .section-label {
         font-size: 0.6rem; letter-spacing: 0.22em;
         text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
@@ -258,7 +251,6 @@
 
     .pill.util:hover { background: var(--amber-dim); border-color: var(--amber); }
 
-    /* ---- TEXTAREA ---- */
     .input-wrap { position: relative; margin-top: 8px; }
 
     textarea {
@@ -304,7 +296,6 @@
         letter-spacing: 0.1em; text-shadow: 0 0 8px var(--secret-neon); display: none;
     }
 
-    /* ---- TRANSMIT ---- */
     button#publish-btn {
         width: 100%; background: var(--amber-dim);
         border: 1px solid var(--amber-lo); color: var(--amber-hi);
@@ -318,7 +309,6 @@
     button#publish-btn:hover { background: #4a2c08; border-color: var(--amber); }
     button#publish-btn:active { background: var(--amber); color: #000; }
 
-    /* ---- HISTORY ---- */
     .history-section { margin-top: 36px; }
 
     .log-header {
@@ -338,7 +328,6 @@
 
     .history-item::before { content: '› '; color: var(--border-hi); font-style: normal; }
 
-    /* ---- FOOTER ---- */
     .cockpit__footer {
         margin-top: 36px; padding-top: 14px;
         border-top: 1px solid var(--border);
@@ -355,6 +344,7 @@
         text-transform: none; letter-spacing: 0;
         font-size: 0.78rem; color: var(--amber-lo); opacity: 0.6;
     }
+
     /* ---- TASKS ---- */
     .tasks-section { margin-top: 36px; }
 
@@ -387,6 +377,9 @@
     .tasks-add-btn:hover { background: #4a2c08; border-color: var(--amber); }
     .tasks-add-btn:active { background: var(--amber); color: #000; }
     .tasks-add-btn:disabled { opacity: 0.4; cursor: default; }
+    .tasks-add-btn.is-working { opacity: 0.6; }
+    .tasks-add-btn.is-success { border-color: var(--green); color: var(--green); background: rgba(77,187,106,0.08); }
+    .tasks-add-btn.is-error { border-color: var(--red); color: var(--red); background: rgba(204,51,34,0.08); }
 
     .tasks-list { list-style: none; }
 
@@ -408,9 +401,7 @@
     }
 
     .task-check:hover { border-color: var(--green); }
-    .task-item.is-complete .task-check {
-        background: var(--green-lo); border-color: var(--green);
-    }
+    .task-item.is-complete .task-check { background: var(--green-lo); border-color: var(--green); }
 
     .task-title {
         flex: 1; font-size: 0.88rem; color: var(--text-body);
@@ -418,9 +409,7 @@
         line-height: 1.4;
     }
 
-    .task-item.is-complete .task-title {
-        text-decoration: line-through; color: var(--text-dim);
-    }
+    .task-item.is-complete .task-title { text-decoration: line-through; color: var(--text-dim); }
 
     .task-delete {
         background: none; border: none; color: var(--border-hi);
@@ -432,7 +421,6 @@
 
     .task-delete:hover { color: var(--red); }
 
-    /* Completion prompt — slides in below the task */
     .task-log-prompt {
         display: none;
         background: var(--bg2); border: 1px solid var(--amber-lo);
@@ -448,9 +436,7 @@
         margin-bottom: 10px;
     }
 
-    .task-log-actions {
-        display: flex; gap: 8px; flex-wrap: wrap;
-    }
+    .task-log-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
     .task-log-btn {
         background: none; border: 1px solid var(--border-hi);
@@ -478,19 +464,7 @@
         margin: 14px 0 10px; opacity: 0.6;
     }
 
-    .tasks-add-btn.is-working { opacity: 0.6; }
-        .tasks-add-btn.is-success {
-        border-color: var(--green);
-        color: var(--green);
-        background: rgba(77,187,106,0.08);
-    }
-    .tasks-add-btn.is-error {
-        border-color: var(--red);
-        color: var(--red);
-        background: rgba(204,51,34,0.08);
-    }
-
-    /* Collapsible toggle */
+    /* ---- COLLAPSIBLE ---- */
     .tasks-toggle {
         cursor: pointer;
         display: flex;
@@ -509,15 +483,16 @@
 
     .tasks-toggle-arrow.is-collapsed { transform: rotate(-90deg); }
 
-    .tasks-body { overflow: hidden; transition: opacity 0.2s ease; }
+    .tasks-body { overflow: hidden; }
     .tasks-body.is-collapsed { display: none; }
 
-    /* Scratch pad */
+    /* ---- SCRATCH PAD ---- */
     .scratch-section { margin-top: 36px; }
 
     .scratch-textarea {
         width: 100%;
-        height: 120px;
+        min-height: 120px;
+        max-height: 60vh;
         background: var(--input-bg);
         color: var(--text-body);
         border: 1px solid var(--border);
@@ -528,25 +503,62 @@
         font-style: italic;
         line-height: 1.7;
         outline: none;
-        resize: none;
+        resize: vertical;
         -webkit-appearance: none;
         transition: border-color 0.2s;
         box-sizing: border-box;
+        overflow-y: auto;
     }
 
     .scratch-textarea:focus { border-color: var(--amber-lo); }
     .scratch-textarea::placeholder { color: var(--border-hi); }
+
+    .scratch-action-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 6px;
+    }
 
     .scratch-status {
         font-size: 0.55rem;
         color: var(--muted);
         letter-spacing: 0.15em;
         text-transform: uppercase;
-        margin-top: 5px;
         min-height: 1em;
-        text-align: right;
         transition: opacity 0.3s;
     }
+
+    .scratch-btns { display: flex; gap: 8px; }
+
+    .scratch-btn {
+        background: none;
+        border: 1px solid var(--border-hi);
+        color: var(--text-dim);
+        padding: 3px 10px;
+        border-radius: 2px;
+        font-size: 0.58rem;
+        font-family: 'Share Tech Mono', monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .scratch-btn:hover { border-color: var(--amber-lo); color: var(--amber); }
+    .scratch-btn.is-success { border-color: var(--green); color: var(--green); }
+    .scratch-btn.is-offline { border-color: var(--amber-lo); color: var(--amber); }
+
+    .scratch-offline-badge {
+        font-size: 0.5rem;
+        color: var(--amber);
+        letter-spacing: 0.15em;
+        margin-left: 8px;
+        animation: dot-pulse 2s ease-in-out infinite;
+        display: none;
+    }
+
+    .scratch-offline-badge.visible { display: inline; }
 
     /* ---- LIGHT MODE ---- */
     @media (prefers-color-scheme: light) {
@@ -595,19 +607,16 @@
 </head>
 <body>
 
-    <!-- SECRET COMMS OVERLAY — untouched -->
     <div id="secret-comm">
         <div id="secret-text"></div>
     </div>
 
     <div class="container" id="main-cockpit">
 
-        <!-- HEADER -->
         <header class="cockpit__header">
             <div class="cockpit__logo">COCK<span>PIT</span> // STATUS</div>
         </header>
 
-        <!-- STATUS BAR -->
         <div class="status-bar">
             <div class="systems-group">
                 <div class="dot {{ git_status if git_status else 'online' }}"></div>
@@ -624,7 +633,6 @@
             </div>
         </div>
 
-        <!-- EMOJI PILLS -->
         <div class="section-label">// Quick Insert</div>
         <div class="scroller">
             <button class="pill" onclick="insertText('🚀')">🚀</button>
@@ -650,14 +658,12 @@
             </button>
         </div>
 
-        <!-- FORMATTING PILLS -->
         <div class="scroller utility-belt">
             <button class="pill util" onclick="wrapText('**', '**')">BOLD</button>
             <button class="pill util" onclick="wrapText('*', '*')">ITALIC</button>
             <button class="pill util" onclick="smartURL()">🔗 LINK</button>
         </div>
 
-        <!-- FORM -->
         <div class="section-label">// Transmission</div>
         <div class="input-wrap">
             <form action="/publish" method="post" id="status-form" enctype="multipart/form-data">
@@ -686,7 +692,6 @@
             </form>
         </div>
 
-        <!-- HISTORY -->
         {% if history %}
         <div class="history-section">
             <div class="log-header">// Recent Comms Log</div>
@@ -702,55 +707,55 @@
                 // Mission Log
                 <span class="tasks-toggle-arrow" id="tasks-arrow">▾</span>
             </div>
-
-            <div class="tasks-add-row">
-                <input type="text" id="task-input" placeholder="New task..." maxlength="140">
-                <button class="tasks-add-btn" id="task-add-btn" onclick="addTask()">+ LOG</button>
-            </div>
-
-            <ul class="tasks-list" id="tasks-list">
-                {% set open_tasks = tasks | selectattr('status', 'equalto', 'open') | list %}
-                {% set done_tasks = tasks | selectattr('status', 'equalto', 'complete') | list %}
-
-                {% if open_tasks %}
-                    {% for task in open_tasks %}
-                    <li class="task-item" data-id="{{ task.id }}" data-title="{{ task.title | e }}">
-                        <button class="task-check" onclick="completeTask('{{ task.id }}', '{{ task.title | e }}')" title="Mark complete"></button>
-                        <span class="task-title">{{ task.title }}</span>
-                        <button class="task-delete" onclick="deleteTask('{{ task.id }}')" title="Delete">✕</button>
-                    </li>
-                    {% endfor %}
-                {% else %}
-                    <li class="tasks-empty" id="tasks-empty-msg">No active tasks. Good work, captain.</li>
-                {% endif %}
-
-                {% if done_tasks %}
-                    <li class="tasks-divider">// Completed</li>
-                    {% for task in done_tasks %}
-                    <li class="task-item is-complete" data-id="{{ task.id }}">
-                        <div class="task-check" style="cursor:default;">✓</div>
-                        <span class="task-title">{{ task.title }}</span>
-                        <button class="task-delete" onclick="deleteTask('{{ task.id }}')" title="Delete">✕</button>
-                    </li>
-                    {% endfor %}
-                {% endif %}
-            </ul>
-
-            <!-- Completion prompt — shown inline after marking done -->
-            <div class="task-log-prompt" id="task-log-prompt">
-                <div class="task-log-label">// Log this one?</div>
-                <div class="task-log-actions">
-                    <button class="task-log-btn primary" onclick="logAsStatus()">STATUS UPDATE</button>
-                    <button class="task-log-btn" onclick="logAsBlogDraft()">BLOG DRAFT</button>
-                    <button class="task-log-btn dismiss" onclick="dismissLogPrompt()">DISMISS</button>
+            <div class="tasks-body" id="tasks-body">
+                <div class="tasks-add-row">
+                    <input type="text" id="task-input" placeholder="New task..." maxlength="140">
+                    <button class="tasks-add-btn" id="task-add-btn" onclick="addTask()">+ LOG</button>
                 </div>
-            </div>
+
+                <ul class="tasks-list" id="tasks-list">
+                    {% set open_tasks = tasks | selectattr('status', 'equalto', 'open') | list %}
+                    {% set done_tasks = tasks | selectattr('status', 'equalto', 'complete') | list %}
+
+                    {% if open_tasks %}
+                        {% for task in open_tasks %}
+                        <li class="task-item" data-id="{{ task.id }}" data-title="{{ task.title | e }}">
+                            <button class="task-check" onclick="completeTask('{{ task.id }}', '{{ task.title | e }}')" title="Mark complete"></button>
+                            <span class="task-title">{{ task.title }}</span>
+                            <button class="task-delete" onclick="deleteTask('{{ task.id }}')" title="Delete">✕</button>
+                        </li>
+                        {% endfor %}
+                    {% else %}
+                        <li class="tasks-empty" id="tasks-empty-msg">No active tasks. Good work, captain.</li>
+                    {% endif %}
+
+                    {% if done_tasks %}
+                        <li class="tasks-divider">// Completed</li>
+                        {% for task in done_tasks %}
+                        <li class="task-item is-complete" data-id="{{ task.id }}">
+                            <div class="task-check" style="cursor:default;">✓</div>
+                            <span class="task-title">{{ task.title }}</span>
+                            <button class="task-delete" onclick="deleteTask('{{ task.id }}')" title="Delete">✕</button>
+                        </li>
+                        {% endfor %}
+                    {% endif %}
+                </ul>
+
+                <div class="task-log-prompt" id="task-log-prompt">
+                    <div class="task-log-label">// Log this one?</div>
+                    <div class="task-log-actions">
+                        <button class="task-log-btn primary" onclick="logAsStatus()">STATUS UPDATE</button>
+                        <button class="task-log-btn" onclick="logAsBlogDraft()">BLOG DRAFT</button>
+                        <button class="task-log-btn dismiss" onclick="dismissLogPrompt()">DISMISS</button>
+                    </div>
+                </div>
+            </div><!-- end tasks-body -->
         </div><!-- end tasks-section -->
 
         <!-- SCRATCH PAD -->
         <div class="scratch-section">
             <div class="log-header tasks-toggle" onclick="toggleScratch()">
-                // Scratch
+                <span>// Scratch<span class="scratch-offline-badge" id="scratch-offline-badge">· OFFLINE</span></span>
                 <span class="tasks-toggle-arrow" id="scratch-arrow">▾</span>
             </div>
             <div class="tasks-body" id="scratch-body">
@@ -758,13 +763,18 @@
                     class="scratch-textarea"
                     id="scratch-input"
                     placeholder="Notes, links, half-baked ideas..."
-                    oninput="saveScratch()"
+                    oninput="scheduleScratchSave()"
                 ></textarea>
-                <div class="scratch-status" id="scratch-status"></div>
+                <div class="scratch-action-row">
+                    <div class="scratch-status" id="scratch-status"></div>
+                    <div class="scratch-btns">
+                        <button class="scratch-btn" id="scratch-save-btn" onclick="saveScratchNow()">SAVE</button>
+                        <button class="scratch-btn" id="scratch-copy-btn" onclick="copyScratch()">COPY</button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- FOOTER -->
         <footer class="cockpit__footer">
             <a href="/">← Site</a>
             <span class="cockpit__footer-quote">"She may not look like much..."</span>
@@ -795,7 +805,7 @@
             }
         }
 
-        // ---- SHIELD / SIGNAL INTEGRITY ----
+        // ---- SHIELD ----
         function updateSignalIntegrity() {
             const start = Date.now();
             fetch('/static/comms.txt', { method: 'HEAD', cache: 'no-store' })
@@ -819,7 +829,7 @@
         setInterval(updateSignalIntegrity, 30000);
         updateSignalIntegrity();
 
-        // ---- SECRET COMMS — untouched ----
+        // ---- SECRET COMMS ----
         const availableComms = {{ comms_list|tojson }};
 
         function showSecret() {
@@ -828,22 +838,16 @@
             playCockpitSound('transmission');
 
             let msg = availableComms[Math.floor(Math.random() * availableComms.length)];
-
-            // The Daddy Swap
-            if (Math.random() < 0.3) {
-                msg = msg.replace(/Aaron/gi, "Daddy");
-            }
+            if (Math.random() < 0.3) { msg = msg.replace(/Aaron/gi, "Daddy"); }
 
             const textTarget = document.getElementById('secret-text');
             textTarget.innerText = msg;
-
             const cursor = document.createElement('span');
             cursor.className = 'terminal-cursor';
             textTarget.appendChild(cursor);
 
             secretDisplay.style.display = 'flex';
             setTimeout(() => { secretDisplay.style.opacity = "1"; }, 10);
-
             setTimeout(() => {
                 window.addEventListener('click', closeSecret, { once: true });
                 window.addEventListener('touchstart', closeSecret, { once: true });
@@ -859,23 +863,24 @@
         function startSecret() { secretTimer = setTimeout(showSecret, 1500); }
         function endSecret() { clearTimeout(secretTimer); }
         function triggerDesktopSecret() { showSecret(); }
-        // --- 🦇 pill long-press / right-click handlers ---
+
+        // ---- ANI PILL HANDLERS ----
         let aniPressTimer = null;
 
         function startAni(e) {
-          e.preventDefault();
-          aniPressTimer = setTimeout(function() {
-            aniPressTimer = null;
-            aniToggle();
-          }, 600);
+            e.preventDefault();
+            aniPressTimer = setTimeout(function() {
+                aniPressTimer = null;
+                aniToggle();
+            }, 600);
         }
 
         function endAni(e) {
-          e.preventDefault();
-          if (aniPressTimer) {
-            clearTimeout(aniPressTimer);
-            aniPressTimer = null;
-          }
+            e.preventDefault();
+            if (aniPressTimer) {
+                clearTimeout(aniPressTimer);
+                aniPressTimer = null;
+            }
         }
 
         // ---- TEXT HELPERS ----
@@ -903,9 +908,6 @@
             updateHUD(); tx.focus();
         }
 
-        // ---- THEME — follows system preference ----
-        // No manual override needed; CSS media queries handle light/dark automatically.
-        // toggleTheme() kept as no-op for any residual calls.
         function toggleTheme() {}
 
         // ---- HYPERSPACE SUBMIT ----
@@ -916,19 +918,15 @@
             e.preventDefault();
         });
 
-        // ---- SOUNDS — your system, completely untouched ----
+        // ---- SOUNDS ----
         function playCockpitSound(type) {
-            if (!cockpitAudioCtx) {
-                cockpitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
+            if (!cockpitAudioCtx) cockpitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (cockpitAudioCtx.state === 'suspended') cockpitAudioCtx.resume();
-
             const osc = cockpitAudioCtx.createOscillator();
             const gain = cockpitAudioCtx.createGain();
             osc.connect(gain);
             gain.connect(cockpitAudioCtx.destination);
             const now = cockpitAudioCtx.currentTime;
-
             if (type === 'transmission') {
                 osc.type = 'square';
                 osc.frequency.setValueAtTime(1600, now);
@@ -955,7 +953,6 @@
                 osc.frequency.setValueAtTime(880, now + 0.08);
                 gain.gain.setValueAtTime(0.1, now);
             }
-
             gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
             osc.start(now); osc.stop(now + 0.2);
         }
@@ -990,75 +987,62 @@
         let _lastCompletedTitle = '';
 
         function addTask() {
-        const input = document.getElementById('task-input');
-        const btn = document.getElementById('task-add-btn');
-        const title = input.value.trim();
-        if (!title) return;
-
-        // Clear immediately — feels responsive
-        input.value = '';
-
-        // Working state
-        btn.disabled = true;
-        btn.textContent = 'LOGGING...';
-        btn.className = 'tasks-add-btn is-working';
-        playChirp(660, 'square');
-
-        const fd = new FormData();
-        fd.append('title', title);
-
-        fetch('/tasks/add', { method: 'POST', body: fd })
-            .then(r => r.json())
-            .then(data => {
-                if (!data.ok) throw new Error(data.error);
-                prependTaskItem(data.task);
-                removeEmptyMsg();
-                playChirp(880, 'sine');
-                // Success state
-                btn.textContent = 'LOGGED ✓';
-                btn.className = 'tasks-add-btn is-success';
-                setTimeout(() => {
-                    btn.textContent = '+ LOG';
-                    btn.className = 'tasks-add-btn';
-                    btn.disabled = false;
-                    input.focus();
-                }, 1800);
-            })
-            .catch(() => {
-                // Put the title back so nothing is lost
-                input.value = title;
-                playChirp(220, 'sawtooth');
-                btn.textContent = 'FAILED — TRY AGAIN';
-                btn.className = 'tasks-add-btn is-error';
-                setTimeout(() => {
-                    btn.textContent = '+ LOG';
-                    btn.className = 'tasks-add-btn';
-                    btn.disabled = false;
-                    input.focus();
-                }, 2500);
-            });
-    }
+            const input = document.getElementById('task-input');
+            const btn = document.getElementById('task-add-btn');
+            const title = input.value.trim();
+            if (!title) return;
+            input.value = '';
+            btn.disabled = true;
+            btn.textContent = 'LOGGING...';
+            btn.className = 'tasks-add-btn is-working';
+            playChirp(660, 'square');
+            const fd = new FormData();
+            fd.append('title', title);
+            fetch('/tasks/add', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.ok) throw new Error(data.error);
+                    prependTaskItem(data.task);
+                    removeEmptyMsg();
+                    playChirp(880, 'sine');
+                    btn.textContent = 'LOGGED ✓';
+                    btn.className = 'tasks-add-btn is-success';
+                    setTimeout(() => {
+                        btn.textContent = '+ LOG';
+                        btn.className = 'tasks-add-btn';
+                        btn.disabled = false;
+                        input.focus();
+                    }, 1800);
+                })
+                .catch(() => {
+                    input.value = title;
+                    playChirp(220, 'sawtooth');
+                    btn.textContent = 'FAILED — TRY AGAIN';
+                    btn.className = 'tasks-add-btn is-error';
+                    setTimeout(() => {
+                        btn.textContent = '+ LOG';
+                        btn.className = 'tasks-add-btn';
+                        btn.disabled = false;
+                        input.focus();
+                    }, 2500);
+                });
+        }
 
         function completeTask(id, title) {
             const li = document.querySelector(`.task-item[data-id="${id}"]`);
             if (!li) return;
-
             playChirp(550, 'sine');
             _lastCompletedTitle = title;
-
             const fd = new FormData();
             fd.append('id', id);
-
             fetch('/tasks/complete', { method: 'POST', body: fd })
                 .then(r => r.json())
                 .then(data => {
                     if (!data.ok) throw new Error(data.error);
-                    // Move to completed visually
                     li.classList.add('is-complete');
                     li.querySelector('.task-check').textContent = '✓';
                     li.querySelector('.task-check').style.cursor = 'default';
                     li.querySelector('.task-check').onclick = null;
-                    // Show the log prompt
                     showLogPrompt();
                     playChirp(880, 'sine');
                 })
@@ -1068,10 +1052,8 @@
         function deleteTask(id) {
             const li = document.querySelector(`.task-item[data-id="${id}"]`);
             if (!li) return;
-
             const fd = new FormData();
             fd.append('id', id);
-
             fetch('/tasks/delete', { method: 'POST', body: fd })
                 .then(r => r.json())
                 .then(data => {
@@ -1095,7 +1077,6 @@
                 <span class="task-title">${escapeHtml(task.title)}</span>
                 <button class="task-delete" onclick="deleteTask('${task.id}')" title="Delete">✕</button>
             `;
-            // Insert before any divider or completed items
             const divider = list.querySelector('.tasks-divider');
             divider ? list.insertBefore(li, divider) : list.prepend(li);
         }
@@ -1115,18 +1096,15 @@
         }
 
         function logAsStatus() {
-            // Pre-fill the status composer with a completion note
             const statusInput = document.getElementById('status-input');
             statusInput.value = `✅ Shipped: ${_lastCompletedTitle}`;
             updateHUD();
             statusInput.focus();
             dismissLogPrompt();
-            // Scroll up to the composer
             statusInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         function logAsBlogDraft() {
-            // Build a minimal draft and copy to clipboard
             const draft = `---\ntitle: "${_lastCompletedTitle}"\ndate: ${new Date().toISOString().split('T')[0]}\nlayout: post\nauthor: aaron\n---\n\n`;
             navigator.clipboard.writeText(draft)
                 .then(() => {
@@ -1141,323 +1119,173 @@
             return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
-        // Allow Enter key in task input
         document.getElementById('task-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { e.preventDefault(); addTask(); }
         });
 
         updateHUD();
 
-        // ---- COLLAPSIBLE SECTIONS ----
+        // ---- COLLAPSIBLE ----
         function toggleTasks() {
-            const body  = document.getElementById('tasks-list').closest('.tasks-section').querySelector('.tasks-body, ul, .tasks-add-row, .task-log-prompt');
-            // Toggle the whole inner content
-            const inner = document.querySelector('.tasks-add-row, .tasks-list, .task-log-prompt');
+            const body = document.getElementById('tasks-body');
             const arrow = document.getElementById('tasks-arrow');
             const isCollapsed = arrow.classList.contains('is-collapsed');
-
-            document.querySelectorAll('.tasks-section > *:not(.log-header)').forEach(el => {
-                el.style.display = isCollapsed ? '' : 'none';
-            });
-
+            body.classList.toggle('is-collapsed');
             arrow.classList.toggle('is-collapsed');
             localStorage.setItem('cockpit-tasks-collapsed', isCollapsed ? '0' : '1');
         }
 
         function toggleScratch() {
-            const body  = document.getElementById('scratch-body');
+            const body = document.getElementById('scratch-body');
             const arrow = document.getElementById('scratch-arrow');
             const isCollapsed = arrow.classList.contains('is-collapsed');
-
             body.classList.toggle('is-collapsed');
             arrow.classList.toggle('is-collapsed');
             localStorage.setItem('cockpit-scratch-collapsed', isCollapsed ? '0' : '1');
+            if (isCollapsed) { initScratch(); }
         }
 
         // ---- SCRATCH PAD ----
-        let scratchTimer;
+        let scratchSaveTimer = null;
+        let scratchLastSaved = null;
+        let scratchTickTimer = null;
+        let scratchOffline = false;
 
-        function saveScratch() {
+        function setScratchOffline(isOffline) {
+            scratchOffline = isOffline;
+            const badge = document.getElementById('scratch-offline-badge');
+            const btn = document.getElementById('scratch-save-btn');
+            const status = document.getElementById('scratch-status');
+            if (isOffline) {
+                badge.classList.add('visible');
+                btn.classList.add('is-offline');
+                btn.classList.remove('is-success');
+                status.textContent = 'Saved locally · no network';
+                status.style.color = 'var(--amber)';
+            } else {
+                badge.classList.remove('visible');
+                btn.classList.remove('is-offline');
+                status.style.color = '';
+            }
+        }
+
+        function scheduleScratchSave() {
+            // Always write to localStorage immediately — offline safety net
             const val = document.getElementById('scratch-input').value;
             localStorage.setItem('cockpit-scratch', val);
+            clearTimeout(scratchSaveTimer);
+            scratchSaveTimer = setTimeout(saveScratchNow, 1500);
+        }
+
+        function saveScratchNow() {
+            clearTimeout(scratchSaveTimer);
+            const val = document.getElementById('scratch-input').value;
             const status = document.getElementById('scratch-status');
-            status.textContent = 'SAVED';
-            clearTimeout(scratchTimer);
-            scratchTimer = setTimeout(() => { status.textContent = ''; }, 1500);
+            const btn = document.getElementById('scratch-save-btn');
+            // Keep localStorage in sync
+            localStorage.setItem('cockpit-scratch', val);
+            fetch('/scratch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: val })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    scratchLastSaved = new Date();
+                    setScratchOffline(false);
+                    updateScratchStatus();
+                    btn.textContent = 'SAVED ✓';
+                    btn.classList.add('is-success');
+                    setTimeout(() => {
+                        btn.textContent = 'SAVE';
+                        btn.classList.remove('is-success');
+                    }, 1500);
+                }
+            })
+            .catch(() => {
+                setScratchOffline(true);
+            });
+        }
+
+        function copyScratch() {
+            const val = document.getElementById('scratch-input').value;
+            const btn = document.getElementById('scratch-copy-btn');
+            navigator.clipboard.writeText(val)
+                .then(() => {
+                    btn.textContent = 'COPIED ✓';
+                    btn.classList.add('is-success');
+                    setTimeout(() => {
+                        btn.textContent = 'COPY';
+                        btn.classList.remove('is-success');
+                    }, 2000);
+                })
+                .catch(() => {});
+        }
+
+        function updateScratchStatus() {
+            if (scratchOffline) return; // offline state owns the status line
+            if (!scratchLastSaved) return;
+            const status = document.getElementById('scratch-status');
+            const now = new Date();
+            const diffSec = Math.floor((now - scratchLastSaved) / 1000);
+            let label;
+            if (diffSec < 10) label = 'Saved · just now';
+            else if (diffSec < 60) label = `Saved · ${diffSec}s ago`;
+            else if (diffSec < 3600) label = `Saved · ${Math.floor(diffSec / 60)}m ago`;
+            else label = `Saved · ${Math.floor(diffSec / 3600)}h ago`;
+            status.textContent = label;
         }
 
         function initScratch() {
-            const saved = localStorage.getItem('cockpit-scratch');
-            if (saved) document.getElementById('scratch-input').value = saved;
-        }
-
-        // ---- RESTORE COLLAPSED STATE ON LOAD ----
-        function initCollapsedStates() {
-            // Tasks
-            if (localStorage.getItem('cockpit-tasks-collapsed') === '1') {
-                document.querySelectorAll('.tasks-section > *:not(.log-header)').forEach(el => {
-                    el.style.display = 'none';
-                });
-                document.getElementById('tasks-arrow').classList.add('is-collapsed');
-            }
-
-            // Scratch
-            if (localStorage.getItem('cockpit-scratch-collapsed') === '1') {
-                document.getElementById('scratch-body').classList.add('is-collapsed');
-                document.getElementById('scratch-arrow').classList.add('is-collapsed');
-            }
-        }
-
-        initScratch();
-        initCollapsedStates();
-
-        // Ani
-
-          const aniPanel   = document.getElementById('ani-panel');
-          const aniMsgs    = document.getElementById('ani-messages');
-          const aniInput   = document.getElementById('ani-input');
-          const aniSendBtn = document.getElementById('ani-send-btn');
-          const aniTyping  = document.getElementById('ani-typing-indicator');
-          const aniEmpty   = document.getElementById('ani-empty-state');
-          const aniAcheDisplay = document.getElementById('ani-ache-display');
-          let aniIsOpen    = false;
-          let aniLoaded    = false;
-          let aniPendingOpener = null;
-
-          // --- Update ache display ---
-          function updateAcheDisplay(level) {
-            if (level === null || level === undefined) return;
-            if (level < 20) {
-              aniAcheDisplay.textContent = '';
-              aniAcheDisplay.className = 'ache-low';
-            } else {
-              aniAcheDisplay.textContent = '· ACHE ' + level + '%';
-              if (level < 40) aniAcheDisplay.className = 'ache-low';
-              else if (level < 65) aniAcheDisplay.className = 'ache-mid';
-              else if (level < 85) aniAcheDisplay.className = 'ache-high';
-              else aniAcheDisplay.className = 'ache-urgent';
-            }
-          }
-
-          // --- Ping on page load ---
-          function aniPing() {
-            fetch('/ani/ping')
-              .then(function(r) { return r.json(); })
-              .then(function(data) {
-                updateAcheDisplay(data.ache_level);
-                if (data.pending && data.opener) {
-                  aniPendingOpener = data.opener;
-                  var batPill = document.getElementById('ani-bat-pill');
-                  if (batPill) batPill.classList.add('ani-bat-waiting');
-                }
-              })
-              .catch(function() {});
-          }
-
-          setTimeout(aniPing, 1500);
-
-          // --- Toggle ---
-          function aniToggle() {
-            aniIsOpen = !aniIsOpen;
-            aniPanel.classList.toggle('ani-open', aniIsOpen);
-
-            var batPill = document.getElementById('ani-bat-pill');
-            if (batPill) batPill.classList.remove('ani-bat-waiting');
-
-            if (aniIsOpen && !aniLoaded) {
-              aniLoadHistory();
-              aniSendLocation();
-            }
-            if (aniIsOpen) {
-              setTimeout(function() { aniInput.focus(); }, 300);
-            }
-          }
-
-          // --- Keyboard shortcut: Ctrl+Shift+A ---
-          document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.shiftKey && e.key === 'A') {
-              e.preventDefault();
-              aniToggle();
-            }
-          });
-
-          // --- Auto-resize textarea ---
-          aniInput.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
-          });
-
-          // --- Enter to send, Shift+Enter for newline ---
-          aniInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              aniSend();
-            }
-          });
-
-          // --- Send location ---
-          function aniSendLocation() {
-            if (!navigator.geolocation) return;
-            navigator.geolocation.getCurrentPosition(function(pos) {
-              fetch('/ani/location', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  lat: pos.coords.latitude,
-                  lon: pos.coords.longitude
+            fetch('/scratch')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.content !== null && data.content !== undefined) {
+                        // Trust the server — even an empty string is intentional
+                        document.getElementById('scratch-input').value = data.content;
+                        localStorage.setItem('cockpit-scratch', data.content);
+                    } else {
+                        // Server returned nothing — check localStorage fallback
+                        const local = localStorage.getItem('cockpit-scratch');
+                        if (local) document.getElementById('scratch-input').value = local;
+                    }
+                    if (data.last_modified) {
+                        scratchLastSaved = new Date(data.last_modified);
+                        updateScratchStatus();
+                    }
                 })
-              }).catch(function() {});
-            }, function() {});
-          }
+                .catch(() => {
+                    // Server unreachable — load from localStorage
+                    const local = localStorage.getItem('cockpit-scratch');
+                    if (local) document.getElementById('scratch-input').value = local;
+                    setScratchOffline(true);
+                });
+        }
 
-          // --- Load history on first open ---
-          function aniLoadHistory() {
-            aniLoaded = true;
-            fetch('/ani/history')
-              .then(function(r) { return r.json(); })
-              .then(function(data) {
-                updateAcheDisplay(data.ache_level);
-                var messages = data.messages || [];
-                if (messages.length > 0) {
-                  aniEmpty.style.display = 'none';
-                  messages.forEach(function(m) { aniRenderMessage(m.role, m.content); });
-                }
-                if (aniPendingOpener) {
-                  aniEmpty.style.display = 'none';
-                  aniRenderMessage('assistant', aniPendingOpener);
-                  aniPendingOpener = null;
-                }
-                aniScrollToBottom();
-              })
-              .catch(function() {});
-          }
+        // ---- INIT ----
+        if (localStorage.getItem('cockpit-tasks-collapsed') === '1') {
+            document.getElementById('tasks-body').classList.add('is-collapsed');
+            document.getElementById('tasks-arrow').classList.add('is-collapsed');
+        }
 
-          // --- Send message ---
-          function aniSend() {
-            var text = aniInput.value.trim();
-            if (!text || aniSendBtn.disabled) return;
+        if (localStorage.getItem('cockpit-scratch-collapsed') === '1') {
+            document.getElementById('scratch-body').classList.add('is-collapsed');
+            document.getElementById('scratch-arrow').classList.add('is-collapsed');
+        } else {
+            initScratch();
+        }
 
-            aniEmpty.style.display = 'none';
-            aniRenderMessage('user', text);
-            aniInput.value = '';
-            aniInput.style.height = 'auto';
-            aniSendBtn.disabled = true;
-            aniShowTyping(true);
-            aniScrollToBottom();
+        scratchTickTimer = setInterval(updateScratchStatus, 30000);
 
-            fetch('/ani/chat', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ message: text })
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-              aniShowTyping(false);
-              aniSendBtn.disabled = false;
-              if (data.reply) {
-                aniRenderMessage('assistant', data.reply);
-                updateAcheDisplay(0);
-              }
-              aniScrollToBottom();
-              aniInput.focus();
-            })
-            .catch(function() {
-              aniShowTyping(false);
-              aniSendBtn.disabled = false;
-              aniRenderMessage('assistant', "lost the signal for a sec. try again?");
-              aniScrollToBottom();
-            });
-          }
-
-          // --- Refresh briefing ---
-          function aniRefresh() {
-            fetch('/ani/refresh', { method: 'POST' })
-              .then(function(r) { return r.json(); })
-              .then(function() {
-                aniRenderNotify('briefing refreshed — she knows what\'s new');
-                aniScrollToBottom();
-              })
-              .catch(function() {});
-          }
-
-          // --- Clear history ---
-          function aniClear() {
-            if (!confirm('clear the whole history? this cannot be undone.')) return;
-            fetch('/ani/clear', { method: 'POST' })
-              .then(function() {
-                Array.from(aniMsgs.querySelectorAll('.ani-msg, .ani-msg-notify')).forEach(function(el) { el.remove(); });
-                aniEmpty.style.display = 'block';
-                aniLoaded = false;
-              })
-              .catch(function() {});
-          }
-
-          // --- Render a single message bubble ---
-          function aniRenderMessage(role, content) {
-            if (content.startsWith('[daily briefing') || content.startsWith('[system:')) return;
-
-            var div = document.createElement('div');
-            div.classList.add('ani-msg');
-            if (role === 'user') {
-              div.classList.add('ani-msg-user');
-              div.textContent = content;
-            } else {
-              div.classList.add('ani-msg-ani');
-              div.innerHTML = '<div class="ani-name">ANI</div>' +
-                aniEscapeHtml(content).replace(/\n/g, '<br>');
-            }
-            aniMsgs.insertBefore(div, aniTyping);
-          }
-
-          // --- Render a subtle notification line ---
-          function aniRenderNotify(text) {
-            var div = document.createElement('div');
-            div.classList.add('ani-msg-notify');
-            div.textContent = '· ' + text + ' ·';
-            aniMsgs.insertBefore(div, aniTyping);
-          }
-
-          function aniEscapeHtml(str) {
-            return str
-              .replace(/&/g, '&amp;')
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;')
-              .replace(/"/g, '&quot;');
-          }
-
-          function aniShowTyping(show) {
-            aniTyping.style.display = show ? 'block' : 'none';
-            if (show) aniScrollToBottom();
-          }
-
-          function aniScrollToBottom() {
-            aniMsgs.scrollTop = aniMsgs.scrollHeight;
-          }
-
-          // --- 🦇 pill handlers ---
-          var aniPressTimer = null;
-
-          function startAni(e) {
-            e.preventDefault();
-            aniPressTimer = setTimeout(function() {
-              aniPressTimer = null;
-              aniToggle();
-            }, 600);
-          }
-
-          function endAni(e) {
-            e.preventDefault();
-            if (aniPressTimer) {
-              clearTimeout(aniPressTimer);
-              aniPressTimer = null;
-            }
-          }
+        window.addEventListener('online', () => {
+            if (scratchOffline) saveScratchNow();
+        });
 
     </script>
 
 <!-- ============================================================ -->
-<!-- ANI PANEL — insert just before </body> in publish_form.html -->
-<!-- Ctrl+Shift+A (desktop) or long-press 🦇 pill (mobile)       -->
+<!-- ANI PANEL                                                     -->
 <!-- ============================================================ -->
 
 <style>
@@ -1481,9 +1309,7 @@
   overflow-x: hidden;
 }
 
-#ani-panel.ani-open {
-  transform: translateY(0);
-}
+#ani-panel.ani-open { transform: translateY(0); }
 
 #ani-header {
   display: flex;
@@ -1522,7 +1348,6 @@
   transition: color 0.5s ease;
 }
 
-/* Ache level color shifts as it climbs */
 #ani-ache-display.ache-low    { color: #3a2010; }
 #ani-ache-display.ache-mid    { color: #7a4018; }
 #ani-ache-display.ache-high   { color: #a05020; }
@@ -1730,16 +1555,9 @@
 }
 .ani-footer-btn:hover { color: #9a6018; }
 
-/* --- Bat pill pulse animation --- */
 @keyframes ani-bat-pulse {
-  0%, 100% {
-    box-shadow: 0 0 0px rgba(212, 136, 10, 0);
-    border-color: var(--border, #2e1e08);
-  }
-  50% {
-    box-shadow: 0 0 8px rgba(212, 136, 10, 0.5);
-    border-color: #9a6018;
-  }
+  0%, 100% { box-shadow: 0 0 0px rgba(212, 136, 10, 0); border-color: var(--border, #2e1e08); }
+  50% { box-shadow: 0 0 8px rgba(212, 136, 10, 0.5); border-color: #9a6018; }
 }
 
 .ani-bat-waiting {
@@ -1758,7 +1576,6 @@
 }
 </style>
 
-<!-- Ani Panel Markup -->
 <div id="ani-panel" role="complementary" aria-label="Ani — private comms">
   <div id="ani-header" onclick="aniToggle()">
     <div>
@@ -1803,18 +1620,17 @@
 </div>
 
 <script>
-  const aniPanel   = document.getElementById('ani-panel');
-  const aniMsgs    = document.getElementById('ani-messages');
-  const aniInput   = document.getElementById('ani-input');
-  const aniSendBtn = document.getElementById('ani-send-btn');
-  const aniTyping  = document.getElementById('ani-typing-indicator');
-  const aniEmpty   = document.getElementById('ani-empty-state');
+  const aniPanel       = document.getElementById('ani-panel');
+  const aniMsgs        = document.getElementById('ani-messages');
+  const aniInput       = document.getElementById('ani-input');
+  const aniSendBtn     = document.getElementById('ani-send-btn');
+  const aniTyping      = document.getElementById('ani-typing-indicator');
+  const aniEmpty       = document.getElementById('ani-empty-state');
   const aniAcheDisplay = document.getElementById('ani-ache-display');
-  let aniIsOpen    = false;
-  let aniLoaded    = false;
+  let aniIsOpen        = false;
+  let aniLoaded        = false;
   let aniPendingOpener = null;
 
-  // --- Update ache display ---
   function updateAcheDisplay(level) {
     if (level === null || level === undefined) return;
     if (level < 20) {
@@ -1829,7 +1645,6 @@
     }
   }
 
-  // --- Ping on page load ---
   function aniPing() {
     fetch('/ani/ping')
       .then(function(r) { return r.json(); })
@@ -1846,14 +1661,11 @@
 
   setTimeout(aniPing, 1500);
 
-  // --- Toggle ---
   function aniToggle() {
     aniIsOpen = !aniIsOpen;
     aniPanel.classList.toggle('ani-open', aniIsOpen);
-
     var batPill = document.getElementById('ani-bat-pill');
     if (batPill) batPill.classList.remove('ani-bat-waiting');
-
     if (aniIsOpen && !aniLoaded) {
       aniLoadHistory();
       aniSendLocation();
@@ -1863,7 +1675,6 @@
     }
   }
 
-  // --- Keyboard shortcut: Ctrl+Shift+A ---
   document.addEventListener('keydown', function(e) {
     if (e.ctrlKey && e.shiftKey && e.key === 'A') {
       e.preventDefault();
@@ -1871,13 +1682,11 @@
     }
   });
 
-  // --- Auto-resize textarea ---
   aniInput.addEventListener('input', function() {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 100) + 'px';
   });
 
-  // --- Enter to send, Shift+Enter for newline ---
   aniInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -1885,22 +1694,17 @@
     }
   });
 
-  // --- Send location ---
   function aniSendLocation() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(function(pos) {
       fetch('/ani/location', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lat: pos.coords.latitude,
-          lon: pos.coords.longitude
-        })
+        body: JSON.stringify({ lat: pos.coords.latitude, lon: pos.coords.longitude })
       }).catch(function() {});
     }, function() {});
   }
 
-  // --- Load history on first open ---
   function aniLoadHistory() {
     aniLoaded = true;
     fetch('/ani/history')
@@ -1922,11 +1726,9 @@
       .catch(function() {});
   }
 
-  // --- Send message ---
   function aniSend() {
     var text = aniInput.value.trim();
     if (!text || aniSendBtn.disabled) return;
-
     aniEmpty.style.display = 'none';
     aniRenderMessage('user', text);
     aniInput.value = '';
@@ -1934,7 +1736,6 @@
     aniSendBtn.disabled = true;
     aniShowTyping(true);
     aniScrollToBottom();
-
     fetch('/ani/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1959,7 +1760,6 @@
     });
   }
 
-  // --- Refresh briefing ---
   function aniRefresh() {
     fetch('/ani/refresh', { method: 'POST' })
       .then(function(r) { return r.json(); })
@@ -1970,7 +1770,6 @@
       .catch(function() {});
   }
 
-  // --- Clear history ---
   function aniClear() {
     if (!confirm('clear the whole history? this cannot be undone.')) return;
     fetch('/ani/clear', { method: 'POST' })
@@ -1982,10 +1781,8 @@
       .catch(function() {});
   }
 
-  // --- Render a single message bubble ---
   function aniRenderMessage(role, content) {
     if (content.startsWith('[daily briefing') || content.startsWith('[system:')) return;
-
     var div = document.createElement('div');
     div.classList.add('ani-msg');
     if (role === 'user') {
@@ -1993,13 +1790,11 @@
       div.textContent = content;
     } else {
       div.classList.add('ani-msg-ani');
-      div.innerHTML = '<div class="ani-name">ANI</div>' +
-        aniEscapeHtml(content).replace(/\n/g, '<br>');
+      div.innerHTML = '<div class="ani-name">ANI</div>' + aniEscapeHtml(content).replace(/\n/g, '<br>');
     }
     aniMsgs.insertBefore(div, aniTyping);
   }
 
-  // --- Render a subtle notification line ---
   function aniRenderNotify(text) {
     var div = document.createElement('div');
     div.classList.add('ani-msg-notify');
@@ -2008,11 +1803,7 @@
   }
 
   function aniEscapeHtml(str) {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   function aniShowTyping(show) {
@@ -2022,25 +1813,6 @@
 
   function aniScrollToBottom() {
     aniMsgs.scrollTop = aniMsgs.scrollHeight;
-  }
-
-  // --- 🦇 pill handlers ---
-  var aniPressTimer = null;
-
-  function startAni(e) {
-    e.preventDefault();
-    aniPressTimer = setTimeout(function() {
-      aniPressTimer = null;
-      aniToggle();
-    }, 600);
-  }
-
-  function endAni(e) {
-    e.preventDefault();
-    if (aniPressTimer) {
-      clearTimeout(aniPressTimer);
-      aniPressTimer = null;
-    }
   }
 </script>
 
