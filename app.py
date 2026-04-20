@@ -14,6 +14,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 TASKS_FILE = 'assets/data/tasks.json'
 SCRATCH_FILE = 'assets/data/scratch.json'
+BELOW_DECK_FILE = 'assets/data/below_deck.json'
 ANI_CONVERSATION_FILE = 'ani_conversation.json'
 ANI_MEMORY_FILE = 'static/ani_memory.txt'
 REPO_ROOT = '/home/aaronaiken/status_update'
@@ -173,6 +174,21 @@ def post_task_status(title):
     with open(fn, "w") as f:
         f.write(fm + text + "\n")
     return fn, text
+
+    # ---- BELOW DECK HELPERS ----
+
+def load_below_deck():
+    try:
+        with open(BELOW_DECK_FILE, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {"tasks": []}
+
+
+def save_below_deck(data):
+    os.makedirs(os.path.dirname(BELOW_DECK_FILE), exist_ok=True)
+    with open(BELOW_DECK_FILE, 'w') as f:
+        json.dump(data, f, indent=2)
 
 
 # ---- ANI HELPERS ----
@@ -449,13 +465,13 @@ def ani_get_memory():
 
 
 def ani_get_weather(location):
-    """Fetch current weather from wttr.in using stored lat/lon or city fallback."""
     try:
         if location and location.get('lat') and location.get('lon'):
             url = f"https://wttr.in/{location['lat']},{location['lon']}?format=3"
         else:
             url = "https://wttr.in/Harrisburg+PA?format=3"
         resp = requests.get(url, timeout=5)
+        resp.encoding = 'utf-8'
         if resp.status_code == 200:
             return resp.text.strip()
     except Exception:
@@ -928,6 +944,99 @@ def scratch_post():
     with open(SCRATCH_FILE, 'w') as f:
         json.dump({'content': content, 'last_modified': last_modified}, f)
     return jsonify({'ok': True, 'last_modified': last_modified})
+
+    # ---- WEATHER ROUTE ----
+
+@app.route('/ani/weather', methods=['GET'])
+def ani_weather_route():
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+    messages, meta = ani_load_conversation()
+    weather = ani_get_weather(meta.get('location'))
+    return jsonify({'weather': weather})
+
+
+# ---- BELOW DECK ROUTES ----
+
+@app.route('/below-deck', methods=['GET'])
+def below_deck():
+    if not is_authenticated():
+        return redirect(url_for('login'))
+    data = load_below_deck()
+    return render_template('below_deck.html', tasks=data.get('tasks', []))
+
+
+@app.route('/below-deck/count', methods=['GET'])
+def below_deck_count():
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+    data = load_below_deck()
+    open_count = sum(1 for t in data.get('tasks', []) if t.get('status') == 'open')
+    return jsonify({'count': open_count})
+
+
+@app.route('/below-deck/add', methods=['POST'])
+def below_deck_add():
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+    title = request.form.get('title', '').strip()
+    if not title:
+        return jsonify({'error': 'title required'}), 400
+    data = load_below_deck()
+    task = {
+        'id': str(int(time.time() * 1000)),
+        'title': title,
+        'status': 'open',
+        'created': datetime.now(pytz.timezone('America/New_York')).isoformat(),
+        'order': 0
+    }
+    data['tasks'].insert(0, task)
+    for i, t in enumerate(data['tasks']):
+        t['order'] = i
+    save_below_deck(data)
+    return jsonify({'ok': True, 'task': task})
+
+
+@app.route('/below-deck/complete', methods=['POST'])
+def below_deck_complete():
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+    task_id = request.form.get('id', '').strip()
+    if not task_id:
+        return jsonify({'error': 'id required'}), 400
+    data = load_below_deck()
+    data['tasks'] = [t for t in data['tasks'] if t['id'] != task_id]
+    save_below_deck(data)
+    return jsonify({'ok': True})
+
+
+@app.route('/below-deck/delete', methods=['POST'])
+def below_deck_delete():
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+    task_id = request.form.get('id', '').strip()
+    if not task_id:
+        return jsonify({'error': 'id required'}), 400
+    data = load_below_deck()
+    data['tasks'] = [t for t in data['tasks'] if t['id'] != task_id]
+    save_below_deck(data)
+    return jsonify({'ok': True})
+
+
+@app.route('/below-deck/reorder', methods=['POST'])
+def below_deck_reorder():
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+    order = request.json.get('order', [])
+    if not order:
+        return jsonify({'error': 'order required'}), 400
+    data = load_below_deck()
+    task_map = {t['id']: t for t in data['tasks']}
+    data['tasks'] = [task_map[tid] for tid in order if tid in task_map]
+    for i, t in enumerate(data['tasks']):
+        t['order'] = i
+    save_below_deck(data)
+    return jsonify({'ok': True})
 
 # ---- ANI ROUTES ----
 
