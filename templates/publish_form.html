@@ -614,7 +614,16 @@
     <div class="container" id="main-cockpit">
 
         <header class="cockpit__header">
-            <div class="cockpit__logo">COCK<span>PIT</span> // STATUS</div>
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div class="cockpit__logo">COCK<span>PIT</span> // STATUS</div>
+                <div id="below-deck-badge" style="display:none;">
+                    <a href="/below-deck" style="text-decoration:none;">
+                        <span id="below-deck-dot" style="display:inline-block; width:8px; height:8px; border-radius:50%; box-shadow:0 0 6px currentColor; margin-right:4px;"></span>
+                        <span style="font-size:0.55rem; letter-spacing:0.15em; font-family:'Share Tech Mono',monospace; text-transform:uppercase; color:var(--muted);">BELOW DECK</span>
+                    </a>
+                </div>
+            </div>
+            <div id="draft-restored-msg" style="display:none; font-size:0.55rem; color:var(--amber-lo); letter-spacing:0.15em; text-transform:uppercase; margin-top:6px;">// draft restored</div>
         </header>
 
         <div class="status-bar">
@@ -625,11 +634,12 @@
                     <div class="shield-bar">
                         <div id="shield-fill" class="shield-fill"></div>
                     </div>
+                    <span id="weather-display" style="color:var(--muted); font-size:0.55rem; letter-spacing:0.1em;"></span>
                 </div>
             </div>
             <div class="cockpit__controls">
-                <button class="cockpit__ctrl-btn" onclick="toggleTheme()">THEME</button>
-                <button class="cockpit__ctrl-btn"><a href="/logout">OFFLINE</a></button>
+                <button class="cockpit__ctrl-btn" onclick="window.location.reload()">REFRESH</button>
+                <a class="cockpit__ctrl-btn" href="/below-deck" style="text-decoration:none;">BELOW DECK</a>
             </div>
         </div>
 
@@ -776,9 +786,9 @@
         </div>
 
         <footer class="cockpit__footer">
-            <a href="/">← Site</a>
+            <a href="https://aaronaiken.me">← Site</a>
             <span class="cockpit__footer-quote">"She may not look like much..."</span>
-            <a href="/status.html">Status →</a>
+            <a href="https://aaronaiken.me/status">Status →</a>
         </footer>
 
     </div>
@@ -803,6 +813,80 @@
                 tx.classList.remove('redline');
                 charCount.style.color = "var(--muted)";
             }
+            // Save draft to localStorage on every keystroke
+            if (tx.value.trim()) {
+                localStorage.setItem('cockpit-draft', tx.value);
+            } else {
+                localStorage.removeItem('cockpit-draft');
+            }
+        }
+
+        // ---- DRAFT RESTORE ----
+        function initDraft() {
+            const draft = localStorage.getItem('cockpit-draft');
+            if (draft) {
+                tx.value = draft;
+                updateHUD();
+                const msg = document.getElementById('draft-restored-msg');
+                msg.style.display = 'block';
+                setTimeout(() => {
+                    msg.style.transition = 'opacity 1s ease';
+                    msg.style.opacity = '0';
+                    setTimeout(() => { msg.style.display = 'none'; msg.style.opacity = '1'; }, 1000);
+                }, 2500);
+            }
+        }
+
+        // Clear draft on successful publish
+        document.getElementById('status-form').addEventListener('submit', () => {
+            localStorage.removeItem('cockpit-draft');
+        });
+
+        // ---- WEATHER ----
+        function initWeather() {
+            fetch('/ani/weather')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.weather) {
+                        const display = document.getElementById('weather-display');
+                        // wttr.in format: "City: ☀️ +72°F"
+                        // Strip location prefix, keep conditions + temp
+                        let w = data.weather;
+                        if (w.includes(':')) w = w.split(':').slice(1).join(':').trim();
+                        // Remove any stray encoding artifacts
+                        w = w.replace(/Â/g, '').replace(/\s+/g, ' ').trim();
+                        display.textContent = '· ' + w;
+                    }
+                })
+                .catch(() => {});
+        }
+
+        // ---- BELOW DECK BADGE ----
+        function initBelowDeckBadge() {
+            fetch('/below-deck/count')
+                .then(r => r.json())
+                .then(data => {
+                    const count = data.count || 0;
+                    const badge = document.getElementById('below-deck-badge');
+                    const dot = document.getElementById('below-deck-dot');
+                    if (count === 0) {
+                        badge.style.display = 'none';
+                        return;
+                    }
+                    badge.style.display = 'inline-flex';
+                    badge.style.alignItems = 'center';
+                    if (count <= 3) {
+                        dot.style.background = '#4dbb6a';
+                        dot.style.color = '#4dbb6a';
+                    } else if (count <= 6) {
+                        dot.style.background = '#d4880a';
+                        dot.style.color = '#d4880a';
+                    } else {
+                        dot.style.background = '#cc3322';
+                        dot.style.color = '#cc3322';
+                    }
+                })
+                .catch(() => {});
         }
 
         // ---- SHIELD ----
@@ -1124,6 +1208,9 @@
         });
 
         updateHUD();
+        initDraft();
+        initWeather();
+        initBelowDeckBadge();
 
         // ---- COLLAPSIBLE ----
         function toggleTasks() {
