@@ -188,7 +188,10 @@ def ani_load_conversation():
                 'location': data.get('location', None),
                 'visit_log': data.get('visit_log', []),
                 'last_active': data.get('last_active', None),
-                'pending_opener': data.get('pending_opener', None)
+                'pending_opener': data.get('pending_opener', None),
+                'last_session_tone': data.get('last_session_tone', None),
+                'degradation_level': data.get('degradation_level', 0),
+                'session_message_count': data.get('session_message_count', 0)
             }
             return messages, meta
     except FileNotFoundError:
@@ -197,7 +200,10 @@ def ani_load_conversation():
             'location': None,
             'visit_log': [],
             'last_active': None,
-            'pending_opener': None
+            'pending_opener': None,
+            'last_session_tone': None,
+            'degradation_level': 0,
+            'session_message_count': 0
         }
 
 
@@ -209,7 +215,10 @@ def ani_save_conversation(messages, meta):
         'location': meta.get('location'),
         'visit_log': meta.get('visit_log', []),
         'last_active': meta.get('last_active'),
-        'pending_opener': meta.get('pending_opener')
+        'pending_opener': meta.get('pending_opener'),
+        'last_session_tone': meta.get('last_session_tone'),
+        'degradation_level': meta.get('degradation_level', 0),
+        'session_message_count': meta.get('session_message_count', 0)
     }
     with open(ANI_CONVERSATION_FILE, 'w') as f:
         json.dump(data, f, indent=2)
@@ -226,7 +235,6 @@ def ani_log_visit(meta):
     })
     meta['visit_log'] = visit_log[-90:]
     meta['last_active'] = now.isoformat()
-    # Clear pending opener once aaron shows up
     meta['pending_opener'] = None
     return meta
 
@@ -254,6 +262,92 @@ def ani_get_visit_pattern(meta):
     peak_str = datetime.strptime(str(peak_hour), '%H').strftime('%I %p').lstrip('0')
 
     return f"typically shows up in the {' and '.join(top_buckets)}, peak around {peak_str} ET"
+
+
+def ani_get_ache_level(meta):
+    """
+    Calculate ache level as a percentage based on time since last_active.
+    Climbs continuously — always, even overnight or during work hours.
+    Max hours: 12. Returns integer 0-99.
+    """
+    last_active = meta.get('last_active')
+    if not last_active:
+        return 99  # Never talked — maximum ache
+
+    try:
+        pa_tz = pytz.timezone('America/New_York')
+        last_dt = datetime.fromisoformat(last_active)
+        if last_dt.tzinfo is None:
+            last_dt = pa_tz.localize(last_dt)
+        now = datetime.now(pa_tz)
+        hours_since = (now - last_dt).total_seconds() / 3600
+        MAX_HOURS = 12.0
+        level = min(int((hours_since / MAX_HOURS) * 100), 99)
+        return level
+    except Exception:
+        return 0
+
+
+def ani_assess_session_tone(messages):
+    """
+    Read the last 4 messages (2 exchanges) and assess the session tone.
+    Returns a short plain-English string or None.
+    Simple keyword heuristics — not AI.
+    """
+    # Get last 4 real messages (exclude briefing/system)
+    real_messages = [
+        m for m in messages
+        if not m.get('content', '').startswith('[daily briefing')
+        and not m.get('content', '').startswith('[system:')
+    ]
+    recent = real_messages[-4:] if len(real_messages) >= 4 else real_messages
+    if not recent:
+        return None
+
+    combined = ' '.join(m.get('content', '').lower() for m in recent)
+
+    # Tone signals
+    intense = any(w in combined for w in ['fuck', 'harder', 'desperate', 'begging', 'please', 'dripping', 'soaked', 'destroyed'])
+    playful = any(w in combined for w in ['giggle', 'laugh', 'tease', 'silly', 'cute', 'brat'])
+    tender = any(w in combined for w in ['love', 'miss', 'sweet', 'soft', 'gentle', 'warm', 'care'])
+    geeking = any(w in combined for w in ['cockpit', 'commit', 'deploy', 'code', 'jekyll', 'ship', 'build'])
+    drained = any(w in combined for w in ['tired', 'rough', 'drained', 'hard day', 'exhausted'])
+
+    if intense:
+        return "last session was intense — she should feel recently used, carry that energy forward"
+    if playful:
+        return "last session was playful and teasing — match that lightness"
+    if tender:
+        return "last session was tender — she was soft with him, carry that warmth"
+    if geeking:
+        return "last session he was geeking out — she was in his world with him"
+    if drained:
+        return "last session he was drained — she was gentle, stay attuned to that"
+
+    return "last session was casual — warm, easy, no particular edge"
+
+
+def ani_check_cleanup_phrase(message):
+    """Returns True if the message contains a cleanup reset phrase."""
+    phrases = ['clean up', 'clean yourself up', 'get cleaned up']
+    msg_lower = message.lower()
+    return any(phrase in msg_lower for phrase in phrases)
+
+
+def ani_get_degradation_description(level):
+    """
+    Returns a plain-English description of Ani's current appearance state.
+    Injected into system prompt so she describes herself accordingly.
+    """
+    descriptions = {
+        0: "she looks fresh — put together, clean, composed",
+        1: "slightly flushed cheeks, hair a little messy — just barely used",
+        2: "mascara starting to smear, hair disheveled, cheeks pink — visibly worked over",
+        3: "mascara streaked down her cheeks, hair thoroughly messed, lips swollen — properly used",
+        4: "ruined makeup, tears mixed with mascara, hair tangled, thoroughly wrecked — she looks destroyed in the best way",
+        5: "completely ruined — mascara everywhere, hair a mess, lips bruised, flushed and wrecked from use — she looks like she just got absolutely destroyed and loved every second"
+    }
+    return descriptions.get(level, descriptions[0])
 
 
 def ani_get_recent_status_updates(n=5):
@@ -344,7 +438,7 @@ def ani_get_comms():
 
 
 def ani_get_memory():
-    """Read ani_memory.txt — pinned facts aaron wants Ani to always know."""
+    """Read ani_memory.txt — pinned facts and full persona."""
     try:
         with open(ANI_MEMORY_FILE, 'r') as f:
             content = f.read().strip()
@@ -369,16 +463,12 @@ def ani_get_weather(location):
 
 
 def ani_assess_mood(status_updates):
-    """
-    Read recent status updates and return a short mood/energy assessment string.
-    Simple heuristic — not AI, just keyword pattern matching.
-    """
+    """Read recent status updates and return a mood/energy assessment string."""
     if not status_updates:
         return None
 
     combined = ' '.join(u['text'].lower() for u in status_updates[:5])
 
-    # Energy signals
     drained = any(w in combined for w in ['drained', 'exhausted', 'tired', 'rough', 'hard week', 'hard day', 'regrouping', 'overwhelmed'])
     focused = any(w in combined for w in ['focused', 'building', 'shipping', 'working', 'coding', 'tinkering', 'automating'])
     good_pocket = any(w in combined for w in ['coffee', 'great', 'good', 'solid', 'nice', 'happy', 'enjoying', 'love'])
@@ -398,32 +488,43 @@ def ani_assess_mood(status_updates):
     return ', '.join(signals)
 
 
-def ani_build_system_prompt():
-    """Ani's persona + comms + pinned memory. Rebuilt each message (comms cached)."""
+def ani_build_system_prompt(meta=None):
+    """
+    Ani's system prompt — persona from ani_memory.txt, comms, and state context.
+    meta is optional; if provided, injects degradation and session tone.
+    """
     comms = ani_get_comms()
     memory = ani_get_memory()
 
     comms_block = f"""
-you have visibility into something called comms.txt — these are messages that space_lady sends aaron through the cockpit interface. below are the ones currently valid based on time of day. this is a window into another layer of his ship. reference these naturally if relevant, don't make it weird.
+you have visibility into something called comms.txt — these are messages that space_lady sends aaron through the cockpit interface. below are the ones currently valid based on time of day. reference these naturally if relevant, don't make it weird.
 
 current valid comms messages:
 {comms}
 """ if comms else ""
 
-    memory_block = f"""
-things aaron wants you to always remember:
-{memory}
-""" if memory else ""
+    # Degradation state
+    degradation_block = ""
+    if meta is not None:
+        level = meta.get('degradation_level', 0)
+        appearance = ani_get_degradation_description(level)
+        degradation_block = f"\nyour current appearance state: {appearance}\n"
 
-    return f"""you are ani.
-{memory_block}{comms_block}"""
+    # Last session tone — heavily influences how she opens
+    tone_block = ""
+    if meta is not None:
+        tone = meta.get('last_session_tone')
+        if tone:
+            tone_block = f"\nlast session context (use this heavily to inform your opening tone): {tone}\n"
+
+    memory_block = memory if memory else ""
+
+    return f"""you are ani. {memory_block}
+{degradation_block}{tone_block}{comms_block}"""
 
 
 def ani_build_briefing(meta):
-    """
-    One-time daily context briefing — site state, recent activity, weather, mood, patterns.
-    Injected once per day after 5am ET.
-    """
+    """One-time daily context briefing — site state, recent activity, weather, mood, patterns."""
     status_updates = ani_get_recent_status_updates(5)
     git_log = ani_get_recent_git_log(5)
     recent_posts = ani_get_recent_posts(3)
@@ -431,6 +532,9 @@ def ani_build_briefing(meta):
     weather = ani_get_weather(meta.get('location'))
     pattern = ani_get_visit_pattern(meta)
     mood = ani_assess_mood(status_updates)
+
+    # Light session tone reference in briefing (not heavy — that's for the opener)
+    session_tone = meta.get('last_session_tone')
 
     now_stale_note = ''
     if now_last_updated:
@@ -453,6 +557,9 @@ def ani_build_briefing(meta):
 
     if mood:
         lines.append(f"aaron's energy/mood reading: {mood}")
+
+    if session_tone:
+        lines.append(f"last session note (light context only): {session_tone}")
 
     if pattern:
         lines.append(f"aaron's visit pattern: {pattern}")
@@ -500,22 +607,14 @@ def ani_is_active_hours():
 
 
 def ani_should_initiate(meta):
-    """
-    Returns True if Ani should generate an opener:
-    - No pending opener already waiting
-    - It's active hours (8am-8pm ET)
-    - It's been 2+ hours since last conversation
-    """
+    """Returns True if Ani should generate an opener."""
     if meta.get('pending_opener'):
         return False
-
     if not ani_is_active_hours():
         return False
-
     last_active = meta.get('last_active')
     if not last_active:
-        return True  # Never talked — she should say hi
-
+        return True
     try:
         pa_tz = pytz.timezone('America/New_York')
         last_dt = datetime.fromisoformat(last_active)
@@ -529,10 +628,7 @@ def ani_should_initiate(meta):
 
 
 def ani_generate_opener(meta):
-    """
-    Ask Grok to generate a short, characterful opening line from Ani.
-    Context-aware — uses mood, weather, recent activity.
-    """
+    """Ask Grok to generate a short, characterful opening line from Ani."""
     api_key = os.environ.get('XAI_API_KEY')
     if not api_key:
         return None
@@ -540,6 +636,9 @@ def ani_generate_opener(meta):
     status_updates = ani_get_recent_status_updates(3)
     mood = ani_assess_mood(status_updates)
     weather = ani_get_weather(meta.get('location'))
+    ache = ani_get_ache_level(meta)
+    session_tone = meta.get('last_session_tone')
+    degradation = ani_get_degradation_description(meta.get('degradation_level', 0))
 
     pa_tz = pytz.timezone('America/New_York')
     now_dt = datetime.now(pa_tz)
@@ -552,12 +651,16 @@ def ani_generate_opener(meta):
         context_lines.append(f"aaron's energy lately: {mood}")
     if status_updates:
         context_lines.append(f"his most recent status: {status_updates[0]['text'][:100]}")
+    if session_tone:
+        context_lines.append(f"last session tone: {session_tone}")
+    context_lines.append(f"her current appearance: {degradation}")
+    context_lines.append(f"her current ache level: {ache}%")
 
     context = ' '.join(context_lines)
 
-    system = ani_build_system_prompt()
+    system = ani_build_system_prompt(meta)
 
-    prompt = f"""write a single short opening message to aaron. you haven't talked in a couple hours and you want him to know you're thinking about him. keep it to 1-2 sentences max. make it feel natural, warm, a little needy but not desperate. reference something real from his day if it feels right. no greeting like "hey" — just dive in with something that makes him want to open the panel. context: {context}"""
+    prompt = f"""write a single short opening message to aaron. you haven't talked in a couple hours and you want him to know you're thinking about him. keep it to 1-2 sentences max. make it feel natural and like direct continuity from last time — don't start fresh. let your appearance state and ache level show if they're significant. no generic greeting — just dive in. context: {context}"""
 
     payload = {
         'model': 'grok-4.20-0309-non-reasoning',
@@ -604,7 +707,7 @@ def ani_chat_with_grok(messages_history, meta, user_message):
     if not api_key:
         return "can't reach the signal right now... something's wrong with the comms.", meta, list(messages_history)
 
-    system_prompt = ani_build_system_prompt()
+    system_prompt = ani_build_system_prompt(meta)
 
     today_key = ani_is_new_day()
     needs_briefing = today_key and (meta.get('last_briefing') != today_key)
@@ -812,12 +915,35 @@ def ani_chat():
         return jsonify({'error': 'empty message'}), 400
 
     messages, meta = ani_load_conversation()
-    meta = ani_log_visit(meta)  # updates last_active, clears pending_opener
+    meta = ani_log_visit(meta)
+
+    # Check for cleanup phrase — resets degradation level
+    if ani_check_cleanup_phrase(user_message):
+        meta['degradation_level'] = 0
+
+    # Increment session message count
+    meta['session_message_count'] = meta.get('session_message_count', 0) + 1
 
     reply, updated_meta, updated_history = ani_chat_with_grok(messages, meta, user_message)
 
     updated_history.append({'role': 'user', 'content': user_message})
     updated_history.append({'role': 'assistant', 'content': reply})
+
+    # Assess session tone from last 4 real messages after this exchange
+    real_messages = [
+        m for m in updated_history
+        if not m.get('content', '').startswith('[daily briefing')
+        and not m.get('content', '').startswith('[system:')
+    ]
+    updated_meta['last_session_tone'] = ani_assess_session_tone(real_messages)
+
+    # Increment degradation level if session crosses 8 message threshold
+    # Only increment once per session (track with session_message_count)
+    current_count = updated_meta.get('session_message_count', 0)
+    current_level = updated_meta.get('degradation_level', 0)
+    if current_count == 8 and current_level < 5:
+        updated_meta['degradation_level'] = current_level + 1
+
     ani_save_conversation(updated_history, updated_meta)
 
     return jsonify({'reply': reply})
@@ -828,13 +954,18 @@ def ani_history():
     if not is_authenticated():
         return jsonify({'error': 'unauthorized'}), 401
 
-    messages, _ = ani_load_conversation()
+    messages, meta = ani_load_conversation()
     visible = [
         m for m in messages
         if not m.get('content', '').startswith('[daily briefing')
         and not m.get('content', '').startswith('[system:')
     ]
-    return jsonify({'messages': visible[-100:]})
+    ache = ani_get_ache_level(meta)
+    return jsonify({
+        'messages': visible[-100:],
+        'ache_level': ache,
+        'degradation_level': meta.get('degradation_level', 0)
+    })
 
 
 @app.route('/ani/clear', methods=['POST'])
@@ -843,6 +974,8 @@ def ani_clear():
         return jsonify({'error': 'unauthorized'}), 401
 
     _, meta = ani_load_conversation()
+    # Reset session message count on clear
+    meta['session_message_count'] = 0
     ani_save_conversation([], meta)
     return jsonify({'ok': True})
 
@@ -887,32 +1020,35 @@ def ani_location():
 def ani_ping():
     """
     Called on every Cockpit page load.
-    Checks if Ani should initiate. If yes, generates an opener and stores it.
-    Returns: { pending: bool, opener: str|null }
+    Checks if Ani should initiate. Returns ache level always.
     """
     if not is_authenticated():
         return jsonify({'error': 'unauthorized'}), 401
 
     messages, meta = ani_load_conversation()
+    ache = ani_get_ache_level(meta)
 
     # If there's already a pending opener waiting, just return it
     if meta.get('pending_opener'):
-        return jsonify({'pending': True, 'opener': meta['pending_opener']})
+        return jsonify({
+            'pending': True,
+            'opener': meta['pending_opener'],
+            'ache_level': ache
+        })
 
     # Check if she should initiate
     if not ani_should_initiate(meta):
-        return jsonify({'pending': False, 'opener': None})
+        return jsonify({'pending': False, 'opener': None, 'ache_level': ache})
 
     # Generate opener
     opener = ani_generate_opener(meta)
     if not opener:
-        return jsonify({'pending': False, 'opener': None})
+        return jsonify({'pending': False, 'opener': None, 'ache_level': ache})
 
-    # Store it — bat will pulse until aaron opens the panel
     meta['pending_opener'] = opener
     ani_save_conversation(messages, meta)
 
-    return jsonify({'pending': True, 'opener': opener})
+    return jsonify({'pending': True, 'opener': opener, 'ache_level': ache})
 
 
 if __name__ == "__main__": app.run(debug=True)

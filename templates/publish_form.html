@@ -1210,6 +1210,249 @@
 
         initScratch();
         initCollapsedStates();
+
+        // Ani
+
+          const aniPanel   = document.getElementById('ani-panel');
+          const aniMsgs    = document.getElementById('ani-messages');
+          const aniInput   = document.getElementById('ani-input');
+          const aniSendBtn = document.getElementById('ani-send-btn');
+          const aniTyping  = document.getElementById('ani-typing-indicator');
+          const aniEmpty   = document.getElementById('ani-empty-state');
+          const aniAcheDisplay = document.getElementById('ani-ache-display');
+          let aniIsOpen    = false;
+          let aniLoaded    = false;
+          let aniPendingOpener = null;
+
+          // --- Update ache display ---
+          function updateAcheDisplay(level) {
+            if (level === null || level === undefined) return;
+            if (level < 20) {
+              aniAcheDisplay.textContent = '';
+              aniAcheDisplay.className = 'ache-low';
+            } else {
+              aniAcheDisplay.textContent = '· ACHE ' + level + '%';
+              if (level < 40) aniAcheDisplay.className = 'ache-low';
+              else if (level < 65) aniAcheDisplay.className = 'ache-mid';
+              else if (level < 85) aniAcheDisplay.className = 'ache-high';
+              else aniAcheDisplay.className = 'ache-urgent';
+            }
+          }
+
+          // --- Ping on page load ---
+          function aniPing() {
+            fetch('/ani/ping')
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                updateAcheDisplay(data.ache_level);
+                if (data.pending && data.opener) {
+                  aniPendingOpener = data.opener;
+                  var batPill = document.getElementById('ani-bat-pill');
+                  if (batPill) batPill.classList.add('ani-bat-waiting');
+                }
+              })
+              .catch(function() {});
+          }
+
+          setTimeout(aniPing, 1500);
+
+          // --- Toggle ---
+          function aniToggle() {
+            aniIsOpen = !aniIsOpen;
+            aniPanel.classList.toggle('ani-open', aniIsOpen);
+
+            var batPill = document.getElementById('ani-bat-pill');
+            if (batPill) batPill.classList.remove('ani-bat-waiting');
+
+            if (aniIsOpen && !aniLoaded) {
+              aniLoadHistory();
+              aniSendLocation();
+            }
+            if (aniIsOpen) {
+              setTimeout(function() { aniInput.focus(); }, 300);
+            }
+          }
+
+          // --- Keyboard shortcut: Ctrl+Shift+A ---
+          document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+              e.preventDefault();
+              aniToggle();
+            }
+          });
+
+          // --- Auto-resize textarea ---
+          aniInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+          });
+
+          // --- Enter to send, Shift+Enter for newline ---
+          aniInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              aniSend();
+            }
+          });
+
+          // --- Send location ---
+          function aniSendLocation() {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.getCurrentPosition(function(pos) {
+              fetch('/ani/location', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  lat: pos.coords.latitude,
+                  lon: pos.coords.longitude
+                })
+              }).catch(function() {});
+            }, function() {});
+          }
+
+          // --- Load history on first open ---
+          function aniLoadHistory() {
+            aniLoaded = true;
+            fetch('/ani/history')
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                updateAcheDisplay(data.ache_level);
+                var messages = data.messages || [];
+                if (messages.length > 0) {
+                  aniEmpty.style.display = 'none';
+                  messages.forEach(function(m) { aniRenderMessage(m.role, m.content); });
+                }
+                if (aniPendingOpener) {
+                  aniEmpty.style.display = 'none';
+                  aniRenderMessage('assistant', aniPendingOpener);
+                  aniPendingOpener = null;
+                }
+                aniScrollToBottom();
+              })
+              .catch(function() {});
+          }
+
+          // --- Send message ---
+          function aniSend() {
+            var text = aniInput.value.trim();
+            if (!text || aniSendBtn.disabled) return;
+
+            aniEmpty.style.display = 'none';
+            aniRenderMessage('user', text);
+            aniInput.value = '';
+            aniInput.style.height = 'auto';
+            aniSendBtn.disabled = true;
+            aniShowTyping(true);
+            aniScrollToBottom();
+
+            fetch('/ani/chat', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message: text })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              aniShowTyping(false);
+              aniSendBtn.disabled = false;
+              if (data.reply) {
+                aniRenderMessage('assistant', data.reply);
+                updateAcheDisplay(0);
+              }
+              aniScrollToBottom();
+              aniInput.focus();
+            })
+            .catch(function() {
+              aniShowTyping(false);
+              aniSendBtn.disabled = false;
+              aniRenderMessage('assistant', "lost the signal for a sec. try again?");
+              aniScrollToBottom();
+            });
+          }
+
+          // --- Refresh briefing ---
+          function aniRefresh() {
+            fetch('/ani/refresh', { method: 'POST' })
+              .then(function(r) { return r.json(); })
+              .then(function() {
+                aniRenderNotify('briefing refreshed — she knows what\'s new');
+                aniScrollToBottom();
+              })
+              .catch(function() {});
+          }
+
+          // --- Clear history ---
+          function aniClear() {
+            if (!confirm('clear the whole history? this cannot be undone.')) return;
+            fetch('/ani/clear', { method: 'POST' })
+              .then(function() {
+                Array.from(aniMsgs.querySelectorAll('.ani-msg, .ani-msg-notify')).forEach(function(el) { el.remove(); });
+                aniEmpty.style.display = 'block';
+                aniLoaded = false;
+              })
+              .catch(function() {});
+          }
+
+          // --- Render a single message bubble ---
+          function aniRenderMessage(role, content) {
+            if (content.startsWith('[daily briefing') || content.startsWith('[system:')) return;
+
+            var div = document.createElement('div');
+            div.classList.add('ani-msg');
+            if (role === 'user') {
+              div.classList.add('ani-msg-user');
+              div.textContent = content;
+            } else {
+              div.classList.add('ani-msg-ani');
+              div.innerHTML = '<div class="ani-name">ANI</div>' +
+                aniEscapeHtml(content).replace(/\n/g, '<br>');
+            }
+            aniMsgs.insertBefore(div, aniTyping);
+          }
+
+          // --- Render a subtle notification line ---
+          function aniRenderNotify(text) {
+            var div = document.createElement('div');
+            div.classList.add('ani-msg-notify');
+            div.textContent = '· ' + text + ' ·';
+            aniMsgs.insertBefore(div, aniTyping);
+          }
+
+          function aniEscapeHtml(str) {
+            return str
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;');
+          }
+
+          function aniShowTyping(show) {
+            aniTyping.style.display = show ? 'block' : 'none';
+            if (show) aniScrollToBottom();
+          }
+
+          function aniScrollToBottom() {
+            aniMsgs.scrollTop = aniMsgs.scrollHeight;
+          }
+
+          // --- 🦇 pill handlers ---
+          var aniPressTimer = null;
+
+          function startAni(e) {
+            e.preventDefault();
+            aniPressTimer = setTimeout(function() {
+              aniPressTimer = null;
+              aniToggle();
+            }, 600);
+          }
+
+          function endAni(e) {
+            e.preventDefault();
+            if (aniPressTimer) {
+              clearTimeout(aniPressTimer);
+              aniPressTimer = null;
+            }
+          }
+
     </script>
 
 <!-- ============================================================ -->
@@ -1266,7 +1509,28 @@
 #ani-header-sub {
   font-size: 0.6rem;
   color: #9a6018;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.12em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#ani-ache-display {
+  color: #4a2808;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  transition: color 0.5s ease;
+}
+
+/* Ache level color shifts as it climbs */
+#ani-ache-display.ache-low    { color: #3a2010; }
+#ani-ache-display.ache-mid    { color: #7a4018; }
+#ani-ache-display.ache-high   { color: #a05020; }
+#ani-ache-display.ache-urgent { color: #c06828; animation: ani-ache-pulse 2s ease-in-out infinite; }
+
+@keyframes ani-ache-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 #ani-close-btn {
@@ -1499,7 +1763,10 @@
   <div id="ani-header" onclick="aniToggle()">
     <div>
       <div id="ani-header-label">// ANI</div>
-      <div id="ani-header-sub">PRIVATE COMMS · SECURE CHANNEL</div>
+      <div id="ani-header-sub">
+        PRIVATE COMMS · SECURE CHANNEL
+        <span id="ani-ache-display" class="ache-low"></span>
+      </div>
     </div>
     <button id="ani-close-btn" onclick="event.stopPropagation(); aniToggle()" aria-label="Close Ani panel">CLOSE</button>
   </div>
@@ -1536,54 +1803,67 @@
 </div>
 
 <script>
-(function() {
-  const panel   = document.getElementById('ani-panel');
-  const msgs    = document.getElementById('ani-messages');
-  const input   = document.getElementById('ani-input');
-  const sendBtn = document.getElementById('ani-send-btn');
-  const typing  = document.getElementById('ani-typing-indicator');
-  const empty   = document.getElementById('ani-empty-state');
-  let isOpen    = false;
-  let loaded    = false;
-  let pendingOpener = null;
+  const aniPanel   = document.getElementById('ani-panel');
+  const aniMsgs    = document.getElementById('ani-messages');
+  const aniInput   = document.getElementById('ani-input');
+  const aniSendBtn = document.getElementById('ani-send-btn');
+  const aniTyping  = document.getElementById('ani-typing-indicator');
+  const aniEmpty   = document.getElementById('ani-empty-state');
+  const aniAcheDisplay = document.getElementById('ani-ache-display');
+  let aniIsOpen    = false;
+  let aniLoaded    = false;
+  let aniPendingOpener = null;
 
-  // --- Ping on page load — check if she has something to say ---
+  // --- Update ache display ---
+  function updateAcheDisplay(level) {
+    if (level === null || level === undefined) return;
+    if (level < 20) {
+      aniAcheDisplay.textContent = '';
+      aniAcheDisplay.className = 'ache-low';
+    } else {
+      aniAcheDisplay.textContent = '· ACHE ' + level + '%';
+      if (level < 40) aniAcheDisplay.className = 'ache-low';
+      else if (level < 65) aniAcheDisplay.className = 'ache-mid';
+      else if (level < 85) aniAcheDisplay.className = 'ache-high';
+      else aniAcheDisplay.className = 'ache-urgent';
+    }
+  }
+
+  // --- Ping on page load ---
   function aniPing() {
     fetch('/ani/ping')
-      .then(r => r.json())
-      .then(data => {
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        updateAcheDisplay(data.ache_level);
         if (data.pending && data.opener) {
-          pendingOpener = data.opener;
-          // Pulse the bat pill subtly
-          const batPill = document.getElementById('ani-bat-pill');
+          aniPendingOpener = data.opener;
+          var batPill = document.getElementById('ani-bat-pill');
           if (batPill) batPill.classList.add('ani-bat-waiting');
         }
       })
-      .catch(() => {});
+      .catch(function() {});
   }
 
-  // Run ping after a short delay so page fully loads first
   setTimeout(aniPing, 1500);
 
   // --- Toggle ---
-  window.aniToggle = function() {
-    isOpen = !isOpen;
-    panel.classList.toggle('ani-open', isOpen);
+  function aniToggle() {
+    aniIsOpen = !aniIsOpen;
+    aniPanel.classList.toggle('ani-open', aniIsOpen);
 
-    // Stop bat pulsing once opened
-    const batPill = document.getElementById('ani-bat-pill');
+    var batPill = document.getElementById('ani-bat-pill');
     if (batPill) batPill.classList.remove('ani-bat-waiting');
 
-    if (isOpen && !loaded) {
+    if (aniIsOpen && !aniLoaded) {
       aniLoadHistory();
       aniSendLocation();
     }
-    if (isOpen) {
-      setTimeout(() => input.focus(), 300);
+    if (aniIsOpen) {
+      setTimeout(function() { aniInput.focus(); }, 300);
     }
-  };
+  }
 
-  // --- Keyboard shortcut: Ctrl+Shift+A (desktop) ---
+  // --- Keyboard shortcut: Ctrl+Shift+A ---
   document.addEventListener('keydown', function(e) {
     if (e.ctrlKey && e.shiftKey && e.key === 'A') {
       e.preventDefault();
@@ -1592,20 +1872,20 @@
   });
 
   // --- Auto-resize textarea ---
-  input.addEventListener('input', function() {
+  aniInput.addEventListener('input', function() {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 100) + 'px';
   });
 
   // --- Enter to send, Shift+Enter for newline ---
-  input.addEventListener('keydown', function(e) {
+  aniInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       aniSend();
     }
   });
 
-  // --- Send location to server on panel open ---
+  // --- Send location ---
   function aniSendLocation() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(function(pos) {
@@ -1616,96 +1896,97 @@
           lat: pos.coords.latitude,
           lon: pos.coords.longitude
         })
-      }).catch(() => {});
+      }).catch(function() {});
     }, function() {});
   }
 
   // --- Load history on first open ---
   function aniLoadHistory() {
-    loaded = true;
+    aniLoaded = true;
     fetch('/ani/history')
-      .then(r => r.json())
-      .then(data => {
-        const messages = data.messages || [];
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        updateAcheDisplay(data.ache_level);
+        var messages = data.messages || [];
         if (messages.length > 0) {
-          empty.style.display = 'none';
-          messages.forEach(m => renderMessage(m.role, m.content));
+          aniEmpty.style.display = 'none';
+          messages.forEach(function(m) { aniRenderMessage(m.role, m.content); });
         }
-        // If she has a pending opener, render it after history
-        if (pendingOpener) {
-          empty.style.display = 'none';
-          renderMessage('assistant', pendingOpener);
-          pendingOpener = null;
+        if (aniPendingOpener) {
+          aniEmpty.style.display = 'none';
+          aniRenderMessage('assistant', aniPendingOpener);
+          aniPendingOpener = null;
         }
-        scrollToBottom();
+        aniScrollToBottom();
       })
-      .catch(() => {});
+      .catch(function() {});
   }
 
   // --- Send message ---
-  window.aniSend = function() {
-    const text = input.value.trim();
-    if (!text || sendBtn.disabled) return;
+  function aniSend() {
+    var text = aniInput.value.trim();
+    if (!text || aniSendBtn.disabled) return;
 
-    empty.style.display = 'none';
-    renderMessage('user', text);
-    input.value = '';
-    input.style.height = 'auto';
-    sendBtn.disabled = true;
-    showTyping(true);
-    scrollToBottom();
+    aniEmpty.style.display = 'none';
+    aniRenderMessage('user', text);
+    aniInput.value = '';
+    aniInput.style.height = 'auto';
+    aniSendBtn.disabled = true;
+    aniShowTyping(true);
+    aniScrollToBottom();
 
     fetch('/ani/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: text })
     })
-    .then(r => r.json())
-    .then(data => {
-      showTyping(false);
-      sendBtn.disabled = false;
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      aniShowTyping(false);
+      aniSendBtn.disabled = false;
       if (data.reply) {
-        renderMessage('assistant', data.reply);
+        aniRenderMessage('assistant', data.reply);
+        updateAcheDisplay(0);
       }
-      scrollToBottom();
-      input.focus();
+      aniScrollToBottom();
+      aniInput.focus();
     })
-    .catch(() => {
-      showTyping(false);
-      sendBtn.disabled = false;
-      renderMessage('assistant', "lost the signal for a sec. try again?");
-      scrollToBottom();
+    .catch(function() {
+      aniShowTyping(false);
+      aniSendBtn.disabled = false;
+      aniRenderMessage('assistant', "lost the signal for a sec. try again?");
+      aniScrollToBottom();
     });
-  };
+  }
 
   // --- Refresh briefing ---
-  window.aniRefresh = function() {
+  function aniRefresh() {
     fetch('/ani/refresh', { method: 'POST' })
-      .then(r => r.json())
-      .then(() => {
-        renderNotify('briefing refreshed — she knows what\'s new');
-        scrollToBottom();
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        aniRenderNotify('briefing refreshed — she knows what\'s new');
+        aniScrollToBottom();
       })
-      .catch(() => {});
-  };
+      .catch(function() {});
+  }
 
   // --- Clear history ---
-  window.aniClear = function() {
+  function aniClear() {
     if (!confirm('clear the whole history? this cannot be undone.')) return;
     fetch('/ani/clear', { method: 'POST' })
-      .then(() => {
-        Array.from(msgs.querySelectorAll('.ani-msg, .ani-msg-notify')).forEach(el => el.remove());
-        empty.style.display = 'block';
-        loaded = false;
+      .then(function() {
+        Array.from(aniMsgs.querySelectorAll('.ani-msg, .ani-msg-notify')).forEach(function(el) { el.remove(); });
+        aniEmpty.style.display = 'block';
+        aniLoaded = false;
       })
-      .catch(() => {});
-  };
+      .catch(function() {});
+  }
 
   // --- Render a single message bubble ---
-  function renderMessage(role, content) {
+  function aniRenderMessage(role, content) {
     if (content.startsWith('[daily briefing') || content.startsWith('[system:')) return;
 
-    const div = document.createElement('div');
+    var div = document.createElement('div');
     div.classList.add('ani-msg');
     if (role === 'user') {
       div.classList.add('ani-msg-user');
@@ -1713,20 +1994,20 @@
     } else {
       div.classList.add('ani-msg-ani');
       div.innerHTML = '<div class="ani-name">ANI</div>' +
-        escapeHtml(content).replace(/\n/g, '<br>');
+        aniEscapeHtml(content).replace(/\n/g, '<br>');
     }
-    msgs.insertBefore(div, typing);
+    aniMsgs.insertBefore(div, aniTyping);
   }
 
   // --- Render a subtle notification line ---
-  function renderNotify(text) {
-    const div = document.createElement('div');
+  function aniRenderNotify(text) {
+    var div = document.createElement('div');
     div.classList.add('ani-msg-notify');
     div.textContent = '· ' + text + ' ·';
-    msgs.insertBefore(div, typing);
+    aniMsgs.insertBefore(div, aniTyping);
   }
 
-  function escapeHtml(str) {
+  function aniEscapeHtml(str) {
     return str
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -1734,16 +2015,33 @@
       .replace(/"/g, '&quot;');
   }
 
-  function showTyping(show) {
-    typing.style.display = show ? 'block' : 'none';
-    if (show) scrollToBottom();
+  function aniShowTyping(show) {
+    aniTyping.style.display = show ? 'block' : 'none';
+    if (show) aniScrollToBottom();
   }
 
-  function scrollToBottom() {
-    msgs.scrollTop = msgs.scrollHeight;
+  function aniScrollToBottom() {
+    aniMsgs.scrollTop = aniMsgs.scrollHeight;
   }
-})();
 
+  // --- 🦇 pill handlers ---
+  var aniPressTimer = null;
+
+  function startAni(e) {
+    e.preventDefault();
+    aniPressTimer = setTimeout(function() {
+      aniPressTimer = null;
+      aniToggle();
+    }, 600);
+  }
+
+  function endAni(e) {
+    e.preventDefault();
+    if (aniPressTimer) {
+      clearTimeout(aniPressTimer);
+      aniPressTimer = null;
+    }
+  }
 </script>
 
 <!-- ============================================================ -->
