@@ -1,8 +1,8 @@
 from flask import Flask, request, render_template, make_response, redirect, url_for, jsonify
 from werkzeug.utils import secure_filename
 from PIL import Image
-from datetime import datetime
 import os, subprocess, pytz, requests, emoji, glob, json, time, re
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY')
@@ -50,11 +50,8 @@ def get_git_status():
 def get_active_tags():
     pa_tz = pytz.timezone('America/New_York')
     now = datetime.now(pa_tz)
-
-    print(f"DEBUG: Local PA Time is {now.strftime('%H:%M:%S')}")
-
-    tags = ["ALL"]
     hour = now.hour
+    tags = ["ALL"]
 
     tags.append(now.strftime("%A").upper())
 
@@ -175,7 +172,8 @@ def post_task_status(title):
         f.write(fm + text + "\n")
     return fn, text
 
-    # ---- BELOW DECK HELPERS ----
+
+# ---- BELOW DECK HELPERS ----
 
 def load_below_deck():
     try:
@@ -820,7 +818,13 @@ def publish_status():
         return render_template('success.html')
 
     files = sorted(glob.glob("_status_updates/*.markdown"), reverse=True)[:3]
-    history = [open(f).read().split("---")[-1].strip() for f in files]
+    history = []
+    for f in files:
+        try:
+            with open(f) as fh:
+                history.append(fh.read().split("---")[-1].strip())
+        except Exception:
+            continue
     comms_list = get_valid_comms()
     tasks_data = load_tasks()
     return render_template(
@@ -945,7 +949,7 @@ def scratch_post():
         json.dump({'content': content, 'last_modified': last_modified}, f)
     return jsonify({'ok': True, 'last_modified': last_modified})
 
-    # ---- WEATHER ROUTE ----
+# ---- WEATHER ROUTE ----
 
 @app.route('/ani/weather', methods=['GET'])
 def ani_weather_route():
@@ -963,6 +967,17 @@ def below_deck():
     if not is_authenticated():
         return redirect(url_for('login'))
     data = load_below_deck()
+    # 4am ET auto-clear of completed tasks from previous day
+    pa_tz = pytz.timezone('America/New_York')
+    now = datetime.now(pa_tz)
+    today_key = now.strftime('%Y-%m-%d') if now.hour >= 4 else (now - timedelta(days=1)).strftime('%Y-%m-%d')
+    before = len(data['tasks'])
+    data['tasks'] = [
+        t for t in data['tasks']
+        if t.get('status') != 'complete' or t.get('completed_date') == today_key
+    ]
+    if len(data['tasks']) != before:
+        save_below_deck(data)
     return render_template('below_deck.html', tasks=data.get('tasks', []))
 
 
@@ -980,14 +995,17 @@ def below_deck_add():
     if not is_authenticated():
         return jsonify({'error': 'unauthorized'}), 401
     title = request.form.get('title', '').strip()
+    tag   = request.form.get('tag', '').strip() or None
     if not title:
         return jsonify({'error': 'title required'}), 400
     data = load_below_deck()
     task = {
         'id': str(int(time.time() * 1000)),
         'title': title,
+        'tag': tag,
         'status': 'open',
         'created': datetime.now(pytz.timezone('America/New_York')).isoformat(),
+        'completed_date': None,
         'order': 0
     }
     data['tasks'].insert(0, task)
@@ -1005,7 +1023,13 @@ def below_deck_complete():
     if not task_id:
         return jsonify({'error': 'id required'}), 400
     data = load_below_deck()
-    data['tasks'] = [t for t in data['tasks'] if t['id'] != task_id]
+    pa_tz = pytz.timezone('America/New_York')
+    now = datetime.now(pa_tz)
+    for t in data['tasks']:
+        if t['id'] == task_id:
+            t['status'] = 'complete'
+            t['completed_date'] = now.strftime('%Y-%m-%d')
+            break
     save_below_deck(data)
     return jsonify({'ok': True})
 
@@ -1019,6 +1043,16 @@ def below_deck_delete():
         return jsonify({'error': 'id required'}), 400
     data = load_below_deck()
     data['tasks'] = [t for t in data['tasks'] if t['id'] != task_id]
+    save_below_deck(data)
+    return jsonify({'ok': True})
+
+
+@app.route('/below-deck/clear-completed', methods=['POST'])
+def below_deck_clear_completed():
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+    data = load_below_deck()
+    data['tasks'] = [t for t in data['tasks'] if t.get('status') != 'complete']
     save_below_deck(data)
     return jsonify({'ok': True})
 
