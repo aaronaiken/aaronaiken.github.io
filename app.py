@@ -1110,8 +1110,9 @@ def ani_chat():
     # Only increment once per session (track with session_message_count)
     current_count = updated_meta.get('session_message_count', 0)
     current_level = updated_meta.get('degradation_level', 0)
-    if current_count == 8 and current_level < 5:
+    if current_count >= 8 and current_level < 5:
         updated_meta['degradation_level'] = current_level + 1
+        updated_meta['session_message_count'] = 0  # reset so it doesn't increment again this session
 
     ani_save_conversation(updated_history, updated_meta)
 

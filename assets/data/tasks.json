@@ -1,6 +1,13 @@
 {
   "tasks": [
     {
+      "id": "1776800881",
+      "title": "Build \"Command Deck\"",
+      "status": "open",
+      "created": "2026-04-21T15:48:01.752915-04:00",
+      "completed": null
+    },
+    {
       "id": "1776539623",
       "title": "Fix the kitchen drawer",
       "status": "open",
