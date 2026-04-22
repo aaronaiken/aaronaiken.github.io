@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Command Deck</title>
+  <link rel="stylesheet" href="/static/command_deck.css">
+</head>
+<body class="command-deck">
+<div class="cd-shell">
+
+  <!-- HEADER -->
+  <header class="cd-header">
+    <div class="cd-header-left">
+      <a href="/command-deck/" class="cd-wordmark">COMMAND DECK</a>
+      <span class="cd-ident">ARCHIVE · OPERATIONS · HUYANG ONLINE</span>
+    </div>
+    <nav class="cd-header-nav">
+      <a href="/command-deck/" class="cd-nav-link active">BRIDGE</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/projects/" class="cd-nav-link">PROJECTS</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/below-deck" class="cd-nav-link">
+        BELOW DECK
+        <span class="cd-bd-badge" id="bdBadge"></span>
+      </a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/publish" class="cd-nav-link">COCKPIT</a>
+    </nav>
+  </header>
+
+  <!-- FLASH MESSAGES -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="cd-flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <!-- MAIN GRID -->
+  <div class="cd-main">
+
+    <!-- LEFT COLUMN -->
+    <div class="cd-content">
+
+      <!-- BELOW DECK QUICK PANEL -->
+      <div class="cd-panel cd-mb">
+        <div class="cd-panel-header">
+          <span class="cd-panel-title">// Below Deck</span>
+          <div class="cd-panel-actions">
+            <a href="/below-deck" class="cd-btn ghost sm">OPEN FULL</a>
+          </div>
+        </div>
+        <div class="cd-panel-body">
+
+          <!-- Add task row -->
+          <div class="cd-tag-pills" id="bdTagPills">
+            <button class="cd-tag-pill" data-tag="work">work</button>
+            <button class="cd-tag-pill" data-tag="home">home</button>
+            <button class="cd-tag-pill" data-tag="errand">errand</button>
+            <button class="cd-tag-pill" data-tag="personal">personal</button>
+          </div>
+          <div class="cd-input-row cd-mb-sm">
+            <input type="text" class="cd-input" id="bdNewTask" placeholder="add a task...">
+            <button class="cd-btn primary sm" id="bdAddBtn">ADD</button>
+          </div>
+
+          <!-- Task list -->
+          {% if bd_tasks %}
+            <ul class="cd-task-list" id="bdTaskList">
+              {% for task in bd_tasks %}
+                <li class="cd-task-item" data-id="{{ task.id }}">
+                  <input type="checkbox" class="cd-task-check" data-id="{{ task.id }}">
+                  <span class="cd-task-title">{{ task.title }}</span>
+                  {% if task.tag %}
+                    <span class="cd-task-tag {{ task.tag }}">{{ task.tag }}</span>
+                  {% endif %}
+                    <button class="cd-btn ghost sm cd-task-promote" data-id="{{ task.id }}" data-title="{{ task.title }}">↑ PROJECT</button>
+                    <button class="cd-task-edit" data-id="{{ task.id }}" title="Edit">✎</button>
+                    <button class="cd-task-assign" data-id="{{ task.id }}" title="Assign to project">→</button>
+                    <button class="cd-btn ghost sm cd-task-delete" data-id="{{ task.id }}">✕</button>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="cd-empty" id="bdEmpty">All clear.</div>
+          {% endif %}
+
+        </div>
+      </div>
+
+      <!-- PROJECTS -->
+      <div class="cd-mb-sm">
+        <div class="cd-section-label">Projects</div>
+      </div>
+
+      {% if projects %}
+        <div class="cd-project-grid cd-mb">
+          {% for project in projects %}
+            <a href="/command-deck/projects/{{ project.slug }}/"
+               class="cd-project-card {% if project.is_private %}is-private private-hidden{% endif %}"
+               data-private="{{ '1' if project.is_private else '0' }}">
+              <div class="cd-project-card-title">
+                  {{ project.title }}
+                  {% if project.is_private %}<span class="cd-private-badge">🔒 private</span>{% endif %}
+              </div>
+              {% if project.description %}
+                <div class="cd-project-card-desc">{{ project.description }}</div>
+              {% endif %}
+              <div class="cd-project-card-meta">
+                {% if project.open_task_count %}
+                  <span>{{ project.open_task_count }} task{{ 's' if project.open_task_count != 1 }}</span>
+                {% endif %}
+                {% if project.block_count %}
+                  <span>{{ project.block_count }} block{{ 's' if project.block_count != 1 }}</span>
+                {% endif %}
+              </div>
+            </a>
+          {% endfor %}
+
+          <!-- New project card -->
+          <button class="cd-project-card new-project" id="newProjectBtn">
+            + NEW PROJECT
+          </button>
+        </div>
+      {% else %}
+        <div class="cd-panel cd-mb">
+          <div class="cd-panel-body">
+            <div class="cd-empty">No projects yet. <button class="cd-btn ghost sm" id="newProjectBtn" style="display:inline-flex;">Start one</button></div>
+          </div>
+        </div>
+      {% endif %}
+
+    </div>
+
+    <!-- RIGHT SIDEBAR -->
+    <div class="cd-sidebar">
+
+      <!-- HUYANG -->
+      <div class="cd-panel">
+        <div class="cd-panel-header">
+          <span class="cd-panel-title">
+            <span class="cd-huyang-name">Huyang</span>
+            &nbsp;·&nbsp; General
+          </span>
+          <div class="cd-panel-actions">
+            <button class="cd-btn ghost sm" id="huyangClear" title="Clear history">CLEAR</button>
+          </div>
+        </div>
+
+        <div class="cd-huyang-panel">
+          <div class="cd-huyang-history" id="huyangHistory">
+            {% if recent_chat %}
+              {% for msg in recent_chat %}
+                <div class="cd-msg {{ msg.role }}">
+                  <div class="cd-msg-bubble">{{ msg.content }}</div>
+                  <div class="cd-msg-meta">{{ 'you' if msg.role == 'user' else 'Huyang' }}</div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="cd-huyang-empty">
+                <p class="cd-huyang-empty-text">Huyang is standing by.<br>Ask him anything.</p>
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="cd-huyang-input-row">
+            <textarea class="cd-huyang-textarea" id="huyangInput"
+              placeholder="ask Huyang..." rows="1"></textarea>
+            <button class="cd-btn primary sm" id="huyangSend">TX</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="cd-footer">
+    <div class="cd-footer-links">
+      <a href="/publish" class="cd-footer-link">Cockpit</a>
+      <a href="/below-deck" class="cd-footer-link">Below Deck</a>
+      <a href="https://aaronaiken.me" class="cd-footer-link">Site</a>
+    </div>
+    <span class="cd-footer-ident">YT-1300F · COMMAND DECK · SECURE</span>
+  </footer>
+
+</div><!-- .cd-shell -->
+
+<!-- PROMOTE TO PROJECT MODAL -->
+<div class="cd-modal-overlay" id="promoteModal">
+  <div class="cd-modal">
+    <div class="cd-modal-title">// Promote to Project</div>
+    <input type="text" class="cd-input" id="promoteTitle" placeholder="Project title...">
+    <div class="cd-modal-actions">
+      <button class="cd-btn ghost" id="promoteCancelBtn">CANCEL</button>
+      <button class="cd-btn primary" id="promoteConfirmBtn">CREATE PROJECT</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW PROJECT MODAL -->
+<div class="cd-modal-overlay" id="newProjectModal">
+  <div class="cd-modal">
+    <div class="cd-modal-title">// New Project</div>
+    <input type="text" class="cd-input cd-mb-sm" id="newProjectTitle" placeholder="Project title..." style="margin-bottom:0.5rem;">
+    <input type="text" class="cd-input" id="newProjectDesc" placeholder="Brief description (optional)...">
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;">
+      <input type="checkbox" id="newProjectPrivate" style="width:14px;height:14px;accent-color:var(--cd-amber);">
+      <label for="newProjectPrivate" style="font-family:var(--cd-font-ui);font-size:0.62rem;letter-spacing:0.1em;color:var(--cd-text-dim);cursor:pointer;">
+        PRIVATE PROJECT
+      </label>
+    </div>
+    <div class="cd-modal-actions">
+      <button class="cd-btn ghost" id="newProjectCancelBtn">CANCEL</button>
+      <button class="cd-btn primary" id="newProjectConfirmBtn">CREATE</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN MODAL -->
+<div class="cd-modal-overlay" id="pinModal">
+  <div class="cd-modal">
+    <div class="cd-modal-title">// Private Projects</div>
+    <input type="password" class="cd-input" id="pinInput"
+      placeholder="6-digit PIN" maxlength="6" inputmode="numeric"
+      style="letter-spacing:0.3em;font-size:1.2rem;text-align:center;">
+    <div id="pinError" style="font-family:var(--cd-font-ui);font-size:0.6rem;color:#cc4444;margin-top:0.5rem;display:none;letter-spacing:0.1em;">
+      INCORRECT PIN
+    </div>
+    <div class="cd-modal-actions">
+      <button class="cd-btn ghost" id="pinCancelBtn">CANCEL</button>
+      <button class="cd-btn primary" id="pinConfirmBtn">UNLOCK</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCRATCH PAD — inserted via snippet -->
+<div class="cd-scratch-overlay" id="scratchOverlay"></div>
+<div class="cd-scratch-panel" id="scratchPanel">
+  <div class="cd-scratch-panel-header">
+    <span class="cd-scratch-title">// Scratch</span>
+    <span class="cd-scratch-status" id="scratchStatus">—</span>
+  </div>
+  <textarea class="cd-scratch-textarea" id="scratchTextarea"
+    placeholder="quick thoughts, clipboard, anything..."></textarea>
+  <div class="cd-scratch-footer">
+    <span class="cd-scratch-hint">Ctrl+Shift+S · Esc to close</span>
+    <div style="display:flex;gap:0.5rem;">
+      <button class="cd-btn sm ghost" id="scratchCopy">COPY</button>
+      <button class="cd-btn sm" id="scratchSave">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+const BD_PROJECTS = {{ projects | tojson }};
+
+// ============================================================
+// BELOW DECK QUICK PANEL
+// ============================================================
+function updateBadge() {
+  fetch('/below-deck/count')
+    .then(r => r.json())
+    .then(data => {
+      const badge = document.getElementById('bdBadge');
+      if (!badge) return;
+      badge.className = 'cd-bd-badge';
+      if (data.count === 0) return;
+      if (data.count <= 3) badge.classList.add('green');
+      else if (data.count <= 6) badge.classList.add('amber');
+      else badge.classList.add('red');
+    });
+}
+
+(function() {
+  let selectedTag = null;
+
+  // Tag pills
+  document.querySelectorAll('.cd-tag-pill').forEach(pill => {
+    pill.addEventListener('click', function() {
+      if (selectedTag === this.dataset.tag) {
+        selectedTag = null;
+        document.querySelectorAll('.cd-tag-pill').forEach(p => p.classList.remove('active', p.dataset.tag));
+      } else {
+        selectedTag = this.dataset.tag;
+        document.querySelectorAll('.cd-tag-pill').forEach(p => {
+          p.classList.remove('active', 'work', 'home', 'errand', 'personal');
+        });
+        this.classList.add('active', selectedTag);
+      }
+    });
+  });
+
+  // Add task
+  function addTask() {
+    const input = document.getElementById('bdNewTask');
+    const title = input.value.trim();
+    if (!title) return;
+
+    const body = new URLSearchParams({ title });
+    if (selectedTag) body.append('tag', selectedTag);
+
+    fetch('/below-deck/add', { method: 'POST', body })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          input.value = '';
+          appendTask(data.task);
+          updateBadge();
+          document.getElementById('bdEmpty') && document.getElementById('bdEmpty').remove();
+        }
+      });
+  }
+
+  document.getElementById('bdAddBtn').addEventListener('click', addTask);
+  document.getElementById('bdNewTask').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addTask();
+  });
+
+  function appendTask(task) {
+    const list = document.getElementById('bdTaskList') || createTaskList();
+    const li = document.createElement('li');
+    li.className = 'cd-task-item';
+    li.dataset.id = task.id;
+    li.innerHTML = `
+      <input type="checkbox" class="cd-task-check" data-id="${task.id}">
+      <span class="cd-task-title">${escapeHtml(task.title)}</span>
+      ${task.tag ? `<span class="cd-task-tag ${task.tag}">${task.tag}</span>` : ''}
+      <button class="cd-btn ghost sm cd-task-promote" data-id="${task.id}" data-title="${escapeHtml(task.title)}">↑ PROJECT</button>
+      <button class="cd-task-edit" data-id="${task.id}" title="Edit">✎</button>
+      <button class="cd-task-assign" data-id="${task.id}" title="Assign">→</button>
+      <button class="cd-btn ghost sm cd-task-delete" data-id="${task.id}">✕</button>
+    `;
+    list.appendChild(li);
+    bindTaskEvents(li);
+  }
+
+  function createTaskList() {
+    const list = document.createElement('ul');
+    list.className = 'cd-task-list';
+    list.id = 'bdTaskList';
+    document.querySelector('.cd-panel-body').appendChild(list);
+    return list;
+  }
+
+  // Complete / delete / promote — delegated
+  document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('cd-task-check')) {
+      const id = e.target.dataset.id;
+      fetch('/below-deck/complete', {
+        method: 'POST',
+        body: new URLSearchParams({ id })
+      }).then(r => r.json()).then(data => {
+        if (data.success) {
+          const li = document.querySelector(`.cd-task-item[data-id="${id}"]`);
+          if (li) li.remove();
+          updateBadge();
+        }
+      });
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('cd-task-delete')) {
+      const id = e.target.dataset.id;
+      fetch('/below-deck/delete', {
+        method: 'POST',
+        body: new URLSearchParams({ id })
+      }).then(r => r.json()).then(data => {
+        if (data.success) {
+          const li = document.querySelector(`.cd-task-item[data-id="${id}"]`);
+          if (li) li.remove();
+          updateBadge();
+        }
+      });
+    }
+    if (e.target.classList.contains('cd-task-promote')) {
+      openPromoteModal(e.target.dataset.id, e.target.dataset.title);
+    }
+    if (e.target.classList.contains('cd-task-edit')) {
+      cdEditTask(e.target.dataset.id);
+    }
+    if (e.target.classList.contains('cd-task-assign')) {
+      cdShowAssign(e.target.dataset.id, 'bd');
+    }
+  });
+
+  function bindTaskEvents(li) {
+    // Events are delegated above — nothing extra needed
+  }
+
+  updateBadge();
+})();
+
+// ============================================================
+// PROMOTE TO PROJECT MODAL
+// ============================================================
+(function() {
+  let promoteTaskId = null;
+
+  window.openPromoteModal = function(taskId, taskTitle) {
+    promoteTaskId = taskId;
+    document.getElementById('promoteTitle').value = taskTitle;
+    document.getElementById('promoteModal').classList.add('open');
+    document.getElementById('promoteTitle').focus();
+  };
+
+  document.getElementById('promoteCancelBtn').addEventListener('click', () => {
+    document.getElementById('promoteModal').classList.remove('open');
+  });
+
+  document.getElementById('promoteModal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+
+  document.getElementById('promoteConfirmBtn').addEventListener('click', function() {
+    const title = document.getElementById('promoteTitle').value.trim();
+    if (!title || !promoteTaskId) return;
+
+    fetch('/command-deck/promote-task', {
+      method: 'POST',
+      body: new URLSearchParams({ task_id: promoteTaskId, project_title: title })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        window.location.href = `/command-deck/projects/${data.slug}/`;
+      }
+    });
+  });
+
+  document.getElementById('promoteTitle').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('promoteConfirmBtn').click();
+    if (e.key === 'Escape') document.getElementById('promoteModal').classList.remove('open');
+  });
+})();
+
+// ============================================================
+// NEW PROJECT MODAL
+// ============================================================
+(function() {
+  function openNewProject() {
+    document.getElementById('newProjectModal').classList.add('open');
+    document.getElementById('newProjectTitle').focus();
+  }
+
+  document.querySelectorAll('#newProjectBtn').forEach(btn => {
+    btn.addEventListener('click', openNewProject);
+  });
+
+  document.getElementById('newProjectCancelBtn').addEventListener('click', () => {
+    document.getElementById('newProjectModal').classList.remove('open');
+  });
+
+  document.getElementById('newProjectModal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+
+  document.getElementById('newProjectConfirmBtn').addEventListener('click', function() {
+    const title = document.getElementById('newProjectTitle').value.trim();
+    const desc  = document.getElementById('newProjectDesc').value.trim();
+    if (!title) return;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/command-deck/projects/new';
+    const isPrivate = document.getElementById('newProjectPrivate').checked ? '1' : '0';
+    form.innerHTML = `
+      <input name="title" value="${escapeHtml(title)}">
+      <input name="description" value="${escapeHtml(desc)}">
+      <input name="is_private" value="${isPrivate}">
+    `;
+    document.body.appendChild(form);
+    form.submit();
+  });
+
+  document.getElementById('newProjectTitle').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('newProjectConfirmBtn').click();
+    if (e.key === 'Escape') document.getElementById('newProjectModal').classList.remove('open');
+  });
+})();
+
+// ============================================================
+// HUYANG CHAT
+// ============================================================
+(function() {
+  const history  = document.getElementById('huyangHistory');
+  const input    = document.getElementById('huyangInput');
+  const sendBtn  = document.getElementById('huyangSend');
+  const clearBtn = document.getElementById('huyangClear');
+
+  function scrollBottom() {
+    history.scrollTop = history.scrollHeight;
+  }
+
+  function appendMsg(role, content) {
+    // Remove empty state if present
+    const empty = history.querySelector('.cd-huyang-empty');
+    if (empty) empty.remove();
+
+    const div = document.createElement('div');
+    div.className = `cd-msg ${role}`;
+    div.innerHTML = `
+      <div class="cd-msg-bubble">${escapeHtml(content)}</div>
+      <div class="cd-msg-meta">${role === 'user' ? 'you' : 'Huyang'}</div>
+    `;
+    history.appendChild(div);
+    scrollBottom();
+  }
+
+  function showThinking() {
+    const div = document.createElement('div');
+    div.className = 'cd-msg assistant';
+    div.id = 'huyangThinking';
+    div.innerHTML = `<div class="cd-huyang-thinking"><span></span><span></span><span></span></div>`;
+    history.appendChild(div);
+    scrollBottom();
+    return div;
+  }
+
+  function sendMessage() {
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+    appendMsg('user', msg);
+    const thinking = showThinking();
+    sendBtn.disabled = true;
+
+    fetch('/command-deck/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, project_id: null })
+    })
+    .then(r => r.json())
+    .then(data => {
+      thinking.remove();
+      sendBtn.disabled = false;
+      if (data.reply) {
+        appendMsg('assistant', data.reply);
+      } else {
+        appendMsg('assistant', data.error || 'Something went wrong.');
+      }
+    })
+    .catch(() => {
+      thinking.remove();
+      sendBtn.disabled = false;
+      appendMsg('assistant', 'Huyang is offline.');
+    });
+  }
+
+  sendBtn.addEventListener('click', sendMessage);
+
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // Auto-resize textarea
+  input.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
+
+  clearBtn.addEventListener('click', function() {
+    if (!confirm('Clear Huyang\'s chat history?')) return;
+    fetch('/command-deck/chat/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project_id: null })
+    }).then(() => {
+      history.innerHTML = '<div class="cd-huyang-empty"><p class="cd-huyang-empty-text">Cleared. Huyang is standing by.</p></div>';
+    });
+  });
+
+  scrollBottom();
+})();
+
+// ============================================================
+// SCRATCH PAD — Ctrl+Shift+S
+// ============================================================
+(function() {
+  const overlay  = document.getElementById('scratchOverlay');
+  const panel    = document.getElementById('scratchPanel');
+  const textarea = document.getElementById('scratchTextarea');
+  const status   = document.getElementById('scratchStatus');
+  const saveBtn  = document.getElementById('scratchSave');
+  const copyBtn  = document.getElementById('scratchCopy');
+
+  let open = false;
+  let debounceTimer = null;
+  let saveTimer = null;
+
+  function openPanel() {
+    open = true;
+    overlay.classList.add('open');
+    panel.classList.add('open');
+    fetchScratch();
+    setTimeout(() => textarea.focus(), 300);
+  }
+
+  function closePanel() {
+    open = false;
+    overlay.classList.remove('open');
+    panel.classList.remove('open');
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+      e.preventDefault();
+      open ? closePanel() : openPanel();
+    }
+    if (e.key === 'Escape' && open) closePanel();
+  });
+
+  overlay.addEventListener('click', closePanel);
+
+  function setStatus(msg) { status.textContent = msg; }
+
+  function fetchScratch() {
+    setStatus('loading...');
+    fetch('/scratch')
+      .then(r => r.json())
+      .then(data => {
+        textarea.value = data.content || '';
+        setStatus(data.last_modified ? 'synced' : '—');
+        if (!data.content) {
+          const local = localStorage.getItem('cockpit-scratch');
+          if (local) { textarea.value = local; setStatus('local'); }
+        }
+      })
+      .catch(() => {
+        const local = localStorage.getItem('cockpit-scratch');
+        if (local) textarea.value = local;
+        setStatus('· OFFLINE');
+      });
+  }
+
+  function saveScratch() {
+    const content = textarea.value;
+    localStorage.setItem('cockpit-scratch', content);
+    fetch('/scratch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content })
+    })
+    .then(r => r.json())
+    .then(() => {
+      setStatus('saved');
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => setStatus('—'), 3000);
+    })
+    .catch(() => setStatus('· OFFLINE'));
+  }
+
+  textarea.addEventListener('input', function() {
+    localStorage.setItem('cockpit-scratch', textarea.value);
+    if (debounceTimer) clearTimeout(debounceTimer);
+    setStatus('...');
+    debounceTimer = setTimeout(saveScratch, 1500);
+  });
+
+  saveBtn.addEventListener('click', saveScratch);
+  copyBtn.addEventListener('click', function() {
+    navigator.clipboard.writeText(textarea.value).then(() => {
+      const orig = copyBtn.textContent;
+      copyBtn.textContent = 'COPIED';
+      setTimeout(() => copyBtn.textContent = orig, 1500);
+    });
+  });
+
+  window.addEventListener('online', saveScratch);
+})();
+
+// ============================================================
+// UTILS
+// ============================================================
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(str || ''));
+  return d.innerHTML;
+}
+
+function cdEditTask(id) {
+  const li = document.querySelector(`[data-id="${id}"]`);
+  if (!li) return;
+  const titleEl = li.querySelector('.cd-task-title');
+  const editBtn = li.querySelector('.cd-task-edit');
+  if (!titleEl) return;
+  const currentTitle = titleEl.textContent.trim();
+  const input = document.createElement('input');
+  input.type = 'text'; input.value = currentTitle;
+  input.className = 'cd-task-edit-input'; input.maxLength = 200;
+  titleEl.replaceWith(input);
+  if (editBtn) { editBtn.style.opacity = '0'; editBtn.style.pointerEvents = 'none'; }
+  input.focus(); input.select();
+  let saved = false;
+  function save() {
+	if (saved) return; saved = true;
+	if (editBtn) { editBtn.style.opacity = ''; editBtn.style.pointerEvents = ''; }
+	const newTitle = input.value.trim();
+	if (!newTitle || newTitle === currentTitle) { input.replaceWith(titleEl); return; }
+	const fd = new FormData(); fd.append('title', newTitle);
+	fetch(`/tasks/${id}/edit`, { method: 'POST', body: fd })
+	  .then(r => r.json()).then(data => {
+		if (data.success) titleEl.textContent = newTitle;
+		input.replaceWith(titleEl);
+	  }).catch(() => input.replaceWith(titleEl));
+  }
+  function cancel() {
+	if (saved) return; saved = true;
+	if (editBtn) { editBtn.style.opacity = ''; editBtn.style.pointerEvents = ''; }
+	input.replaceWith(titleEl);
+  }
+  input.addEventListener('keydown', e => {
+	if (e.key === 'Enter') { e.preventDefault(); save(); }
+	if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+  });
+  input.addEventListener('blur', () => setTimeout(save, 120));
+}
+
+function cdShowAssign(id, context) {
+  const li = document.querySelector(`[data-id="${id}"]`);
+  if (!li) return;
+  if (li.querySelector('.cd-assign-select')) return;
+  // Use projects from BD_PROJECTS if available, else fetch
+  const projects = (typeof BD_PROJECTS !== 'undefined' && BD_PROJECTS) ? BD_PROJECTS : [];
+  if (!projects.length) { alert('No projects yet.'); return; }
+  const select = document.createElement('select');
+  select.className = 'cd-assign-select';
+  const ph = document.createElement('option');
+  ph.value = ''; ph.textContent = '→ project...'; ph.disabled = true; ph.selected = true;
+  select.appendChild(ph);
+  projects.forEach(p => {
+	const opt = document.createElement('option'); opt.value = p.id; opt.textContent = p.title;
+	select.appendChild(opt);
+  });
+  const deleteBtn = li.querySelector('.cd-task-delete, .cd-btn.danger');
+  if (deleteBtn) li.insertBefore(select, deleteBtn);
+  else li.appendChild(select);
+  select.focus();
+  select.addEventListener('change', function() {
+	const projectId = this.value; if (!projectId) return;
+	const fd = new FormData(); fd.append('project_id', projectId);
+	fetch(`/tasks/${id}/assign`, { method: 'POST', body: fd })
+	  .then(r => r.json()).then(data => {
+		if (data.success) {
+		  li.style.opacity = '0'; li.style.transition = 'opacity .25s';
+		  setTimeout(() => { li.remove(); updateBadge && updateBadge(); }, 250);
+		}
+	  }).catch(() => select.remove());
+  });
+  select.addEventListener('blur', () => setTimeout(() => { if (select.parentNode) select.remove(); }, 150));
+  select.addEventListener('keydown', e => { if (e.key === 'Escape') select.remove(); });
+}
+
+(function() {
+  let privateVisible = false;
+
+  function showPrivateProjects() {
+    document.querySelectorAll('.cd-project-card.is-private').forEach(el => {
+      el.classList.remove('private-hidden');
+    });
+    privateVisible = true;
+  }
+
+  function hidePrivateProjects() {
+    document.querySelectorAll('.cd-project-card.is-private').forEach(el => {
+      el.classList.add('private-hidden');
+    });
+    privateVisible = false;
+  }
+
+  function openPinModal() {
+    document.getElementById('pinModal').classList.add('open');
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinError').style.display = 'none';
+    setTimeout(() => document.getElementById('pinInput').focus(), 100);
+  }
+
+  function closePinModal() {
+    document.getElementById('pinModal').classList.remove('open');
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+      e.preventDefault();
+      if (privateVisible) { hidePrivateProjects(); } else { openPinModal(); }
+    }
+    if (e.key === 'Escape') closePinModal();
+  });
+
+  document.getElementById('pinCancelBtn').addEventListener('click', closePinModal);
+  document.getElementById('pinModal').addEventListener('click', function(e) {
+    if (e.target === this) closePinModal();
+  });
+
+  function submitPin() {
+    const pin = document.getElementById('pinInput').value.trim();
+    if (!pin) return;
+    fetch('/command-deck/verify-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        closePinModal();
+        showPrivateProjects();
+      } else {
+        document.getElementById('pinError').style.display = 'block';
+        document.getElementById('pinInput').value = '';
+        document.getElementById('pinInput').focus();
+      }
+    })
+    .catch(() => {
+      document.getElementById('pinError').style.display = 'block';
+    });
+  }
+
+  document.getElementById('pinConfirmBtn').addEventListener('click', submitPin);
+  document.getElementById('pinInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitPin();
+  });
+})();
+
+</script>
+
+</body>
+</html>

@@ -6,313 +6,115 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>BELOW DECK</title>
-
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
     <link rel="shortcut icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Crimson+Pro:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
-
     <style>
     :root {
-        --bg:           #060806;
-        --bg2:          #0a0c08;
-        --amber:        #d4880a;
-        --amber-hi:     #f5b332;
-        --amber-lo:     #9a6018;
-        --amber-dim:    #3d2804;
-        --green:        #4dbb6a;
-        --green-lo:     #2a6b3c;
-        --red:          #cc3322;
-        --blue:         #4a8fa8;
-        --blue-lo:      #2a5a6a;
-        --text:         #c89040;
-        --text-dim:     #7a5020;
-        --border:       #1e1608;
-        --border-hi:    #3a2c10;
-        --muted:        #5a3c18;
-        --input-bg:     #0a0c08;
+        --bg:#060806;--bg2:#0a0c08;--amber:#d4880a;--amber-hi:#f5b332;
+        --amber-lo:#9a6018;--amber-dim:#3d2804;--green:#4dbb6a;--green-lo:#2a6b3c;
+        --red:#cc3322;--blue:#4a8fa8;--blue-lo:#2a5a6a;--text:#c89040;
+        --text-dim:#7a5020;--border:#1e1608;--border-hi:#3a2c10;--muted:#5a3c18;--input-bg:#0a0c08;
     }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-        background: var(--bg);
-        color: var(--text);
-        font-family: 'Share Tech Mono', 'Courier New', monospace;
-        min-height: 100vh;
-        padding: env(safe-area-inset-top, 20px) 0 60px;
-        font-size: 14px;
-        overscroll-behavior-y: contain;
-    }
-
-    .bd-container {
-        width: 100%;
-        max-width: 480px;
-        margin: 0 auto;
-        padding: 24px 20px 60px;
-    }
-
-    @media (min-width: 768px) {
-        .bd-container { margin-top: 40px; border: 1px solid var(--border); }
-    }
-
-    .bd-header {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        margin-bottom: 24px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid var(--border);
-    }
-
-    .bd-title {
-        font-family: 'VT323', monospace;
-        font-size: 1.8rem;
-        color: var(--amber-lo);
-        letter-spacing: 0.06em;
-        line-height: 1;
-    }
-
-    .bd-nav { display: flex; gap: 16px; align-items: center; }
-
-    .bd-nav-btn {
-        background: none; border: none;
-        color: var(--muted); font-size: 0.6rem;
-        font-family: 'Share Tech Mono', monospace;
-        letter-spacing: 0.15em; text-transform: uppercase;
-        cursor: pointer; transition: color 0.15s;
-        padding: 0; text-decoration: none;
-    }
-
-    .bd-nav-btn:hover { color: var(--amber-lo); }
-
-    /* ADD */
-    .bd-add-section { margin-bottom: 20px; }
-
-    .bd-add-row { display: flex; gap: 8px; margin-bottom: 8px; }
-
-    .bd-add-row input[type="text"] {
-        flex: 1; background: var(--input-bg); color: var(--text);
-        border: 1px solid var(--border); border-radius: 2px;
-        padding: 10px 14px; font-size: 0.9rem;
-        font-family: 'Crimson Pro', Georgia, serif;
-        outline: none; transition: border-color 0.15s; -webkit-appearance: none;
-    }
-
-    .bd-add-row input[type="text"]:focus { border-color: var(--amber-lo); }
-    .bd-add-row input[type="text"]::placeholder { color: var(--border-hi); font-style: italic; }
-
-    .bd-add-btn {
-        background: none; border: 1px solid var(--border-hi); color: var(--text-dim);
-        padding: 10px 16px; border-radius: 2px; font-size: 0.65rem;
-        font-family: 'Share Tech Mono', monospace; text-transform: uppercase;
-        letter-spacing: 0.18em; cursor: pointer; transition: all 0.15s;
-        white-space: nowrap; flex-shrink: 0;
-    }
-
-    .bd-add-btn:hover { border-color: var(--amber-lo); color: var(--amber); }
-    .bd-add-btn.is-success { border-color: var(--green); color: var(--green); }
-
-    /* TAGS */
-    .bd-tag-row { display: flex; gap: 6px; flex-wrap: wrap; }
-
-    .bd-tag-pill {
-        background: none; border: 1px solid var(--border-hi); color: var(--muted);
-        padding: 3px 10px; border-radius: 2px; font-size: 0.58rem;
-        font-family: 'Share Tech Mono', monospace; text-transform: uppercase;
-        letter-spacing: 0.12em; cursor: pointer; transition: all 0.15s;
-    }
-
-    .bd-tag-pill:hover { border-color: var(--amber-lo); color: var(--amber-lo); }
-    .bd-tag-pill.selected-work    { border-color: var(--amber);    color: var(--amber);    background: var(--amber-dim); }
-    .bd-tag-pill.selected-home    { border-color: var(--green);    color: var(--green);    background: rgba(77,187,106,0.08); }
-    .bd-tag-pill.selected-errand  { border-color: var(--blue);     color: var(--blue);     background: rgba(74,143,168,0.08); }
-    .bd-tag-pill.selected-personal{ border-color: var(--border-hi);color: var(--text-dim); background: rgba(90,60,24,0.15); }
-
-    /* SECTION HEADERS */
-    .bd-section-header {
-        font-size: 0.58rem; color: var(--muted); text-transform: uppercase;
-        letter-spacing: 0.22em; padding-bottom: 8px; border-bottom: 1px solid var(--border);
-        margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;
-    }
-
-    .bd-clear-btn {
-        background: none; border: none; color: var(--muted); font-size: 0.55rem;
-        font-family: 'Share Tech Mono', monospace; letter-spacing: 0.12em;
-        text-transform: uppercase; cursor: pointer; transition: color 0.15s; padding: 0;
-    }
-
-    .bd-clear-btn:hover { color: var(--red); }
-
-    /* TASK LIST */
-    .bd-list { list-style: none; position: relative; }
-
-    .bd-item {
-        display: flex; align-items: center; gap: 8px;
-        padding: 11px 0; border-bottom: 1px solid var(--border);
-        user-select: none; -webkit-user-select: none; position: relative;
-    }
-
-    .bd-item.is-dragging { opacity: 0.35; }
-
-    /* Drop indicator line */
-    .bd-drop-indicator {
-        position: absolute; left: 0; right: 0; height: 2px;
-        background: var(--amber-lo); border-radius: 1px;
-        pointer-events: none; display: none;
-        box-shadow: 0 0 6px var(--amber-lo);
-    }
-
-    .bd-drop-indicator.above { top: -1px; display: block; }
-    .bd-drop-indicator.below { bottom: -1px; display: block; }
-
-    /* Sentinels */
-    .bd-sentinel { height: 10px; position: relative; }
-    .bd-sentinel .bd-drop-indicator { top: 50%; transform: translateY(-50%); display: none; }
-    .bd-sentinel .bd-drop-indicator.active { display: block; }
-
-    /* Handle */
-    .bd-handle {
-        color: var(--border-hi); font-size: 0.75rem; cursor: grab;
-        padding: 2px 2px; flex-shrink: 0; line-height: 1;
-        letter-spacing: -1px; touch-action: none; transition: color 0.15s;
-    }
-
-    .bd-handle:active { cursor: grabbing; color: var(--amber-lo); }
-    .bd-handle.touch-active { color: var(--amber-lo); }
-
-    .bd-check {
-        width: 14px; height: 14px; flex-shrink: 0;
-        border: 1px solid var(--border-hi); border-radius: 2px;
-        background: none; cursor: pointer;
-        display: flex; align-items: center; justify-content: center;
-        transition: all 0.15s; color: var(--green); font-size: 10px; line-height: 1;
-    }
-
-    .bd-check:hover { border-color: var(--green); }
-
-    .bd-title-text {
-        flex: 1; font-size: 0.92rem; color: var(--text);
-        font-family: 'Crimson Pro', Georgia, serif;
-        line-height: 1.4; min-width: 0;
-    }
-
-    .bd-task-tag {
-        font-size: 0.5rem; letter-spacing: 0.12em; padding: 2px 6px;
-        border-radius: 2px; text-transform: uppercase; flex-shrink: 0;
-        font-family: 'Share Tech Mono', monospace;
-    }
-
-    .bd-task-tag.tag-work     { border: 1px solid var(--amber-lo); color: var(--amber-lo); }
-    .bd-task-tag.tag-home     { border: 1px solid var(--green-lo); color: var(--green); }
-    .bd-task-tag.tag-errand   { border: 1px solid var(--blue-lo);  color: var(--blue); }
-    .bd-task-tag.tag-personal { border: 1px solid var(--border-hi);color: var(--muted); }
-
-    .bd-delete {
-        background: none; border: none; color: var(--border-hi);
-        font-size: 0.65rem; cursor: pointer; padding: 2px 4px;
-        font-family: 'Share Tech Mono', monospace; transition: color 0.15s; flex-shrink: 0;
-    }
-
-    .bd-delete:hover { color: var(--red); }
-
-    /* WINS */
-    .bd-wins-section { margin-top: 28px; }
-
-    .bd-win-item {
-        display: flex; align-items: center; gap: 8px;
-        padding: 9px 0; border-bottom: 1px solid var(--border); opacity: 0.5;
-    }
-
-    .bd-win-check {
-        width: 14px; height: 14px; flex-shrink: 0;
-        border: 1px solid var(--green-lo); border-radius: 2px;
-        background: var(--green-lo); display: flex;
-        align-items: center; justify-content: center;
-        color: var(--green); font-size: 10px; line-height: 1;
-    }
-
-    .bd-win-title {
-        flex: 1; font-size: 0.88rem; color: var(--text-dim);
-        font-family: 'Crimson Pro', Georgia, serif; font-style: italic;
-        text-decoration: line-through; text-decoration-color: var(--muted);
-        line-height: 1.4; min-width: 0;
-    }
-
-    @keyframes bd-complete-flash {
-        0%   { background: rgba(77,187,106,0.2); }
-        100% { background: transparent; opacity: 0; }
-    }
-
-    .bd-item.completing {
-        animation: bd-complete-flash 0.5s ease-out forwards;
-        pointer-events: none;
-    }
-
-    .bd-empty {
-        font-family: 'Crimson Pro', serif; font-style: italic;
-        color: var(--muted); font-size: 0.9rem;
-        padding: 20px 0; text-align: center; opacity: 0.6;
-    }
-
-    /* DRAG CLONE */
-    .bd-drag-clone {
-        position: fixed; pointer-events: none; z-index: 9999;
-        background: var(--bg2); border: 1px solid var(--amber-lo);
-        opacity: 0.92; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        left: 20px; right: 20px;
-        display: flex; align-items: center; gap: 8px; padding: 11px 20px;
-    }
-
-    /* FOOTER */
-    .bd-footer {
-        margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--border);
-        font-size: 0.55rem; color: var(--muted); letter-spacing: 0.15em;
-        text-transform: uppercase; display: flex;
-        justify-content: space-between; align-items: center;
-    }
-
-    @media (prefers-color-scheme: light) {
-        :root {
-            --bg: #f5f0e8; --bg2: #ede8dc; --amber: #7a3e00; --amber-hi: #5a2e00;
-            --amber-lo: #a06020; --amber-dim: #f0e6d0; --text: #4a3818; --text-dim: #8a7858;
-            --border: #d8cdb8; --border-hi: #c4b090; --muted: #8a7858; --input-bg: #ede8dc;
-            --green: #2a6e3f; --green-lo: #4a8c60; --blue: #2a6a7a; --blue-lo: #4a8a9a;
-        }
-        .bd-add-row input[type="text"] { color: #3a2a10; }
-        .bd-add-row input[type="text"]::placeholder { color: #c4b090; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono','Courier New',monospace;min-height:100vh;padding:env(safe-area-inset-top,20px) 0 60px;font-size:14px;overscroll-behavior-y:contain;}
+    .bd-container{width:100%;max-width:480px;margin:0 auto;padding:24px 20px 60px;}
+    @media(min-width:768px){.bd-container{margin-top:40px;border:1px solid var(--border);}}
+    .bd-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:24px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+    .bd-title{font-family:'VT323',monospace;font-size:1.8rem;color:var(--amber-lo);letter-spacing:.06em;line-height:1;}
+    .bd-nav{display:flex;gap:16px;align-items:center;}
+    .bd-nav-btn{background:none;border:none;color:var(--muted);font-size:.6rem;font-family:'Share Tech Mono',monospace;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;transition:color .15s;padding:0;text-decoration:none;}
+    .bd-nav-btn:hover{color:var(--amber-lo);}
+    .bd-add-section{margin-bottom:20px;}
+    .bd-add-row{display:flex;gap:8px;margin-bottom:8px;}
+    .bd-add-row input[type="text"]{flex:1;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:2px;padding:10px 14px;font-size:.9rem;font-family:'Crimson Pro',Georgia,serif;outline:none;transition:border-color .15s;-webkit-appearance:none;}
+    .bd-add-row input[type="text"]:focus{border-color:var(--amber-lo);}
+    .bd-add-row input[type="text"]::placeholder{color:var(--border-hi);font-style:italic;}
+    .bd-add-btn{background:none;border:1px solid var(--border-hi);color:var(--text-dim);padding:10px 16px;border-radius:2px;font-size:.65rem;font-family:'Share Tech Mono',monospace;text-transform:uppercase;letter-spacing:.18em;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;}
+    .bd-add-btn:hover{border-color:var(--amber-lo);color:var(--amber);}
+    .bd-add-btn.is-success{border-color:var(--green);color:var(--green);}
+    .bd-tag-row{display:flex;gap:6px;flex-wrap:wrap;}
+    .bd-tag-pill{background:none;border:1px solid var(--border-hi);color:var(--muted);padding:3px 10px;border-radius:2px;font-size:.58rem;font-family:'Share Tech Mono',monospace;text-transform:uppercase;letter-spacing:.12em;cursor:pointer;transition:all .15s;}
+    .bd-tag-pill:hover{border-color:var(--amber-lo);color:var(--amber-lo);}
+    .bd-tag-pill.selected-work{border-color:var(--amber);color:var(--amber);background:var(--amber-dim);}
+    .bd-tag-pill.selected-home{border-color:var(--green);color:var(--green);background:rgba(77,187,106,.08);}
+    .bd-tag-pill.selected-errand{border-color:var(--blue);color:var(--blue);background:rgba(74,143,168,.08);}
+    .bd-tag-pill.selected-personal{border-color:var(--border-hi);color:var(--text-dim);background:rgba(90,60,24,.15);}
+    .bd-section-header{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.22em;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;}
+    .bd-clear-btn{background:none;border:none;color:var(--muted);font-size:.55rem;font-family:'Share Tech Mono',monospace;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:color .15s;padding:0;}
+    .bd-clear-btn:hover{color:var(--red);}
+    .bd-list{list-style:none;position:relative;}
+    .bd-item{display:flex;align-items:center;gap:8px;padding:11px 0;border-bottom:1px solid var(--border);user-select:none;-webkit-user-select:none;position:relative;}
+    .bd-item.is-dragging{opacity:.35;}
+    .bd-drop-indicator{position:absolute;left:0;right:0;height:2px;background:var(--amber-lo);border-radius:1px;pointer-events:none;display:none;box-shadow:0 0 6px var(--amber-lo);}
+    .bd-drop-indicator.above{top:-1px;display:block;}
+    .bd-drop-indicator.below{bottom:-1px;display:block;}
+    .bd-sentinel{height:10px;position:relative;}
+    .bd-sentinel .bd-drop-indicator{top:50%;transform:translateY(-50%);display:none;}
+    .bd-sentinel .bd-drop-indicator.active{display:block;}
+    .bd-handle{color:var(--border-hi);font-size:.75rem;cursor:grab;padding:2px;flex-shrink:0;line-height:1;letter-spacing:-1px;touch-action:none;transition:color .15s;}
+    .bd-handle:active{cursor:grabbing;color:var(--amber-lo);}
+    .bd-handle.touch-active{color:var(--amber-lo);}
+    .bd-check{width:14px;height:14px;flex-shrink:0;border:1px solid var(--border-hi);border-radius:2px;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--green);font-size:10px;line-height:1;}
+    .bd-check:hover{border-color:var(--green);}
+    .bd-title-text{flex:1;font-size:.92rem;color:var(--text);font-family:'Crimson Pro',Georgia,serif;line-height:1.4;min-width:0;}
+    .bd-task-tag{font-size:.5rem;letter-spacing:.12em;padding:2px 6px;border-radius:2px;text-transform:uppercase;flex-shrink:0;font-family:'Share Tech Mono',monospace;}
+    .bd-task-tag.tag-work{border:1px solid var(--amber-lo);color:var(--amber-lo);}
+    .bd-task-tag.tag-home{border:1px solid var(--green-lo);color:var(--green);}
+    .bd-task-tag.tag-errand{border:1px solid var(--blue-lo);color:var(--blue);}
+    .bd-task-tag.tag-personal{border:1px solid var(--border-hi);color:var(--muted);}
+    .bd-action{opacity:0;background:none;border:none;color:var(--amber-lo);font-size:.6rem;cursor:pointer;padding:2px 4px;font-family:'Share Tech Mono',monospace;letter-spacing:.08em;text-transform:uppercase;transition:color .15s,opacity .15s;flex-shrink:0;white-space:nowrap;}
+    .bd-item:hover .bd-action{opacity:1;}
+    .bd-action:hover{color:var(--amber);}
+    .bd-action.assign:hover{color:var(--green);}
+    .bd-edit-input{flex:1;background:transparent;border:none;border-bottom:1px solid var(--amber-lo);color:var(--text);font-family:'Crimson Pro',Georgia,serif;font-size:.92rem;line-height:1.4;outline:none;padding:0;min-width:0;user-select:text;-webkit-user-select:text;}
+    .bd-assign-select{background:var(--bg2);border:1px solid var(--amber-lo);border-radius:2px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.6rem;letter-spacing:.05em;padding:3px 6px;outline:none;cursor:pointer;max-width:130px;flex-shrink:0;}
+    .bd-assign-select option{background:var(--bg2);color:var(--text);}
+    .bd-delete{background:none;border:none;color:var(--border-hi);font-size:.65rem;cursor:pointer;padding:2px 4px;font-family:'Share Tech Mono',monospace;transition:color .15s;flex-shrink:0;}
+    .bd-delete:hover{color:var(--red);}
+    .bd-wins-section{margin-top:28px;}
+    .bd-win-item{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);opacity:.5;}
+    .bd-win-check{width:14px;height:14px;flex-shrink:0;border:1px solid var(--green-lo);border-radius:2px;background:var(--green-lo);display:flex;align-items:center;justify-content:center;color:var(--green);font-size:10px;line-height:1;}
+    .bd-win-title{flex:1;font-size:.88rem;color:var(--text-dim);font-family:'Crimson Pro',Georgia,serif;font-style:italic;text-decoration:line-through;text-decoration-color:var(--muted);line-height:1.4;min-width:0;}
+    @keyframes bd-complete-flash{0%{background:rgba(77,187,106,.2);}100%{background:transparent;opacity:0;}}
+    .bd-item.completing{animation:bd-complete-flash .5s ease-out forwards;pointer-events:none;}
+    .bd-empty{font-family:'Crimson Pro',serif;font-style:italic;color:var(--muted);font-size:.9rem;padding:20px 0;text-align:center;opacity:.6;}
+    .bd-drag-clone{position:fixed;pointer-events:none;z-index:9999;background:var(--bg2);border:1px solid var(--amber-lo);opacity:.92;box-shadow:0 4px 20px rgba(0,0,0,.5);left:20px;right:20px;display:flex;align-items:center;gap:8px;padding:11px 20px;}
+    .bd-footer{margin-top:32px;padding-top:12px;border-top:1px solid var(--border);font-size:.55rem;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;}
+    @media(prefers-color-scheme:light){
+        :root{--bg:#f5f0e8;--bg2:#ede8dc;--amber:#7a3e00;--amber-hi:#5a2e00;--amber-lo:#a06020;--amber-dim:#f0e6d0;--text:#4a3818;--text-dim:#8a7858;--border:#d8cdb8;--border-hi:#c4b090;--muted:#8a7858;--input-bg:#ede8dc;--green:#2a6e3f;--green-lo:#4a8c60;--blue:#2a6a7a;--blue-lo:#4a8a9a;}
+        .bd-add-row input[type="text"]{color:#3a2a10;}
+        .bd-add-row input[type="text"]::placeholder{color:#c4b090;}
+        .bd-edit-input{border-bottom-color:#a06020;color:#4a3818;}
+        .bd-assign-select{background:#ede8dc;color:#3a2a10;}
     }
     </style>
 </head>
 <body>
-
 <div class="bd-container">
-
     <div class="bd-header">
         <div class="bd-title">// BELOW DECK</div>
         <nav class="bd-nav">
             <button class="bd-nav-btn" onclick="window.location.reload()">REFRESH</button>
             <a class="bd-nav-btn" href="/publish">COCKPIT</a>
+            <a class="bd-nav-btn" href="/command-deck/">COMMAND DECK</a>
             <a class="bd-nav-btn" href="/logout">OFFLINE</a>
         </nav>
     </div>
-
     <div class="bd-add-section">
         <div class="bd-add-row">
             <input type="text" id="bd-input" placeholder="Add a task..." maxlength="200" autocomplete="off">
             <button class="bd-add-btn" id="bd-add-btn" onclick="bdAdd()">+ ADD</button>
         </div>
         <div class="bd-tag-row">
-            <button class="bd-tag-pill" data-tag="work"     onclick="bdSelectTag('work')"    >#work</button>
-            <button class="bd-tag-pill" data-tag="home"     onclick="bdSelectTag('home')"    >#home</button>
-            <button class="bd-tag-pill" data-tag="errand"   onclick="bdSelectTag('errand')"  >#errand</button>
+            <button class="bd-tag-pill" data-tag="work" onclick="bdSelectTag('work')">#work</button>
+            <button class="bd-tag-pill" data-tag="home" onclick="bdSelectTag('home')">#home</button>
+            <button class="bd-tag-pill" data-tag="errand" onclick="bdSelectTag('errand')">#errand</button>
             <button class="bd-tag-pill" data-tag="personal" onclick="bdSelectTag('personal')">#personal</button>
         </div>
     </div>
-
     <div class="bd-section-header">// Open</div>
-    <div class="bd-sentinel" id="bd-sentinel-top">
-        <div class="bd-drop-indicator" id="bd-top-indicator"></div>
-    </div>
+    <div class="bd-sentinel" id="bd-sentinel-top"><div class="bd-drop-indicator" id="bd-top-indicator"></div></div>
     <ul class="bd-list" id="bd-list">
         {% set open_tasks = tasks | selectattr('status', 'equalto', 'open') | list %}
         {% if open_tasks %}
@@ -323,6 +125,8 @@
                 <button class="bd-check" onclick="bdComplete('{{ task.id }}')" title="Done"></button>
                 <span class="bd-title-text">{{ task.title }}</span>
                 {% if task.tag %}<span class="bd-task-tag tag-{{ task.tag }}">#{{ task.tag }}</span>{% endif %}
+                <button class="bd-action" onclick="bdEditTask('{{ task.id }}')" title="Edit">✎</button>
+                <button class="bd-action assign" onclick="bdShowAssign('{{ task.id }}')" title="Assign to project">→</button>
                 <button class="bd-delete" onclick="bdDelete('{{ task.id }}')" title="Delete">✕</button>
             </li>
             {% endfor %}
@@ -330,18 +134,14 @@
             <li class="bd-empty" id="bd-empty">Clear skies. Nothing below deck.</li>
         {% endif %}
     </ul>
-    <div class="bd-sentinel" id="bd-sentinel-bottom">
-        <div class="bd-drop-indicator" id="bd-bottom-indicator"></div>
-    </div>
-
-    {% set done_tasks = tasks | selectattr('status', 'equalto', 'complete') | list %}
-    <div class="bd-wins-section" id="bd-wins-section" {% if not done_tasks %}style="display:none;"{% endif %}>
+    <div class="bd-sentinel" id="bd-sentinel-bottom"><div class="bd-drop-indicator" id="bd-bottom-indicator"></div></div>
+    <div class="bd-wins-section" id="bd-wins-section" {% if not completed_tasks %}style="display:none;"{% endif %}>
         <div class="bd-section-header">
             // Today's Wins
             <button class="bd-clear-btn" onclick="bdClearCompleted()">CLEAR</button>
         </div>
         <ul class="bd-wins-list" id="bd-wins-list">
-            {% for task in done_tasks %}
+            {% for task in completed_tasks %}
             <li class="bd-win-item" data-id="{{ task.id }}">
                 <div class="bd-win-check">✓</div>
                 <span class="bd-win-title">{{ task.title }}</span>
@@ -351,382 +151,164 @@
             {% endfor %}
         </ul>
     </div>
-
     <div class="bd-footer">
         <span>private · not published</span>
         <span id="bd-count-display"></span>
     </div>
-
 </div>
-
 <script>
-    const bdList        = document.getElementById('bd-list');
-    const bdWinsList    = document.getElementById('bd-wins-list');
-    const bdWinsSection = document.getElementById('bd-wins-section');
-    let selectedTag     = null;
-    let dragSrc         = null;
-    let dragClone       = null;
-    let touchDragging   = false;
+    const BD_PROJECTS = {{ projects | tojson }};
+    const bdList=document.getElementById('bd-list'),bdWinsList=document.getElementById('bd-wins-list'),bdWinsSection=document.getElementById('bd-wins-section');
+    let selectedTag=null,dragSrc=null,dragClone=null,touchDragging=false;
 
-    // ---- TAGS ----
-    function bdSelectTag(tag) {
-        if (selectedTag === tag) {
-            selectedTag = null;
-            document.querySelectorAll('.bd-tag-pill').forEach(p => p.className = 'bd-tag-pill');
-        } else {
-            selectedTag = tag;
-            document.querySelectorAll('.bd-tag-pill').forEach(p => {
-                p.className = 'bd-tag-pill';
-                if (p.dataset.tag === tag) p.classList.add('selected-' + tag);
-            });
+    function bdSelectTag(tag){
+        if(selectedTag===tag){selectedTag=null;document.querySelectorAll('.bd-tag-pill').forEach(p=>p.className='bd-tag-pill');}
+        else{selectedTag=tag;document.querySelectorAll('.bd-tag-pill').forEach(p=>{p.className='bd-tag-pill';if(p.dataset.tag===tag)p.classList.add('selected-'+tag);});}
+    }
+
+    function bdAdd(){
+        const input=document.getElementById('bd-input'),btn=document.getElementById('bd-add-btn'),title=input.value.trim();
+        if(!title)return;
+        input.value='';const prevTag=selectedTag;selectedTag=null;
+        document.querySelectorAll('.bd-tag-pill').forEach(p=>p.className='bd-tag-pill');
+        const fd=new FormData();fd.append('title',title);if(prevTag)fd.append('tag',prevTag);
+        fetch('/below-deck/add',{method:'POST',body:fd}).then(r=>r.json()).then(data=>{
+            if(!data.success)throw new Error();
+            bdPrepend(data.task);bdRemoveEmpty();bdUpdateCount();
+            btn.textContent='ADDED ✓';btn.classList.add('is-success');
+            setTimeout(()=>{btn.textContent='+ ADD';btn.classList.remove('is-success');},1500);
+            input.focus();
+        }).catch(()=>{input.value=title;selectedTag=prevTag;input.focus();});
+    }
+    document.getElementById('bd-input').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();bdAdd();}});
+
+    function bdEditTask(id){
+        const li=document.querySelector(`.bd-item[data-id="${id}"]`);if(!li)return;
+        const titleEl=li.querySelector('.bd-title-text');if(!titleEl)return;
+        const currentTitle=titleEl.textContent.trim();
+        li.setAttribute('draggable','false');
+        const input=document.createElement('input');
+        input.type='text';input.value=currentTitle;input.className='bd-edit-input';input.maxLength=200;
+        titleEl.replaceWith(input);
+        let saved=false;
+        function save(){
+            if(saved)return;saved=true;li.setAttribute('draggable','true');
+            const newTitle=input.value.trim();
+            if(!newTitle||newTitle===currentTitle){input.replaceWith(titleEl);return;}
+            const fd=new FormData();fd.append('title',newTitle);
+            fetch(`/tasks/${id}/edit`,{method:'POST',body:fd}).then(r=>r.json()).then(data=>{
+                if(data.success)titleEl.textContent=newTitle;
+                input.replaceWith(titleEl);
+            }).catch(()=>input.replaceWith(titleEl));
         }
+        function cancel(){if(saved)return;saved=true;li.setAttribute('draggable','true');input.replaceWith(titleEl);}
+        input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();save();}if(e.key==='Escape'){e.preventDefault();cancel();}});
+        input.addEventListener('blur',()=>setTimeout(save,120));
+        input.focus();input.select();
     }
 
-    // ---- ADD ----
-    function bdAdd() {
-        const input = document.getElementById('bd-input');
-        const btn   = document.getElementById('bd-add-btn');
-        const title = input.value.trim();
-        if (!title) return;
-
-        input.value = '';
-        const prevTag = selectedTag;
-        selectedTag = null;
-        document.querySelectorAll('.bd-tag-pill').forEach(p => p.className = 'bd-tag-pill');
-
-        const fd = new FormData();
-        fd.append('title', title);
-        if (prevTag) fd.append('tag', prevTag);
-
-        fetch('/below-deck/add', { method: 'POST', body: fd })
-            .then(r => r.json())
-            .then(data => {
-                if (!data.ok) throw new Error();
-                bdPrepend(data.task);
-                bdRemoveEmpty();
-                bdUpdateCount();
-                btn.textContent = 'ADDED ✓';
-                btn.classList.add('is-success');
-                setTimeout(() => { btn.textContent = '+ ADD'; btn.classList.remove('is-success'); }, 1500);
-                input.focus();
-            })
-            .catch(() => {
-                input.value = title;
-                selectedTag = prevTag;
-                input.focus();
-            });
+    function bdShowAssign(id){
+        const li=document.querySelector(`.bd-item[data-id="${id}"]`);if(!li)return;
+        if(li.querySelector('.bd-assign-select'))return;
+        if(!BD_PROJECTS||!BD_PROJECTS.length){alert('No projects yet. Create one in Command Deck first.');return;}
+        const select=document.createElement('select');select.className='bd-assign-select';
+        const ph=document.createElement('option');ph.value='';ph.textContent='→ project...';ph.disabled=true;ph.selected=true;select.appendChild(ph);
+        BD_PROJECTS.forEach(p=>{const opt=document.createElement('option');opt.value=p.id;opt.textContent=p.title;select.appendChild(opt);});
+        const deleteBtn=li.querySelector('.bd-delete');li.insertBefore(select,deleteBtn);
+        select.focus();
+        select.addEventListener('change',function(){
+            const projectId=this.value;if(!projectId)return;
+            const fd=new FormData();fd.append('project_id',projectId);
+            fetch(`/tasks/${id}/assign`,{method:'POST',body:fd}).then(r=>r.json()).then(data=>{
+                if(data.success){li.style.opacity='0';li.style.transition='opacity .25s';setTimeout(()=>{li.remove();if(!bdList.querySelector('.bd-item'))bdShowEmpty();bdUpdateCount();},250);}
+            }).catch(()=>select.remove());
+        });
+        select.addEventListener('blur',()=>setTimeout(()=>{if(select.parentNode)select.remove();},150));
+        select.addEventListener('keydown',e=>{if(e.key==='Escape')select.remove();});
     }
 
-    document.getElementById('bd-input').addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.preventDefault(); bdAdd(); }
-    });
-
-    // ---- COMPLETE ----
-    function bdComplete(id) {
-        const li = document.querySelector(`.bd-item[data-id="${id}"]`);
-        if (!li) return;
+    function bdComplete(id){
+        const li=document.querySelector(`.bd-item[data-id="${id}"]`);if(!li)return;
         li.classList.add('completing');
-        setTimeout(() => {
-            const title   = li.querySelector('.bd-title-text').textContent;
-            const tagEl   = li.querySelector('.bd-task-tag');
-            const tagClass = tagEl ? tagEl.className : null;
-            const tagText  = tagEl ? tagEl.textContent : null;
-            const fd = new FormData();
-            fd.append('id', id);
-            fetch('/below-deck/complete', { method: 'POST', body: fd })
-                .then(r => r.json())
-                .then(data => {
-                    if (!data.ok) throw new Error();
-                    li.remove();
-                    if (!bdList.querySelector('.bd-item')) bdShowEmpty();
-                    bdAppendWin(id, title, tagClass, tagText);
-                    bdUpdateCount();
-                })
-                .catch(() => li.classList.remove('completing'));
-        }, 350);
+        setTimeout(()=>{
+            const titleEl=li.querySelector('.bd-title-text');const title=titleEl?titleEl.textContent:'';
+            const tagEl=li.querySelector('.bd-task-tag');const tagClass=tagEl?tagEl.className:null,tagText=tagEl?tagEl.textContent:null;
+            const fd=new FormData();fd.append('id',id);
+            fetch('/below-deck/complete',{method:'POST',body:fd}).then(r=>r.json()).then(data=>{
+                if(!data.success)throw new Error();
+                li.remove();if(!bdList.querySelector('.bd-item'))bdShowEmpty();
+                bdAppendWin(id,title,tagClass,tagText);bdUpdateCount();
+            }).catch(()=>li.classList.remove('completing'));
+        },350);
     }
 
-    function bdAppendWin(id, title, tagClass, tagText) {
-        bdWinsSection.style.display = '';
-        const li = document.createElement('li');
-        li.className = 'bd-win-item';
-        li.dataset.id = id;
-        li.innerHTML = `
-            <div class="bd-win-check">✓</div>
-            <span class="bd-win-title">${escBd(title)}</span>
-            ${tagClass ? `<span class="${escBd(tagClass)}">${escBd(tagText)}</span>` : ''}
-            <button class="bd-delete" onclick="bdDeleteWin('${id}')" title="Delete">✕</button>
-        `;
+    function bdAppendWin(id,title,tagClass,tagText){
+        bdWinsSection.style.display='';
+        const li=document.createElement('li');li.className='bd-win-item';li.dataset.id=id;
+        li.innerHTML=`<div class="bd-win-check">✓</div><span class="bd-win-title">${escBd(title)}</span>${tagClass?`<span class="${escBd(tagClass)}">${escBd(tagText)}</span>`:''}<button class="bd-delete" onclick="bdDeleteWin('${id}')" title="Delete">✕</button>`;
         bdWinsList.appendChild(li);
     }
 
-    // ---- DELETE OPEN ----
-    function bdDelete(id) {
-        const li = document.querySelector(`.bd-item[data-id="${id}"]`);
-        if (!li) return;
-        li.style.opacity = '0';
-        li.style.transition = 'opacity 0.2s';
-        setTimeout(() => {
-            const fd = new FormData();
-            fd.append('id', id);
-            fetch('/below-deck/delete', { method: 'POST', body: fd })
-                .then(() => { li.remove(); if (!bdList.querySelector('.bd-item')) bdShowEmpty(); bdUpdateCount(); });
-        }, 200);
+    function bdDelete(id){
+        const li=document.querySelector(`.bd-item[data-id="${id}"]`);if(!li)return;
+        li.style.opacity='0';li.style.transition='opacity .2s';
+        setTimeout(()=>{const fd=new FormData();fd.append('id',id);fetch('/below-deck/delete',{method:'POST',body:fd}).then(()=>{li.remove();if(!bdList.querySelector('.bd-item'))bdShowEmpty();bdUpdateCount();});},200);
     }
 
-    // ---- DELETE WIN ----
-    function bdDeleteWin(id) {
-        const li = document.querySelector(`.bd-win-item[data-id="${id}"]`);
-        if (!li) return;
-        li.style.opacity = '0';
-        li.style.transition = 'opacity 0.2s';
-        setTimeout(() => {
-            const fd = new FormData();
-            fd.append('id', id);
-            fetch('/below-deck/delete', { method: 'POST', body: fd })
-                .then(() => {
-                    li.remove();
-                    if (!bdWinsList.querySelector('.bd-win-item')) bdWinsSection.style.display = 'none';
-                });
-        }, 200);
+    function bdDeleteWin(id){
+        const li=document.querySelector(`.bd-win-item[data-id="${id}"]`);if(!li)return;
+        li.style.opacity='0';li.style.transition='opacity .2s';
+        setTimeout(()=>{const fd=new FormData();fd.append('id',id);fetch('/below-deck/delete',{method:'POST',body:fd}).then(()=>{li.remove();if(!bdWinsList.querySelector('.bd-win-item'))bdWinsSection.style.display='none';});},200);
     }
 
-    // ---- CLEAR COMPLETED ----
-    function bdClearCompleted() {
-        fetch('/below-deck/clear-completed', { method: 'POST' })
-            .then(r => r.json())
-            .then(data => {
-                if (!data.ok) throw new Error();
-                bdWinsList.innerHTML = '';
-                bdWinsSection.style.display = 'none';
-            })
-            .catch(() => {});
+    function bdClearCompleted(){
+        fetch('/below-deck/clear-completed',{method:'POST'}).then(r=>r.json()).then(data=>{if(!data.success)throw new Error();bdWinsList.innerHTML='';bdWinsSection.style.display='none';}).catch(()=>{});
     }
 
-    // ---- HELPERS ----
-    function bdPrepend(task) {
+    function bdPrepend(task){
         bdRemoveEmpty();
-        const li = document.createElement('li');
-        li.className = 'bd-item';
-        li.dataset.id = task.id;
-        li.setAttribute('draggable', 'true');
-        const tagHtml = task.tag ? `<span class="bd-task-tag tag-${task.tag}">#${task.tag}</span>` : '';
-        li.innerHTML = `
-            <div class="bd-drop-indicator"></div>
-            <span class="bd-handle" title="Hold to reorder">⠿</span>
-            <button class="bd-check" onclick="bdComplete('${task.id}')" title="Done"></button>
-            <span class="bd-title-text">${escBd(task.title)}</span>
-            ${tagHtml}
-            <button class="bd-delete" onclick="bdDelete('${task.id}')" title="Delete">✕</button>
-        `;
-        bdAttachDrag(li);
-        bdAttachTouch(li);
-        const first = bdList.querySelector('.bd-item');
-        first ? bdList.insertBefore(li, first) : bdList.prepend(li);
+        const li=document.createElement('li');li.className='bd-item';li.dataset.id=task.id;li.setAttribute('draggable','true');
+        const tagHtml=task.tag?`<span class="bd-task-tag tag-${task.tag}">#${task.tag}</span>`:'';
+        li.innerHTML=`<div class="bd-drop-indicator"></div><span class="bd-handle" title="Hold to reorder">⠿</span><button class="bd-check" onclick="bdComplete('${task.id}')" title="Done"></button><span class="bd-title-text">${escBd(task.title)}</span>${tagHtml}<button class="bd-action" onclick="bdEditTask('${task.id}')" title="Edit">✎</button><button class="bd-action assign" onclick="bdShowAssign('${task.id}')" title="Assign to project">→</button><button class="bd-delete" onclick="bdDelete('${task.id}')" title="Delete">✕</button>`;
+        bdAttachDrag(li);bdAttachTouch(li);
+        const first=bdList.querySelector('.bd-item');first?bdList.insertBefore(li,first):bdList.prepend(li);
     }
 
-    function bdRemoveEmpty() {
-        const e = document.getElementById('bd-empty');
-        if (e) e.remove();
+    function bdRemoveEmpty(){const e=document.getElementById('bd-empty');if(e)e.remove();}
+    function bdShowEmpty(){if(document.getElementById('bd-empty'))return;const li=document.createElement('li');li.className='bd-empty';li.id='bd-empty';li.textContent='Clear skies. Nothing below deck.';bdList.appendChild(li);}
+    function bdUpdateCount(){const open=bdList.querySelectorAll('.bd-item').length;document.getElementById('bd-count-display').textContent=open>0?open+' open':'';}
+    function escBd(str){return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+    function bdClearAllIndicators(){document.querySelectorAll('.bd-drop-indicator').forEach(el=>el.classList.remove('above','below'));document.getElementById('bd-top-indicator').classList.remove('active');document.getElementById('bd-bottom-indicator').classList.remove('active');}
+
+    function bdAttachDrag(li){
+        li.addEventListener('dragstart',e=>{dragSrc=li;li.classList.add('is-dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setDragImage(li,20,li.offsetHeight/2);});
+        li.addEventListener('dragend',()=>{li.classList.remove('is-dragging');bdClearAllIndicators();dragSrc=null;bdSaveOrder();});
+        li.addEventListener('dragover',e=>{e.preventDefault();if(!dragSrc||dragSrc===li)return;e.dataTransfer.dropEffect='move';bdClearAllIndicators();const rect=li.getBoundingClientRect();const ind=li.querySelector('.bd-drop-indicator');if(e.clientY<rect.top+rect.height/2)ind.classList.add('above');else ind.classList.add('below');});
+        li.addEventListener('dragleave',()=>{li.querySelector('.bd-drop-indicator').classList.remove('above','below');});
+        li.addEventListener('drop',e=>{e.preventDefault();if(!dragSrc||dragSrc===li)return;const rect=li.getBoundingClientRect();if(e.clientY<rect.top+rect.height/2)bdList.insertBefore(dragSrc,li);else bdList.insertBefore(dragSrc,li.nextSibling);bdClearAllIndicators();});
     }
 
-    function bdShowEmpty() {
-        if (document.getElementById('bd-empty')) return;
-        const li = document.createElement('li');
-        li.className = 'bd-empty'; li.id = 'bd-empty';
-        li.textContent = 'Clear skies. Nothing below deck.';
-        bdList.appendChild(li);
+    function bdSetupSentinel(sId,iId,fn){
+        const el=document.getElementById(sId),ind=document.getElementById(iId);
+        el.addEventListener('dragover',e=>{e.preventDefault();bdClearAllIndicators();ind.classList.add('active');});
+        el.addEventListener('dragleave',()=>ind.classList.remove('active'));
+        el.addEventListener('drop',e=>{e.preventDefault();if(dragSrc){fn();bdClearAllIndicators();bdSaveOrder();}});
+    }
+    bdSetupSentinel('bd-sentinel-top','bd-top-indicator',()=>{const f=bdList.querySelector('.bd-item');f?bdList.insertBefore(dragSrc,f):bdList.appendChild(dragSrc);});
+    bdSetupSentinel('bd-sentinel-bottom','bd-bottom-indicator',()=>bdList.appendChild(dragSrc));
+
+    function bdAttachTouch(li){
+        const handle=li.querySelector('.bd-handle');let touchTimer=null,startY=0;
+        handle.addEventListener('touchstart',e=>{startY=e.touches[0].clientY;touchTimer=setTimeout(()=>{touchDragging=true;dragSrc=li;handle.classList.add('touch-active');li.classList.add('is-dragging');if(navigator.vibrate)navigator.vibrate(30);dragClone=document.createElement('div');dragClone.className='bd-drag-clone';const tEl=li.querySelector('.bd-title-text'),tgEl=li.querySelector('.bd-task-tag');dragClone.innerHTML=`<span style="font-family:'Crimson Pro',serif;font-size:.92rem;color:var(--text)">${escBd(tEl?tEl.textContent:'')}</span>`;if(tgEl)dragClone.innerHTML+=tgEl.outerHTML;dragClone.style.top=(e.touches[0].clientY-20)+'px';document.body.appendChild(dragClone);},300);},{passive:true});
+        handle.addEventListener('touchmove',e=>{if(!touchDragging){if(Math.abs(e.touches[0].clientY-startY)>8)clearTimeout(touchTimer);return;}e.preventDefault();const y=e.touches[0].clientY;if(dragClone)dragClone.style.top=(y-20)+'px';bdClearAllIndicators();const tR=document.getElementById('bd-sentinel-top').getBoundingClientRect(),bR=document.getElementById('bd-sentinel-bottom').getBoundingClientRect();if(y<=tR.bottom){document.getElementById('bd-top-indicator').classList.add('active');return;}if(y>=bR.top){document.getElementById('bd-bottom-indicator').classList.add('active');return;}const items=[...bdList.querySelectorAll('.bd-item:not(.is-dragging)')];const target=items.find(i=>{const r=i.getBoundingClientRect();return y>=r.top&&y<=r.bottom;});if(target){const r=target.getBoundingClientRect();const ind=target.querySelector('.bd-drop-indicator');if(y<r.top+r.height/2)ind.classList.add('above');else ind.classList.add('below');}},{passive:false});
+        handle.addEventListener('touchend',e=>{clearTimeout(touchTimer);if(!touchDragging)return;touchDragging=false;if(dragClone){dragClone.remove();dragClone=null;}li.classList.remove('is-dragging');handle.classList.remove('touch-active');const y=e.changedTouches[0].clientY;const tR=document.getElementById('bd-sentinel-top').getBoundingClientRect(),bR=document.getElementById('bd-sentinel-bottom').getBoundingClientRect();if(y<=tR.bottom){const f=bdList.querySelector('.bd-item');f?bdList.insertBefore(dragSrc,f):bdList.appendChild(dragSrc);}else if(y>=bR.top){bdList.appendChild(dragSrc);}else{const items=[...bdList.querySelectorAll('.bd-item:not(.is-dragging)')];const target=items.find(i=>{const r=i.getBoundingClientRect();return y>=r.top&&y<=r.bottom;});if(target&&target!==dragSrc){const r=target.getBoundingClientRect();if(y<r.top+r.height/2)bdList.insertBefore(dragSrc,target);else bdList.insertBefore(dragSrc,target.nextSibling);}}bdClearAllIndicators();dragSrc=null;bdSaveOrder();});
+        handle.addEventListener('touchcancel',()=>{clearTimeout(touchTimer);touchDragging=false;if(dragClone){dragClone.remove();dragClone=null;}li.classList.remove('is-dragging');handle.classList.remove('touch-active');bdClearAllIndicators();dragSrc=null;});
     }
 
-    function bdUpdateCount() {
-        const open = bdList.querySelectorAll('.bd-item').length;
-        document.getElementById('bd-count-display').textContent = open > 0 ? open + ' open' : '';
-    }
+    function bdSaveOrder(){const order=[...bdList.querySelectorAll('.bd-item')].map(li=>li.dataset.id);fetch('/below-deck/reorder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order})}).catch(()=>{});}
 
-    function escBd(str) {
-        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    function bdClearAllIndicators() {
-        document.querySelectorAll('.bd-drop-indicator').forEach(el => el.classList.remove('above','below'));
-        document.getElementById('bd-top-indicator').classList.remove('active');
-        document.getElementById('bd-bottom-indicator').classList.remove('active');
-    }
-
-    // ---- DRAG — DESKTOP ----
-    function bdAttachDrag(li) {
-        li.addEventListener('dragstart', e => {
-            dragSrc = li;
-            li.classList.add('is-dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setDragImage(li, 20, li.offsetHeight / 2);
-        });
-
-        li.addEventListener('dragend', () => {
-            li.classList.remove('is-dragging');
-            bdClearAllIndicators();
-            dragSrc = null;
-            bdSaveOrder();
-        });
-
-        li.addEventListener('dragover', e => {
-            e.preventDefault();
-            if (!dragSrc || dragSrc === li) return;
-            e.dataTransfer.dropEffect = 'move';
-            bdClearAllIndicators();
-            const rect = li.getBoundingClientRect();
-            const indicator = li.querySelector('.bd-drop-indicator');
-            if (e.clientY < rect.top + rect.height / 2) indicator.classList.add('above');
-            else indicator.classList.add('below');
-        });
-
-        li.addEventListener('dragleave', () => {
-            li.querySelector('.bd-drop-indicator').classList.remove('above','below');
-        });
-
-        li.addEventListener('drop', e => {
-            e.preventDefault();
-            if (!dragSrc || dragSrc === li) return;
-            const rect = li.getBoundingClientRect();
-            if (e.clientY < rect.top + rect.height / 2) bdList.insertBefore(dragSrc, li);
-            else bdList.insertBefore(dragSrc, li.nextSibling);
-            bdClearAllIndicators();
-        });
-    }
-
-    // Sentinels
-    function bdSetupSentinel(sentinelId, indicatorId, insertFn) {
-        const el = document.getElementById(sentinelId);
-        const ind = document.getElementById(indicatorId);
-        el.addEventListener('dragover', e => { e.preventDefault(); bdClearAllIndicators(); ind.classList.add('active'); });
-        el.addEventListener('dragleave', () => ind.classList.remove('active'));
-        el.addEventListener('drop', e => { e.preventDefault(); if (dragSrc) { insertFn(); bdClearAllIndicators(); bdSaveOrder(); } });
-    }
-
-    bdSetupSentinel('bd-sentinel-top', 'bd-top-indicator', () => {
-        const first = bdList.querySelector('.bd-item');
-        if (first) bdList.insertBefore(dragSrc, first); else bdList.appendChild(dragSrc);
-    });
-
-    bdSetupSentinel('bd-sentinel-bottom', 'bd-bottom-indicator', () => {
-        bdList.appendChild(dragSrc);
-    });
-
-    // ---- DRAG — TOUCH ----
-    function bdAttachTouch(li) {
-        const handle = li.querySelector('.bd-handle');
-        let touchTimer = null;
-        let startY = 0;
-
-        handle.addEventListener('touchstart', e => {
-            startY = e.touches[0].clientY;
-            touchTimer = setTimeout(() => {
-                touchDragging = true;
-                dragSrc = li;
-                handle.classList.add('touch-active');
-                li.classList.add('is-dragging');
-                if (navigator.vibrate) navigator.vibrate(30);
-
-                dragClone = document.createElement('div');
-                dragClone.className = 'bd-drag-clone';
-                const titleEl = li.querySelector('.bd-title-text');
-                const tagEl   = li.querySelector('.bd-task-tag');
-                dragClone.innerHTML = `<span style="font-family:'Crimson Pro',serif;font-size:0.92rem;color:var(--text)">${escBd(titleEl.textContent)}</span>`;
-                if (tagEl) dragClone.innerHTML += tagEl.outerHTML;
-                dragClone.style.top = (e.touches[0].clientY - 20) + 'px';
-                document.body.appendChild(dragClone);
-            }, 300);
-        }, { passive: true });
-
-        handle.addEventListener('touchmove', e => {
-            if (!touchDragging) {
-                if (Math.abs(e.touches[0].clientY - startY) > 8) clearTimeout(touchTimer);
-                return;
-            }
-            e.preventDefault();
-            const y = e.touches[0].clientY;
-            if (dragClone) dragClone.style.top = (y - 20) + 'px';
-            bdClearAllIndicators();
-
-            const topRect = document.getElementById('bd-sentinel-top').getBoundingClientRect();
-            const botRect = document.getElementById('bd-sentinel-bottom').getBoundingClientRect();
-
-            if (y <= topRect.bottom) {
-                document.getElementById('bd-top-indicator').classList.add('active');
-                return;
-            }
-            if (y >= botRect.top) {
-                document.getElementById('bd-bottom-indicator').classList.add('active');
-                return;
-            }
-
-            const items = [...bdList.querySelectorAll('.bd-item:not(.is-dragging)')];
-            const target = items.find(i => { const r = i.getBoundingClientRect(); return y >= r.top && y <= r.bottom; });
-            if (target) {
-                const rect = target.getBoundingClientRect();
-                const indicator = target.querySelector('.bd-drop-indicator');
-                if (y < rect.top + rect.height / 2) indicator.classList.add('above');
-                else indicator.classList.add('below');
-            }
-        }, { passive: false });
-
-        handle.addEventListener('touchend', e => {
-            clearTimeout(touchTimer);
-            if (!touchDragging) return;
-            touchDragging = false;
-            if (dragClone) { dragClone.remove(); dragClone = null; }
-            li.classList.remove('is-dragging');
-            handle.classList.remove('touch-active');
-
-            const y = e.changedTouches[0].clientY;
-            const topRect = document.getElementById('bd-sentinel-top').getBoundingClientRect();
-            const botRect = document.getElementById('bd-sentinel-bottom').getBoundingClientRect();
-
-            if (y <= topRect.bottom) {
-                const first = bdList.querySelector('.bd-item');
-                if (first) bdList.insertBefore(dragSrc, first); else bdList.appendChild(dragSrc);
-            } else if (y >= botRect.top) {
-                bdList.appendChild(dragSrc);
-            } else {
-                const items = [...bdList.querySelectorAll('.bd-item:not(.is-dragging)')];
-                const target = items.find(i => { const r = i.getBoundingClientRect(); return y >= r.top && y <= r.bottom; });
-                if (target && target !== dragSrc) {
-                    const rect = target.getBoundingClientRect();
-                    if (y < rect.top + rect.height / 2) bdList.insertBefore(dragSrc, target);
-                    else bdList.insertBefore(dragSrc, target.nextSibling);
-                }
-            }
-
-            bdClearAllIndicators();
-            dragSrc = null;
-            bdSaveOrder();
-        });
-
-        handle.addEventListener('touchcancel', () => {
-            clearTimeout(touchTimer);
-            touchDragging = false;
-            if (dragClone) { dragClone.remove(); dragClone = null; }
-            li.classList.remove('is-dragging');
-            handle.classList.remove('touch-active');
-            bdClearAllIndicators();
-            dragSrc = null;
-        });
-    }
-
-    // ---- SAVE ORDER ----
-    function bdSaveOrder() {
-        const order = [...bdList.querySelectorAll('.bd-item')].map(li => li.dataset.id);
-        fetch('/below-deck/reorder', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ order })
-        }).catch(() => {});
-    }
-
-    // ---- INIT ----
-    document.querySelectorAll('.bd-item').forEach(li => { bdAttachDrag(li); bdAttachTouch(li); });
+    document.querySelectorAll('.bd-item').forEach(li=>{bdAttachDrag(li);bdAttachTouch(li);});
     bdUpdateCount();
 </script>
-
 </body>
 </html>
