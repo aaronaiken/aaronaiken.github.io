@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-04-22 17:15:35 -0400
+layout: status_update
+author: aaron
+source: web
+---
+✅ Shipped: Build "Command Deck" - proper blog post about this to follow but man o day. So pumped.
+
+![Status Image](/assets/img/status/20260422171535-SCR-20260422-pdja.png)
