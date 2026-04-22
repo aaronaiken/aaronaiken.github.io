@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ project.title }} — Command Deck</title>
+  <link rel="stylesheet" href="/static/command_deck.css">
+</head>
+<body class="command-deck">
+<div class="cd-shell">
+
+  <!-- HEADER -->
+  <header class="cd-header">
+    <div class="cd-header-left">
+      <a href="/command-deck/" class="cd-wordmark">COMMAND DECK</a>
+      <span class="cd-ident">{{ project.title | upper }}</span>
+    </div>
+    <nav class="cd-header-nav">
+      <a href="/command-deck/" class="cd-nav-link">BRIDGE</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/projects/" class="cd-nav-link">PROJECTS</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/below-deck" class="cd-nav-link">
+        BELOW DECK
+        <span class="cd-bd-badge" id="bdBadge"></span>
+      </a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/publish" class="cd-nav-link">COCKPIT</a>
+    </nav>
+  </header>
+
+  <!-- MAIN GRID -->
+  <div class="cd-main">
+
+    <!-- LEFT — Project content -->
+    <div class="cd-content">
+
+      <!-- PROJECT TITLE + META -->
+      <div class="cd-flex-between cd-mb-sm">
+        <div>
+          <h1 class="cd-page-title" id="projectTitle">{{ project.title }}</h1>
+          {% if project.description %}
+            <p class="cd-page-subtitle" id="projectDesc">{{ project.description }}</p>
+          {% endif %}
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-shrink:0;align-self:flex-start;">
+          <button class="cd-btn sm" id="editProjectBtn">EDIT</button>
+          <button class="cd-btn sm danger" id="deleteProjectBtn">DELETE</button>
+        </div>
+      </div>
+
+      <!-- ADD BLOCK ROW -->
+      <div class="cd-add-block-row">
+        <span class="cd-text-mono cd-text-dim" style="font-size:0.6rem;letter-spacing:0.15em;">ADD BLOCK</span>
+        <button class="cd-btn sm" data-type="note" id="addNoteBtn">+ NOTE</button>
+        <button class="cd-btn sm" data-type="checklist" id="addChecklistBtn">+ CHECKLIST</button>
+      </div>
+
+      <!-- CONTENT BLOCKS -->
+      <div class="cd-blocks" id="blocksContainer">
+
+        {% for block in blocks %}
+          <div class="cd-block" data-block-id="{{ block.id }}" data-type="{{ block.type }}">
+            <div class="cd-block-header">
+              <span class="cd-block-type">// {{ block.type }}</span>
+              <div class="cd-panel-actions">
+                <button class="cd-btn ghost sm block-delete-btn" data-id="{{ block.id }}">REMOVE</button>
+              </div>
+            </div>
+            <div class="cd-block-body">
+
+              {% if block.type == 'note' %}
+                <div class="cd-note-content"
+                  contenteditable="true"
+                  data-block-id="{{ block.id }}"
+                  data-placeholder="Start writing..."
+                  spellcheck="true">{{ block.content }}</div>
+
+              {% elif block.type == 'checklist' %}
+                <ul class="cd-checklist" data-block-id="{{ block.id }}">
+                  {% for item in block.items %}
+                    <li class="cd-checklist-item {% if item.checked %}checked{% endif %}" data-item-id="{{ item.id }}">
+                      <input type="checkbox"
+                        {% if item.checked %}checked{% endif %}
+                        data-item-id="{{ item.id }}"
+                        data-slug="{{ project.slug }}">
+                      <label>{{ item.text }}</label>
+                      <button class="cd-btn ghost sm checklist-item-delete" data-id="{{ item.id }}" data-slug="{{ project.slug }}">✕</button>
+                    </li>
+                  {% endfor %}
+                </ul>
+                <div class="cd-checklist-add">
+                  <input type="text" class="cd-input checklist-new-item"
+                    data-block-id="{{ block.id }}"
+                    data-slug="{{ project.slug }}"
+                    placeholder="add item...">
+                  <button class="cd-btn sm checklist-add-btn"
+                    data-block-id="{{ block.id }}"
+                    data-slug="{{ project.slug }}">ADD</button>
+                </div>
+              {% endif %}
+
+            </div>
+          </div>
+        {% endfor %}
+
+      </div><!-- #blocksContainer -->
+
+      <!-- PROJECT TASKS -->
+      <div class="cd-panel cd-mb">
+        <div class="cd-panel-header">
+          <span class="cd-panel-title">// Tasks</span>
+        </div>
+        <div class="cd-panel-body">
+          <div class="cd-input-row cd-mb-sm">
+            <input type="text" class="cd-input" id="projectNewTask" placeholder="add a task...">
+            <button class="cd-btn primary sm" id="projectAddTaskBtn">ADD</button>
+          </div>
+          {% if project_tasks %}
+            <ul class="cd-task-list" id="projectTaskList">
+              {% for task in project_tasks %}
+                <li class="cd-task-item" data-id="{{ task.id }}">
+                  <input type="checkbox" class="cd-task-check project-task-check" data-id="{{ task.id }}" data-slug="{{ project.slug }}">
+                  <span class="cd-task-title">{{ task.title }}</span>
+                  <button class="cd-task-edit" data-id="{{ task.id }}" title="Edit">✎</button>
+                  <button class="cd-btn ghost sm project-task-delete" data-id="{{ task.id }}" data-slug="{{ project.slug }}">✕</button>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="cd-empty" id="projectTaskEmpty">No tasks for this project.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- FILES -->
+      <div class="cd-panel cd-mb">
+        <div class="cd-panel-header">
+          <span class="cd-panel-title">// Files</span>
+          <button class="cd-btn sm" id="attachFileBtn">ATTACH FILE</button>
+        </div>
+        <div class="cd-panel-body">
+          <input type="file" id="fileInput" style="display:none;" multiple>
+          <div class="cd-file-upload-area" id="dropZone">
+            <span class="cd-file-upload-label">Drop files here or click ATTACH FILE</span>
+          </div>
+          <div id="uploadStatus" style="margin-top:0.5rem;font-family:var(--cd-font-ui);font-size:0.6rem;color:var(--cd-text-dim);"></div>
+
+          {% if files %}
+            <div class="cd-files-grid cd-mt-sm" id="filesGrid">
+              {% for file in files %}
+                {% set ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else '' %}
+                <div class="cd-file-card" data-file-id="{{ file.id }}">
+                  {% if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp'] %}
+                    <a href="{{ file.bunny_url }}" target="_blank">
+                      <img src="{{ file.bunny_url }}" alt="{{ file.filename }}" loading="lazy">
+                    </a>
+                  {% else %}
+                    <a href="{{ file.bunny_url }}" target="_blank" class="cd-file-card-generic">
+                      {{ ext | upper }}
+                    </a>
+                  {% endif %}
+                  <div class="cd-file-card-meta">
+                    <span class="cd-file-name" title="{{ file.filename }}">{{ file.filename }}</span>
+                    <button class="cd-btn ghost sm file-delete-btn" data-id="{{ file.id }}" data-slug="{{ project.slug }}">✕</button>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="cd-empty" id="filesEmpty" style="margin-top:0.5rem;">No files attached.</div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div><!-- .cd-content -->
+
+    <!-- RIGHT SIDEBAR — Huyang + Below Deck panel -->
+    <div class="cd-sidebar">
+
+      <!-- HUYANG — project context -->
+      <div class="cd-panel">
+        <div class="cd-panel-header">
+          <span class="cd-panel-title">
+            <span class="cd-huyang-name">Huyang</span>
+            &nbsp;·&nbsp; {{ project.title }}
+          </span>
+          <div class="cd-panel-actions">
+            <button class="cd-btn ghost sm" id="huyangClear">CLEAR</button>
+          </div>
+        </div>
+
+        <div class="cd-huyang-panel">
+          <div class="cd-huyang-history" id="huyangHistory">
+            {% if chat_history %}
+              {% for msg in chat_history %}
+                <div class="cd-msg {{ msg.role }}">
+                  <div class="cd-msg-bubble">{{ msg.content }}</div>
+                  <div class="cd-msg-meta">{{ 'you' if msg.role == 'user' else 'Huyang' }}</div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="cd-huyang-empty">
+                <p class="cd-huyang-empty-text">Huyang has read the project.<br>Ask him anything about it.</p>
+              </div>
+            {% endif %}
+          </div>
+          <div class="cd-huyang-input-row">
+            <textarea class="cd-huyang-textarea" id="huyangInput"
+              placeholder="ask about this project..." rows="1"></textarea>
+            <button class="cd-btn primary sm" id="huyangSend">TX</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- BELOW DECK QUICK PANEL -->
+      <div class="cd-panel">
+        <div class="cd-panel-header">
+          <span class="cd-panel-title">// Below Deck</span>
+          <a href="/below-deck" class="cd-btn ghost sm">OPEN FULL</a>
+        </div>
+        <div class="cd-panel-body" id="bdQuickPanel">
+          <div class="cd-input-row cd-mb-sm">
+            <input type="text" class="cd-input" id="bdNewTask" placeholder="quick task...">
+            <button class="cd-btn primary sm" id="bdAddBtn">ADD</button>
+          </div>
+          <div class="cd-empty cd-text-dim" style="font-size:0.8rem;">Tasks load on bridge.</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- .cd-main -->
+
+  <!-- FOOTER -->
+  <footer class="cd-footer">
+    <div class="cd-footer-links">
+      <a href="/command-deck/" class="cd-footer-link">Bridge</a>
+      <a href="/command-deck/projects/" class="cd-footer-link">Projects</a>
+      <a href="/publish" class="cd-footer-link">Cockpit</a>
+    </div>
+    <span class="cd-footer-ident">YT-1300F · COMMAND DECK · SECURE</span>
+  </footer>
+
+</div><!-- .cd-shell -->
+
+<!-- EDIT PROJECT MODAL -->
+<div class="cd-modal-overlay" id="editModal">
+  <div class="cd-modal">
+    <div class="cd-modal-title">// Edit Project</div>
+    <input type="text" class="cd-input cd-mb-sm" id="editTitle"
+      value="{{ project.title }}" style="margin-bottom:0.5rem;">
+    <input type="text" class="cd-input" id="editDesc"
+      value="{{ project.description or '' }}" placeholder="Description (optional)...">
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;">
+          <input type="checkbox" id="editProjectPrivate"
+            style="width:14px;height:14px;accent-color:var(--cd-amber);"
+            {% if project.is_private %}checked{% endif %}>
+          <label for="editProjectPrivate" style="font-family:var(--cd-font-ui);font-size:0.62rem;letter-spacing:0.1em;color:var(--cd-text-dim);cursor:pointer;">
+            PRIVATE PROJECT
+          </label>
+        </div>
+    <div class="cd-modal-actions">
+      <button class="cd-btn ghost" id="editCancelBtn">CANCEL</button>
+      <button class="cd-btn primary" id="editConfirmBtn">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCRATCH PAD -->
+<div class="cd-scratch-overlay" id="scratchOverlay"></div>
+<div class="cd-scratch-panel" id="scratchPanel">
+  <div class="cd-scratch-panel-header">
+    <span class="cd-scratch-title">// Scratch</span>
+    <span class="cd-scratch-status" id="scratchStatus">—</span>
+  </div>
+  <textarea class="cd-scratch-textarea" id="scratchTextarea"
+    placeholder="quick thoughts, clipboard, anything..."></textarea>
+  <div class="cd-scratch-footer">
+    <span class="cd-scratch-hint">Ctrl+Shift+S · Esc to close</span>
+    <div style="display:flex;gap:0.5rem;">
+      <button class="cd-btn sm ghost" id="scratchCopy">COPY</button>
+      <button class="cd-btn sm" id="scratchSave">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PROJECT_ID   = {{ project.id }};
+const PROJECT_SLUG = "{{ project.slug }}";
+
+// ============================================================
+// BADGE
+// ============================================================
+fetch('/below-deck/count').then(r=>r.json()).then(data=>{
+  const badge=document.getElementById('bdBadge');
+  if(!badge||data.count===0) return;
+  badge.classList.add(data.count<=3?'green':data.count<=6?'amber':'red');
+});
+
+// ============================================================
+// NOTE BLOCKS — contenteditable autosave
+// ============================================================
+(function(){
+  let noteTimers = {};
+
+  document.getElementById('blocksContainer').addEventListener('input', function(e) {
+    if (!e.target.classList.contains('cd-note-content')) return;
+    const blockId = e.target.dataset.blockId;
+    if (noteTimers[blockId]) clearTimeout(noteTimers[blockId]);
+    noteTimers[blockId] = setTimeout(() => {
+      fetch(`/command-deck/projects/${PROJECT_SLUG}/blocks/${blockId}/update`, {
+        method: 'POST',
+        body: new URLSearchParams({ content: e.target.innerText })
+      });
+    }, 1200);
+  });
+})();
+
+// ============================================================
+// ADD BLOCKS
+// ============================================================
+(function(){
+  function addBlock(type) {
+    fetch(`/command-deck/projects/${PROJECT_SLUG}/blocks/add`, {
+      method: 'POST',
+      body: new URLSearchParams({ type })
+    })
+    .then(r=>r.json())
+    .then(data=>{
+      if(!data.success) return;
+      const block = data.block;
+      const container = document.getElementById('blocksContainer');
+      const div = document.createElement('div');
+      div.className = 'cd-block';
+      div.dataset.blockId = block.id;
+      div.dataset.type = block.type;
+
+      if(block.type==='note'){
+        div.innerHTML=`
+          <div class="cd-block-header">
+            <span class="cd-block-type">// note</span>
+            <div class="cd-panel-actions">
+              <button class="cd-btn ghost sm block-delete-btn" data-id="${block.id}">REMOVE</button>
+            </div>
+          </div>
+          <div class="cd-block-body">
+            <div class="cd-note-content" contenteditable="true"
+              data-block-id="${block.id}"
+              data-placeholder="Start writing..."
+              spellcheck="true"></div>
+          </div>`;
+      } else {
+        div.innerHTML=`
+          <div class="cd-block-header">
+            <span class="cd-block-type">// checklist</span>
+            <div class="cd-panel-actions">
+              <button class="cd-btn ghost sm block-delete-btn" data-id="${block.id}">REMOVE</button>
+            </div>
+          </div>
+          <div class="cd-block-body">
+            <ul class="cd-checklist" data-block-id="${block.id}"></ul>
+            <div class="cd-checklist-add">
+              <input type="text" class="cd-input checklist-new-item"
+                data-block-id="${block.id}" data-slug="${PROJECT_SLUG}"
+                placeholder="add item...">
+              <button class="cd-btn sm checklist-add-btn"
+                data-block-id="${block.id}" data-slug="${PROJECT_SLUG}">ADD</button>
+            </div>
+          </div>`;
+      }
+
+      container.appendChild(div);
+      if(block.type==='note'){
+        div.querySelector('.cd-note-content').focus();
+      }
+    });
+  }
+
+  document.getElementById('addNoteBtn').addEventListener('click', ()=>addBlock('note'));
+  document.getElementById('addChecklistBtn').addEventListener('click', ()=>addBlock('checklist'));
+})();
+
+// ============================================================
+// DELETE BLOCKS
+// ============================================================
+document.getElementById('blocksContainer').addEventListener('click', function(e){
+  if(!e.target.classList.contains('block-delete-btn')) return;
+  const id = e.target.dataset.id;
+  if(!confirm('Remove this block?')) return;
+  fetch(`/command-deck/projects/${PROJECT_SLUG}/blocks/${id}/delete`,{method:'POST'})
+  .then(r=>r.json())
+  .then(data=>{
+    if(data.success){
+      const block = document.querySelector(`.cd-block[data-block-id="${id}"]`);
+      if(block) block.remove();
+    }
+  });
+});
+
+// ============================================================
+// CHECKLIST ITEMS
+// ============================================================
+(function(){
+  // Toggle
+  document.getElementById('blocksContainer').addEventListener('change', function(e){
+    if(!e.target.dataset.itemId) return;
+    const itemId = e.target.dataset.itemId;
+    const li = e.target.closest('.cd-checklist-item');
+    fetch(`/command-deck/projects/${PROJECT_SLUG}/checklist/${itemId}/toggle`,{method:'POST'})
+    .then(r=>r.json())
+    .then(data=>{
+      if(data.success){
+        li.classList.toggle('checked', data.checked);
+      }
+    });
+  });
+
+  // Delete item
+  document.getElementById('blocksContainer').addEventListener('click', function(e){
+    if(!e.target.classList.contains('checklist-item-delete')) return;
+    const itemId = e.target.dataset.id;
+    fetch(`/command-deck/projects/${PROJECT_SLUG}/checklist/${itemId}/delete`,{method:'POST'})
+    .then(r=>r.json())
+    .then(data=>{
+      if(data.success){
+        const li = document.querySelector(`.cd-checklist-item[data-item-id="${itemId}"]`);
+        if(li) li.remove();
+      }
+    });
+  });
+
+  // Add item
+  function addChecklistItem(blockId) {
+    const input = document.querySelector(`.checklist-new-item[data-block-id="${blockId}"]`);
+    const text = input.value.trim();
+    if(!text) return;
+
+    fetch(`/command-deck/projects/${PROJECT_SLUG}/checklist/add`, {
+      method:'POST',
+      body: new URLSearchParams({ block_id: blockId, text })
+    })
+    .then(r=>r.json())
+    .then(data=>{
+      if(!data.success) return;
+      input.value='';
+      const ul = document.querySelector(`.cd-checklist[data-block-id="${blockId}"]`);
+      const li = document.createElement('li');
+      li.className='cd-checklist-item';
+      li.dataset.itemId=data.item.id;
+      li.innerHTML=`
+        <input type="checkbox" data-item-id="${data.item.id}" data-slug="${PROJECT_SLUG}">
+        <label>${escapeHtml(data.item.text)}</label>
+        <button class="cd-btn ghost sm checklist-item-delete" data-id="${data.item.id}" data-slug="${PROJECT_SLUG}">✕</button>`;
+      ul.appendChild(li);
+    });
+  }
+
+  document.getElementById('blocksContainer').addEventListener('click', function(e){
+    if(e.target.classList.contains('checklist-add-btn')){
+      addChecklistItem(e.target.dataset.blockId);
+    }
+  });
+
+  document.getElementById('blocksContainer').addEventListener('keydown', function(e){
+    if(e.key==='Enter' && e.target.classList.contains('checklist-new-item')){
+      e.preventDefault();
+      addChecklistItem(e.target.dataset.blockId);
+    }
+  });
+})();
+
+// ============================================================
+// PROJECT TASKS
+// ============================================================
+(function(){
+  function addProjectTask(){
+    const input=document.getElementById('projectNewTask');
+    const title=input.value.trim();
+    if(!title) return;
+
+    fetch(`/command-deck/projects/${PROJECT_SLUG}/tasks/add`,{
+      method:'POST',
+      body: new URLSearchParams({title})
+    })
+    .then(r=>r.json())
+    .then(data=>{
+      if(!data.success) return;
+      input.value='';
+      const empty=document.getElementById('projectTaskEmpty');
+      if(empty) empty.remove();
+      const list=document.getElementById('projectTaskList')||createList();
+      const li=document.createElement('li');
+      li.className='cd-task-item';
+      li.dataset.id=data.task.id;
+      li.innerHTML=`
+        <input type="checkbox" class="cd-task-check project-task-check"
+          data-id="${data.task.id}" data-slug="${PROJECT_SLUG}">
+        <span class="cd-task-title">${escapeHtml(data.task.title)}</span>
+        <button class="cd-task-edit" data-id="${data.task.id}" title="Edit">✎</button>
+        <button class="cd-btn ghost sm project-task-delete"
+          data-id="${data.task.id}" data-slug="${PROJECT_SLUG}">✕</button>`;
+      list.appendChild(li);
+    });
+  }
+
+  function createList(){
+    const ul=document.createElement('ul');
+    ul.className='cd-task-list';
+    ul.id='projectTaskList';
+    document.querySelector('.cd-panel .cd-panel-body').appendChild(ul);
+    return ul;
+  }
+
+  document.getElementById('projectAddTaskBtn').addEventListener('click',addProjectTask);
+  document.getElementById('projectNewTask').addEventListener('keydown',e=>{
+    if(e.key==='Enter') addProjectTask();
+  });
+
+  document.addEventListener('change',function(e){
+    if(!e.target.classList.contains('project-task-check')) return;
+    const id=e.target.dataset.id;
+    const slug=e.target.dataset.slug;
+    fetch(`/command-deck/projects/${slug}/tasks/${id}/complete`,{method:'POST'})
+    .then(r=>r.json())
+    .then(data=>{
+      if(data.success){
+        const li=document.querySelector(`.cd-task-item[data-id="${id}"]`);
+        if(li) li.remove();
+      }
+    });
+  });
+
+  document.addEventListener('click',function(e){
+    if(e.target.classList.contains('cd-task-edit')){
+      cdEditTask(e.target.dataset.id);
+      return;
+    }
+    if(!e.target.classList.contains('project-task-delete')) return;
+    const id=e.target.dataset.id;
+    const slug=e.target.dataset.slug;
+    fetch(`/command-deck/projects/${slug}/tasks/${id}/delete`,{method:'POST'})
+    .then(r=>r.json())
+    .then(data=>{
+      if(data.success){
+        const li=document.querySelector(`.cd-task-item[data-id="${id}"]`);
+        if(li) li.remove();
+      }
+    });
+  });
+})();
+
+// ============================================================
+// FILE UPLOADS
+// ============================================================
+(function(){
+  const fileInput=document.getElementById('fileInput');
+  const dropZone=document.getElementById('dropZone');
+  const uploadStatus=document.getElementById('uploadStatus');
+
+  document.getElementById('attachFileBtn').addEventListener('click',()=>fileInput.click());
+  dropZone.addEventListener('click',()=>fileInput.click());
+
+  dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('drag-over');});
+  dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop',e=>{
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    uploadFiles(e.dataTransfer.files);
+  });
+
+  fileInput.addEventListener('change',()=>uploadFiles(fileInput.files));
+
+  function uploadFiles(files){
+    Array.from(files).forEach(file=>{
+      const fd=new FormData();
+      fd.append('file',file);
+      uploadStatus.textContent=`Uploading ${file.name}...`;
+
+      fetch(`/command-deck/projects/${PROJECT_SLUG}/upload`,{method:'POST',body:fd})
+      .then(r=>r.json())
+      .then(data=>{
+        if(data.success){
+          uploadStatus.textContent='';
+          appendFileCard(data.file);
+          const empty=document.getElementById('filesEmpty');
+          if(empty) empty.remove();
+        } else {
+          uploadStatus.textContent=`Error: ${data.error}`;
+        }
+      })
+      .catch(()=>{uploadStatus.textContent='Upload failed.';});
+    });
+  }
+
+  function appendFileCard(file){
+    let grid=document.getElementById('filesGrid');
+    if(!grid){
+      grid=document.createElement('div');
+      grid.className='cd-files-grid cd-mt-sm';
+      grid.id='filesGrid';
+      dropZone.parentElement.appendChild(grid);
+    }
+    const ext=file.filename.includes('.')?file.filename.split('.').pop().toLowerCase():'';
+    const isImg=['jpg','jpeg','png','gif','webp'].includes(ext);
+    const card=document.createElement('div');
+    card.className='cd-file-card';
+    card.dataset.fileId=file.id;
+    card.innerHTML=isImg
+      ?`<a href="${file.bunny_url}" target="_blank"><img src="${file.bunny_url}" alt="${escapeHtml(file.filename)}" loading="lazy"></a>`
+      :`<a href="${file.bunny_url}" target="_blank" class="cd-file-card-generic">${ext.toUpperCase()}</a>`;
+    card.innerHTML+=`<div class="cd-file-card-meta">
+      <span class="cd-file-name" title="${escapeHtml(file.filename)}">${escapeHtml(file.filename)}</span>
+      <button class="cd-btn ghost sm file-delete-btn" data-id="${file.id}" data-slug="${PROJECT_SLUG}">✕</button>
+    </div>`;
+    grid.appendChild(card);
+  }
+
+  document.addEventListener('click',function(e){
+    if(!e.target.classList.contains('file-delete-btn')) return;
+    const id=e.target.dataset.id;
+    if(!confirm('Remove this file?')) return;
+    fetch(`/command-deck/projects/${PROJECT_SLUG}/files/${id}/delete`,{method:'POST'})
+    .then(r=>r.json())
+    .then(data=>{
+      if(data.success){
+        const card=document.querySelector(`.cd-file-card[data-file-id="${id}"]`);
+        if(card) card.remove();
+      }
+    });
+  });
+})();
+
+// ============================================================
+// HUYANG — project-scoped
+// ============================================================
+(function(){
+  const history=document.getElementById('huyangHistory');
+  const input=document.getElementById('huyangInput');
+  const sendBtn=document.getElementById('huyangSend');
+  const clearBtn=document.getElementById('huyangClear');
+
+  function scrollBottom(){history.scrollTop=history.scrollHeight;}
+
+  function appendMsg(role,content){
+    const empty=history.querySelector('.cd-huyang-empty');
+    if(empty) empty.remove();
+    const div=document.createElement('div');
+    div.className=`cd-msg ${role}`;
+    div.innerHTML=`<div class="cd-msg-bubble">${escapeHtml(content)}</div><div class="cd-msg-meta">${role==='user'?'you':'Huyang'}</div>`;
+    history.appendChild(div);
+    scrollBottom();
+  }
+
+  function showThinking(){
+    const div=document.createElement('div');
+    div.className='cd-msg assistant';div.id='huyangThinking';
+    div.innerHTML='<div class="cd-huyang-thinking"><span></span><span></span><span></span></div>';
+    history.appendChild(div);scrollBottom();return div;
+  }
+
+  function sendMessage(){
+    const msg=input.value.trim();
+    if(!msg) return;
+    input.value='';input.style.height='auto';
+    appendMsg('user',msg);
+    const thinking=showThinking();
+    sendBtn.disabled=true;
+
+    fetch('/command-deck/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message:msg,project_id:PROJECT_ID})
+    })
+    .then(r=>r.json())
+    .then(data=>{
+      thinking.remove();sendBtn.disabled=false;
+      appendMsg('assistant',data.reply||data.error||'Something went wrong.');
+    })
+    .catch(()=>{thinking.remove();sendBtn.disabled=false;appendMsg('assistant','Huyang is offline.');});
+  }
+
+  sendBtn.addEventListener('click',sendMessage);
+  input.addEventListener('keydown',function(e){
+    if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}
+  });
+  input.addEventListener('input',function(){
+    this.style.height='auto';
+    this.style.height=Math.min(this.scrollHeight,120)+'px';
+  });
+  clearBtn.addEventListener('click',function(){
+    if(!confirm("Clear Huyang's chat for this project?")) return;
+    fetch('/command-deck/chat/clear',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({project_id:PROJECT_ID})
+    }).then(()=>{
+      history.innerHTML='<div class="cd-huyang-empty"><p class="cd-huyang-empty-text">Cleared. Huyang has re-read the project.</p></div>';
+    });
+  });
+
+  scrollBottom();
+})();
+
+// ============================================================
+// BELOW DECK QUICK ADD (sidebar)
+// ============================================================
+(function(){
+  function addBdTask(){
+    const input=document.getElementById('bdNewTask');
+    const title=input.value.trim();
+    if(!title) return;
+    fetch('/below-deck/add',{method:'POST',body:new URLSearchParams({title})})
+    .then(r=>r.json())
+    .then(data=>{
+      if(data.success){input.value='';fetch('/below-deck/count').then(r=>r.json()).then(d=>{
+        const badge=document.getElementById('bdBadge');if(!badge) return;
+        badge.className='cd-bd-badge';
+        if(d.count===0) return;
+        badge.classList.add(d.count<=3?'green':d.count<=6?'amber':'red');
+      });}
+    });
+  }
+  document.getElementById('bdAddBtn').addEventListener('click',addBdTask);
+  document.getElementById('bdNewTask').addEventListener('keydown',e=>{if(e.key==='Enter')addBdTask();});
+})();
+
+// ============================================================
+// EDIT PROJECT MODAL
+// ============================================================
+(function(){
+  document.getElementById('editProjectBtn').addEventListener('click',()=>{
+    document.getElementById('editModal').classList.add('open');
+    document.getElementById('editTitle').focus();
+  });
+  document.getElementById('editCancelBtn').addEventListener('click',()=>{
+    document.getElementById('editModal').classList.remove('open');
+  });
+  document.getElementById('editModal').addEventListener('click',function(e){
+    if(e.target===this) this.classList.remove('open');
+  });
+  document.getElementById('editConfirmBtn').addEventListener('click',function(){
+    const title=document.getElementById('editTitle').value.trim();
+    const desc=document.getElementById('editDesc').value.trim();
+    if(!title) return;
+    const form=document.createElement('form');
+    form.method='POST';form.action=`/command-deck/projects/${PROJECT_SLUG}/update`;
+    const isPrivate = document.getElementById('editProjectPrivate').checked ? '1' : '0';
+form.innerHTML=`<input name="title" value="${escapeHtml(title)}"><input name="description" value="${escapeHtml(desc)}"><input name="is_private" value="${isPrivate}">`;
+    document.body.appendChild(form);form.submit();
+  });
+})();
+
+// DELETE PROJECT
+document.getElementById('deleteProjectBtn').addEventListener('click',function(){
+  if(!confirm('Delete this project and all its content? This cannot be undone.')) return;
+  const form=document.createElement('form');
+  form.method='POST';form.action=`/command-deck/projects/${PROJECT_SLUG}/delete`;
+  document.body.appendChild(form);form.submit();
+});
+
+// ============================================================
+// SCRATCH PAD — Ctrl+Shift+S
+// ============================================================
+(function(){
+  const overlay=document.getElementById('scratchOverlay');
+  const panel=document.getElementById('scratchPanel');
+  const textarea=document.getElementById('scratchTextarea');
+  const status=document.getElementById('scratchStatus');
+  const saveBtn=document.getElementById('scratchSave');
+  const copyBtn=document.getElementById('scratchCopy');
+  let open=false,debounce=null,saveTimer=null;
+  function openPanel(){open=true;overlay.classList.add('open');panel.classList.add('open');fetchScratch();setTimeout(()=>textarea.focus(),300);}
+  function closePanel(){open=false;overlay.classList.remove('open');panel.classList.remove('open');}
+  document.addEventListener('keydown',e=>{
+    if(e.ctrlKey&&e.shiftKey&&e.key==='S'){e.preventDefault();open?closePanel():openPanel();}
+    if(e.key==='Escape'&&open) closePanel();
+  });
+  overlay.addEventListener('click',closePanel);
+  function setStatus(m){status.textContent=m;}
+  function fetchScratch(){
+    setStatus('loading...');
+    fetch('/scratch').then(r=>r.json()).then(data=>{
+      textarea.value=data.content||'';
+      setStatus(data.last_modified?'synced':'—');
+      if(!data.content){const l=localStorage.getItem('cockpit-scratch');if(l){textarea.value=l;setStatus('local');}}
+    }).catch(()=>{const l=localStorage.getItem('cockpit-scratch');if(l)textarea.value=l;setStatus('· OFFLINE');});
+  }
+  function saveScratch(){
+    const content=textarea.value;localStorage.setItem('cockpit-scratch',content);
+    fetch('/scratch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content })
+    })
+    .then(r=>r.json()).then(()=>{setStatus('saved');if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(()=>setStatus('—'),3000);})
+    .catch(()=>setStatus('· OFFLINE'));
+  }
+  textarea.addEventListener('input',function(){
+    localStorage.setItem('cockpit-scratch',textarea.value);
+    if(debounce)clearTimeout(debounce);setStatus('...');debounce=setTimeout(saveScratch,1500);
+  });
+  saveBtn.addEventListener('click',saveScratch);
+  copyBtn.addEventListener('click',function(){
+    navigator.clipboard.writeText(textarea.value).then(()=>{const o=copyBtn.textContent;copyBtn.textContent='COPIED';setTimeout(()=>copyBtn.textContent=o,1500);});
+  });
+  window.addEventListener('online',saveScratch);
+})();
+
+// ============================================================
+// UTILS
+// ============================================================
+function escapeHtml(str){
+  const d=document.createElement('div');d.appendChild(document.createTextNode(str||''));return d.innerHTML;
+}
+
+function cdEditTask(id) {
+  const li = document.querySelector(`[data-id="${id}"]`);
+  if (!li) return;
+  const titleEl = li.querySelector('.cd-task-title');
+  const editBtn = li.querySelector('.cd-task-edit');
+  if (!titleEl) return;
+  const currentTitle = titleEl.textContent.trim();
+  const input = document.createElement('input');
+  input.type = 'text'; input.value = currentTitle;
+  input.className = 'cd-task-edit-input'; input.maxLength = 200;
+  titleEl.replaceWith(input);
+  if (editBtn) { editBtn.style.opacity = '0'; editBtn.style.pointerEvents = 'none'; }
+  input.focus(); input.select();
+  let saved = false;
+  function save() {
+    if (saved) return; saved = true;
+    if (editBtn) { editBtn.style.opacity = ''; editBtn.style.pointerEvents = ''; }
+    const newTitle = input.value.trim();
+    if (!newTitle || newTitle === currentTitle) { input.replaceWith(titleEl); return; }
+    const fd = new FormData(); fd.append('title', newTitle);
+    fetch(`/tasks/${id}/edit`, { method: 'POST', body: fd })
+      .then(r => r.json()).then(data => {
+        if (data.success) titleEl.textContent = newTitle;
+        input.replaceWith(titleEl);
+      }).catch(() => input.replaceWith(titleEl));
+  }
+  function cancel() {
+    if (saved) return; saved = true;
+    if (editBtn) { editBtn.style.opacity = ''; editBtn.style.pointerEvents = ''; }
+    input.replaceWith(titleEl);
+  }
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+  });
+  input.addEventListener('blur', () => setTimeout(save, 120));
+}
+</script>
+
+</body>
+</html>
