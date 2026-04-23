@@ -30,6 +30,10 @@ BUNNY_STORAGE_ZONE = os.environ.get('BUNNY_STORAGE_ZONE')
 BUNNY_API_KEY      = os.environ.get('BUNNY_API_KEY')
 BUNNY_CDN_URL      = os.environ.get('BUNNY_CDN_URL', '').rstrip('/')
 
+BUNNY_STATUS_STORAGE_ZONE = os.environ.get('BUNNY_STATUS_STORAGE_ZONE')
+BUNNY_STATUS_API_KEY      = os.environ.get('BUNNY_STATUS_API_KEY')
+BUNNY_STATUS_CDN_URL      = os.environ.get('BUNNY_STATUS_CDN_URL', '').rstrip('/')
+
 PRIVATE_PROJECTS_PIN = os.environ.get('PRIVATE_PROJECTS_PIN', '')
 
 ALLOWED_FILE_EXTENSIONS = {
@@ -162,6 +166,22 @@ def optimize_image(input_path, max_width=1200):
 			h_size = int((float(img.size[1]) * float(w_percent)))
 			img = img.resize((max_width, h_size), Image.Resampling.LANCZOS)
 		img.save(input_path, "JPEG", optimize=True, quality=85)
+
+def upload_status_image_to_bunny(image_bytes, filename):
+    """Upload a processed status image to Bunny storage zone. Returns CDN URL."""
+    upload_url = f"https://ny.storage.bunnycdn.com/{BUNNY_STATUS_STORAGE_ZONE}/status/{filename}"
+    response = req_lib.put(
+        upload_url,
+        data=image_bytes,
+        headers={
+            'AccessKey': BUNNY_STATUS_API_KEY,
+            'Content-Type': 'image/jpeg',
+        },
+        timeout=60
+    )
+    if response.status_code != 201:
+        raise Exception(f"Bunny status upload failed: {response.status_code} {response.text}")
+    return f"{BUNNY_STATUS_CDN_URL}/status/{filename}"
 
 
 # ---- TASKS HELPERS ----
@@ -823,22 +843,27 @@ def publish_status():
 	if request.method == 'POST':
 		txt = request.form['status']
 		image_file = request.files.get('image')
-
 		now = datetime.now(pytz.timezone('America/New_York'))
 		fn = now.strftime("_status_updates/%Y-%m-%d-%H%M%S.markdown")
-
 		image_markdown = ""
 		has_image = False
 
 		if image_file and image_file.filename != '':
 			has_image = True
-			img_dir = "assets/img/status"
-			os.makedirs(img_dir, exist_ok=True)
-			img_name = secure_filename(image_file.filename)
-			img_path_fs = os.path.join(img_dir, f"{now.strftime('%Y%m%d%H%M%S')}-{img_name}")
-			image_file.save(img_path_fs)
-			optimize_image(img_path_fs)
-			image_markdown = f"\n\n![Status Image](/{img_path_fs})"
+			import io
+			img_filename = f"{now.strftime('%Y%m%d%H%M%S')}.jpg"
+			with Image.open(image_file) as img:
+				if img.mode in ("RGBA", "P"):
+					img = img.convert("RGB")
+				if img.size[0] > 1200:
+					w_percent = 1200 / float(img.size[0])
+					h_size = int(float(img.size[1]) * w_percent)
+					img = img.resize((1200, h_size), Image.Resampling.LANCZOS)
+				buf = io.BytesIO()
+				img.save(buf, format="JPEG", optimize=True, quality=85)
+				buf.seek(0)
+			cdn_url = upload_status_image_to_bunny(buf.read(), img_filename)
+			image_markdown = f"\n\n![Status Image]({cdn_url})"
 
 		tags = [t for t in ["movie", "book", "music", "idea", "coffee"] if f"#{t}" in txt.lower()]
 		fm = f"---\ntitle: Status\ndate: {now.strftime('%Y-%m-%d %H:%M:%S %z')}\nlayout: status_update\n"
@@ -881,7 +906,6 @@ def publish_status():
 		comms_list=comms_list,
 		tasks=tasks_data.get('tasks', [])
 	)
-
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
