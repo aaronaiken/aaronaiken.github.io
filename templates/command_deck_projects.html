@@ -82,6 +82,10 @@
       <a href="/command-deck/" class="cd-footer-link">Bridge</a>
       <a href="/publish" class="cd-footer-link">Cockpit</a>
       <a href="/below-deck" class="cd-footer-link">Below Deck</a>
+      {% if private_projects_enabled %}
+      <span class="cd-nav-sep">·</span>
+      <button class="cd-nav-link" id="unlockPrivateBtn" style="background:none;border:none;cursor:pointer;" title="Private projects">🔒</button>
+      {% endif %}
     </div>
     <span class="cd-footer-ident">YT-1300F · COMMAND DECK · SECURE</span>
   </footer>
@@ -242,6 +246,8 @@ function escapeHtml(str){const d=document.createElement('div');d.appendChild(doc
       el.classList.remove('private-hidden');
     });
     privateVisible = true;
+    const btn = document.getElementById('unlockPrivateBtn');
+    if (btn) btn.textContent = '🔓';
   }
 
   function hidePrivateProjects() {
@@ -249,6 +255,8 @@ function escapeHtml(str){const d=document.createElement('div');d.appendChild(doc
       el.classList.add('private-hidden');
     });
     privateVisible = false;
+    const btn = document.getElementById('unlockPrivateBtn');
+    if (btn) btn.textContent = '🔒';
   }
 
   function openPinModal() {
@@ -302,6 +310,10 @@ function escapeHtml(str){const d=document.createElement('div');d.appendChild(doc
   document.getElementById('pinConfirmBtn').addEventListener('click', submitPin);
   document.getElementById('pinInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') submitPin();
+  });
+  const unlockBtn = document.getElementById('unlockPrivateBtn');
+  if (unlockBtn) unlockBtn.addEventListener('click', function() {
+    if (privateVisible) { hidePrivateProjects(); } else { openPinModal(); }
   });
 })();
 </script>

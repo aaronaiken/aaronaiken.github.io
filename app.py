@@ -1283,7 +1283,6 @@ def cd_dashboard():
                (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.status = 'open') AS open_task_count,
                (SELECT COUNT(*) FROM blocks b WHERE b.project_id = p.id) AS block_count
         FROM projects p
-        WHERE p.is_private = 0 OR p.is_private IS NULL
         ORDER BY p.updated DESC
     ''').fetchall()
 
