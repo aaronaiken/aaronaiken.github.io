@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ project.title }} — Command Deck</title>
   <link rel="stylesheet" href="/static/command_deck.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 </head>
 <body class="command-deck">
 <div class="cd-shell">
@@ -61,20 +62,28 @@
 
         {% for block in blocks %}
           <div class="cd-block" data-block-id="{{ block.id }}" data-type="{{ block.type }}">
-            <div class="cd-block-header">
-              <span class="cd-block-type">// {{ block.type }}</span>
+            <div class="cd-block-header" data-block-id="{{ block.id }}">
+              <span class="cd-block-drag-handle" title="Drag to reorder">⠿</span>
+              <span class="cd-block-title-display"
+                data-block-id="{{ block.id }}"
+                data-type="{{ block.type }}"
+                data-custom-title="{{ block.title | default('', true) }}">{% if block.title %}{{ block.title }}{% elif block.type == 'note' %}Untitled Note{% else %}Untitled Checklist{% endif %}</span>
               <div class="cd-panel-actions">
+                <button class="cd-block-collapse-btn" data-block-id="{{ block.id }}" title="Collapse">▾</button>
                 <button class="cd-btn ghost sm block-delete-btn" data-id="{{ block.id }}">REMOVE</button>
               </div>
             </div>
-            <div class="cd-block-body">
+            <div class="cd-block-body" data-block-id="{{ block.id }}">
 
               {% if block.type == 'note' %}
-                <div class="cd-note-content"
-                  contenteditable="true"
-                  data-block-id="{{ block.id }}"
-                  data-placeholder="Start writing..."
-                  spellcheck="true">{{ block.content }}</div>
+                <div class="cd-note-rendered"
+                  data-block-id="{{ block.id }}">{{ block.content | default('', true) }}</div>
+                <div class="cd-note-editor" data-block-id="{{ block.id }}" style="display:none;">
+                  <textarea class="cd-note-textarea"
+                    data-block-id="{{ block.id }}"
+                    placeholder="Start writing... (markdown supported)"
+                    spellcheck="true">{{ block.content | default('', true) }}</textarea>
+                </div>
 
               {% elif block.type == 'checklist' %}
                 <ul class="cd-checklist" data-block-id="{{ block.id }}">
@@ -299,21 +308,187 @@ fetch('/below-deck/count').then(r=>r.json()).then(data=>{
 });
 
 // ============================================================
-// NOTE BLOCKS — contenteditable autosave
+// NOTE BLOCKS — markdown render/edit toggle + autosave
 // ============================================================
 (function(){
   let noteTimers = {};
 
+  function renderNote(blockId) {
+    const rendered = document.querySelector(`.cd-note-rendered[data-block-id="${blockId}"]`);
+    const editorWrap = document.querySelector(`.cd-note-editor[data-block-id="${blockId}"] textarea`) ||
+                       document.querySelector(`.cd-note-textarea[data-block-id="${blockId}"]`);
+    if (!rendered) return;
+    const raw = editorWrap ? editorWrap.value : rendered.dataset.rawContent || '';
+    if (raw.trim()) {
+      rendered.innerHTML = marked.parse(raw);
+    } else {
+      rendered.innerHTML = '<span class="cd-note-placeholder">Start writing... (markdown supported)</span>';
+    }
+    rendered.dataset.rawContent = raw;
+  }
+
+  function switchToEdit(blockId) {
+    const rendered = document.querySelector(`.cd-note-rendered[data-block-id="${blockId}"]`);
+    const editorDiv = document.querySelector(`.cd-note-editor[data-block-id="${blockId}"]`);
+    if (!rendered || !editorDiv) return;
+    const textarea = editorDiv.querySelector('textarea');
+    // Sync textarea with current raw content
+    if (rendered.dataset.rawContent !== undefined) {
+      textarea.value = rendered.dataset.rawContent;
+    }
+    rendered.style.display = 'none';
+    editorDiv.style.display = 'block';
+    textarea.focus();
+    // Place cursor at end
+    textarea.selectionStart = textarea.selectionEnd = textarea.value.length;
+  }
+
+  function switchToRender(blockId) {
+    const rendered = document.querySelector(`.cd-note-rendered[data-block-id="${blockId}"]`);
+    const editorDiv = document.querySelector(`.cd-note-editor[data-block-id="${blockId}"]`);
+    if (!rendered || !editorDiv) return;
+    const textarea = editorDiv.querySelector('textarea');
+    rendered.dataset.rawContent = textarea.value;
+    renderNote(blockId);
+    rendered.style.display = 'block';
+    editorDiv.style.display = 'none';
+  }
+
+  // Initial render for all note blocks on page load
+  document.querySelectorAll('.cd-note-rendered').forEach(el => {
+    const blockId = el.dataset.blockId;
+    const editorDiv = document.querySelector(`.cd-note-editor[data-block-id="${blockId}"]`);
+    const textarea = editorDiv ? editorDiv.querySelector('textarea') : null;
+    const raw = textarea ? textarea.value : '';
+    el.dataset.rawContent = raw;
+    renderNote(blockId);
+  });
+
+  // Click rendered area → switch to edit
+  document.getElementById('blocksContainer').addEventListener('click', function(e) {
+    const rendered = e.target.closest('.cd-note-rendered');
+    if (!rendered) return;
+    switchToEdit(rendered.dataset.blockId);
+  });
+
+  // Blur textarea → switch back to rendered + autosave
+  document.getElementById('blocksContainer').addEventListener('focusout', function(e) {
+    if (!e.target.classList.contains('cd-note-textarea')) return;
+    const blockId = e.target.dataset.blockId;
+    // Small delay so click events on rendered area don't race
+    setTimeout(() => {
+      switchToRender(blockId);
+      // Autosave
+      if (noteTimers[blockId]) clearTimeout(noteTimers[blockId]);
+      noteTimers[blockId] = setTimeout(() => {
+        const editorDiv = document.querySelector(`.cd-note-editor[data-block-id="${blockId}"]`);
+        const textarea = editorDiv ? editorDiv.querySelector('textarea') : null;
+        const rendered = document.querySelector(`.cd-note-rendered[data-block-id="${blockId}"]`);
+        const content = textarea ? textarea.value : (rendered ? rendered.dataset.rawContent : '');
+        fetch(`/command-deck/projects/${PROJECT_SLUG}/blocks/${blockId}/update`, {
+          method: 'POST',
+          body: new URLSearchParams({ content })
+        });
+      }, 300);
+    }, 150);
+  });
+
+  // Also autosave on textarea input (debounced) while editing
   document.getElementById('blocksContainer').addEventListener('input', function(e) {
-    if (!e.target.classList.contains('cd-note-content')) return;
+    if (!e.target.classList.contains('cd-note-textarea')) return;
     const blockId = e.target.dataset.blockId;
     if (noteTimers[blockId]) clearTimeout(noteTimers[blockId]);
     noteTimers[blockId] = setTimeout(() => {
       fetch(`/command-deck/projects/${PROJECT_SLUG}/blocks/${blockId}/update`, {
         method: 'POST',
-        body: new URLSearchParams({ content: e.target.innerText })
+        body: new URLSearchParams({ content: e.target.value })
       });
     }, 1200);
+  });
+
+  // Expose switchToEdit for use by newly created blocks
+  window._cdSwitchToEdit = switchToEdit;
+  window._cdRenderNote = renderNote;
+})();
+
+// ============================================================
+// BLOCK TITLE INLINE EDIT
+// ============================================================
+(function(){
+  document.getElementById('blocksContainer').addEventListener('click', function(e) {
+    const titleEl = e.target.closest('.cd-block-title-display');
+    if (!titleEl) return;
+    const blockId = titleEl.dataset.blockId;
+    const blockType = titleEl.dataset.type;
+    const currentTitle = titleEl.dataset.customTitle || '';
+    const placeholder = blockType === 'note' ? 'Untitled Note' : 'Untitled Checklist';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentTitle;
+    input.placeholder = placeholder;
+    input.className = 'cd-block-title-input';
+    input.maxLength = 100;
+    titleEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    let saved = false;
+    function save() {
+      if (saved) return; saved = true;
+      const newTitle = input.value.trim();
+      const display = document.createElement('span');
+      display.className = 'cd-block-title-display';
+      display.dataset.blockId = blockId;
+      display.dataset.type = blockType;
+      display.dataset.customTitle = newTitle;
+      display.textContent = newTitle || placeholder;
+      input.replaceWith(display);
+
+      if (newTitle !== currentTitle) {
+        const fd = new FormData();
+        fd.append('title', newTitle);
+        fetch(`/command-deck/projects/${PROJECT_SLUG}/blocks/${blockId}/update-title`, {
+          method: 'POST', body: fd
+        });
+      }
+    }
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); save(); }
+      if (e.key === 'Escape') { e.preventDefault(); saved = true; input.replaceWith(titleEl); }
+    });
+    input.addEventListener('blur', () => setTimeout(save, 120));
+  });
+})();
+
+// ============================================================
+// BLOCK COLLAPSE
+// ============================================================
+(function(){
+  function setCollapsed(blockId, collapsed) {
+    const body = document.querySelector(`.cd-block-body[data-block-id="${blockId}"]`);
+    const btn = document.querySelector(`.cd-block-collapse-btn[data-block-id="${blockId}"]`);
+    if (!body) return;
+    body.style.display = collapsed ? 'none' : '';
+    if (btn) btn.textContent = collapsed ? '▸' : '▾';
+    localStorage.setItem(`cd-block-${blockId}-collapsed`, collapsed ? '1' : '0');
+  }
+
+  // Restore state on load
+  document.querySelectorAll('.cd-block').forEach(block => {
+    const blockId = block.dataset.blockId;
+    const saved = localStorage.getItem(`cd-block-${blockId}-collapsed`);
+    if (saved === '1') setCollapsed(blockId, true);
+  });
+
+  document.getElementById('blocksContainer').addEventListener('click', function(e) {
+    const btn = e.target.closest('.cd-block-collapse-btn');
+    if (!btn) return;
+    e.stopPropagation();
+    const blockId = btn.dataset.blockId;
+    const body = document.querySelector(`.cd-block-body[data-block-id="${blockId}"]`);
+    const isCollapsed = body && body.style.display === 'none';
+    setCollapsed(blockId, !isCollapsed);
   });
 })();
 
@@ -336,29 +511,35 @@ fetch('/below-deck/count').then(r=>r.json()).then(data=>{
       div.dataset.blockId = block.id;
       div.dataset.type = block.type;
 
+      const placeholder = block.type === 'note' ? 'Untitled Note' : 'Untitled Checklist';
       if(block.type==='note'){
         div.innerHTML=`
-          <div class="cd-block-header">
-            <span class="cd-block-type">// note</span>
+          <div class="cd-block-header" data-block-id="${block.id}">
+            <span class="cd-block-drag-handle" title="Drag to reorder">⠿</span>
+            <span class="cd-block-title-display" data-block-id="${block.id}" data-type="note" data-custom-title="">${placeholder}</span>
             <div class="cd-panel-actions">
+              <button class="cd-block-collapse-btn" data-block-id="${block.id}" title="Collapse">▾</button>
               <button class="cd-btn ghost sm block-delete-btn" data-id="${block.id}">REMOVE</button>
             </div>
           </div>
-          <div class="cd-block-body">
-            <div class="cd-note-content" contenteditable="true"
-              data-block-id="${block.id}"
-              data-placeholder="Start writing..."
-              spellcheck="true"></div>
+          <div class="cd-block-body" data-block-id="${block.id}">
+            <div class="cd-note-rendered" data-block-id="${block.id}" data-raw-content=""></div>
+            <div class="cd-note-editor" data-block-id="${block.id}" style="display:none;">
+              <textarea class="cd-note-textarea" data-block-id="${block.id}"
+                placeholder="Start writing... (markdown supported)" spellcheck="true"></textarea>
+            </div>
           </div>`;
       } else {
         div.innerHTML=`
-          <div class="cd-block-header">
-            <span class="cd-block-type">// checklist</span>
+          <div class="cd-block-header" data-block-id="${block.id}">
+            <span class="cd-block-drag-handle" title="Drag to reorder">⠿</span>
+            <span class="cd-block-title-display" data-block-id="${block.id}" data-type="checklist" data-custom-title="">${placeholder}</span>
             <div class="cd-panel-actions">
+              <button class="cd-block-collapse-btn" data-block-id="${block.id}" title="Collapse">▾</button>
               <button class="cd-btn ghost sm block-delete-btn" data-id="${block.id}">REMOVE</button>
             </div>
           </div>
-          <div class="cd-block-body">
+          <div class="cd-block-body" data-block-id="${block.id}">
             <ul class="cd-checklist" data-block-id="${block.id}"></ul>
             <div class="cd-checklist-add">
               <input type="text" class="cd-input checklist-new-item"
@@ -372,7 +553,9 @@ fetch('/below-deck/count').then(r=>r.json()).then(data=>{
 
       container.appendChild(div);
       if(block.type==='note'){
-        div.querySelector('.cd-note-content').focus();
+        // Initialize rendered state then open editor
+        if(window._cdRenderNote) window._cdRenderNote(block.id);
+        if(window._cdSwitchToEdit) window._cdSwitchToEdit(block.id);
       }
     });
   }
@@ -851,6 +1034,144 @@ function cdEditTask(id) {
   });
   input.addEventListener('blur', () => setTimeout(save, 120));
 }
+
+// ============================================================
+// BLOCK DRAG TO REORDER
+// ============================================================
+(function(){
+  const container = document.getElementById('blocksContainer');
+  let dragEl = null, indicator = null;
+
+  function getIndicator() {
+    if (!indicator) {
+      indicator = document.createElement('div');
+      indicator.className = 'cd-block-drop-indicator';
+    }
+    return indicator;
+  }
+
+  function getBlockFromHandle(el) {
+    const handle = el.closest('.cd-block-drag-handle');
+    if (!handle) return null;
+    return handle.closest('.cd-block');
+  }
+
+  // ---- Desktop (HTML5 drag) ----
+  container.addEventListener('mousedown', function(e) {
+    if (!e.target.classList.contains('cd-block-drag-handle')) return;
+    const block = getBlockFromHandle(e.target);
+    if (!block) return;
+    block.setAttribute('draggable', 'true');
+  });
+
+  container.addEventListener('dragstart', function(e) {
+    dragEl = e.target.closest('.cd-block');
+    if (!dragEl) return;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => dragEl.classList.add('cd-block-dragging'), 0);
+  });
+
+  container.addEventListener('dragend', function() {
+    if (dragEl) dragEl.classList.remove('cd-block-dragging');
+    document.querySelectorAll('.cd-block[draggable]').forEach(b => b.removeAttribute('draggable'));
+    getIndicator().remove();
+    dragEl = null;
+    saveBlockOrder();
+  });
+
+  container.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    if (!dragEl) return;
+    const target = e.target.closest('.cd-block');
+    if (!target || target === dragEl) return;
+    const rect = target.getBoundingClientRect();
+    const mid = rect.top + rect.height / 2;
+    const ind = getIndicator();
+    if (e.clientY < mid) {
+      container.insertBefore(ind, target);
+    } else {
+      container.insertBefore(ind, target.nextSibling);
+    }
+  });
+
+  container.addEventListener('drop', function(e) {
+    e.preventDefault();
+    if (!dragEl) return;
+    const ind = getIndicator();
+    container.insertBefore(dragEl, ind);
+    ind.remove();
+  });
+
+  // ---- Touch (long-press 300ms to grab) ----
+  let touchTimer = null, touchClone = null, touchBlock = null, touchOffsetY = 0;
+
+  container.addEventListener('touchstart', function(e) {
+    const handle = e.target.closest('.cd-block-drag-handle');
+    if (!handle) return;
+    const block = handle.closest('.cd-block');
+    if (!block) return;
+    touchTimer = setTimeout(() => {
+      touchBlock = block;
+      const rect = block.getBoundingClientRect();
+      touchOffsetY = e.touches[0].clientY - rect.top;
+      touchClone = block.cloneNode(true);
+      touchClone.className += ' cd-block-dragging cd-block-touch-clone';
+      touchClone.style.cssText = `position:fixed;top:${rect.top}px;left:${rect.left}px;width:${rect.width}px;z-index:999;pointer-events:none;opacity:0.85;`;
+      document.body.appendChild(touchClone);
+      block.style.opacity = '0.3';
+      navigator.vibrate && navigator.vibrate(30);
+    }, 300);
+  }, {passive: true});
+
+  container.addEventListener('touchmove', function(e) {
+    if (!touchBlock) { clearTimeout(touchTimer); return; }
+    e.preventDefault();
+    const y = e.touches[0].clientY;
+    const x = e.touches[0].clientX;
+    if (touchClone) touchClone.style.top = (y - touchOffsetY) + 'px';
+
+    // Find insertion target
+    const blocks = Array.from(container.querySelectorAll('.cd-block:not(.cd-block-touch-clone)'));
+    const ind = getIndicator();
+    let inserted = false;
+    for (const b of blocks) {
+      if (b === touchBlock) continue;
+      const rect = b.getBoundingClientRect();
+      if (y < rect.top + rect.height / 2) {
+        container.insertBefore(ind, b);
+        inserted = true; break;
+      }
+    }
+    if (!inserted) container.appendChild(ind);
+  }, {passive: false});
+
+  function touchEnd() {
+    clearTimeout(touchTimer);
+    if (touchBlock) {
+      const ind = getIndicator();
+      container.insertBefore(touchBlock, ind);
+      ind.remove();
+      touchBlock.style.opacity = '';
+      if (touchClone) touchClone.remove();
+      touchClone = null;
+      touchBlock = null;
+      saveBlockOrder();
+    }
+  }
+  container.addEventListener('touchend', touchEnd);
+  container.addEventListener('touchcancel', touchEnd);
+
+  function saveBlockOrder() {
+    const order = Array.from(container.querySelectorAll('.cd-block'))
+      .map(b => parseInt(b.dataset.blockId))
+      .filter(id => !isNaN(id));
+    fetch(`/command-deck/projects/${PROJECT_SLUG}/blocks/reorder`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ order })
+    });
+  }
+})();
 </script>
 
 </body>

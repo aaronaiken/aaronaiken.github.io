@@ -1532,6 +1532,216 @@ body.command-deck {
 }
 
 /* ============================================================
+   BLOCK ENHANCEMENTS — title, collapse, drag, markdown
+   ============================================================ */
+
+/* Drag handle */
+.cd-block-drag-handle {
+  cursor: grab;
+  color: var(--cd-text-dim);
+  font-size: 0.85rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+  user-select: none;
+  padding: 0 0.25rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.cd-block:hover .cd-block-drag-handle {
+  opacity: 0.5;
+}
+
+.cd-block-drag-handle:hover {
+  opacity: 1 !important;
+  color: var(--cd-amber);
+  cursor: grab;
+}
+
+.cd-block-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Block title (replaces .cd-block-type) */
+.cd-block-title-display {
+  font-family: var(--cd-font-ui);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cd-amber);
+  flex: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  padding: 0.1rem 0.25rem;
+  border-radius: var(--cd-radius);
+  transition: color 0.15s, background 0.15s;
+}
+
+.cd-block-title-display:hover {
+  color: var(--cd-amber-hi);
+  background: var(--cd-glow);
+}
+
+/* Block title edit input */
+.cd-block-title-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--cd-amber-lo);
+  color: var(--cd-amber-hi);
+  font-family: var(--cd-font-ui);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  outline: none;
+  padding: 0.1rem 0.25rem;
+  min-width: 0;
+}
+
+/* Collapse button */
+.cd-block-collapse-btn {
+  background: none;
+  border: none;
+  color: var(--cd-text-dim);
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 0 0.2rem;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  line-height: 1;
+}
+
+.cd-block:hover .cd-block-collapse-btn {
+  opacity: 0.7;
+}
+
+.cd-block-collapse-btn:hover {
+  opacity: 1 !important;
+  color: var(--cd-amber);
+}
+
+/* Dragging states */
+.cd-block-dragging {
+  opacity: 0.5;
+  border-style: dashed;
+}
+
+.cd-block-drop-indicator {
+  height: 3px;
+  background: var(--cd-amber);
+  border-radius: 2px;
+  margin: 2px 0;
+  box-shadow: 0 0 8px var(--cd-glow-hi);
+}
+
+/* Note block — rendered markdown view */
+.cd-note-rendered {
+  font-family: var(--cd-font-body);
+  font-size: 0.95rem;
+  color: var(--cd-text);
+  line-height: 1.7;
+  min-height: 2rem;
+  cursor: text;
+  word-break: break-word;
+}
+
+.cd-note-rendered .cd-note-placeholder {
+  color: var(--cd-text-dim);
+  font-style: italic;
+}
+
+/* Markdown rendered styles inside note blocks */
+.cd-note-rendered p { margin-bottom: 0.75rem; }
+.cd-note-rendered p:last-child { margin-bottom: 0; }
+.cd-note-rendered h1, .cd-note-rendered h2, .cd-note-rendered h3 {
+  font-family: var(--cd-font-heading);
+  color: var(--cd-text-bright);
+  margin: 1rem 0 0.5rem;
+  line-height: 1.3;
+}
+.cd-note-rendered h1 { font-size: 1.3rem; }
+.cd-note-rendered h2 { font-size: 1.1rem; }
+.cd-note-rendered h3 { font-size: 1rem; }
+.cd-note-rendered ul, .cd-note-rendered ol {
+  padding-left: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+.cd-note-rendered li { margin-bottom: 0.25rem; }
+.cd-note-rendered code {
+  font-family: var(--cd-font-ui);
+  font-size: 0.8rem;
+  background: var(--cd-bg-raised);
+  border: 1px solid var(--cd-border);
+  border-radius: 2px;
+  padding: 0.1em 0.35em;
+  color: var(--cd-amber-hi);
+}
+.cd-note-rendered pre {
+  background: var(--cd-bg-raised);
+  border: 1px solid var(--cd-border);
+  border-radius: var(--cd-radius);
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  margin-bottom: 0.75rem;
+}
+.cd-note-rendered pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+.cd-note-rendered blockquote {
+  border-left: 2px solid var(--cd-amber-lo);
+  padding-left: 0.75rem;
+  color: var(--cd-text-dim);
+  font-style: italic;
+  margin: 0.5rem 0;
+}
+.cd-note-rendered strong { color: var(--cd-text-bright); }
+.cd-note-rendered a { color: var(--cd-amber); }
+.cd-note-rendered hr {
+  border: none;
+  border-top: 1px solid var(--cd-border);
+  margin: 1rem 0;
+}
+
+/* Note block — edit textarea */
+.cd-note-editor {
+  width: 100%;
+}
+
+.cd-note-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--cd-border);
+  color: var(--cd-text-bright);
+  font-family: var(--cd-font-body);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  outline: none;
+  resize: vertical;
+  min-height: 6rem;
+  padding: 0.25rem 0;
+  word-break: break-word;
+}
+
+.cd-note-textarea::placeholder {
+  color: var(--cd-text-dim);
+  font-style: italic;
+}
+
+/* Fix block header flex now that .cd-block-type is gone */
+.cd-block-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ============================================================
    RESPONSIVE
    ============================================================ */
 
