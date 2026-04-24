@@ -1503,6 +1503,26 @@ def cd_block_update(slug, block_id):
 
 	return jsonify({'success': True})
 
+@app.route('/command-deck/projects/<slug>/blocks/<int:block_id>/update-title', methods=['POST'])
+@cd_auth_required
+def cd_block_update_title(slug, block_id):
+    title = request.form.get('title', '').strip() or None
+
+    conn = get_db()
+    project = conn.execute('SELECT * FROM projects WHERE slug = ?', (slug,)).fetchone()
+    if not project:
+        conn.close()
+        return jsonify({'error': 'not found'}), 404
+
+    conn.execute(
+        'UPDATE blocks SET title = ? WHERE id = ? AND project_id = ?',
+        (title, block_id, project['id'])
+    )
+    conn.execute('UPDATE projects SET updated = ? WHERE id = ?', (et_now(), project['id']))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'title': title})
 
 @app.route('/command-deck/projects/<slug>/blocks/<int:block_id>/delete', methods=['POST'])
 @cd_auth_required
