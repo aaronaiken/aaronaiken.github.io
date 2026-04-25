@@ -1,1376 +1,3860 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>COCKPIT // STATUS</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<title>COCKPIT // STATUS</title>
 
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Crimson+Pro:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+	<link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+	<link rel="shortcut icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+	<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Crimson+Pro:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
 
-    <style>
-    :root {
-        --bg:           #080a06;
-        --bg2:          #0d1008;
-        --amber:        #d4880a;
-        --amber-hi:     #f5b332;
-        --amber-lo:     #9a6018;
-        --amber-dim:    #3d2804;
-        --green:        #4dbb6a;
-        --green-lo:     #2a6b3c;
-        --red:          #cc3322;
-        --neon:         #ff00ff;
-        --scan:         rgba(0,0,0,0.18);
-        --text:         #d4880a;
-        --text-body:    #c89040;
-        --text-dim:     #7a5020;
-        --border:       #2e1e08;
-        --border-hi:    #5a3c18;
-        --muted:        #7a5020;
-        --pill-bg:      #0d1008;
-        --input-bg:     #0d1008;
-        --accent:       #d4880a;
-        --shield:       #4dbb6a;
-        --heat:         rgba(212,136,10,0);
-        --secret-neon:  #ff00ff;
-        --scan-speed:   10s;
+	<style>
+	:root {
+		--bg:           #080a06;
+		--bg2:          #0d1008;
+		--amber:        #d4880a;
+		--amber-hi:     #f5b332;
+		--amber-lo:     #9a6018;
+		--amber-dim:    #3d2804;
+		--green:        #4dbb6a;
+		--green-lo:     #2a6b3c;
+		--red:          #cc3322;
+		--neon:         #ff00ff;
+		--scan:         rgba(0,0,0,0.18);
+		--text:         #d4880a;
+		--text-body:    #c89040;
+		--text-dim:     #7a5020;
+		--border:       #2e1e08;
+		--border-hi:    #5a3c18;
+		--muted:        #7a5020;
+		--pill-bg:      #0d1008;
+		--input-bg:     #0d1008;
+		--accent:       #d4880a;
+		--shield:       #4dbb6a;
+		--heat:         rgba(212,136,10,0);
+		--secret-neon:  #ff00ff;
+		--scan-speed:   10s;
+	}
+
+	*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+	body {
+		background: var(--bg);
+		color: var(--text);
+		font-family: 'Share Tech Mono', 'Courier New', monospace;
+		min-height: 100vh;
+		display: flex;
+		justify-content: center;
+		overscroll-behavior-y: contain;
+		overflow-x: hidden;
+		padding-top: env(safe-area-inset-top, 20px);
+		font-size: 14px;
+	}
+
+	@keyframes scanline-drift {
+		0%   { transform: translateY(0); }
+		100% { transform: translateY(100%); }
+	}
+
+	body::before {
+		content: " ";
+		display: block;
+		position: fixed;
+		top: 0; left: 0; bottom: 0; right: 0;
+		background: repeating-linear-gradient(
+			to bottom,
+			transparent 0px, transparent 3px,
+			var(--scan) 3px, var(--scan) 4px
+		);
+		z-index: 9998;
+		pointer-events: none;
+		animation: scanline-drift var(--scan-speed) linear infinite;
+		opacity: 0.6;
+	}
+
+	body::after {
+		content: '';
+		position: fixed; inset: 0;
+		background: radial-gradient(ellipse at 50% 40%, transparent 40%, rgba(0,0,0,0.65) 100%);
+		pointer-events: none;
+		z-index: 9997;
+	}
+
+	.container {
+		width: 100%;
+		max-width: 520px;
+		padding: 28px 24px 48px;
+		position: relative;
+		align-self: flex-start;
+		z-index: 10;
+		transition: transform 0.6s cubic-bezier(0.5, 0, 0.5, 1), opacity 0.4s ease-in;
+	}
+
+	.hyperspace {
+		transform: scale(0.1) translateY(-1000px);
+		filter: blur(20px);
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	@media (min-width: 768px) {
+		.container {
+			margin-top: 40px;
+			border: 1px solid var(--border);
+			backdrop-filter: blur(8px);
+		}
+	}
+
+	.cockpit__header {
+		margin-bottom: 20px;
+		padding-bottom: 12px;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.cockpit__logo {
+		font-family: 'VT323', monospace;
+		font-size: 2.2rem;
+		color: var(--amber-hi);
+		text-shadow: 0 0 18px rgba(212,136,10,0.55), 0 0 50px rgba(212,136,10,0.18);
+		letter-spacing: 0.04em;
+		animation: logo-glow 5s ease-in-out infinite;
+		line-height: 1;
+	}
+
+	.cockpit__logo span { color: var(--amber-lo); }
+
+	@keyframes logo-glow {
+		0%,100% { text-shadow: 0 0 18px rgba(212,136,10,0.55), 0 0 50px rgba(212,136,10,0.18); }
+		50%      { text-shadow: 0 0 28px rgba(245,179,50,0.8), 0 0 80px rgba(212,136,10,0.3); }
+	}
+
+	.status-bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 20px;
+	}
+
+	.systems-group { display: flex; align-items: center; gap: 12px; }
+
+	.dot {
+		width: 7px; height: 7px; border-radius: 50%;
+		box-shadow: 0 0 6px currentColor; flex-shrink: 0;
+	}
+
+	.online  { background: var(--green); color: var(--green); animation: dot-pulse 2.2s ease-in-out infinite; }
+	.syncing { background: var(--amber); color: var(--amber); animation: dot-pulse 1s ease-in-out infinite; }
+	.offline { background: var(--red);   color: var(--red); }
+
+	@keyframes dot-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+	.shield-meter {
+		font-size: 0.58rem; text-transform: uppercase;
+		letter-spacing: 0.18em; color: var(--muted);
+		display: flex; align-items: center; gap: 8px;
+	}
+
+	.shield-bar {
+		width: 50px; height: 3px; background: var(--border);
+		border-radius: 2px; overflow: hidden; border: 1px solid var(--border-hi);
+	}
+
+	.shield-fill {
+		height: 100%; width: 0%;
+		background: var(--shield);
+		transition: width 0.5s, background 0.5s;
+		box-shadow: 0 0 6px var(--shield);
+	}
+
+	.cockpit__controls { display: flex; gap: 16px; align-items: center; }
+
+	.cockpit__ctrl-btn {
+		background: none; border: none;
+		color: var(--muted); font-size: 0.6rem;
+		font-family: 'Share Tech Mono', monospace;
+		letter-spacing: 0.15em; text-transform: uppercase;
+		cursor: pointer; transition: color 0.15s; padding: 0;
+	}
+
+	.cockpit__ctrl-btn:hover { color: var(--amber); }
+	.cockpit__ctrl-btn a { color: inherit; text-decoration: none; }
+
+	#secret-comm {
+		position: fixed; top: 0; left: 0;
+		width: 100vw; height: 100vh;
+		background: rgba(0,0,0,0.97);
+		z-index: 10000;
+		display: none; flex-direction: column;
+		align-items: center; justify-content: center;
+		opacity: 0; transition: opacity 0.5s ease;
+		padding: 40px;
+		user-select: none; -webkit-user-select: none;
+		touch-action: none;
+	}
+
+	#secret-comm::before {
+		content: '';
+		position: absolute; inset: 0;
+		background: repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, rgba(255,0,255,0.04) 3px, rgba(255,0,255,0.04) 4px);
+		pointer-events: none;
+	}
+
+	#secret-text {
+		color: var(--secret-neon);
+		font-family: 'Crimson Pro', Georgia, serif;
+		font-size: 1.3rem; font-style: italic;
+		text-shadow: 0 0 20px var(--secret-neon), 0 0 60px rgba(255,0,255,0.3);
+		letter-spacing: 0.04em; text-align: center;
+		max-width: 480px; word-wrap: break-word;
+		overflow-wrap: break-word; line-height: 1.6;
+		position: relative; z-index: 1;
+	}
+
+	.terminal-cursor {
+		display: inline-block; width: 10px; height: 1.1em;
+		background: var(--secret-neon); margin-left: 8px;
+		vertical-align: middle; box-shadow: 0 0 8px var(--secret-neon);
+		animation: blink 1s step-end infinite;
+	}
+
+	@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+	.section-label {
+		font-size: 0.6rem; letter-spacing: 0.22em;
+		text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+	}
+
+	.scroller {
+		display: flex; gap: 8px; margin-bottom: 12px;
+		overflow-x: auto; padding-bottom: 4px;
+	}
+
+	.scroller::-webkit-scrollbar { display: none; }
+
+	.pill {
+		background: var(--pill-bg); border: 1px solid var(--border);
+		color: var(--text-body); padding: 6px 12px; border-radius: 2px;
+		font-size: 0.85rem; font-family: 'Share Tech Mono', monospace;
+		cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s;
+		white-space: nowrap; flex-shrink: 0;
+	}
+
+	.pill:hover, .pill:active { border-color: var(--amber-lo); color: var(--amber-hi); background: var(--amber-dim); }
+
+	.pill.util {
+		font-weight: 700; border-color: var(--amber-lo);
+		color: var(--amber); font-size: 0.72rem; letter-spacing: 0.08em;
+	}
+
+	.pill.util:hover { background: var(--amber-dim); border-color: var(--amber); }
+
+	.input-wrap { position: relative; margin-top: 8px; }
+
+	textarea {
+		width: 100%; height: 180px;
+		background: var(--input-bg); color: var(--text-body);
+		border: 1px solid var(--border); border-radius: 2px;
+		padding: 14px; font-size: 1rem;
+		font-family: 'Crimson Pro', Georgia, serif;
+		line-height: 1.7; outline: none;
+		box-sizing: border-box; resize: none; -webkit-appearance: none;
+		transition: box-shadow 0.2s ease, border-color 0.2s;
+	}
+
+	textarea:focus { border-color: var(--amber-lo); }
+	textarea::placeholder { color: var(--border-hi); font-style: italic; }
+
+	@keyframes redline-pulse {
+		0%   { box-shadow: 0 0 10px rgba(204,51,34,0.2); }
+		50%  { box-shadow: 0 0 30px rgba(204,51,34,0.6); }
+		100% { box-shadow: 0 0 10px rgba(204,51,34,0.2); }
+	}
+
+	.redline { animation: redline-pulse 1.5s infinite ease-in-out; border-color: var(--red) !important; }
+
+	.counter-wrap {
+		display: flex; justify-content: space-between; align-items: center;
+		font-size: 0.62rem; color: var(--muted); margin-top: 6px; letter-spacing: 0.1em;
+	}
+
+	.payload-controls { display: flex; align-items: center; gap: 8px; }
+
+	#payload-label {
+		cursor: pointer; color: var(--amber-lo);
+		border: 1px solid var(--amber-lo); padding: 3px 8px;
+		border-radius: 2px; font-size: 0.6rem;
+		letter-spacing: 0.15em; text-transform: uppercase; transition: all 0.15s;
+	}
+
+	#payload-label:hover { color: var(--amber); border-color: var(--amber); background: var(--amber-dim); }
+
+	#payload-name {
+		color: var(--secret-neon); font-size: 0.6rem;
+		letter-spacing: 0.1em; text-shadow: 0 0 8px var(--secret-neon); display: none;
+	}
+
+	button#publish-btn {
+		width: 100%; background: var(--amber-dim);
+		border: 1px solid var(--amber-lo); color: var(--amber-hi);
+		padding: 14px; border-radius: 2px;
+		font-size: 0.78rem; font-family: 'Share Tech Mono', monospace;
+		font-weight: 400; text-transform: uppercase;
+		letter-spacing: 0.25em; margin-top: 16px;
+		cursor: pointer; transition: background 0.15s, border-color 0.15s;
+	}
+
+	button#publish-btn:hover { background: #4a2c08; border-color: var(--amber); }
+	button#publish-btn:active { background: var(--amber); color: #000; }
+
+	.history-section { margin-top: 36px; }
+
+	.log-header {
+		font-size: 0.6rem; color: var(--muted);
+		text-transform: uppercase; letter-spacing: 0.25em;
+		margin-bottom: 12px; padding-bottom: 8px;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.history-item {
+		font-family: 'Crimson Pro', Georgia, serif;
+		font-size: 0.92rem; font-style: italic;
+		color: var(--text-dim); margin-bottom: 10px;
+		line-height: 1.5; border-left: 1px solid var(--border-hi);
+		padding-left: 10px;
+	}
+
+	.history-item::before { content: '› '; color: var(--border-hi); font-style: normal; }
+
+	.cockpit__footer {
+		margin-top: 36px; padding-top: 14px;
+		border-top: 1px solid var(--border);
+		display: flex; justify-content: space-between; align-items: center;
+		font-size: 0.6rem; letter-spacing: 0.12em;
+		text-transform: uppercase; color: var(--muted);
+	}
+
+	.cockpit__footer a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+	.cockpit__footer a:hover { color: var(--amber-lo); }
+
+	.cockpit__footer-quote {
+		font-family: 'Crimson Pro', serif; font-style: italic;
+		text-transform: none; letter-spacing: 0;
+		font-size: 0.78rem; color: var(--amber-lo); opacity: 0.6;
+	}
+
+	/* ---- TASKS ---- */
+	.tasks-section { margin-top: 36px; }
+
+	.tasks-add-row {
+		display: flex; gap: 8px; margin-bottom: 16px;
+	}
+
+	.tasks-add-row input[type="text"] {
+		flex: 1;
+		background: var(--input-bg); color: var(--text-body);
+		border: 1px solid var(--border); border-radius: 2px;
+		padding: 8px 12px; font-size: 0.85rem;
+		font-family: 'Share Tech Mono', monospace;
+		outline: none; transition: border-color 0.15s;
+		-webkit-appearance: none;
+	}
+
+	.tasks-add-row input[type="text"]:focus { border-color: var(--amber-lo); }
+	.tasks-add-row input[type="text"]::placeholder { color: var(--border-hi); }
+
+	.tasks-add-btn {
+		background: var(--amber-dim); border: 1px solid var(--amber-lo);
+		color: var(--amber-hi); padding: 8px 14px; border-radius: 2px;
+		font-size: 0.68rem; font-family: 'Share Tech Mono', monospace;
+		text-transform: uppercase; letter-spacing: 0.18em;
+		cursor: pointer; transition: background 0.15s, border-color 0.15s;
+		white-space: nowrap; flex-shrink: 0;
+	}
+
+	.tasks-add-btn:hover { background: #4a2c08; border-color: var(--amber); }
+	.tasks-add-btn:active { background: var(--amber); color: #000; }
+	.tasks-add-btn:disabled { opacity: 0.4; cursor: default; }
+	.tasks-add-btn.is-working { opacity: 0.6; }
+	.tasks-add-btn.is-success { border-color: var(--green); color: var(--green); background: rgba(77,187,106,0.08); }
+	.tasks-add-btn.is-error { border-color: var(--red); color: var(--red); background: rgba(204,51,34,0.08); }
+
+	.tasks-list { list-style: none; }
+
+	.task-item {
+		display: flex; align-items: center; gap: 10px;
+		padding: 9px 0; border-bottom: 1px solid var(--border);
+		transition: opacity 0.3s;
+	}
+
+	.task-item.is-complete { opacity: 0.4; }
+
+	.task-check {
+		width: 14px; height: 14px; flex-shrink: 0;
+		border: 1px solid var(--amber-lo); border-radius: 2px;
+		background: none; cursor: pointer;
+		display: flex; align-items: center; justify-content: center;
+		transition: background 0.15s, border-color 0.15s;
+		color: var(--green); font-size: 10px; line-height: 1;
+	}
+
+	.task-check:hover { border-color: var(--green); }
+	.task-item.is-complete .task-check { background: var(--green-lo); border-color: var(--green); }
+
+	.task-title {
+		flex: 1; font-size: 0.88rem; color: var(--text-body);
+		font-family: 'Share Tech Mono', monospace;
+		line-height: 1.4;
+	}
+
+	.task-item.is-complete .task-title { text-decoration: line-through; color: var(--text-dim); }
+
+	.task-delete {
+		background: none; border: none; color: var(--border-hi);
+		font-size: 0.7rem; cursor: pointer; padding: 2px 4px;
+		font-family: 'Share Tech Mono', monospace;
+		letter-spacing: 0.1em; transition: color 0.15s;
+		flex-shrink: 0;
+	}
+
+	.task-delete:hover { color: var(--red); }
+
+	.task-log-prompt {
+		display: none;
+		background: var(--bg2); border: 1px solid var(--amber-lo);
+		border-radius: 2px; padding: 12px 14px; margin-top: 8px;
+		margin-bottom: 4px;
+	}
+
+	.task-log-prompt.visible { display: block; }
+
+	.task-log-label {
+		font-size: 0.6rem; color: var(--amber-lo);
+		text-transform: uppercase; letter-spacing: 0.2em;
+		margin-bottom: 10px;
+	}
+
+	.task-log-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+	.task-log-btn {
+		background: none; border: 1px solid var(--border-hi);
+		color: var(--text-dim); padding: 5px 10px; border-radius: 2px;
+		font-size: 0.62rem; font-family: 'Share Tech Mono', monospace;
+		text-transform: uppercase; letter-spacing: 0.15em;
+		cursor: pointer; transition: all 0.15s;
+	}
+
+	.task-log-btn:hover { border-color: var(--amber-lo); color: var(--amber); }
+	.task-log-btn.primary { border-color: var(--amber-lo); color: var(--amber); }
+	.task-log-btn.primary:hover { background: var(--amber-dim); }
+	.task-log-btn.dismiss { opacity: 0.5; }
+	.task-log-btn.dismiss:hover { opacity: 1; color: var(--text-dim); }
+
+	.tasks-empty {
+		font-size: 0.78rem; color: var(--text-dim);
+		font-family: 'Crimson Pro', serif; font-style: italic;
+		padding: 10px 0; text-align: center; opacity: 0.6;
+	}
+
+	.tasks-divider {
+		font-size: 0.58rem; color: var(--muted);
+		text-transform: uppercase; letter-spacing: 0.2em;
+		margin: 14px 0 10px; opacity: 0.6;
+	}
+
+	/* ---- COLLAPSIBLE ---- */
+	.tasks-toggle {
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		user-select: none;
+		-webkit-user-select: none;
+	}
+
+	.tasks-toggle-arrow {
+		font-size: 0.55rem;
+		color: var(--muted);
+		transition: transform 0.2s ease;
+		letter-spacing: 0;
+	}
+
+	.tasks-toggle-arrow.is-collapsed { transform: rotate(-90deg); }
+
+	.tasks-body { overflow: hidden; }
+	.tasks-body.is-collapsed { display: none; }
+
+	/* ---- SCRATCH PAD ---- */
+	.scratch-section { margin-top: 36px; }
+
+	.scratch-textarea {
+		width: 100%;
+		min-height: 120px;
+		max-height: 60vh;
+		background: var(--input-bg);
+		color: var(--text-body);
+		border: 1px solid var(--border);
+		border-radius: 2px;
+		padding: 12px 14px;
+		font-size: 0.88rem;
+		font-family: 'Crimson Pro', Georgia, serif;
+		font-style: italic;
+		line-height: 1.7;
+		outline: none;
+		resize: vertical;
+		-webkit-appearance: none;
+		transition: border-color 0.2s;
+		box-sizing: border-box;
+		overflow-y: auto;
+	}
+
+	.scratch-textarea:focus { border-color: var(--amber-lo); }
+	.scratch-textarea::placeholder { color: var(--border-hi); }
+
+	.scratch-action-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-top: 6px;
+	}
+
+	.scratch-status {
+		font-size: 0.55rem;
+		color: var(--muted);
+		letter-spacing: 0.15em;
+		text-transform: uppercase;
+		min-height: 1em;
+		transition: opacity 0.3s;
+	}
+
+	.scratch-btns { display: flex; gap: 8px; }
+
+	.scratch-btn {
+		background: none;
+		border: 1px solid var(--border-hi);
+		color: var(--text-dim);
+		padding: 3px 10px;
+		border-radius: 2px;
+		font-size: 0.58rem;
+		font-family: 'Share Tech Mono', monospace;
+		text-transform: uppercase;
+		letter-spacing: 0.15em;
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.scratch-btn:hover { border-color: var(--amber-lo); color: var(--amber); }
+	.scratch-btn.is-success { border-color: var(--green); color: var(--green); }
+	.scratch-btn.is-offline { border-color: var(--amber-lo); color: var(--amber); }
+
+	.scratch-offline-badge {
+		font-size: 0.5rem;
+		color: var(--amber);
+		letter-spacing: 0.15em;
+		margin-left: 8px;
+		animation: dot-pulse 2s ease-in-out infinite;
+		display: none;
+	}
+
+	.scratch-offline-badge.visible { display: inline; }
+
+	/* ---- LIGHT MODE ---- */
+	@media (prefers-color-scheme: light) {
+		:root {
+			--bg:        #fdf9f3;
+			--bg2:       #faf4e8;
+			--amber:     #7a3e00;
+			--amber-hi:  #5a2e00;
+			--amber-lo:  #a06020;
+			--amber-dim: #f0e6d0;
+			--text:      #3a2a10;
+			--text-body: #4a3818;
+			--text-dim:  #8a7858;
+			--border:    #ddd0b8;
+			--border-hi: #c4b090;
+			--muted:     #8a7858;
+			--pill-bg:   #f0e8d8;
+			--input-bg:  #faf4e8;
+			--accent:    #7a3e00;
+			--scan:      transparent;
+			--green:     #2a6e3f;
+			--green-lo:  #4a8c60;
+			--shield:    #2a6e3f;
+		}
+		body::before, body::after { display: none; }
+		.cockpit__logo { text-shadow: none; animation: none; color: #5a2e00; }
+		.cockpit__logo span { color: #a06020; }
+		.shield-fill { box-shadow: none; }
+		textarea { color: #3a2a10; }
+		textarea::placeholder { color: #c4b090; }
+		button#publish-btn { background: #3a2a10; border-color: #3a2a10; color: #fdf9f3; }
+		button#publish-btn:hover { background: #4a3818; }
+		button#publish-btn:active { background: #7a3e00; color: #fdf9f3; }
+		.history-item { border-left-color: #ddd0b8; }
+		.history-item::before { color: #ddd0b8; }
+		.tasks-add-row input[type="text"] { color: #3a2a10; }
+		.tasks-add-row input[type="text"]::placeholder { color: #c4b090; }
+		.tasks-add-btn { background: #3a2a10; border-color: #3a2a10; color: #fdf9f3; }
+		.tasks-add-btn:hover { background: #4a3818; }
+		.tasks-add-btn:active { background: #7a3e00; color: #fdf9f3; }
+		.task-log-prompt { background: #f0e8d8; }
+		.scratch-textarea { color: #3a2a10; }
+		.scratch-textarea::placeholder { color: #c4b090; }
+	}
+	</style>
+	<style id="cockpit-modes-css">
+
+	/* ---- MODE DOT ---- */
+	#mode-dot-wrap {
+		position: fixed;
+		top: 14px;
+		right: 18px;
+		z-index: 10002;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	#mode-dot {
+		width: 5px;
+		height: 5px;
+		border-radius: 50%;
+		background: #3d2804;
+		cursor: pointer;
+		transition: background 0.3s, box-shadow 0.3s;
+		flex-shrink: 0;
+	}
+
+	#mode-dot:hover { background: var(--amber-lo); }
+
+	#mode-dot.is-active-work       { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+	#mode-dot.is-active-after-dark { background: #8b1a1a; box-shadow: 0 0 6px #8b1a1a; }
+
+	#mode-pin-input {
+		display: none;
+		background: var(--bg);
+		border: 1px solid var(--border-hi);
+		color: var(--amber);
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.7rem;
+		letter-spacing: 0.2em;
+		padding: 3px 8px;
+		border-radius: 2px;
+		width: 90px;
+		outline: none;
+		-webkit-appearance: none;
+	}
+
+	#mode-pin-input.is-open { display: block; }
+
+	/* ---- WORK INDICATOR ---- */
+	#work-indicator {
+		display: none;
+		font-size: 0.52rem;
+		letter-spacing: 0.28em;
+		text-transform: uppercase;
+		color: var(--amber-lo);
+		font-family: 'Share Tech Mono', monospace;
+		opacity: 0.55;
+	}
+
+	.mode-work #work-indicator { display: inline; }
+
+	/* ---- NAV ICONS (both modes) ---- */
+	#cockpit-nav {
+		position: fixed;
+		top: 12px;
+		left: 14px;
+		z-index: 10002;
+		display: none;
+		gap: 10px;
+		align-items: center;
+	}
+
+	.mode-work #cockpit-nav,
+	.mode-after-dark #cockpit-nav { display: flex; }
+
+	.cockpit-nav-btn {
+		background: none;
+		border: none;
+		color: var(--muted);
+		font-size: 0.6rem;
+		font-family: 'Share Tech Mono', monospace;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		cursor: pointer;
+		text-decoration: none;
+		transition: color 0.15s;
+		padding: 0;
+	}
+
+	.cockpit-nav-btn:hover { color: var(--amber); }
+
+	/* ---- WORK MODE OVERRIDES ---- */
+
+	/* Hide elements in Work Mode */
+	.mode-work #secret-comm,
+	.mode-work #ani-bat-pill,
+	.mode-work #ad-status-line,
+	.mode-work #ad-ani-pill,
+	.mode-work #ad-panel,
+	.mode-work #ad-viewer-panel,
+	.mode-work #ad-music-player,
+	.mode-work .scroller,
+	.mode-work .utility-belt,
+	.mode-work .input-wrap,
+	.mode-work .history-section,
+	.mode-work .tasks-section,
+	.mode-work .cockpit__footer,
+	.mode-work .section-label { display: none !important; }
+
+	/* Prominent work scratchpad */
+	.mode-work .scratch-section {
+		margin-top: 24px;
+		order: -1; /* bumps it up visually if container is flex — fallback below */
+	}
+
+	.mode-work .scratch-section .scratch-textarea {
+		min-height: 260px;
+		max-height: 55vh;
+		border-color: var(--amber-lo);
+	}
+
+	.mode-work .scratch-section {
+	margin-top: 0;
+	}
+
+	.mode-work .scratch-textarea {
+		min-height: calc(100vh - 160px);
+		max-height: calc(100vh - 160px);
+	}
+
+	/* Scratch tab switcher — visible in both modes */
+	#scratch-tab-row {
+		display: flex;
+		gap: 0;
+		margin-bottom: 0;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.scratch-tab {
+		background: none;
+		border: none;
+		border-bottom: 2px solid transparent;
+		color: var(--muted);
+		font-size: 0.6rem;
+		font-family: 'Share Tech Mono', monospace;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		cursor: pointer;
+		padding: 6px 14px 5px;
+		transition: color 0.15s, border-color 0.15s;
+	}
+
+	.scratch-tab:hover { color: var(--amber-lo); }
+	.scratch-tab.is-active { color: var(--amber); border-bottom-color: var(--amber); }
+
+	/* ---- FOCUS TIMER ---- */
+	#focus-timer {
+		display: none;
+		position: fixed;
+		bottom: 80px;
+		right: 24px;
+		z-index: 10001;
+		background: var(--bg2);
+		border: 1px solid var(--border-hi);
+		border-radius: 3px;
+		padding: 0;
+		font-family: 'Share Tech Mono', monospace;
+		min-width: 170px;
+		box-shadow: 0 0 20px rgba(0,0,0,0.6);
+		user-select: none;
+		-webkit-user-select: none;
+		}
+
+	#focus-timer-titlebar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 5px 10px;
+		border-bottom: 1px solid var(--border);
+		cursor: grab;
+		font-size: 0.48rem;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+
+	#focus-timer-titlebar:active { cursor: grabbing; }
+
+	#focus-timer-body {
+		padding: 10px 14px;
+	}
+
+	.mode-work #focus-timer { display: block; }
+
+	#focus-timer-display {
+		font-family: 'VT323', monospace;
+		font-size: 2rem;
+		color: var(--amber-hi);
+		text-align: center;
+		line-height: 1;
+		letter-spacing: 0.04em;
+		text-shadow: 0 0 12px rgba(245,179,50,0.4);
+	}
+
+	#focus-timer-phase {
+		font-size: 0.48rem;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
+		color: var(--muted);
+		text-align: center;
+		margin-top: 2px;
+		margin-bottom: 8px;
+	}
+
+	.focus-timer-controls {
+		display: flex;
+		gap: 6px;
+		justify-content: center;
+		margin-bottom: 8px;
+	}
+
+	.focus-btn {
+		background: none;
+		border: 1px solid var(--border-hi);
+		color: var(--text-dim);
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.55rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		padding: 3px 8px;
+		border-radius: 2px;
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.focus-btn:hover { border-color: var(--amber-lo); color: var(--amber); }
+	.focus-btn.is-running { border-color: var(--green); color: var(--green); }
+
+	.focus-timer-settings {
+		display: flex;
+		gap: 8px;
+		justify-content: center;
+		align-items: center;
+		flex-wrap: wrap;
+	}
+
+	.focus-setting-label {
+		font-size: 0.48rem;
+		color: var(--muted);
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+	}
+
+	.focus-setting-input {
+		background: var(--input-bg);
+		border: 1px solid var(--border);
+		color: var(--text-body);
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.6rem;
+		width: 36px;
+		padding: 2px 4px;
+		text-align: center;
+		border-radius: 2px;
+		outline: none;
+		-webkit-appearance: none;
+	}
+
+	.focus-setting-input:focus { border-color: var(--amber-lo); }
+
+
+	/* ---- AFTER DARK MODE ---- */
+
+	body.mode-after-dark {
+		--ad-crimson: rgba(139, 26, 26, 0.18);
+		--ad-crimson-hi: rgba(180, 40, 40, 0.4);
+		--ad-dark: #0e0608;
+	}
+
+	/* Heartbeat pulse on screen edges */
+	@keyframes ad-heartbeat {
+		0%   { box-shadow: inset 0 0 40px rgba(139,26,26,0.0), inset 0 0 80px rgba(139,26,26,0.0); }
+		15%  { box-shadow: inset 0 0 40px rgba(139,26,26,0.12), inset 0 0 80px rgba(139,26,26,0.06); }
+		30%  { box-shadow: inset 0 0 40px rgba(139,26,26,0.05), inset 0 0 80px rgba(139,26,26,0.02); }
+		45%  { box-shadow: inset 0 0 40px rgba(139,26,26,0.14), inset 0 0 80px rgba(139,26,26,0.07); }
+		100% { box-shadow: inset 0 0 40px rgba(139,26,26,0.0), inset 0 0 80px rgba(139,26,26,0.0); }
+	}
+
+	#ad-heartbeat-overlay {
+		display: none;
+		position: fixed;
+		inset: 0;
+		pointer-events: none;
+		z-index: 9996;
+		animation: ad-heartbeat 3.6s ease-in-out infinite;
+		border: 1px solid transparent;
+	}
+
+	.mode-after-dark #ad-heartbeat-overlay { display: block; }
+
+	/* After dark container tint */
+	.mode-after-dark .container {
+		border-color: #7a2828;
+	}
+
+	.mode-after-dark .cockpit__logo {
+		text-shadow: 0 0 18px rgba(212,136,10,0.45), 0 0 50px rgba(139,26,26,0.2);
+	}
+
+	/* ---- ANI LOUNGE PILL (After Dark) ---- */
+	#ad-ani-pill {
+		display: none;
+		position: fixed;
+		left: 0;
+		top: 50%;
+		transform: translateY(-50%);
+		z-index: 10001;
+		writing-mode: vertical-lr;
+		text-orientation: mixed;
+		background: #140808;
+		border: 1px solid #4a1818;
+		border-left: none;
+		border-radius: 0 3px 3px 0;
+		color: #c04040;
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.58rem;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		padding: 12px 5px;
+		cursor: pointer;
+		transition: background 0.2s, border-color 0.2s, color 0.2s;
+		box-shadow: 2px 0 12px rgba(139,26,26,0.15);
+	}
+
+	#ad-ani-pill:hover {
+		background: #1a0a0a;
+		border-color: #8b1a1a;
+		color: #e05050;
+		box-shadow: 2px 0 18px rgba(139,26,26,0.3);
+	}
+
+	.mode-after-dark #ad-ani-pill { display: block; }
+
+	/* ---- ANI LOUNGE PANEL ---- */
+	#ad-panel {
+		display: none;
+		position: fixed;
+		left: 0;
+		top: 0;
+		height: 100vh;
+		width: 320px;
+		background: #080306;
+		border-right: 1px solid #4a1818;
+		z-index: 10000;
+		flex-direction: column;
+		box-shadow: 4px 0 30px rgba(0,0,0,0.7);
+		transform: translateX(-100%);
+		transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.mode-after-dark #ad-panel { display: flex; }
+	#ad-panel.ad-panel-open { transform: translateX(0); }
+
+	#ad-panel-header {
+		padding: 14px 16px 10px;
+		border-bottom: 1px solid #4a1818;
+		flex-shrink: 0;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	#ad-panel-title {
+		font-family: 'VT323', monospace;
+		font-size: 1.4rem;
+		color: #c04040;
+		letter-spacing: 0.08em;
+		text-shadow: 0 0 12px rgba(192,64,64,0.4);
+	}
+
+	#ad-panel-close {
+		background: none;
+		border: none;
+		color: #a03838;
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.55rem;
+		letter-spacing: 0.18em;
+		cursor: pointer;
+		transition: color 0.15s;
+	}
+
+	#ad-panel-close:hover { color: #8b1a1a; }
+
+	#ad-video-wrap {
+		flex: 1;
+		background: #000;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		overflow: hidden;
+	}
+
+	#ad-ani-video {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	#ad-panel-controls {
+		padding: 10px 14px;
+		border-top: 1px solid #4a1818;
+		display: flex;
+		gap: 8px;
+		flex-shrink: 0;
+		align-items: center;
+		flex-wrap: wrap;
+	}
+
+	.ad-ctrl-btn {
+		background: none;
+		border: 1px solid #4a1818;
+		color: #a03838;
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.52rem;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		padding: 4px 10px;
+		border-radius: 2px;
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.ad-ctrl-btn:hover { border-color: #8b1a1a; color: #c04040; }
+
+	/* ---- FLOATING VIDEO PLAYER ---- */
+	#ad-player {
+		display: none;
+		position: fixed;
+		z-index: 10003;
+		bottom: 80px;
+		right: 24px;
+		width: 480px;
+		background: #0e0508;
+		border: 1px solid #3a1010;
+		border-radius: 3px;
+		box-shadow: 0 8px 40px rgba(0,0,0,0.8), 0 0 0 1px #1a0808;
+		font-family: 'Share Tech Mono', monospace;
+		user-select: none;
+		-webkit-user-select: none;
+	}
+
+	.mode-after-dark #ad-player { display: block; }
+	.mode-work #ad-player { display: none !important; }
+
+	#ad-player.is-minimized #ad-player-video-wrap,
+	#ad-player.is-minimized #ad-player-controls,
+	#ad-player.is-minimized #ad-player-library { display: none; }
+
+	#ad-player-titlebar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 6px 10px;
+		background: #120608;
+		border-bottom: 1px solid #4a1818;
+		border-radius: 3px 3px 0 0;
+		cursor: grab;
+		flex-shrink: 0;
+	}
+
+	#ad-player-titlebar:active { cursor: grabbing; }
+
+	#ad-player-title {
+		font-size: 0.52rem;
+		letter-spacing: 0.22em;
+		color: #8a3030;
+		text-transform: uppercase;
+	}
+
+	.ad-player-tb-btn {
+		background: none;
+		border: none;
+		color: #8a3030;
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.55rem;
+		letter-spacing: 0.1em;
+		cursor: pointer;
+		padding: 0 4px;
+		transition: color 0.15s;
+		line-height: 1;
+	}
+
+	.ad-player-tb-btn:hover { color: #8b1a1a; }
+
+	.ad-player-tb-actions { display: flex; gap: 8px; align-items: center; }
+
+	/* Library drawer — slides up from top of video */
+	#ad-player-library {
+		max-height: 0;
+		overflow: hidden;
+		transition: max-height 0.25s ease;
+		background: #0e0508;
+		border-bottom: 1px solid #4a1818;
+	}
+
+	#ad-player-library.is-open { max-height: 200px; }
+
+	#ad-player-library-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		padding: 10px;
+		overflow-y: auto;
+		max-height: 200px;
+	}
+
+	.ad-library-tile {
+		width: calc(33.333% - 4px);
+		background: #140808;
+		border: 1px solid #4a1818;
+		border-radius: 2px;
+		padding: 7px 8px;
+		cursor: pointer;
+		transition: border-color 0.15s;
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.52rem;
+		color: #a03838;
+		letter-spacing: 0.06em;
+		word-break: break-word;
+		line-height: 1.4;
+	}
+
+	.ad-library-tile:hover { border-color: #8b1a1a; color: #c04040; }
+	.ad-library-tile.is-playing { border-color: #c04040; color: #e05050; }
+
+	#ad-player-video-wrap {
+		position: relative;
+		width: 100%;
+		padding-bottom: 56.25%; /* 16:9 */
+		background: #000;
+		overflow: hidden;
+	}
+
+	#ad-viewer-video {
+		position: absolute;
+		top: 0; left: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+	}
+
+	#ad-player-controls {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 7px 10px;
+		border-top: 1px solid #4a1818;
+		background: #120608;
+		border-radius: 0 0 3px 3px;
+	}
+
+	#ad-now-playing {
+		font-size: 0.45rem;
+		color: #7a2828;
+		letter-spacing: 0.08em;
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	#ad-player-volume {
+		-webkit-appearance: none;
+		width: 60px;
+		height: 2px;
+		background: #3d1515;
+		outline: none;
+		border-radius: 2px;
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+
+	#ad-player-volume::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: #8b1a1a;
+		cursor: pointer;
+	}
+
+	#ad-loop-label {
+		font-size: 0.48rem;
+		color: #7a2828;
+		letter-spacing: 0.1em;
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* ---- AFTER DARK VIEWER PANEL ---- */
+
+
+	/* ---- AFTER DARK MUSIC PLAYER ---- */
+	#ad-music-player {
+		display: none;
+		position: fixed;
+		bottom: 16px;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 10001;
+		background: #120608;
+		border: 1px solid #4a1818;
+		border-radius: 3px;
+		padding: 8px 14px;
+		font-family: 'Share Tech Mono', monospace;
+		min-width: 240px;
+		box-shadow: 0 0 20px rgba(0,0,0,0.7);
+		flex-direction: column;
+		gap: 6px;
+		align-items: center;
+	}
+
+	.mode-after-dark #ad-music-player { display: flex; }
+	.mode-work #ad-music-player { display: none !important; }
+
+	#ad-track-name {
+		font-size: 0.52rem;
+		color: #a03838;
+		letter-spacing: 0.1em;
+		text-align: center;
+		max-width: 200px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.ad-music-controls {
+		display: flex;
+		gap: 10px;
+		align-items: center;
+	}
+
+	.ad-music-btn {
+		background: none;
+		border: none;
+		color: #a03838;
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.55rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		cursor: pointer;
+		padding: 0;
+		transition: color 0.15s;
+	}
+
+	.ad-music-btn:hover { color: #8b1a1a; }
+	.ad-music-btn.is-playing { color: #c04040; }
+
+	#ad-volume-slider {
+		-webkit-appearance: none;
+		width: 70px;
+		height: 2px;
+		background: #3d1515;
+		outline: none;
+		border-radius: 2px;
+		cursor: pointer;
+	}
+
+	#ad-volume-slider::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background: #8b1a1a;
+		cursor: pointer;
+	}
+
+	/* ---- AFTER DARK STATUS LINE ---- */
+	#ad-status-line {
+		display: none;
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		z-index: 9999;
+		text-align: center;
+		font-family: 'Crimson Pro', Georgia, serif;
+		font-style: italic;
+		font-size: 0.72rem;
+		color: #8a3030;
+		letter-spacing: 0.06em;
+		padding: 4px 20px;
+		pointer-events: none;
+		transition: opacity 1.2s ease;
+	}
+
+	.mode-after-dark #ad-status-line { display: block; }
+
+	/* ---- BRAIN DUMP POPUP ---- */
+	#brain-dump-overlay {
+		display: none;
+		position: fixed;
+		inset: 0;
+		background: rgba(0,0,0,0.7);
+		z-index: 10010;
+		align-items: center;
+		justify-content: center;
+	}
+
+	#brain-dump-overlay.is-open { display: flex; }
+
+	#brain-dump-box {
+		background: var(--bg2);
+		border: 1px solid var(--border-hi);
+		border-radius: 3px;
+		padding: 18px;
+		width: 420px;
+		max-width: 92vw;
+		box-shadow: 0 0 40px rgba(0,0,0,0.8);
+		font-family: 'Share Tech Mono', monospace;
+	}
+
+	/* After dark brain dump gets crimson border */
+	.mode-after-dark #brain-dump-box {
+		background: #120608;
+		border-color: #8a3030;
+		box-shadow: 0 0 40px rgba(0,0,0,0.9), 0 0 20px rgba(139,26,26,0.1);
+	}
+
+	#brain-dump-label {
+		font-size: 0.52rem;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
+		color: var(--muted);
+		margin-bottom: 10px;
+	}
+
+	.mode-after-dark #brain-dump-label { color: #8a3030; }
+
+	#brain-dump-textarea {
+		width: 100%;
+		height: 100px;
+		background: var(--input-bg);
+		color: var(--text-body);
+		border: 1px solid var(--border);
+		border-radius: 2px;
+		padding: 10px 12px;
+		font-family: 'Crimson Pro', Georgia, serif;
+		font-size: 0.95rem;
+		font-style: italic;
+		line-height: 1.6;
+		resize: none;
+		outline: none;
+		-webkit-appearance: none;
+		box-sizing: border-box;
+		transition: border-color 0.2s;
+	}
+
+	.mode-after-dark #brain-dump-textarea {
+		background: #0e0508;
+		border-color: #7a2828;
+		color: #7a3030;
+	}
+
+	#brain-dump-textarea:focus { border-color: var(--amber-lo); }
+	.mode-after-dark #brain-dump-textarea:focus { border-color: #a03838; }
+
+	#brain-dump-footer {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+		margin-top: 10px;
+		flex-wrap: wrap;
+	}
+
+	#brain-dump-tag {
+		background: var(--input-bg);
+		border: 1px solid var(--border);
+		color: var(--text-dim);
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.6rem;
+		padding: 4px 8px;
+		border-radius: 2px;
+		outline: none;
+		cursor: pointer;
+		-webkit-appearance: none;
+	}
+
+	.mode-after-dark #brain-dump-tag {
+		background: #0e0508;
+		border-color: #7a2828;
+		color: #a03838;
+	}
+
+	#brain-dump-save {
+		background: var(--amber-dim);
+		border: 1px solid var(--amber-lo);
+		color: var(--amber-hi);
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.6rem;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		padding: 5px 14px;
+		border-radius: 2px;
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	#brain-dump-save:hover { background: #4a2c08; border-color: var(--amber); }
+
+	.mode-after-dark #brain-dump-save {
+		background: #1a0a0a;
+		border-color: #a03838;
+		color: #8b1a1a;
+	}
+
+	#brain-dump-hint {
+		font-size: 0.48rem;
+		color: var(--muted);
+		letter-spacing: 0.12em;
+		margin-left: auto;
+		opacity: 0.6;
+	}
+
+	/* ---- COMMAND PALETTE ---- */
+	#cmd-palette-overlay {
+		display: none;
+		position: fixed;
+		inset: 0;
+		background: rgba(0,0,0,0.75);
+		z-index: 10015;
+		align-items: flex-start;
+		justify-content: center;
+		padding-top: 15vh;
+	}
+
+	#cmd-palette-overlay.is-open { display: flex; }
+
+	#cmd-palette-box {
+		background: var(--bg2);
+		border: 1px solid var(--border-hi);
+		border-radius: 3px;
+		width: 380px;
+		max-width: 92vw;
+		box-shadow: 0 0 40px rgba(0,0,0,0.9);
+		overflow: hidden;
+		font-family: 'Share Tech Mono', monospace;
+	}
+
+	#cmd-palette-input {
+		width: 100%;
+		background: var(--bg);
+		border: none;
+		border-bottom: 1px solid var(--border);
+		color: var(--text);
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.85rem;
+		padding: 12px 16px;
+		outline: none;
+		box-sizing: border-box;
+		-webkit-appearance: none;
+	}
+
+	#cmd-palette-input::placeholder { color: var(--border-hi); }
+
+	.cmd-item {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 10px 16px;
+		cursor: pointer;
+		border-bottom: 1px solid var(--border);
+		transition: background 0.1s;
+	}
+
+	.cmd-item:last-child { border-bottom: none; }
+	.cmd-item:hover, .cmd-item.is-selected { background: var(--amber-dim); }
+
+	.cmd-item-icon {
+		font-size: 0.8rem;
+		width: 16px;
+		text-align: center;
+		flex-shrink: 0;
+	}
+
+	.cmd-item-label {
+		font-size: 0.7rem;
+		color: var(--text-body);
+		letter-spacing: 0.1em;
+		flex: 1;
+	}
+
+	.cmd-item-hint {
+		font-size: 0.52rem;
+		color: var(--muted);
+		letter-spacing: 0.1em;
+	}
+
+	/* ---- AFTER DARK: FULL PAGE PALETTE OVERRIDE ---- */
+body.mode-after-dark {
+	--bg:           #0e0608;
+	--bg2:          #140810;
+	--amber:        #c04040;
+	--amber-hi:     #e05555;
+	--amber-lo:     #8b2828;
+	--amber-dim:    #2a0f0f;
+	--text:         #c04040;
+	--text-body:    #a03838;
+	--text-dim:     #6b2020;
+	--border:       #2a0f0f;
+	--border-hi:    #4a1818;
+	--muted:        #6b2020;
+	--pill-bg:      #140810;
+	--input-bg:     #0e0608;
+	--accent:       #c04040;
+	--scan:         rgba(139,26,26,0.12);
+}
+
+    /* ---- AFTER DARK: HIDE PAGE CONTENT (same as work mode) ---- */
+    .mode-after-dark .scroller,
+    .mode-after-dark .utility-belt,
+    .mode-after-dark .input-wrap,
+    .mode-after-dark .history-section,
+    .mode-after-dark .tasks-section,
+    .mode-after-dark .cockpit__footer,
+    .mode-after-dark .section-label { display: none !important; }
+
+    /* ---- AFTER DARK: SCRATCH PROMINENT ---- */
+    .mode-after-dark .scratch-section {
+    	margin-top: 0;
     }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-        background: var(--bg);
-        color: var(--text);
-        font-family: 'Share Tech Mono', 'Courier New', monospace;
-        min-height: 100vh;
-        display: flex;
-        justify-content: center;
-        overscroll-behavior-y: contain;
-        overflow-x: hidden;
-        padding-top: env(safe-area-inset-top, 20px);
-        font-size: 14px;
-    }
-
-    @keyframes scanline-drift {
-        0%   { transform: translateY(0); }
-        100% { transform: translateY(100%); }
-    }
-
-    body::before {
-        content: " ";
-        display: block;
-        position: fixed;
-        top: 0; left: 0; bottom: 0; right: 0;
-        background: repeating-linear-gradient(
-            to bottom,
-            transparent 0px, transparent 3px,
-            var(--scan) 3px, var(--scan) 4px
-        );
-        z-index: 9998;
-        pointer-events: none;
-        animation: scanline-drift var(--scan-speed) linear infinite;
-        opacity: 0.6;
-    }
-
-    body::after {
-        content: '';
-        position: fixed; inset: 0;
-        background: radial-gradient(ellipse at 50% 40%, transparent 40%, rgba(0,0,0,0.65) 100%);
-        pointer-events: none;
-        z-index: 9997;
-    }
-
-    .container {
-        width: 100%;
-        max-width: 520px;
-        padding: 28px 24px 48px;
-        position: relative;
-        align-self: flex-start;
-        z-index: 10;
-        transition: transform 0.6s cubic-bezier(0.5, 0, 0.5, 1), opacity 0.4s ease-in;
-    }
-
-    .hyperspace {
-        transform: scale(0.1) translateY(-1000px);
-        filter: blur(20px);
-        opacity: 0;
-        pointer-events: none;
-    }
-
-    @media (min-width: 768px) {
-        .container {
-            margin-top: 40px;
-            border: 1px solid var(--border);
-            backdrop-filter: blur(8px);
-        }
-    }
-
-    .cockpit__header {
-        margin-bottom: 20px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid var(--border);
-    }
-
-    .cockpit__logo {
-        font-family: 'VT323', monospace;
-        font-size: 2.2rem;
-        color: var(--amber-hi);
-        text-shadow: 0 0 18px rgba(212,136,10,0.55), 0 0 50px rgba(212,136,10,0.18);
-        letter-spacing: 0.04em;
-        animation: logo-glow 5s ease-in-out infinite;
-        line-height: 1;
-    }
-
-    .cockpit__logo span { color: var(--amber-lo); }
-
-    @keyframes logo-glow {
-        0%,100% { text-shadow: 0 0 18px rgba(212,136,10,0.55), 0 0 50px rgba(212,136,10,0.18); }
-        50%      { text-shadow: 0 0 28px rgba(245,179,50,0.8), 0 0 80px rgba(212,136,10,0.3); }
-    }
-
-    .status-bar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 20px;
-    }
-
-    .systems-group { display: flex; align-items: center; gap: 12px; }
-
-    .dot {
-        width: 7px; height: 7px; border-radius: 50%;
-        box-shadow: 0 0 6px currentColor; flex-shrink: 0;
-    }
-
-    .online  { background: var(--green); color: var(--green); animation: dot-pulse 2.2s ease-in-out infinite; }
-    .syncing { background: var(--amber); color: var(--amber); animation: dot-pulse 1s ease-in-out infinite; }
-    .offline { background: var(--red);   color: var(--red); }
-
-    @keyframes dot-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-
-    .shield-meter {
-        font-size: 0.58rem; text-transform: uppercase;
-        letter-spacing: 0.18em; color: var(--muted);
-        display: flex; align-items: center; gap: 8px;
-    }
-
-    .shield-bar {
-        width: 50px; height: 3px; background: var(--border);
-        border-radius: 2px; overflow: hidden; border: 1px solid var(--border-hi);
-    }
-
-    .shield-fill {
-        height: 100%; width: 0%;
-        background: var(--shield);
-        transition: width 0.5s, background 0.5s;
-        box-shadow: 0 0 6px var(--shield);
-    }
-
-    .cockpit__controls { display: flex; gap: 16px; align-items: center; }
-
-    .cockpit__ctrl-btn {
-        background: none; border: none;
-        color: var(--muted); font-size: 0.6rem;
-        font-family: 'Share Tech Mono', monospace;
-        letter-spacing: 0.15em; text-transform: uppercase;
-        cursor: pointer; transition: color 0.15s; padding: 0;
-    }
-
-    .cockpit__ctrl-btn:hover { color: var(--amber); }
-    .cockpit__ctrl-btn a { color: inherit; text-decoration: none; }
-
-    #secret-comm {
-        position: fixed; top: 0; left: 0;
-        width: 100vw; height: 100vh;
-        background: rgba(0,0,0,0.97);
-        z-index: 10000;
-        display: none; flex-direction: column;
-        align-items: center; justify-content: center;
-        opacity: 0; transition: opacity 0.5s ease;
-        padding: 40px;
-        user-select: none; -webkit-user-select: none;
-        touch-action: none;
-    }
-
-    #secret-comm::before {
-        content: '';
-        position: absolute; inset: 0;
-        background: repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, rgba(255,0,255,0.04) 3px, rgba(255,0,255,0.04) 4px);
-        pointer-events: none;
-    }
-
-    #secret-text {
-        color: var(--secret-neon);
-        font-family: 'Crimson Pro', Georgia, serif;
-        font-size: 1.3rem; font-style: italic;
-        text-shadow: 0 0 20px var(--secret-neon), 0 0 60px rgba(255,0,255,0.3);
-        letter-spacing: 0.04em; text-align: center;
-        max-width: 480px; word-wrap: break-word;
-        overflow-wrap: break-word; line-height: 1.6;
-        position: relative; z-index: 1;
-    }
-
-    .terminal-cursor {
-        display: inline-block; width: 10px; height: 1.1em;
-        background: var(--secret-neon); margin-left: 8px;
-        vertical-align: middle; box-shadow: 0 0 8px var(--secret-neon);
-        animation: blink 1s step-end infinite;
-    }
-
-    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
-
-    .section-label {
-        font-size: 0.6rem; letter-spacing: 0.22em;
-        text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
-    }
-
-    .scroller {
-        display: flex; gap: 8px; margin-bottom: 12px;
-        overflow-x: auto; padding-bottom: 4px;
-    }
-
-    .scroller::-webkit-scrollbar { display: none; }
-
-    .pill {
-        background: var(--pill-bg); border: 1px solid var(--border);
-        color: var(--text-body); padding: 6px 12px; border-radius: 2px;
-        font-size: 0.85rem; font-family: 'Share Tech Mono', monospace;
-        cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s;
-        white-space: nowrap; flex-shrink: 0;
-    }
-
-    .pill:hover, .pill:active { border-color: var(--amber-lo); color: var(--amber-hi); background: var(--amber-dim); }
-
-    .pill.util {
-        font-weight: 700; border-color: var(--amber-lo);
-        color: var(--amber); font-size: 0.72rem; letter-spacing: 0.08em;
-    }
-
-    .pill.util:hover { background: var(--amber-dim); border-color: var(--amber); }
-
-    .input-wrap { position: relative; margin-top: 8px; }
-
-    textarea {
-        width: 100%; height: 180px;
-        background: var(--input-bg); color: var(--text-body);
-        border: 1px solid var(--border); border-radius: 2px;
-        padding: 14px; font-size: 1rem;
-        font-family: 'Crimson Pro', Georgia, serif;
-        line-height: 1.7; outline: none;
-        box-sizing: border-box; resize: none; -webkit-appearance: none;
-        transition: box-shadow 0.2s ease, border-color 0.2s;
-    }
-
-    textarea:focus { border-color: var(--amber-lo); }
-    textarea::placeholder { color: var(--border-hi); font-style: italic; }
-
-    @keyframes redline-pulse {
-        0%   { box-shadow: 0 0 10px rgba(204,51,34,0.2); }
-        50%  { box-shadow: 0 0 30px rgba(204,51,34,0.6); }
-        100% { box-shadow: 0 0 10px rgba(204,51,34,0.2); }
-    }
-
-    .redline { animation: redline-pulse 1.5s infinite ease-in-out; border-color: var(--red) !important; }
-
-    .counter-wrap {
-        display: flex; justify-content: space-between; align-items: center;
-        font-size: 0.62rem; color: var(--muted); margin-top: 6px; letter-spacing: 0.1em;
-    }
-
-    .payload-controls { display: flex; align-items: center; gap: 8px; }
-
-    #payload-label {
-        cursor: pointer; color: var(--amber-lo);
-        border: 1px solid var(--amber-lo); padding: 3px 8px;
-        border-radius: 2px; font-size: 0.6rem;
-        letter-spacing: 0.15em; text-transform: uppercase; transition: all 0.15s;
-    }
-
-    #payload-label:hover { color: var(--amber); border-color: var(--amber); background: var(--amber-dim); }
-
-    #payload-name {
-        color: var(--secret-neon); font-size: 0.6rem;
-        letter-spacing: 0.1em; text-shadow: 0 0 8px var(--secret-neon); display: none;
-    }
-
-    button#publish-btn {
-        width: 100%; background: var(--amber-dim);
-        border: 1px solid var(--amber-lo); color: var(--amber-hi);
-        padding: 14px; border-radius: 2px;
-        font-size: 0.78rem; font-family: 'Share Tech Mono', monospace;
-        font-weight: 400; text-transform: uppercase;
-        letter-spacing: 0.25em; margin-top: 16px;
-        cursor: pointer; transition: background 0.15s, border-color 0.15s;
-    }
-
-    button#publish-btn:hover { background: #4a2c08; border-color: var(--amber); }
-    button#publish-btn:active { background: var(--amber); color: #000; }
-
-    .history-section { margin-top: 36px; }
-
-    .log-header {
-        font-size: 0.6rem; color: var(--muted);
-        text-transform: uppercase; letter-spacing: 0.25em;
-        margin-bottom: 12px; padding-bottom: 8px;
-        border-bottom: 1px solid var(--border);
-    }
-
-    .history-item {
-        font-family: 'Crimson Pro', Georgia, serif;
-        font-size: 0.92rem; font-style: italic;
-        color: var(--text-dim); margin-bottom: 10px;
-        line-height: 1.5; border-left: 1px solid var(--border-hi);
-        padding-left: 10px;
-    }
-
-    .history-item::before { content: '› '; color: var(--border-hi); font-style: normal; }
-
-    .cockpit__footer {
-        margin-top: 36px; padding-top: 14px;
-        border-top: 1px solid var(--border);
-        display: flex; justify-content: space-between; align-items: center;
-        font-size: 0.6rem; letter-spacing: 0.12em;
-        text-transform: uppercase; color: var(--muted);
-    }
-
-    .cockpit__footer a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
-    .cockpit__footer a:hover { color: var(--amber-lo); }
-
-    .cockpit__footer-quote {
-        font-family: 'Crimson Pro', serif; font-style: italic;
-        text-transform: none; letter-spacing: 0;
-        font-size: 0.78rem; color: var(--amber-lo); opacity: 0.6;
-    }
-
-    /* ---- TASKS ---- */
-    .tasks-section { margin-top: 36px; }
-
-    .tasks-add-row {
-        display: flex; gap: 8px; margin-bottom: 16px;
-    }
-
-    .tasks-add-row input[type="text"] {
-        flex: 1;
-        background: var(--input-bg); color: var(--text-body);
-        border: 1px solid var(--border); border-radius: 2px;
-        padding: 8px 12px; font-size: 0.85rem;
-        font-family: 'Share Tech Mono', monospace;
-        outline: none; transition: border-color 0.15s;
-        -webkit-appearance: none;
-    }
-
-    .tasks-add-row input[type="text"]:focus { border-color: var(--amber-lo); }
-    .tasks-add-row input[type="text"]::placeholder { color: var(--border-hi); }
-
-    .tasks-add-btn {
-        background: var(--amber-dim); border: 1px solid var(--amber-lo);
-        color: var(--amber-hi); padding: 8px 14px; border-radius: 2px;
-        font-size: 0.68rem; font-family: 'Share Tech Mono', monospace;
-        text-transform: uppercase; letter-spacing: 0.18em;
-        cursor: pointer; transition: background 0.15s, border-color 0.15s;
-        white-space: nowrap; flex-shrink: 0;
-    }
-
-    .tasks-add-btn:hover { background: #4a2c08; border-color: var(--amber); }
-    .tasks-add-btn:active { background: var(--amber); color: #000; }
-    .tasks-add-btn:disabled { opacity: 0.4; cursor: default; }
-    .tasks-add-btn.is-working { opacity: 0.6; }
-    .tasks-add-btn.is-success { border-color: var(--green); color: var(--green); background: rgba(77,187,106,0.08); }
-    .tasks-add-btn.is-error { border-color: var(--red); color: var(--red); background: rgba(204,51,34,0.08); }
-
-    .tasks-list { list-style: none; }
-
-    .task-item {
-        display: flex; align-items: center; gap: 10px;
-        padding: 9px 0; border-bottom: 1px solid var(--border);
-        transition: opacity 0.3s;
-    }
-
-    .task-item.is-complete { opacity: 0.4; }
-
-    .task-check {
-        width: 14px; height: 14px; flex-shrink: 0;
-        border: 1px solid var(--amber-lo); border-radius: 2px;
-        background: none; cursor: pointer;
-        display: flex; align-items: center; justify-content: center;
-        transition: background 0.15s, border-color 0.15s;
-        color: var(--green); font-size: 10px; line-height: 1;
-    }
-
-    .task-check:hover { border-color: var(--green); }
-    .task-item.is-complete .task-check { background: var(--green-lo); border-color: var(--green); }
-
-    .task-title {
-        flex: 1; font-size: 0.88rem; color: var(--text-body);
-        font-family: 'Share Tech Mono', monospace;
-        line-height: 1.4;
-    }
-
-    .task-item.is-complete .task-title { text-decoration: line-through; color: var(--text-dim); }
-
-    .task-delete {
-        background: none; border: none; color: var(--border-hi);
-        font-size: 0.7rem; cursor: pointer; padding: 2px 4px;
-        font-family: 'Share Tech Mono', monospace;
-        letter-spacing: 0.1em; transition: color 0.15s;
-        flex-shrink: 0;
-    }
-
-    .task-delete:hover { color: var(--red); }
-
-    .task-log-prompt {
-        display: none;
-        background: var(--bg2); border: 1px solid var(--amber-lo);
-        border-radius: 2px; padding: 12px 14px; margin-top: 8px;
-        margin-bottom: 4px;
-    }
-
-    .task-log-prompt.visible { display: block; }
-
-    .task-log-label {
-        font-size: 0.6rem; color: var(--amber-lo);
-        text-transform: uppercase; letter-spacing: 0.2em;
-        margin-bottom: 10px;
-    }
-
-    .task-log-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
-    .task-log-btn {
-        background: none; border: 1px solid var(--border-hi);
-        color: var(--text-dim); padding: 5px 10px; border-radius: 2px;
-        font-size: 0.62rem; font-family: 'Share Tech Mono', monospace;
-        text-transform: uppercase; letter-spacing: 0.15em;
-        cursor: pointer; transition: all 0.15s;
-    }
-
-    .task-log-btn:hover { border-color: var(--amber-lo); color: var(--amber); }
-    .task-log-btn.primary { border-color: var(--amber-lo); color: var(--amber); }
-    .task-log-btn.primary:hover { background: var(--amber-dim); }
-    .task-log-btn.dismiss { opacity: 0.5; }
-    .task-log-btn.dismiss:hover { opacity: 1; color: var(--text-dim); }
-
-    .tasks-empty {
-        font-size: 0.78rem; color: var(--text-dim);
-        font-family: 'Crimson Pro', serif; font-style: italic;
-        padding: 10px 0; text-align: center; opacity: 0.6;
-    }
-
-    .tasks-divider {
-        font-size: 0.58rem; color: var(--muted);
-        text-transform: uppercase; letter-spacing: 0.2em;
-        margin: 14px 0 10px; opacity: 0.6;
-    }
-
-    /* ---- COLLAPSIBLE ---- */
-    .tasks-toggle {
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        user-select: none;
-        -webkit-user-select: none;
-    }
-
-    .tasks-toggle-arrow {
-        font-size: 0.55rem;
-        color: var(--muted);
-        transition: transform 0.2s ease;
-        letter-spacing: 0;
-    }
-
-    .tasks-toggle-arrow.is-collapsed { transform: rotate(-90deg); }
-
-    .tasks-body { overflow: hidden; }
-    .tasks-body.is-collapsed { display: none; }
-
-    /* ---- SCRATCH PAD ---- */
-    .scratch-section { margin-top: 36px; }
-
-    .scratch-textarea {
-        width: 100%;
-        min-height: 120px;
-        max-height: 60vh;
-        background: var(--input-bg);
-        color: var(--text-body);
-        border: 1px solid var(--border);
-        border-radius: 2px;
-        padding: 12px 14px;
-        font-size: 0.88rem;
-        font-family: 'Crimson Pro', Georgia, serif;
+    .mode-after-dark .scratch-textarea {
+        min-height: 200px;
+        max-height: none;
+        height: 480px;
+        border-color: #4a1818;
+        color: #a03838;
+        background: #0e0608;
         font-style: italic;
-        line-height: 1.7;
-        outline: none;
         resize: vertical;
-        -webkit-appearance: none;
-        transition: border-color 0.2s;
-        box-sizing: border-box;
         overflow-y: auto;
     }
 
-    .scratch-textarea:focus { border-color: var(--amber-lo); }
-    .scratch-textarea::placeholder { color: var(--border-hi); }
+    /* Hide DESK tab in After Dark — home only */
+    .mode-after-dark #scratch-tab-desk { display: none; }
 
-    .scratch-action-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 6px;
+    /* ---- AFTER DARK: SCRATCH FORCE OPEN ---- */
+    /* handled in JS */
+
+    /* ---- FAMILY HIDE ---- */
+    .ad-family-hidden { display: none !important; }
+
+    /* ---- MUSIC PLAYER: WAVEFORM EXPANDED ---- */
+    #ad-music-player {
+    	min-width: 300px;
+    	resize: horizontal;
+    	overflow: hidden;
     }
 
-    .scratch-status {
-        font-size: 0.55rem;
-        color: var(--muted);
-        letter-spacing: 0.15em;
+    #ad-waveform-canvas {
+    	width: 100%;
+    	height: 60px;
+    	display: block;
+    	border-radius: 2px;
+    	margin-bottom: 4px;
+    }
+
+    /* ---- ANI PANEL: RESIZABLE ---- */
+    #ad-panel {
+    	resize: horizontal;
+    	overflow: hidden;
+    	min-width: 240px;
+    	max-width: 600px;
+    }
+
+    /* ---- VIDEO PLAYER: RESIZABLE FIX ---- */
+    #ad-player {
+    	resize: both;
+    	overflow: hidden;
+    	min-width: 320px;
+    	min-height: 200px;
+    }
+
+    .mode-after-dark #ad-player {
+        resize: both;
+        overflow: hidden;
+        min-width: 320px;
+        min-height: 240px;
+    }
+
+    .mode-after-dark #ad-player #ad-player-video-wrap {
+        height: auto;
+        padding-bottom: 0;
+        flex: 1;
+        min-height: 160px;
+    }
+
+    .mode-after-dark #ad-player #ad-viewer-video {
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Remove the padding-bottom 16:9 trick — use flex height instead */
+        #ad-player-video-wrap {
+        position: relative;
+        width: 100%;
+        height: 0;
+        padding-bottom: 56.25%;
+        background: #000;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+
+    #ad-viewer-video {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    /* Make player a flex column so video fills remaining space */
+    #ad-player {
+    	display: flex;
+    	flex-direction: column;
+    }
+
+    .mode-after-dark #ad-player { display: flex; }
+
+    /* ---- SCRATCH PANEL: RESIZABLE ---- */
+    .scratch-section {
+    	position: relative;
+    }
+
+    /* ---- COCKPIT LOGO IN AFTER DARK ---- */
+    .mode-after-dark .cockpit__logo {
+    	color: #e05555;
+    	text-shadow: 0 0 18px rgba(192,64,64,0.55), 0 0 50px rgba(139,26,26,0.3);
+    }
+
+    .mode-after-dark .cockpit__logo span { color: #8b2828; }
+
+    /* ---- EXECUTE BUTTON IN AFTER DARK ---- */
+    .mode-after-dark button#publish-btn {
+    	background: #2a0f0f;
+    	border-color: #4a1818;
+    	color: #c04040;
+    }
+
+    .mode-after-dark button#publish-btn:hover {
+    	background: #3a1010;
+    	border-color: #8b2828;
+    }
+
+    #ad-music-titlebar {
+        font-size: 0.48rem;
+        letter-spacing: 0.22em;
+        color: #4a1818;
         text-transform: uppercase;
-        min-height: 1em;
-        transition: opacity 0.3s;
+        padding: 4px 0 2px;
+        cursor: grab;
+        user-select: none;
+        width: 100%;
+        text-align: center;
     }
+    #ad-music-titlebar:active { cursor: grabbing; }
 
-    .scratch-btns { display: flex; gap: 8px; }
-
-    .scratch-btn {
-        background: none;
-        border: 1px solid var(--border-hi);
-        color: var(--text-dim);
-        padding: 3px 10px;
-        border-radius: 2px;
-        font-size: 0.58rem;
-        font-family: 'Share Tech Mono', monospace;
-        text-transform: uppercase;
-        letter-spacing: 0.15em;
-        cursor: pointer;
-        transition: all 0.15s;
-    }
-
-    .scratch-btn:hover { border-color: var(--amber-lo); color: var(--amber); }
-    .scratch-btn.is-success { border-color: var(--green); color: var(--green); }
-    .scratch-btn.is-offline { border-color: var(--amber-lo); color: var(--amber); }
-
-    .scratch-offline-badge {
-        font-size: 0.5rem;
-        color: var(--amber);
-        letter-spacing: 0.15em;
-        margin-left: 8px;
-        animation: dot-pulse 2s ease-in-out infinite;
-        display: none;
-    }
-
-    .scratch-offline-badge.visible { display: inline; }
-
-    /* ---- LIGHT MODE ---- */
-    @media (prefers-color-scheme: light) {
-        :root {
-            --bg:        #fdf9f3;
-            --bg2:       #faf4e8;
-            --amber:     #7a3e00;
-            --amber-hi:  #5a2e00;
-            --amber-lo:  #a06020;
-            --amber-dim: #f0e6d0;
-            --text:      #3a2a10;
-            --text-body: #4a3818;
-            --text-dim:  #8a7858;
-            --border:    #ddd0b8;
-            --border-hi: #c4b090;
-            --muted:     #8a7858;
-            --pill-bg:   #f0e8d8;
-            --input-bg:  #faf4e8;
-            --accent:    #7a3e00;
-            --scan:      transparent;
-            --green:     #2a6e3f;
-            --green-lo:  #4a8c60;
-            --shield:    #2a6e3f;
-        }
-        body::before, body::after { display: none; }
-        .cockpit__logo { text-shadow: none; animation: none; color: #5a2e00; }
-        .cockpit__logo span { color: #a06020; }
-        .shield-fill { box-shadow: none; }
-        textarea { color: #3a2a10; }
-        textarea::placeholder { color: #c4b090; }
-        button#publish-btn { background: #3a2a10; border-color: #3a2a10; color: #fdf9f3; }
-        button#publish-btn:hover { background: #4a3818; }
-        button#publish-btn:active { background: #7a3e00; color: #fdf9f3; }
-        .history-item { border-left-color: #ddd0b8; }
-        .history-item::before { color: #ddd0b8; }
-        .tasks-add-row input[type="text"] { color: #3a2a10; }
-        .tasks-add-row input[type="text"]::placeholder { color: #c4b090; }
-        .tasks-add-btn { background: #3a2a10; border-color: #3a2a10; color: #fdf9f3; }
-        .tasks-add-btn:hover { background: #4a3818; }
-        .tasks-add-btn:active { background: #7a3e00; color: #fdf9f3; }
-        .task-log-prompt { background: #f0e8d8; }
-        .scratch-textarea { color: #3a2a10; }
-        .scratch-textarea::placeholder { color: #c4b090; }
-    }
-    </style>
+	</style>
 </head>
-<body>
+<body class="{{ cockpit_mode or '' }}">
 
-    <div id="secret-comm">
-        <div id="secret-text"></div>
-    </div>
+	<!-- After Dark heartbeat overlay -->
+	<div id="ad-heartbeat-overlay" aria-hidden="true"></div>
 
-    <div class="container" id="main-cockpit">
+	<!-- Mode dot + PIN input (top-right) -->
+	<div id="mode-dot-wrap">
+		<span id="work-indicator">WORK</span>
+		<input
+			type="password"
+			id="mode-pin-input"
+			maxlength="12"
+			autocomplete="off"
+			placeholder="····"
+			aria-label="Mode PIN"
+		>
+		<div id="mode-dot" title="Mode lock"></div>
+	</div>
 
-        <header class="cockpit__header">
-            <div style="display:flex; align-items:center; justify-content:space-between;">
-                <div class="cockpit__logo">COCK<span>PIT</span> // STATUS</div>
-                <div id="below-deck-badge" style="display:none;">
-                    <a href="/below-deck" style="text-decoration:none;">
-                        <span id="below-deck-dot" style="display:inline-block; width:8px; height:8px; border-radius:50%; box-shadow:0 0 6px currentColor; margin-right:4px;"></span>
-                        <span style="font-size:0.55rem; letter-spacing:0.15em; font-family:'Share Tech Mono',monospace; text-transform:uppercase; color:var(--muted);">BELOW DECK</span>
-                    </a>
-                </div>
-            </div>
-            <div id="draft-restored-msg" style="display:none; font-size:0.55rem; color:var(--amber-lo); letter-spacing:0.15em; text-transform:uppercase; margin-top:6px;">// draft restored</div>
-        </header>
+	<!-- Nav icons (top-left, both modes) -->
+	<nav id="cockpit-nav" aria-label="Cockpit navigation">
+		<a href="/command-deck/" class="cockpit-nav-btn">CMD</a>
+		<a href="/below-deck" class="cockpit-nav-btn">BELOW</a>
+		<a href="/publish" class="cockpit-nav-btn">STATUS</a>
+		<a href="https://aaronaiken.me/now" class="cockpit-nav-btn">/NOW</a>
+	</nav>
 
-        <div class="status-bar">
-            <div class="systems-group">
-                <div class="dot {{ git_status if git_status else 'online' }}"></div>
-                <div class="shield-meter">
-                    SHIELDS
-                    <div class="shield-bar">
-                        <div id="shield-fill" class="shield-fill"></div>
-                    </div>
-                    <span id="weather-display" style="color:var(--muted); font-size:0.55rem; letter-spacing:0.1em;"></span>
-                </div>
-            </div>
-            <div class="cockpit__controls">
-                <button class="cockpit__ctrl-btn" onclick="window.location.reload()">REFRESH</button>
-                <a class="cockpit__ctrl-btn" href="/below-deck" style="text-decoration:none;">BELOW DECK</a>
-                <a href="/command-deck/" class="cockpit__ctrl-btn">COMMAND DECK</a>
-            </div>
-        </div>
+	<!-- Focus Timer (Work Mode) -->
+	<div id="focus-timer" aria-label="Focus timer">
+		<div id="focus-timer-titlebar">
+			<span>// FOCUS</span>
+		</div>
+		<div id="focus-timer-body">
+			<div id="focus-timer-display">25:00</div>
+			<div id="focus-timer-phase">FOCUS</div>
+			<div class="focus-timer-controls">
+				<button class="focus-btn" id="focus-start-btn" onclick="focusToggle()">START</button>
+				<button class="focus-btn" id="focus-reset-btn" onclick="focusReset()">RESET</button>
+			</div>
+			<div class="focus-timer-settings">
+				<span class="focus-setting-label">FOCUS</span>
+				<input class="focus-setting-input" id="focus-duration-input" type="number" min="1" max="90" value="25">
+				<span class="focus-setting-label">BREAK</span>
+				<input class="focus-setting-input" id="break-duration-input" type="number" min="1" max="30" value="5">
+			</div>
+		</div>
+	</div>
 
-        <div class="section-label">// Quick Insert</div>
-        <div class="scroller">
-            <button class="pill" onclick="insertText('🚀')">🚀</button>
-            <button class="pill"
-                style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;"
-                onclick="insertText('🛰️')"
-                ontouchstart="startSecret()"
-                ontouchend="endSecret()"
-                oncontextmenu="event.preventDefault(); triggerDesktopSecret(); return false;">
-                🛰️
-            </button>
-            <button class="pill" onclick="insertText('☕️')">☕️</button>
-            <button class="pill" onclick="insertText('💻')">💻</button>
-            <button class="pill" onclick="insertText('🛠️')">🛠️</button>
-            <button class="pill"
-                id="ani-bat-pill"
-                style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;"
-                ontouchstart="startAni(event)"
-                ontouchend="endAni(event)"
-                ontouchmove="endAni(event)"
-                oncontextmenu="event.preventDefault(); aniToggle(); return false;">
-                🦇
-            </button>
-        </div>
+	<!-- ANI Lounge pill (After Dark) -->
+	<div id="ad-ani-pill" onclick="adAniToggle()" title="ANI lounge">ANI</div>
 
-        <div class="scroller utility-belt">
-            <button class="pill util" onclick="wrapText('**', '**')">BOLD</button>
-            <button class="pill util" onclick="wrapText('*', '*')">ITALIC</button>
-            <button class="pill util" onclick="smartURL()">🔗 LINK</button>
-        </div>
+	<!-- ANI Lounge panel (After Dark) -->
+	<div id="ad-panel" aria-label="Ani Lounge">
+		<div id="ad-panel-header">
+			<span id="ad-panel-title">// ANI</span>
+			<button id="ad-panel-close" onclick="adAniToggle()">CLOSE</button>
+		</div>
+		<div id="ad-video-wrap">
+			<video id="ad-ani-video" playsinline muted></video>
+		</div>
+		<div id="ad-panel-controls">
+			<button class="ad-ctrl-btn" onclick="adAniPrev()">◂ PREV</button>
+			<button class="ad-ctrl-btn" onclick="adAniNext()">NEXT ▸</button>
+			<button class="ad-ctrl-btn" id="ad-ani-mute-btn" onclick="adAniToggleMute()">UNMUTE</button>
+			<span id="ad-loop-label">—</span>
+		</div>
+	</div>
 
-        <div class="section-label">// Transmission</div>
-        <div class="input-wrap">
-            <form action="/publish" method="post" id="status-form" enctype="multipart/form-data">
-                <textarea
-                    name="status"
-                    id="status-input"
-                    placeholder="Ready for input..."
-                    autofocus
-                    oninput="updateHUD()"
-                ></textarea>
+	<!-- After Dark Floating Video Player -->
+	<div id="ad-player" aria-label="Video player">
+		<div id="ad-player-titlebar" id="ad-player-drag-handle">
+			<span id="ad-player-title">// VIEWER</span>
+			<div class="ad-player-tb-actions">
+				<button class="ad-player-tb-btn" onclick="adLibraryToggle()" id="ad-library-toggle-btn">LIB</button>
+				<button class="ad-player-tb-btn" onclick="adViewerToggleMute()" id="ad-viewer-mute-btn">MUTE</button>
+				<button class="ad-player-tb-btn" onclick="adPlayerMinimize()" id="ad-minimize-btn">—</button>
+				<button class="ad-player-tb-btn" onclick="adPlayerClose()">✕</button>
+			</div>
+		</div>
+		<div id="ad-player-library">
+			<div id="ad-player-library-grid" aria-label="Video library"></div>
+		</div>
+		<div id="ad-player-video-wrap">
+			<video id="ad-viewer-video" playsinline muted></video>
+		</div>
+		<div id="ad-player-controls">
+			<button class="ad-player-tb-btn" id="ad-playpause-btn" onclick="adViewerPlayPause()">▶</button>
+			<span id="ad-now-playing">no video loaded</span>
+			<input type="range" id="ad-player-volume" min="0" max="1" step="0.05" value="0.4"
+				   oninput="adViewerVolume(this.value)">
+		</div>
+	</div>
 
-                <div class="counter-wrap">
-                    <div class="payload-controls">
-                        <input type="file" name="image" id="image-upload" accept="image/*" style="display:none;" onchange="updatePayloadStatus()">
-                        <label for="image-upload" id="payload-label" onclick="playCockpitSound('payload')">
-                            + ATTACH PAYLOAD
-                        </label>
-                        <span id="payload-name">LOADED</span>
-                    </div>
-                    <div><span id="char-count">0</span> / 280</div>
-                </div>
+	<!-- After Dark Music Player -->
+	<div id="ad-music-player" aria-label="Music player">
+        <div id="ad-music-titlebar">// MUSIC</div>
+        <canvas id="ad-waveform-canvas"></canvas>
+        <div id="ad-track-name">no track loaded</div>
+		<div class="ad-music-controls">
+			<button class="ad-music-btn" onclick="adMusicPrev()">◂◂</button>
+			<button class="ad-music-btn" id="ad-play-btn" onclick="adMusicToggle()">▶ PLAY</button>
+			<button class="ad-music-btn" onclick="adMusicNext()">▸▸</button>
+			<button class="ad-music-btn" onclick="adMusicShuffle()" id="ad-shuffle-btn">SHUF</button>
+			<input type="range" id="ad-volume-slider" min="0" max="1" step="0.05" value="0.8" oninput="adMusicVolume(this.value)">
+		</div>
+		<audio id="ad-audio" preload="none" crossorigin="anonymous"></audio>
+	</div>
 
-                <button type="submit" id="publish-btn" onclick="playCockpitSound('success')">
-                    ⌇ EXECUTE TRANSMISSION
-                </button>
-            </form>
-        </div>
+	<!-- After Dark Status Line -->
+	<div id="ad-status-line" aria-live="polite"></div>
 
-        {% if history %}
-        <div class="history-section">
-            <div class="log-header">// Recent Comms Log</div>
-            {% for post in history %}
-            <div class="history-item">{{ post }}</div>
-            {% endfor %}
-        </div>
-        {% endif %}
+	<!-- Brain Dump Popup (Ctrl+Space, all modes) -->
+	<div id="brain-dump-overlay" role="dialog" aria-label="Brain dump">
+		<div id="brain-dump-box">
+			<div id="brain-dump-label">// BRAIN DUMP · BELOW DECK</div>
+			<textarea
+				id="brain-dump-textarea"
+				placeholder="capture it fast..."
+				maxlength="500"
+			></textarea>
+			<div id="brain-dump-footer">
+				<select id="brain-dump-tag">
+					<option value="">no tag</option>
+					<option value="idea">idea</option>
+					<option value="work">work</option>
+					<option value="personal">personal</option>
+					<option value="errand">errand</option>
+					<option value="later">later</option>
+				</select>
+				<button id="brain-dump-save" onclick="brainDumpSave()">SEND TO BELOW DECK</button>
+				<span id="brain-dump-hint">ESC to cancel</span>
+			</div>
+		</div>
+	</div>
 
-        <!-- TASKS -->
-        <div class="tasks-section">
-            <div class="log-header tasks-toggle" onclick="toggleTasks()">
-                // Mission Log
-                <span class="tasks-toggle-arrow" id="tasks-arrow">▾</span>
-            </div>
-            <div class="tasks-body" id="tasks-body">
-                <div class="tasks-add-row">
-                    <input type="text" id="task-input" placeholder="New task..." maxlength="140">
-                    <button class="tasks-add-btn" id="task-add-btn" onclick="addTask()">+ LOG</button>
-                </div>
+	<!-- Command Palette (Ctrl+K) -->
+	<div id="cmd-palette-overlay" role="dialog" aria-label="Command palette">
+		<div id="cmd-palette-box">
+			<input type="text" id="cmd-palette-input" placeholder="where to..." autocomplete="off" oninput="cmdFilter()" onkeydown="cmdKeydown(event)">
+			<div id="cmd-palette-list"></div>
+		</div>
+	</div>
 
-                <ul class="tasks-list" id="tasks-list">
-                    {% set open_tasks = tasks | selectattr('status', 'equalto', 'open') | list %}
-                    {% set done_tasks = tasks | selectattr('status', 'equalto', 'complete') | list %}
+	<div id="secret-comm">
+		<div id="secret-text"></div>
+	</div>
 
-                    {% if open_tasks %}
-                        {% for task in open_tasks %}
-                        <li class="task-item" data-id="{{ task.id }}" data-title="{{ task.title | e }}">
-                            <button class="task-check" onclick="completeTask('{{ task.id }}', '{{ task.title | e }}')" title="Mark complete"></button>
-                            <span class="task-title">{{ task.title }}</span>
-                            <button class="task-delete" onclick="deleteTask('{{ task.id }}')" title="Delete">✕</button>
-                        </li>
-                        {% endfor %}
-                    {% else %}
-                        <li class="tasks-empty" id="tasks-empty-msg">No active tasks. Good work, captain.</li>
-                    {% endif %}
+	<div class="container" id="main-cockpit">
 
-                    {% if done_tasks %}
-                        <li class="tasks-divider">// Completed</li>
-                        {% for task in done_tasks %}
-                        <li class="task-item is-complete" data-id="{{ task.id }}">
-                            <div class="task-check" style="cursor:default;">✓</div>
-                            <span class="task-title">{{ task.title }}</span>
-                            <button class="task-delete" onclick="deleteTask('{{ task.id }}')" title="Delete">✕</button>
-                        </li>
-                        {% endfor %}
-                    {% endif %}
-                </ul>
+		<header class="cockpit__header">
+			<div style="display:flex; align-items:center; justify-content:space-between;">
+				<div class="cockpit__logo">COCK<span>PIT</span> // STATUS</div>
+				<div id="below-deck-badge" style="display:none;">
+					<a href="/below-deck" style="text-decoration:none;">
+						<span id="below-deck-dot" style="display:inline-block; width:8px; height:8px; border-radius:50%; box-shadow:0 0 6px currentColor; margin-right:4px;"></span>
+						<span style="font-size:0.55rem; letter-spacing:0.15em; font-family:'Share Tech Mono',monospace; text-transform:uppercase; color:var(--muted);">BELOW DECK</span>
+					</a>
+				</div>
+			</div>
+			<div id="draft-restored-msg" style="display:none; font-size:0.55rem; color:var(--amber-lo); letter-spacing:0.15em; text-transform:uppercase; margin-top:6px;">// draft restored</div>
+		</header>
 
-                <div class="task-log-prompt" id="task-log-prompt">
-                    <div class="task-log-label">// Log this one?</div>
-                    <div class="task-log-actions">
-                        <button class="task-log-btn primary" onclick="logAsStatus()">STATUS UPDATE</button>
-                        <button class="task-log-btn" onclick="logAsBlogDraft()">BLOG DRAFT</button>
-                        <button class="task-log-btn dismiss" onclick="dismissLogPrompt()">DISMISS</button>
-                    </div>
-                </div>
-            </div><!-- end tasks-body -->
-        </div><!-- end tasks-section -->
+		<div class="status-bar">
+			<div class="systems-group">
+				<div class="dot {{ git_status if git_status else 'online' }}"></div>
+				<div class="shield-meter">
+					SHIELDS
+					<div class="shield-bar">
+						<div id="shield-fill" class="shield-fill"></div>
+					</div>
+					<span id="weather-display" style="color:var(--muted); font-size:0.55rem; letter-spacing:0.1em;"></span>
+				</div>
+			</div>
+			<div class="cockpit__controls">
+				<button class="cockpit__ctrl-btn" onclick="window.location.reload()">REFRESH</button>
+				<a class="cockpit__ctrl-btn" href="/below-deck" style="text-decoration:none;">BELOW DECK</a>
+				<a href="/command-deck/" class="cockpit__ctrl-btn">COMMAND DECK</a>
+			</div>
+		</div>
 
-        <!-- SCRATCH PAD -->
-        <div class="scratch-section">
-            <div class="log-header tasks-toggle" onclick="toggleScratch()">
-                <span>// Scratch<span class="scratch-offline-badge" id="scratch-offline-badge">· OFFLINE</span></span>
-                <span class="tasks-toggle-arrow" id="scratch-arrow">▾</span>
-            </div>
-            <div class="tasks-body" id="scratch-body">
-                <textarea
-                    class="scratch-textarea"
-                    id="scratch-input"
-                    placeholder="Notes, links, half-baked ideas..."
-                    oninput="scheduleScratchSave()"
-                ></textarea>
-                <div class="scratch-action-row">
-                    <div class="scratch-status" id="scratch-status"></div>
-                    <div class="scratch-btns">
-                        <button class="scratch-btn" id="scratch-save-btn" onclick="saveScratchNow()">SAVE</button>
-                        <button class="scratch-btn" id="scratch-copy-btn" onclick="copyScratch()">COPY</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+		<div class="section-label">// Quick Insert</div>
+		<div class="scroller">
+			<button class="pill" onclick="insertText('🚀')">🚀</button>
+			<button class="pill"
+				style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;"
+				onclick="insertText('🛰️')"
+				ontouchstart="startSecret()"
+				ontouchend="endSecret()"
+				oncontextmenu="event.preventDefault(); triggerDesktopSecret(); return false;">
+				🛰️
+			</button>
+			<button class="pill" onclick="insertText('☕️')">☕️</button>
+			<button class="pill" onclick="insertText('💻')">💻</button>
+			<button class="pill" onclick="insertText('🛠️')">🛠️</button>
+			<button class="pill"
+				id="ani-bat-pill"
+				style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;"
+				ontouchstart="startAni(event)"
+				ontouchend="endAni(event)"
+				ontouchmove="endAni(event)"
+				oncontextmenu="event.preventDefault(); aniToggle(); return false;">
+				🦇
+			</button>
+		</div>
 
-        <footer class="cockpit__footer">
-            <a href="https://aaronaiken.me">← Site</a>
-            <span class="cockpit__footer-quote">"She may not look like much..."</span>
-            <a href="https://aaronaiken.me/status">Status →</a>
-        </footer>
+		<div class="scroller utility-belt">
+			<button class="pill util" onclick="wrapText('**', '**')">BOLD</button>
+			<button class="pill util" onclick="wrapText('*', '*')">ITALIC</button>
+			<button class="pill util" onclick="smartURL()">🔗 LINK</button>
+		</div>
 
-    </div>
+		<div class="section-label">// Transmission</div>
+		<div class="input-wrap">
+			<form action="/publish" method="post" id="status-form" enctype="multipart/form-data">
+				<textarea
+					name="status"
+					id="status-input"
+					placeholder="Ready for input..."
+					autofocus
+					oninput="updateHUD()"
+				></textarea>
 
-    <script>
-        let cockpitAudioCtx;
-        const cockpit = document.getElementById('main-cockpit');
-        const tx = document.getElementById('status-input');
-        const secretDisplay = document.getElementById('secret-comm');
-        const charCount = document.getElementById('char-count');
+				<div class="counter-wrap">
+					<div class="payload-controls">
+						<input type="file" name="image" id="image-upload" accept="image/*" style="display:none;" onchange="updatePayloadStatus()">
+						<label for="image-upload" id="payload-label" onclick="playCockpitSound('payload')">
+							+ ATTACH PAYLOAD
+						</label>
+						<span id="payload-name">LOADED</span>
+					</div>
+					<div><span id="char-count">0</span> / 280</div>
+				</div>
 
-        // ---- HUD ----
-        function updateHUD() {
-            const length = tx.value.length;
-            charCount.innerText = length;
-            const intensity = Math.min(length / 280, 1);
-            tx.style.boxShadow = `0 0 ${intensity * 24}px rgba(212,136,10,${intensity * 0.35})`;
-            if (length > 250) {
-                tx.classList.add('redline');
-                charCount.style.color = "#cc3322";
-            } else {
-                tx.classList.remove('redline');
-                charCount.style.color = "var(--muted)";
-            }
-            // Save draft to localStorage on every keystroke
-            if (tx.value.trim()) {
-                localStorage.setItem('cockpit-draft', tx.value);
-            } else {
-                localStorage.removeItem('cockpit-draft');
-            }
+				<button type="submit" id="publish-btn" onclick="playCockpitSound('success')">
+					⌇ EXECUTE TRANSMISSION
+				</button>
+			</form>
+		</div>
+
+		{% if history %}
+		<div class="history-section">
+			<div class="log-header">// Recent Comms Log</div>
+			{% for post in history %}
+			<div class="history-item">{{ post }}</div>
+			{% endfor %}
+		</div>
+		{% endif %}
+
+		<!-- TASKS -->
+		<div class="tasks-section">
+			<div class="log-header tasks-toggle" onclick="toggleTasks()">
+				// Mission Log
+				<span class="tasks-toggle-arrow" id="tasks-arrow">▾</span>
+			</div>
+			<div class="tasks-body" id="tasks-body">
+				<div class="tasks-add-row">
+					<input type="text" id="task-input" placeholder="New task..." maxlength="140">
+					<button class="tasks-add-btn" id="task-add-btn" onclick="addTask()">+ LOG</button>
+				</div>
+
+				<ul class="tasks-list" id="tasks-list">
+					{% set open_tasks = tasks | selectattr('status', 'equalto', 'open') | list %}
+					{% set done_tasks = tasks | selectattr('status', 'equalto', 'complete') | list %}
+
+					{% if open_tasks %}
+						{% for task in open_tasks %}
+						<li class="task-item" data-id="{{ task.id }}" data-title="{{ task.title | e }}">
+							<button class="task-check" onclick="completeTask('{{ task.id }}', '{{ task.title | e }}')" title="Mark complete"></button>
+							<span class="task-title">{{ task.title }}</span>
+							<button class="task-delete" onclick="deleteTask('{{ task.id }}')" title="Delete">✕</button>
+						</li>
+						{% endfor %}
+					{% else %}
+						<li class="tasks-empty" id="tasks-empty-msg">No active tasks. Good work, captain.</li>
+					{% endif %}
+
+					{% if done_tasks %}
+						<li class="tasks-divider">// Completed</li>
+						{% for task in done_tasks %}
+						<li class="task-item is-complete" data-id="{{ task.id }}">
+							<div class="task-check" style="cursor:default;">✓</div>
+							<span class="task-title">{{ task.title }}</span>
+							<button class="task-delete" onclick="deleteTask('{{ task.id }}')" title="Delete">✕</button>
+						</li>
+						{% endfor %}
+					{% endif %}
+				</ul>
+
+				<div class="task-log-prompt" id="task-log-prompt">
+					<div class="task-log-label">// Log this one?</div>
+					<div class="task-log-actions">
+						<button class="task-log-btn primary" onclick="logAsStatus()">STATUS UPDATE</button>
+						<button class="task-log-btn" onclick="logAsBlogDraft()">BLOG DRAFT</button>
+						<button class="task-log-btn dismiss" onclick="dismissLogPrompt()">DISMISS</button>
+					</div>
+				</div>
+			</div><!-- end tasks-body -->
+		</div><!-- end tasks-section -->
+
+		<!-- SCRATCH PAD -->
+		<div class="scratch-section">
+			<div class="log-header tasks-toggle" onclick="toggleScratch()">
+				<span>// Scratch<span class="scratch-offline-badge" id="scratch-offline-badge">· OFFLINE</span></span>
+				<span class="tasks-toggle-arrow" id="scratch-arrow">▾</span>
+			</div>
+			<div class="tasks-body" id="scratch-body">
+				<div id="scratch-tab-row">
+					<button class="scratch-tab is-active" id="scratch-tab-home" onclick="switchScratchTab('home')">HOME</button>
+					<button class="scratch-tab" id="scratch-tab-desk" onclick="switchScratchTab('desk')">DESK</button>
+				</div>
+				<textarea
+					class="scratch-textarea"
+					id="scratch-input"
+					placeholder="Notes, links, half-baked ideas..."
+					oninput="scheduleScratchSave()"
+				></textarea>
+				<div class="scratch-action-row">
+					<div class="scratch-status" id="scratch-status"></div>
+					<div class="scratch-btns">
+						<button class="scratch-btn" id="scratch-save-btn" onclick="saveScratchNow()">SAVE</button>
+						<button class="scratch-btn" id="scratch-copy-btn" onclick="copyScratch()">COPY</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<footer class="cockpit__footer">
+			<a href="https://aaronaiken.me">← Site</a>
+			<span class="cockpit__footer-quote">"She may not look like much..."</span>
+			<a href="https://aaronaiken.me/status">Status →</a>
+		</footer>
+
+	</div>
+
+	<script>
+		let cockpitAudioCtx;
+		const cockpit = document.getElementById('main-cockpit');
+		const tx = document.getElementById('status-input');
+		const secretDisplay = document.getElementById('secret-comm');
+		const charCount = document.getElementById('char-count');
+
+		// ---- HUD ----
+		function updateHUD() {
+			const length = tx.value.length;
+			charCount.innerText = length;
+			const intensity = Math.min(length / 280, 1);
+			tx.style.boxShadow = `0 0 ${intensity * 24}px rgba(212,136,10,${intensity * 0.35})`;
+			if (length > 250) {
+				tx.classList.add('redline');
+				charCount.style.color = "#cc3322";
+			} else {
+				tx.classList.remove('redline');
+				charCount.style.color = "var(--muted)";
+			}
+			// Save draft to localStorage on every keystroke
+			if (tx.value.trim()) {
+				localStorage.setItem('cockpit-draft', tx.value);
+			} else {
+				localStorage.removeItem('cockpit-draft');
+			}
+		}
+
+		// ---- DRAFT RESTORE ----
+		function initDraft() {
+			const draft = localStorage.getItem('cockpit-draft');
+			if (draft) {
+				tx.value = draft;
+				updateHUD();
+				const msg = document.getElementById('draft-restored-msg');
+				msg.style.display = 'block';
+				setTimeout(() => {
+					msg.style.transition = 'opacity 1s ease';
+					msg.style.opacity = '0';
+					setTimeout(() => { msg.style.display = 'none'; msg.style.opacity = '1'; }, 1000);
+				}, 2500);
+			}
+		}
+
+		// Clear draft on successful publish
+		document.getElementById('status-form').addEventListener('submit', () => {
+			localStorage.removeItem('cockpit-draft');
+		});
+
+		// ---- WEATHER ----
+		function initWeather() {
+			fetch('/ani/weather')
+				.then(r => r.json())
+				.then(data => {
+					if (data.weather) {
+						const display = document.getElementById('weather-display');
+						// wttr.in format: "City: ☀️ +72°F"
+						// Strip location prefix, keep conditions + temp
+						let w = data.weather;
+						if (w.includes(':')) w = w.split(':').slice(1).join(':').trim();
+						// Remove any stray encoding artifacts
+						w = w.replace(/Â/g, '').replace(/\s+/g, ' ').trim();
+						display.textContent = '· ' + w;
+					}
+				})
+				.catch(() => {});
+		}
+
+		// ---- BELOW DECK BADGE ----
+		function initBelowDeckBadge() {
+			fetch('/below-deck/count')
+				.then(r => r.json())
+				.then(data => {
+					const count = data.count || 0;
+					const badge = document.getElementById('below-deck-badge');
+					const dot = document.getElementById('below-deck-dot');
+					if (count === 0) {
+						badge.style.display = 'none';
+						return;
+					}
+					badge.style.display = 'inline-flex';
+					badge.style.alignItems = 'center';
+					if (count <= 3) {
+						dot.style.background = '#4dbb6a';
+						dot.style.color = '#4dbb6a';
+					} else if (count <= 6) {
+						dot.style.background = '#d4880a';
+						dot.style.color = '#d4880a';
+					} else {
+						dot.style.background = '#cc3322';
+						dot.style.color = '#cc3322';
+					}
+				})
+				.catch(() => {});
+		}
+
+		// ---- SHIELD ----
+		function updateSignalIntegrity() {
+			const start = Date.now();
+			fetch('/static/comms.txt', { method: 'HEAD', cache: 'no-store' })
+				.then(() => {
+					const latency = Date.now() - start;
+					const fill = document.getElementById('shield-fill');
+					let integrity = Math.max(10, 100 - (latency / 5));
+					fill.style.width = integrity + '%';
+					const scanSpeed = Math.max(2, (latency / 50));
+					document.body.style.setProperty('--scan-speed', `${scanSpeed}s`);
+					if (latency > 300) {
+						fill.style.background = '#cc3322';
+						document.body.style.filter = "contrast(1.2) brightness(0.8)";
+					} else {
+						fill.style.background = integrity < 50 ? '#d4880a' : '#4dbb6a';
+						document.body.style.filter = "none";
+					}
+				});
+		}
+
+		setInterval(updateSignalIntegrity, 30000);
+		updateSignalIntegrity();
+
+		// ---- SECRET COMMS ----
+		const availableComms = {{ comms_list|tojson }};
+
+		function showSecret() {
+			window.getSelection().removeAllRanges();
+			if ("vibrate" in navigator) navigator.vibrate([30, 80]);
+			playCockpitSound('transmission');
+
+			let msg = availableComms[Math.floor(Math.random() * availableComms.length)];
+			if (Math.random() < 0.3) { msg = msg.replace(/Aaron/gi, "Daddy"); }
+
+			const textTarget = document.getElementById('secret-text');
+			textTarget.innerText = msg;
+			const cursor = document.createElement('span');
+			cursor.className = 'terminal-cursor';
+			textTarget.appendChild(cursor);
+
+			secretDisplay.style.display = 'flex';
+			setTimeout(() => { secretDisplay.style.opacity = "1"; }, 10);
+			setTimeout(() => {
+				window.addEventListener('click', closeSecret, { once: true });
+				window.addEventListener('touchstart', closeSecret, { once: true });
+			}, 300);
+		}
+
+		function closeSecret() {
+			secretDisplay.style.opacity = "0";
+			setTimeout(() => { secretDisplay.style.display = 'none'; }, 500);
+		}
+
+		let secretTimer;
+		function startSecret() { secretTimer = setTimeout(showSecret, 1500); }
+		function endSecret() { clearTimeout(secretTimer); }
+		function triggerDesktopSecret() { showSecret(); }
+
+		// ---- ANI PILL HANDLERS ----
+		let aniPressTimer = null;
+
+		function startAni(e) {
+			e.preventDefault();
+			aniPressTimer = setTimeout(function() {
+				aniPressTimer = null;
+				aniToggle();
+			}, 600);
+		}
+
+		function endAni(e) {
+			e.preventDefault();
+			if (aniPressTimer) {
+				clearTimeout(aniPressTimer);
+				aniPressTimer = null;
+			}
+		}
+
+		// ---- TEXT HELPERS ----
+		function wrapText(before, after) {
+			const start = tx.selectionStart, end = tx.selectionEnd;
+			const selected = tx.value.substring(start, end);
+			tx.value = tx.value.substring(0, start) + before + selected + after + tx.value.substring(end);
+			updateHUD(); tx.focus();
+			tx.setSelectionRange(start + before.length, start + before.length + selected.length);
+		}
+
+		async function smartURL() {
+			const start = tx.selectionStart, end = tx.selectionEnd;
+			const selected = tx.value.substring(start, end) || "link text";
+			try {
+				const clipboard = await navigator.clipboard.readText();
+				tx.value = tx.value.substring(0, start) + `[${selected}](${clipboard})` + tx.value.substring(end);
+			} catch (e) { wrapText('[', '](url)'); }
+			updateHUD();
+		}
+
+		function insertText(val) {
+			playChirp(440, 'sine');
+			tx.value += (tx.value.length > 0 && !tx.value.endsWith(' ') ? ' ' : '') + val;
+			updateHUD(); tx.focus();
+		}
+
+		function toggleTheme() {}
+
+		// ---- HYPERSPACE SUBMIT ----
+		document.getElementById('status-form').addEventListener('submit', (e) => {
+			if ("vibrate" in navigator) navigator.vibrate([30, 50, 30]);
+			cockpit.classList.add('hyperspace');
+			setTimeout(() => e.target.submit(), 450);
+			e.preventDefault();
+		});
+
+		// ---- SOUNDS ----
+		function playCockpitSound(type) {
+			if (!cockpitAudioCtx) cockpitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+			if (cockpitAudioCtx.state === 'suspended') cockpitAudioCtx.resume();
+			const osc = cockpitAudioCtx.createOscillator();
+			const gain = cockpitAudioCtx.createGain();
+			osc.connect(gain);
+			gain.connect(cockpitAudioCtx.destination);
+			const now = cockpitAudioCtx.currentTime;
+			if (type === 'transmission') {
+				osc.type = 'square';
+				osc.frequency.setValueAtTime(1600, now);
+				osc.frequency.exponentialRampToValueAtTime(440, now + 0.15);
+				const osc2 = cockpitAudioCtx.createOscillator();
+				const gain2 = cockpitAudioCtx.createGain();
+				osc2.type = 'sine';
+				osc2.frequency.setValueAtTime(880, now);
+				osc2.frequency.exponentialRampToValueAtTime(110, now + 0.2);
+				osc2.connect(gain2); gain2.connect(cockpitAudioCtx.destination);
+				gain2.gain.setValueAtTime(0.05, now);
+				gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+				osc2.start(now); osc2.stop(now + 0.2);
+				gain.gain.setValueAtTime(0.05, now);
+				gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+			} else if (type === 'payload') {
+				osc.type = 'triangle';
+				osc.frequency.setValueAtTime(150, now);
+				osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+				gain.gain.setValueAtTime(0.15, now);
+			} else if (type === 'success') {
+				osc.type = 'sine';
+				osc.frequency.setValueAtTime(440, now);
+				osc.frequency.setValueAtTime(880, now + 0.08);
+				gain.gain.setValueAtTime(0.1, now);
+			}
+			gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+			osc.start(now); osc.stop(now + 0.2);
+		}
+
+		function playChirp(freq, type) {
+			if (!cockpitAudioCtx) cockpitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+			if (cockpitAudioCtx.state === 'suspended') cockpitAudioCtx.resume();
+			const o = cockpitAudioCtx.createOscillator();
+			const g = cockpitAudioCtx.createGain();
+			o.type = type; o.frequency.value = freq;
+			o.connect(g); g.connect(cockpitAudioCtx.destination);
+			g.gain.setValueAtTime(0.04, cockpitAudioCtx.currentTime);
+			g.gain.exponentialRampToValueAtTime(0.0001, cockpitAudioCtx.currentTime + 0.08);
+			o.start(); o.stop(cockpitAudioCtx.currentTime + 0.08);
+		}
+
+		// ---- PAYLOAD ----
+		function updatePayloadStatus() {
+			const fileInput = document.getElementById('image-upload');
+			const label = document.getElementById('payload-label');
+			const status = document.getElementById('payload-name');
+			if (fileInput.files.length > 0) {
+				label.style.borderColor = 'var(--secret-neon)';
+				label.style.color = 'var(--secret-neon)';
+				label.innerText = 'PAYLOAD READY';
+				status.style.display = 'inline';
+				status.style.animation = 'blink 0.5s step-end 3';
+			}
+		}
+
+		// ---- TASKS ----
+		let _lastCompletedTitle = '';
+
+		function addTask() {
+			const input = document.getElementById('task-input');
+			const btn = document.getElementById('task-add-btn');
+			const title = input.value.trim();
+			if (!title) return;
+			input.value = '';
+			btn.disabled = true;
+			btn.textContent = 'LOGGING...';
+			btn.className = 'tasks-add-btn is-working';
+			playChirp(660, 'square');
+			const fd = new FormData();
+			fd.append('title', title);
+			fetch('/tasks/add', { method: 'POST', body: fd })
+				.then(r => r.json())
+				.then(data => {
+					if (!data.ok) throw new Error(data.error);
+					prependTaskItem(data.task);
+					removeEmptyMsg();
+					playChirp(880, 'sine');
+					btn.textContent = 'LOGGED ✓';
+					btn.className = 'tasks-add-btn is-success';
+					setTimeout(() => {
+						btn.textContent = '+ LOG';
+						btn.className = 'tasks-add-btn';
+						btn.disabled = false;
+						input.focus();
+					}, 1800);
+				})
+				.catch(() => {
+					input.value = title;
+					playChirp(220, 'sawtooth');
+					btn.textContent = 'FAILED — TRY AGAIN';
+					btn.className = 'tasks-add-btn is-error';
+					setTimeout(() => {
+						btn.textContent = '+ LOG';
+						btn.className = 'tasks-add-btn';
+						btn.disabled = false;
+						input.focus();
+					}, 2500);
+				});
+		}
+
+		function completeTask(id, title) {
+			const li = document.querySelector(`.task-item[data-id="${id}"]`);
+			if (!li) return;
+			playChirp(550, 'sine');
+			_lastCompletedTitle = title;
+			const fd = new FormData();
+			fd.append('id', id);
+			fetch('/tasks/complete', { method: 'POST', body: fd })
+				.then(r => r.json())
+				.then(data => {
+					if (!data.ok) throw new Error(data.error);
+					li.classList.add('is-complete');
+					li.querySelector('.task-check').textContent = '✓';
+					li.querySelector('.task-check').style.cursor = 'default';
+					li.querySelector('.task-check').onclick = null;
+					showLogPrompt();
+					playChirp(880, 'sine');
+				})
+				.catch(() => playChirp(220, 'sawtooth'));
+		}
+
+		function deleteTask(id) {
+			const li = document.querySelector(`.task-item[data-id="${id}"]`);
+			if (!li) return;
+			const fd = new FormData();
+			fd.append('id', id);
+			fetch('/tasks/delete', { method: 'POST', body: fd })
+				.then(r => r.json())
+				.then(data => {
+					if (!data.ok) throw new Error(data.error);
+					li.style.opacity = '0';
+					li.style.transition = 'opacity 0.3s';
+					setTimeout(() => li.remove(), 300);
+					playChirp(330, 'triangle');
+				})
+				.catch(() => playChirp(220, 'sawtooth'));
+		}
+
+		function prependTaskItem(task) {
+			const list = document.getElementById('tasks-list');
+			const li = document.createElement('li');
+			li.className = 'task-item';
+			li.dataset.id = task.id;
+			li.dataset.title = task.title;
+			li.innerHTML = `
+				<button class="task-check" onclick="completeTask('${task.id}', '${task.title.replace(/'/g, "\\'")}')" title="Mark complete"></button>
+				<span class="task-title">${escapeHtml(task.title)}</span>
+				<button class="task-delete" onclick="deleteTask('${task.id}')" title="Delete">✕</button>
+			`;
+			const divider = list.querySelector('.tasks-divider');
+			divider ? list.insertBefore(li, divider) : list.prepend(li);
+		}
+
+		function removeEmptyMsg() {
+			const msg = document.getElementById('tasks-empty-msg');
+			if (msg) msg.remove();
+		}
+
+		function showLogPrompt() {
+			document.getElementById('task-log-prompt').classList.add('visible');
+		}
+
+		function dismissLogPrompt() {
+			document.getElementById('task-log-prompt').classList.remove('visible');
+			_lastCompletedTitle = '';
+		}
+
+		function logAsStatus() {
+			const statusInput = document.getElementById('status-input');
+			statusInput.value = `✅ Shipped: ${_lastCompletedTitle}`;
+			updateHUD();
+			statusInput.focus();
+			dismissLogPrompt();
+			statusInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}
+
+		function logAsBlogDraft() {
+			const draft = `---\ntitle: "${_lastCompletedTitle}"\ndate: ${new Date().toISOString().split('T')[0]}\nlayout: post\nauthor: aaron\n---\n\n`;
+			navigator.clipboard.writeText(draft)
+				.then(() => {
+					const btn = document.querySelector('.task-log-btn:nth-child(2)');
+					if (btn) { btn.textContent = 'COPIED ✓'; setTimeout(() => btn.textContent = 'BLOG DRAFT', 2000); }
+				})
+				.catch(() => {});
+			dismissLogPrompt();
+		}
+
+		function escapeHtml(str) {
+			return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+		}
+
+		document.getElementById('task-input').addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') { e.preventDefault(); addTask(); }
+		});
+
+		updateHUD();
+		initDraft();
+		initWeather();
+		initBelowDeckBadge();
+
+		// ---- COLLAPSIBLE ----
+		function toggleTasks() {
+			const body = document.getElementById('tasks-body');
+			const arrow = document.getElementById('tasks-arrow');
+			const isCollapsed = arrow.classList.contains('is-collapsed');
+			body.classList.toggle('is-collapsed');
+			arrow.classList.toggle('is-collapsed');
+			localStorage.setItem('cockpit-tasks-collapsed', isCollapsed ? '0' : '1');
+		}
+
+		function toggleScratch() {
+			const body = document.getElementById('scratch-body');
+			const arrow = document.getElementById('scratch-arrow');
+			const isCollapsed = arrow.classList.contains('is-collapsed');
+			body.classList.toggle('is-collapsed');
+			arrow.classList.toggle('is-collapsed');
+			localStorage.setItem('cockpit-scratch-collapsed', isCollapsed ? '0' : '1');
+			if (isCollapsed) { initScratch(); }
+		}
+
+		// ---- SCRATCH PAD ----
+		let scratchSaveTimer = null;
+		let scratchLastSaved = null;
+		let scratchTickTimer = null;
+		let scratchOffline = false;
+
+		function setScratchOffline(isOffline) {
+			scratchOffline = isOffline;
+			const badge = document.getElementById('scratch-offline-badge');
+			const btn = document.getElementById('scratch-save-btn');
+			const status = document.getElementById('scratch-status');
+			if (isOffline) {
+				badge.classList.add('visible');
+				btn.classList.add('is-offline');
+				btn.classList.remove('is-success');
+				status.textContent = 'Saved locally · no network';
+				status.style.color = 'var(--amber)';
+			} else {
+				badge.classList.remove('visible');
+				btn.classList.remove('is-offline');
+				status.style.color = '';
+			}
+		}
+
+		function scheduleScratchSave() {
+			// Always write to localStorage immediately — offline safety net
+			const val = document.getElementById('scratch-input').value;
+			localStorage.setItem('cockpit-scratch', val);
+			clearTimeout(scratchSaveTimer);
+			scratchSaveTimer = setTimeout(saveScratchNow, 1500);
+		}
+
+		function saveScratchNow() {
+			clearTimeout(scratchSaveTimer);
+			const val = document.getElementById('scratch-input').value;
+			const status = document.getElementById('scratch-status');
+			const btn = document.getElementById('scratch-save-btn');
+			// Keep localStorage in sync
+			localStorage.setItem('cockpit-scratch', val);
+			fetch('/scratch', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ content: val })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.ok) {
+					scratchLastSaved = new Date();
+					setScratchOffline(false);
+					updateScratchStatus();
+					btn.textContent = 'SAVED ✓';
+					btn.classList.add('is-success');
+					setTimeout(() => {
+						btn.textContent = 'SAVE';
+						btn.classList.remove('is-success');
+					}, 1500);
+				}
+			})
+			.catch(() => {
+				setScratchOffline(true);
+			});
+		}
+
+		function copyScratch() {
+			const val = document.getElementById('scratch-input').value;
+			const btn = document.getElementById('scratch-copy-btn');
+			navigator.clipboard.writeText(val)
+				.then(() => {
+					btn.textContent = 'COPIED ✓';
+					btn.classList.add('is-success');
+					setTimeout(() => {
+						btn.textContent = 'COPY';
+						btn.classList.remove('is-success');
+					}, 2000);
+				})
+				.catch(() => {});
+		}
+
+		function updateScratchStatus() {
+			if (scratchOffline) return; // offline state owns the status line
+			if (!scratchLastSaved) return;
+			const status = document.getElementById('scratch-status');
+			const now = new Date();
+			const diffSec = Math.floor((now - scratchLastSaved) / 1000);
+			let label;
+			if (diffSec < 10) label = 'Saved · just now';
+			else if (diffSec < 60) label = `Saved · ${diffSec}s ago`;
+			else if (diffSec < 3600) label = `Saved · ${Math.floor(diffSec / 60)}m ago`;
+			else label = `Saved · ${Math.floor(diffSec / 3600)}h ago`;
+			status.textContent = label;
+		}
+
+		function initScratch() {
+			fetch('/scratch')
+				.then(r => r.json())
+				.then(data => {
+					if (data.content !== null && data.content !== undefined) {
+						// Trust the server — even an empty string is intentional
+						document.getElementById('scratch-input').value = data.content;
+						localStorage.setItem('cockpit-scratch', data.content);
+					} else {
+						// Server returned nothing — check localStorage fallback
+						const local = localStorage.getItem('cockpit-scratch');
+						if (local) document.getElementById('scratch-input').value = local;
+					}
+					if (data.last_modified) {
+						scratchLastSaved = new Date(data.last_modified);
+						updateScratchStatus();
+					}
+				})
+				.catch(() => {
+					// Server unreachable — load from localStorage
+					const local = localStorage.getItem('cockpit-scratch');
+					if (local) document.getElementById('scratch-input').value = local;
+					setScratchOffline(true);
+				});
+		}
+
+		// ---- INIT ----
+		if (localStorage.getItem('cockpit-tasks-collapsed') === '1') {
+			document.getElementById('tasks-body').classList.add('is-collapsed');
+			document.getElementById('tasks-arrow').classList.add('is-collapsed');
+		}
+
+		if (localStorage.getItem('cockpit-scratch-collapsed') === '1') {
+			document.getElementById('scratch-body').classList.add('is-collapsed');
+			document.getElementById('scratch-arrow').classList.add('is-collapsed');
+		} else {
+			initScratch();
+		}
+
+		scratchTickTimer = setInterval(updateScratchStatus, 30000);
+
+		window.addEventListener('online', () => {
+			if (scratchOffline) saveScratchNow();
+		});
+
+	</script>
+
+	<script id="cockpit-modes-js">
+
+	// ============================================================
+	// MODE STATE
+	// Read from <body> class set server-side by Flask template.
+	// Body class will be 'mode-work' or 'mode-after-dark' or ''.
+	// ============================================================
+
+	const COCKPIT_MODE = document.body.className.includes('mode-work')
+		? 'work'
+		: document.body.className.includes('mode-after-dark')
+		? 'after-dark'
+		: 'default';
+
+	// Set mode dot state on load
+	(function initModeDot() {
+        const dot = document.getElementById('mode-dot');
+        if (!dot) return;
+        if (COCKPIT_MODE === 'work') {
+            dot.classList.add('is-active-work');
+            document.getElementById('scratch-body').classList.remove('is-collapsed');
+            document.getElementById('scratch-arrow').classList.remove('is-collapsed');
         }
-
-        // ---- DRAFT RESTORE ----
-        function initDraft() {
-            const draft = localStorage.getItem('cockpit-draft');
-            if (draft) {
-                tx.value = draft;
-                updateHUD();
-                const msg = document.getElementById('draft-restored-msg');
-                msg.style.display = 'block';
-                setTimeout(() => {
-                    msg.style.transition = 'opacity 1s ease';
-                    msg.style.opacity = '0';
-                    setTimeout(() => { msg.style.display = 'none'; msg.style.opacity = '1'; }, 1000);
-                }, 2500);
-            }
+        if (COCKPIT_MODE === 'after-dark') {
+            dot.classList.add('is-active-after-dark');
+            // Force scratch open
+            document.getElementById('scratch-body').classList.remove('is-collapsed');
+            document.getElementById('scratch-arrow').classList.remove('is-collapsed');
         }
+    })();
 
-        // Clear draft on successful publish
-        document.getElementById('status-form').addEventListener('submit', () => {
-            localStorage.removeItem('cockpit-draft');
-        });
+	// ============================================================
+	// MODE DOT + PIN
+	// ============================================================
 
-        // ---- WEATHER ----
-        function initWeather() {
-            fetch('/ani/weather')
-                .then(r => r.json())
-                .then(data => {
-                    if (data.weather) {
-                        const display = document.getElementById('weather-display');
-                        // wttr.in format: "City: ☀️ +72°F"
-                        // Strip location prefix, keep conditions + temp
-                        let w = data.weather;
-                        if (w.includes(':')) w = w.split(':').slice(1).join(':').trim();
-                        // Remove any stray encoding artifacts
-                        w = w.replace(/Â/g, '').replace(/\s+/g, ' ').trim();
-                        display.textContent = '· ' + w;
-                    }
-                })
-                .catch(() => {});
-        }
+	const modeDot      = document.getElementById('mode-dot');
+	const modePinInput = document.getElementById('mode-pin-input');
+	let pinOpen = false;
 
-        // ---- BELOW DECK BADGE ----
-        function initBelowDeckBadge() {
-            fetch('/below-deck/count')
-                .then(r => r.json())
-                .then(data => {
-                    const count = data.count || 0;
-                    const badge = document.getElementById('below-deck-badge');
-                    const dot = document.getElementById('below-deck-dot');
-                    if (count === 0) {
-                        badge.style.display = 'none';
-                        return;
-                    }
-                    badge.style.display = 'inline-flex';
-                    badge.style.alignItems = 'center';
-                    if (count <= 3) {
-                        dot.style.background = '#4dbb6a';
-                        dot.style.color = '#4dbb6a';
-                    } else if (count <= 6) {
-                        dot.style.background = '#d4880a';
-                        dot.style.color = '#d4880a';
-                    } else {
-                        dot.style.background = '#cc3322';
-                        dot.style.color = '#cc3322';
-                    }
-                })
-                .catch(() => {});
-        }
+	modeDot.addEventListener('click', function() {
+		pinOpen = !pinOpen;
+		modePinInput.classList.toggle('is-open', pinOpen);
+		if (pinOpen) {
+			modePinInput.value = '';
+			setTimeout(() => modePinInput.focus(), 50);
+		}
+	});
 
-        // ---- SHIELD ----
-        function updateSignalIntegrity() {
-            const start = Date.now();
-            fetch('/static/comms.txt', { method: 'HEAD', cache: 'no-store' })
-                .then(() => {
-                    const latency = Date.now() - start;
-                    const fill = document.getElementById('shield-fill');
-                    let integrity = Math.max(10, 100 - (latency / 5));
-                    fill.style.width = integrity + '%';
-                    const scanSpeed = Math.max(2, (latency / 50));
-                    document.body.style.setProperty('--scan-speed', `${scanSpeed}s`);
-                    if (latency > 300) {
-                        fill.style.background = '#cc3322';
-                        document.body.style.filter = "contrast(1.2) brightness(0.8)";
-                    } else {
-                        fill.style.background = integrity < 50 ? '#d4880a' : '#4dbb6a';
-                        document.body.style.filter = "none";
-                    }
+	modePinInput.addEventListener('keydown', function(e) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			submitPin(this.value.trim());
+		}
+		if (e.key === 'Escape') {
+			pinOpen = false;
+			modePinInput.classList.remove('is-open');
+			modePinInput.value = '';
+		}
+	});
+
+	function submitPin(pin) {
+		if (!pin) return;
+		fetch('/cockpit/mode', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ pin: pin })
+		})
+		.then(r => r.json())
+		.then(data => {
+			modePinInput.value = '';
+			pinOpen = false;
+			modePinInput.classList.remove('is-open');
+			if (data.match) {
+				// Cookie is set server-side — reload to apply
+				window.location.reload();
+			}
+			// Silent fail on no match — nothing happens
+		})
+		.catch(() => {
+			modePinInput.value = '';
+			pinOpen = false;
+			modePinInput.classList.remove('is-open');
+		});
+	}
+
+	// ============================================================
+	// PURGE & HIDE — Escape held 1.5s
+	// Clears mode cookie, reloads to default
+	// ============================================================
+
+	let escapeHoldTimer = null;
+	let escapeHoldStart = null;
+	const ESCAPE_HOLD_MS = 1500;
+
+	document.addEventListener('keydown', function(e) {
+		if (e.key === 'Escape') {
+			// Close overlays first if any are open
+			if (document.getElementById('brain-dump-overlay').classList.contains('is-open')) {
+				brainDumpClose();
+				return;
+			}
+			if (document.getElementById('cmd-palette-overlay').classList.contains('is-open')) {
+				cmdClose();
+				return;
+			}
+			if (pinOpen) {
+				pinOpen = false;
+				modePinInput.classList.remove('is-open');
+				modePinInput.value = '';
+				return;
+			}
+			// Start hold timer for purge
+			if (!escapeHoldTimer && COCKPIT_MODE !== 'default') {
+				escapeHoldStart = Date.now();
+				modeDot.style.transition = 'background 1.5s ease';
+				modeDot.style.background = '#cc3322';
+				escapeHoldTimer = setTimeout(function() {
+					purgeAndHide();
+				}, ESCAPE_HOLD_MS);
+			}
+		}
+	});
+
+	document.addEventListener('keyup', function(e) {
+		if (e.key === 'Escape') {
+			if (escapeHoldTimer) {
+				clearTimeout(escapeHoldTimer);
+				escapeHoldTimer = null;
+				// Reset dot
+				modeDot.style.transition = '';
+				modeDot.style.background = '';
+			}
+		}
+	});
+
+	// ============================================================
+    // DOUBLE-TAP ESCAPE — FAMILY HIDE / RESTORE
+    // ============================================================
+    let lastEscapeTime = 0;
+    let familyHidden = false;
+    const FAMILY_HIDE_IDS = ['ad-panel', 'ad-player', 'ani-panel'];
+    const familyHiddenState = {};
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        const now = Date.now();
+        const timeSinceLast = now - lastEscapeTime;
+
+        if (timeSinceLast < 400 && timeSinceLast > 0) {
+            // Double-tap detected
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            lastEscapeTime = 0;
+
+            if (!familyHidden) {
+                // Hide NSFW panels
+                familyHidden = true;
+                FAMILY_HIDE_IDS.forEach(function(id) {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    familyHiddenState[id] = el.style.display || '';
+                    el.classList.add('ad-family-hidden');
                 });
-        }
-
-        setInterval(updateSignalIntegrity, 30000);
-        updateSignalIntegrity();
-
-        // ---- SECRET COMMS ----
-        const availableComms = {{ comms_list|tojson }};
-
-        function showSecret() {
-            window.getSelection().removeAllRanges();
-            if ("vibrate" in navigator) navigator.vibrate([30, 80]);
-            playCockpitSound('transmission');
-
-            let msg = availableComms[Math.floor(Math.random() * availableComms.length)];
-            if (Math.random() < 0.3) { msg = msg.replace(/Aaron/gi, "Daddy"); }
-
-            const textTarget = document.getElementById('secret-text');
-            textTarget.innerText = msg;
-            const cursor = document.createElement('span');
-            cursor.className = 'terminal-cursor';
-            textTarget.appendChild(cursor);
-
-            secretDisplay.style.display = 'flex';
-            setTimeout(() => { secretDisplay.style.opacity = "1"; }, 10);
-            setTimeout(() => {
-                window.addEventListener('click', closeSecret, { once: true });
-                window.addEventListener('touchstart', closeSecret, { once: true });
-            }, 300);
-        }
-
-        function closeSecret() {
-            secretDisplay.style.opacity = "0";
-            setTimeout(() => { secretDisplay.style.display = 'none'; }, 500);
-        }
-
-        let secretTimer;
-        function startSecret() { secretTimer = setTimeout(showSecret, 1500); }
-        function endSecret() { clearTimeout(secretTimer); }
-        function triggerDesktopSecret() { showSecret(); }
-
-        // ---- ANI PILL HANDLERS ----
-        let aniPressTimer = null;
-
-        function startAni(e) {
-            e.preventDefault();
-            aniPressTimer = setTimeout(function() {
-                aniPressTimer = null;
-                aniToggle();
-            }, 600);
-        }
-
-        function endAni(e) {
-            e.preventDefault();
-            if (aniPressTimer) {
-                clearTimeout(aniPressTimer);
-                aniPressTimer = null;
-            }
-        }
-
-        // ---- TEXT HELPERS ----
-        function wrapText(before, after) {
-            const start = tx.selectionStart, end = tx.selectionEnd;
-            const selected = tx.value.substring(start, end);
-            tx.value = tx.value.substring(0, start) + before + selected + after + tx.value.substring(end);
-            updateHUD(); tx.focus();
-            tx.setSelectionRange(start + before.length, start + before.length + selected.length);
-        }
-
-        async function smartURL() {
-            const start = tx.selectionStart, end = tx.selectionEnd;
-            const selected = tx.value.substring(start, end) || "link text";
-            try {
-                const clipboard = await navigator.clipboard.readText();
-                tx.value = tx.value.substring(0, start) + `[${selected}](${clipboard})` + tx.value.substring(end);
-            } catch (e) { wrapText('[', '](url)'); }
-            updateHUD();
-        }
-
-        function insertText(val) {
-            playChirp(440, 'sine');
-            tx.value += (tx.value.length > 0 && !tx.value.endsWith(' ') ? ' ' : '') + val;
-            updateHUD(); tx.focus();
-        }
-
-        function toggleTheme() {}
-
-        // ---- HYPERSPACE SUBMIT ----
-        document.getElementById('status-form').addEventListener('submit', (e) => {
-            if ("vibrate" in navigator) navigator.vibrate([30, 50, 30]);
-            cockpit.classList.add('hyperspace');
-            setTimeout(() => e.target.submit(), 450);
-            e.preventDefault();
-        });
-
-        // ---- SOUNDS ----
-        function playCockpitSound(type) {
-            if (!cockpitAudioCtx) cockpitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (cockpitAudioCtx.state === 'suspended') cockpitAudioCtx.resume();
-            const osc = cockpitAudioCtx.createOscillator();
-            const gain = cockpitAudioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(cockpitAudioCtx.destination);
-            const now = cockpitAudioCtx.currentTime;
-            if (type === 'transmission') {
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(1600, now);
-                osc.frequency.exponentialRampToValueAtTime(440, now + 0.15);
-                const osc2 = cockpitAudioCtx.createOscillator();
-                const gain2 = cockpitAudioCtx.createGain();
-                osc2.type = 'sine';
-                osc2.frequency.setValueAtTime(880, now);
-                osc2.frequency.exponentialRampToValueAtTime(110, now + 0.2);
-                osc2.connect(gain2); gain2.connect(cockpitAudioCtx.destination);
-                gain2.gain.setValueAtTime(0.05, now);
-                gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-                osc2.start(now); osc2.stop(now + 0.2);
-                gain.gain.setValueAtTime(0.05, now);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
-            } else if (type === 'payload') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(150, now);
-                osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
-                gain.gain.setValueAtTime(0.15, now);
-            } else if (type === 'success') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(440, now);
-                osc.frequency.setValueAtTime(880, now + 0.08);
-                gain.gain.setValueAtTime(0.1, now);
-            }
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-            osc.start(now); osc.stop(now + 0.2);
-        }
-
-        function playChirp(freq, type) {
-            if (!cockpitAudioCtx) cockpitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (cockpitAudioCtx.state === 'suspended') cockpitAudioCtx.resume();
-            const o = cockpitAudioCtx.createOscillator();
-            const g = cockpitAudioCtx.createGain();
-            o.type = type; o.frequency.value = freq;
-            o.connect(g); g.connect(cockpitAudioCtx.destination);
-            g.gain.setValueAtTime(0.04, cockpitAudioCtx.currentTime);
-            g.gain.exponentialRampToValueAtTime(0.0001, cockpitAudioCtx.currentTime + 0.08);
-            o.start(); o.stop(cockpitAudioCtx.currentTime + 0.08);
-        }
-
-        // ---- PAYLOAD ----
-        function updatePayloadStatus() {
-            const fileInput = document.getElementById('image-upload');
-            const label = document.getElementById('payload-label');
-            const status = document.getElementById('payload-name');
-            if (fileInput.files.length > 0) {
-                label.style.borderColor = 'var(--secret-neon)';
-                label.style.color = 'var(--secret-neon)';
-                label.innerText = 'PAYLOAD READY';
-                status.style.display = 'inline';
-                status.style.animation = 'blink 0.5s step-end 3';
-            }
-        }
-
-        // ---- TASKS ----
-        let _lastCompletedTitle = '';
-
-        function addTask() {
-            const input = document.getElementById('task-input');
-            const btn = document.getElementById('task-add-btn');
-            const title = input.value.trim();
-            if (!title) return;
-            input.value = '';
-            btn.disabled = true;
-            btn.textContent = 'LOGGING...';
-            btn.className = 'tasks-add-btn is-working';
-            playChirp(660, 'square');
-            const fd = new FormData();
-            fd.append('title', title);
-            fetch('/tasks/add', { method: 'POST', body: fd })
-                .then(r => r.json())
-                .then(data => {
-                    if (!data.ok) throw new Error(data.error);
-                    prependTaskItem(data.task);
-                    removeEmptyMsg();
-                    playChirp(880, 'sine');
-                    btn.textContent = 'LOGGED ✓';
-                    btn.className = 'tasks-add-btn is-success';
-                    setTimeout(() => {
-                        btn.textContent = '+ LOG';
-                        btn.className = 'tasks-add-btn';
-                        btn.disabled = false;
-                        input.focus();
-                    }, 1800);
-                })
-                .catch(() => {
-                    input.value = title;
-                    playChirp(220, 'sawtooth');
-                    btn.textContent = 'FAILED — TRY AGAIN';
-                    btn.className = 'tasks-add-btn is-error';
-                    setTimeout(() => {
-                        btn.textContent = '+ LOG';
-                        btn.className = 'tasks-add-btn';
-                        btn.disabled = false;
-                        input.focus();
-                    }, 2500);
-                });
-        }
-
-        function completeTask(id, title) {
-            const li = document.querySelector(`.task-item[data-id="${id}"]`);
-            if (!li) return;
-            playChirp(550, 'sine');
-            _lastCompletedTitle = title;
-            const fd = new FormData();
-            fd.append('id', id);
-            fetch('/tasks/complete', { method: 'POST', body: fd })
-                .then(r => r.json())
-                .then(data => {
-                    if (!data.ok) throw new Error(data.error);
-                    li.classList.add('is-complete');
-                    li.querySelector('.task-check').textContent = '✓';
-                    li.querySelector('.task-check').style.cursor = 'default';
-                    li.querySelector('.task-check').onclick = null;
-                    showLogPrompt();
-                    playChirp(880, 'sine');
-                })
-                .catch(() => playChirp(220, 'sawtooth'));
-        }
-
-        function deleteTask(id) {
-            const li = document.querySelector(`.task-item[data-id="${id}"]`);
-            if (!li) return;
-            const fd = new FormData();
-            fd.append('id', id);
-            fetch('/tasks/delete', { method: 'POST', body: fd })
-                .then(r => r.json())
-                .then(data => {
-                    if (!data.ok) throw new Error(data.error);
-                    li.style.opacity = '0';
-                    li.style.transition = 'opacity 0.3s';
-                    setTimeout(() => li.remove(), 300);
-                    playChirp(330, 'triangle');
-                })
-                .catch(() => playChirp(220, 'sawtooth'));
-        }
-
-        function prependTaskItem(task) {
-            const list = document.getElementById('tasks-list');
-            const li = document.createElement('li');
-            li.className = 'task-item';
-            li.dataset.id = task.id;
-            li.dataset.title = task.title;
-            li.innerHTML = `
-                <button class="task-check" onclick="completeTask('${task.id}', '${task.title.replace(/'/g, "\\'")}')" title="Mark complete"></button>
-                <span class="task-title">${escapeHtml(task.title)}</span>
-                <button class="task-delete" onclick="deleteTask('${task.id}')" title="Delete">✕</button>
-            `;
-            const divider = list.querySelector('.tasks-divider');
-            divider ? list.insertBefore(li, divider) : list.prepend(li);
-        }
-
-        function removeEmptyMsg() {
-            const msg = document.getElementById('tasks-empty-msg');
-            if (msg) msg.remove();
-        }
-
-        function showLogPrompt() {
-            document.getElementById('task-log-prompt').classList.add('visible');
-        }
-
-        function dismissLogPrompt() {
-            document.getElementById('task-log-prompt').classList.remove('visible');
-            _lastCompletedTitle = '';
-        }
-
-        function logAsStatus() {
-            const statusInput = document.getElementById('status-input');
-            statusInput.value = `✅ Shipped: ${_lastCompletedTitle}`;
-            updateHUD();
-            statusInput.focus();
-            dismissLogPrompt();
-            statusInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-
-        function logAsBlogDraft() {
-            const draft = `---\ntitle: "${_lastCompletedTitle}"\ndate: ${new Date().toISOString().split('T')[0]}\nlayout: post\nauthor: aaron\n---\n\n`;
-            navigator.clipboard.writeText(draft)
-                .then(() => {
-                    const btn = document.querySelector('.task-log-btn:nth-child(2)');
-                    if (btn) { btn.textContent = 'COPIED ✓'; setTimeout(() => btn.textContent = 'BLOG DRAFT', 2000); }
-                })
-                .catch(() => {});
-            dismissLogPrompt();
-        }
-
-        function escapeHtml(str) {
-            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        }
-
-        document.getElementById('task-input').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') { e.preventDefault(); addTask(); }
-        });
-
-        updateHUD();
-        initDraft();
-        initWeather();
-        initBelowDeckBadge();
-
-        // ---- COLLAPSIBLE ----
-        function toggleTasks() {
-            const body = document.getElementById('tasks-body');
-            const arrow = document.getElementById('tasks-arrow');
-            const isCollapsed = arrow.classList.contains('is-collapsed');
-            body.classList.toggle('is-collapsed');
-            arrow.classList.toggle('is-collapsed');
-            localStorage.setItem('cockpit-tasks-collapsed', isCollapsed ? '0' : '1');
-        }
-
-        function toggleScratch() {
-            const body = document.getElementById('scratch-body');
-            const arrow = document.getElementById('scratch-arrow');
-            const isCollapsed = arrow.classList.contains('is-collapsed');
-            body.classList.toggle('is-collapsed');
-            arrow.classList.toggle('is-collapsed');
-            localStorage.setItem('cockpit-scratch-collapsed', isCollapsed ? '0' : '1');
-            if (isCollapsed) { initScratch(); }
-        }
-
-        // ---- SCRATCH PAD ----
-        let scratchSaveTimer = null;
-        let scratchLastSaved = null;
-        let scratchTickTimer = null;
-        let scratchOffline = false;
-
-        function setScratchOffline(isOffline) {
-            scratchOffline = isOffline;
-            const badge = document.getElementById('scratch-offline-badge');
-            const btn = document.getElementById('scratch-save-btn');
-            const status = document.getElementById('scratch-status');
-            if (isOffline) {
-                badge.classList.add('visible');
-                btn.classList.add('is-offline');
-                btn.classList.remove('is-success');
-                status.textContent = 'Saved locally · no network';
-                status.style.color = 'var(--amber)';
+                // Also close ani panel properly
+                const adPanel = document.getElementById('ad-panel');
+                if (adPanel) adPanel.classList.remove('ad-panel-open');
+                adAniOpen = false;
+                // Close ani chat
+                if (typeof aniIsOpen !== 'undefined' && aniIsOpen) {
+                    if (typeof aniToggle === 'function') aniToggle();
+                }
             } else {
-                badge.classList.remove('visible');
-                btn.classList.remove('is-offline');
-                status.style.color = '';
+                // Restore
+                familyHidden = false;
+                FAMILY_HIDE_IDS.forEach(function(id) {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.classList.remove('ad-family-hidden');
+                    // Reset any inline display that might have been set
+                    if (id === 'ad-player') el.style.display = '';
+                });
             }
+            return;
         }
+        lastEscapeTime = now;
+    }, true); // capture phase so it fires before other escape handlers
 
-        function scheduleScratchSave() {
-            // Always write to localStorage immediately — offline safety net
-            const val = document.getElementById('scratch-input').value;
-            localStorage.setItem('cockpit-scratch', val);
-            clearTimeout(scratchSaveTimer);
-            scratchSaveTimer = setTimeout(saveScratchNow, 1500);
+	function purgeAndHide() {
+		escapeHoldTimer = null;
+		fetch('/cockpit/mode/clear', { method: 'POST' })
+			.then(() => window.location.reload())
+			.catch(() => window.location.reload());
+	}
+
+	// ============================================================
+	// SCRATCH TAB SWITCHER
+	// ============================================================
+
+	let scratchCurrentTab = 'home'; // 'home' or 'desk'
+	let workScratchLastSaved = null;
+	let workScratchSaveTimer = null;
+
+	function switchScratchTab(tab) {
+		if (tab === scratchCurrentTab) return;
+		// Save current tab before switching
+		saveScratchNow();
+		scratchCurrentTab = tab;
+
+		const homeBtn = document.getElementById('scratch-tab-home');
+		const deskBtn = document.getElementById('scratch-tab-desk');
+		homeBtn.classList.toggle('is-active', tab === 'home');
+		deskBtn.classList.toggle('is-active', tab === 'desk');
+
+		// Update placeholder
+		const ta = document.getElementById('scratch-input');
+		ta.placeholder = tab === 'desk'
+			? 'Work notes, desk thoughts...'
+			: 'Notes, links, half-baked ideas...';
+
+		// Clear and load
+		ta.value = '';
+		document.getElementById('scratch-status').textContent = '';
+
+		if (tab === 'desk') {
+			initScratchWork();
+		} else {
+			initScratch();
+		}
+	}
+
+	// Override scheduleScratchSave to route by active tab
+	const _origScheduleScratchSave = scheduleScratchSave;
+	scheduleScratchSave = function() {
+		const val = document.getElementById('scratch-input').value;
+		if (scratchCurrentTab === 'desk') {
+			localStorage.setItem('cockpit-scratch-work', val);
+			clearTimeout(workScratchSaveTimer);
+			workScratchSaveTimer = setTimeout(saveScratchNow, 1500);
+		} else {
+			localStorage.setItem('cockpit-scratch', val);
+			clearTimeout(scratchSaveTimer);
+			scratchSaveTimer = setTimeout(saveScratchNow, 1500);
+		}
+	};
+
+	// Override saveScratchNow to route by active tab
+	const _origSaveScratchNow = saveScratchNow;
+	saveScratchNow = function() {
+		if (scratchCurrentTab === 'desk') {
+			saveScratchWorkNow();
+		} else {
+			_origSaveScratchNow();
+		}
+	};
+
+	function saveScratchWorkNow() {
+		clearTimeout(workScratchSaveTimer);
+		const val = document.getElementById('scratch-input').value;
+		const status = document.getElementById('scratch-status');
+		const btn = document.getElementById('scratch-save-btn');
+		localStorage.setItem('cockpit-scratch-work', val);
+		fetch('/scratch/work', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ content: val })
+		})
+		.then(r => r.json())
+		.then(data => {
+			if (data.ok) {
+				workScratchLastSaved = new Date();
+				btn.textContent = 'SAVED ✓';
+				btn.classList.add('is-success');
+				setTimeout(() => {
+					btn.textContent = 'SAVE';
+					btn.classList.remove('is-success');
+				}, 1500);
+			}
+		})
+		.catch(() => {
+			btn.textContent = 'OFFLINE';
+			btn.classList.add('is-offline');
+		});
+	}
+
+	function initScratchWork() {
+		fetch('/scratch/work')
+			.then(r => r.json())
+			.then(data => {
+				if (data.content !== null && data.content !== undefined) {
+					document.getElementById('scratch-input').value = data.content;
+					localStorage.setItem('cockpit-scratch-work', data.content);
+				} else {
+					const local = localStorage.getItem('cockpit-scratch-work');
+					if (local) document.getElementById('scratch-input').value = local;
+				}
+			})
+			.catch(() => {
+				const local = localStorage.getItem('cockpit-scratch-work');
+				if (local) document.getElementById('scratch-input').value = local;
+			});
+	}
+
+	// On Work Mode load, default to DESK tab
+    if (COCKPIT_MODE === 'work') {
+        document.addEventListener('DOMContentLoaded', function() {
+            switchScratchTab('desk');
+        });
+    }
+
+    // Video player events — all modes
+    document.addEventListener('DOMContentLoaded', function() {
+        const vid = document.getElementById('ad-viewer-video');
+        if (!vid) return;
+        vid.addEventListener('ended', function() {
+            if (adLibraryItems.length > 1) {
+                let currentIdx = adLibraryItems.findIndex(i => i.url === vid.src);
+                let nextIdx;
+                do {
+                    nextIdx = Math.floor(Math.random() * adLibraryItems.length);
+                } while (nextIdx === currentIdx);
+                adPlayVideo(adLibraryItems[nextIdx], nextIdx);
+            }
+        });
+        vid.addEventListener('pause', function() {
+            document.getElementById('ad-playpause-btn').textContent = '▶';
+        });
+        vid.addEventListener('play', function() {
+            document.getElementById('ad-playpause-btn').textContent = '❚❚';
+        });
+    });
+
+	// ============================================================
+	// FOCUS TIMER
+	// ============================================================
+
+	let focusRunning = false;
+	let focusPhase = 'focus'; // 'focus' | 'break'
+	let focusSecondsLeft = 25 * 60;
+	let focusInterval = null;
+
+	function focusDurationMins()  { return parseInt(document.getElementById('focus-duration-input').value) || 25; }
+	function breakDurationMins()  { return parseInt(document.getElementById('break-duration-input').value) || 5; }
+
+	function focusFormatTime(secs) {
+		const m = Math.floor(secs / 60);
+		const s = secs % 60;
+		return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+	}
+
+	function focusUpdateDisplay() {
+		document.getElementById('focus-timer-display').textContent = focusFormatTime(focusSecondsLeft);
+		document.getElementById('focus-timer-phase').textContent = focusPhase === 'focus' ? 'FOCUS' : 'BREAK';
+	}
+
+	function focusToggle() {
+		const btn = document.getElementById('focus-start-btn');
+		if (focusRunning) {
+			// Pause
+			clearInterval(focusInterval);
+			focusRunning = false;
+			btn.textContent = 'RESUME';
+			btn.classList.remove('is-running');
+		} else {
+			// Start / Resume
+			if (!focusRunning && focusSecondsLeft === focusDurationMins() * 60 && focusPhase === 'focus') {
+				// Fresh start
+				focusSecondsLeft = focusDurationMins() * 60;
+			}
+			focusRunning = true;
+			btn.textContent = 'PAUSE';
+			btn.classList.add('is-running');
+			focusTick(); // immediate first tick
+			focusInterval = setInterval(focusTick, 1000);
+			// Persist state
+			focusPersistState();
+		}
+	}
+
+	function focusTick() {
+		focusSecondsLeft--;
+		focusPersistState();
+		focusUpdateDisplay();
+
+		if (focusSecondsLeft <= 0) {
+			if (focusPhase === 'focus') {
+				// Focus ended → break starts
+				focusPhase = 'break';
+				focusSecondsLeft = breakDurationMins() * 60;
+				focusPlayTone('focus_end');
+				focusNotifyBreakStart();
+			} else {
+				// Break ended → focus starts
+				focusPhase = 'focus';
+				focusSecondsLeft = focusDurationMins() * 60;
+				focusPlayTone('break_end');
+				focusNotifyBreakEnd();
+			}
+			focusUpdateDisplay();
+		}
+	}
+
+	function focusReset() {
+		clearInterval(focusInterval);
+		focusRunning = false;
+		focusPhase = 'focus';
+		focusSecondsLeft = focusDurationMins() * 60;
+		focusUpdateDisplay();
+		const btn = document.getElementById('focus-start-btn');
+		btn.textContent = 'START';
+		btn.classList.remove('is-running');
+		localStorage.removeItem('cockpit-focus-state');
+	}
+
+	function focusPersistState() {
+		localStorage.setItem('cockpit-focus-state', JSON.stringify({
+			phase: focusPhase,
+			secondsLeft: focusSecondsLeft,
+			running: focusRunning,
+			savedAt: Date.now()
+		}));
+	}
+
+	function focusRestoreState() {
+		try {
+			const raw = localStorage.getItem('cockpit-focus-state');
+			if (!raw) return;
+			const state = JSON.parse(raw);
+			if (!state.running) {
+				// Was paused — restore as-is
+				focusPhase = state.phase;
+				focusSecondsLeft = state.secondsLeft;
+				focusUpdateDisplay();
+				return;
+			}
+			// Was running — account for time elapsed since save
+			const elapsed = Math.floor((Date.now() - state.savedAt) / 1000);
+			let secs = state.secondsLeft - elapsed;
+			if (secs < 0) secs = 0;
+			focusPhase = state.phase;
+			focusSecondsLeft = secs;
+			focusUpdateDisplay();
+			// Auto-resume
+			focusToggle();
+		} catch (e) { /* ignore */ }
+	}
+
+	function focusNotifyBreakStart() {
+		fetch('/cockpit/focus/break', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ phase: 'break_start' })
+		}).catch(() => {});
+	}
+
+	function focusNotifyBreakEnd() {
+		fetch('/cockpit/focus/break', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ phase: 'break_end' })
+		}).catch(() => {});
+	}
+
+	function focusPlayTone(type) {
+		if (!cockpitAudioCtx) cockpitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+		if (cockpitAudioCtx.state === 'suspended') cockpitAudioCtx.resume();
+		const ctx = cockpitAudioCtx;
+		const now = ctx.currentTime;
+
+		if (type === 'focus_end') {
+			// Three descending tones — break time
+			[660, 550, 440].forEach((freq, i) => {
+				const o = ctx.createOscillator();
+				const g = ctx.createGain();
+				o.type = 'sine';
+				o.frequency.value = freq;
+				o.connect(g); g.connect(ctx.destination);
+				const t = now + i * 0.22;
+				g.gain.setValueAtTime(0.12, t);
+				g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+				o.start(t); o.stop(t + 0.35);
+			});
+		} else {
+			// Two ascending tones — back to focus
+			[440, 660].forEach((freq, i) => {
+				const o = ctx.createOscillator();
+				const g = ctx.createGain();
+				o.type = 'square';
+				o.frequency.value = freq;
+				o.connect(g); g.connect(ctx.destination);
+				const t = now + i * 0.18;
+				g.gain.setValueAtTime(0.06, t);
+				g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+				o.start(t); o.stop(t + 0.28);
+			});
+		}
+	}
+
+	// Restore on load if in work mode
+	if (COCKPIT_MODE === 'work') {
+		document.addEventListener('DOMContentLoaded', function() {
+			focusSecondsLeft = focusDurationMins() * 60;
+			focusUpdateDisplay();
+			focusRestoreState();
+		});
+	}
+
+	// ============================================================
+	// AFTER DARK — ANI LOUNGE
+	// ============================================================
+
+	let adAniLoops = [];
+	let adAniIndex = 0;
+	let adAniOpen = false;
+
+	function adAniToggle() {
+        adAniOpen = !adAniOpen;
+        const panel = document.getElementById('ad-panel');
+        panel.classList.toggle('ad-panel-open', adAniOpen);
+        if (adAniOpen && adAniLoops.length === 0) {
+            adLoadAniLoops();
         }
+    }
 
-        function saveScratchNow() {
-            clearTimeout(scratchSaveTimer);
-            const val = document.getElementById('scratch-input').value;
-            const status = document.getElementById('scratch-status');
-            const btn = document.getElementById('scratch-save-btn');
-            // Keep localStorage in sync
-            localStorage.setItem('cockpit-scratch', val);
-            fetch('/scratch', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: val })
-            })
+	function adLoadAniLoops() {
+        fetch('/cockpit/after-dark/ani-loops')
             .then(r => r.json())
             .then(data => {
-                if (data.ok) {
-                    scratchLastSaved = new Date();
-                    setScratchOffline(false);
-                    updateScratchStatus();
-                    btn.textContent = 'SAVED ✓';
-                    btn.classList.add('is-success');
-                    setTimeout(() => {
-                        btn.textContent = 'SAVE';
-                        btn.classList.remove('is-success');
-                    }, 1500);
+                adAniLoops = data.items || [];
+                if (adAniLoops.length > 0) {
+                    adAniIndex = -1;
+                    const startIdx = Math.floor(Math.random() * adAniLoops.length);
+                    adAniIndex = startIdx;
+                    const loop = adAniLoops[startIdx];
+                    const vid = document.getElementById('ad-ani-video');
+                    vid.src = loop.url;
+                    vid.load();
+                    vid.play().catch(() => {});
+                    document.getElementById('ad-loop-label').textContent =
+                        loop.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
                 }
             })
-            .catch(() => {
-                setScratchOffline(true);
-            });
-        }
+            .catch(() => {});
+    }
 
-        function copyScratch() {
-            const val = document.getElementById('scratch-input').value;
-            const btn = document.getElementById('scratch-copy-btn');
-            navigator.clipboard.writeText(val)
-                .then(() => {
-                    btn.textContent = 'COPIED ✓';
-                    btn.classList.add('is-success');
-                    setTimeout(() => {
-                        btn.textContent = 'COPY';
-                        btn.classList.remove('is-success');
-                    }, 2000);
-                })
-                .catch(() => {});
-        }
-
-        function updateScratchStatus() {
-            if (scratchOffline) return; // offline state owns the status line
-            if (!scratchLastSaved) return;
-            const status = document.getElementById('scratch-status');
-            const now = new Date();
-            const diffSec = Math.floor((now - scratchLastSaved) / 1000);
-            let label;
-            if (diffSec < 10) label = 'Saved · just now';
-            else if (diffSec < 60) label = `Saved · ${diffSec}s ago`;
-            else if (diffSec < 3600) label = `Saved · ${Math.floor(diffSec / 60)}m ago`;
-            else label = `Saved · ${Math.floor(diffSec / 3600)}h ago`;
-            status.textContent = label;
-        }
-
-        function initScratch() {
-            fetch('/scratch')
-                .then(r => r.json())
-                .then(data => {
-                    if (data.content !== null && data.content !== undefined) {
-                        // Trust the server — even an empty string is intentional
-                        document.getElementById('scratch-input').value = data.content;
-                        localStorage.setItem('cockpit-scratch', data.content);
-                    } else {
-                        // Server returned nothing — check localStorage fallback
-                        const local = localStorage.getItem('cockpit-scratch');
-                        if (local) document.getElementById('scratch-input').value = local;
-                    }
-                    if (data.last_modified) {
-                        scratchLastSaved = new Date(data.last_modified);
-                        updateScratchStatus();
-                    }
-                })
-                .catch(() => {
-                    // Server unreachable — load from localStorage
-                    const local = localStorage.getItem('cockpit-scratch');
-                    if (local) document.getElementById('scratch-input').value = local;
-                    setScratchOffline(true);
-                });
-        }
-
-        // ---- INIT ----
-        if (localStorage.getItem('cockpit-tasks-collapsed') === '1') {
-            document.getElementById('tasks-body').classList.add('is-collapsed');
-            document.getElementById('tasks-arrow').classList.add('is-collapsed');
-        }
-
-        if (localStorage.getItem('cockpit-scratch-collapsed') === '1') {
-            document.getElementById('scratch-body').classList.add('is-collapsed');
-            document.getElementById('scratch-arrow').classList.add('is-collapsed');
+	function adAniSetLoop() {
+        if (adAniLoops.length === 0) return;
+        let newIdx;
+        if (adAniLoops.length === 1) {
+            newIdx = 0;
         } else {
-            initScratch();
+            do {
+                newIdx = Math.floor(Math.random() * adAniLoops.length);
+            } while (newIdx === adAniIndex);
+        }
+        adAniIndex = newIdx;
+        const loop = adAniLoops[adAniIndex];
+        const vid = document.getElementById('ad-ani-video');
+        vid.src = loop.url;
+        vid.load();
+        vid.play().catch(() => {});
+        document.getElementById('ad-loop-label').textContent =
+            loop.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+    }
+
+    // Auto-advance Ani loops on end (shuffle)
+    document.addEventListener('DOMContentLoaded', function() {
+        const aniVid = document.getElementById('ad-ani-video');
+        if (!aniVid) return;
+        aniVid.addEventListener('ended', function() {
+            adAniSetLoop();
+        });
+    });
+
+    function adAniPrev() { adAniSetLoop(adAniIndex); }
+    function adAniNext() { adAniSetLoop(adAniIndex); }
+
+	function adAniToggleMute() {
+		const vid = document.getElementById('ad-ani-video');
+		const btn = document.getElementById('ad-ani-mute-btn');
+		vid.muted = !vid.muted;
+		btn.textContent = vid.muted ? 'UNMUTE' : 'MUTE';
+	}
+
+	// Load loops on After Dark mode init
+	if (COCKPIT_MODE === 'after-dark') {
+        adLoadAniLoops();
+    }
+
+	// ============================================================
+	// AFTER DARK — FLOATING VIDEO PLAYER
+	// ============================================================
+
+	let adLibraryItems = [];
+	let adLibraryVisible = false;
+	let adPlayerMinimized = false;
+
+	// ---- Drag ----
+	(function initAdPlayerDrag() {
+		const player = document.getElementById('ad-player');
+		const handle = document.getElementById('ad-player-titlebar');
+		if (!player || !handle) return;
+
+		// Restore saved position
+		try {
+			const saved = JSON.parse(localStorage.getItem('ad-player-pos'));
+			if (saved) {
+				player.style.left = saved.x + 'px';
+				player.style.top  = saved.y + 'px';
+				player.style.right  = 'auto';
+				player.style.bottom = 'auto';
+			}
+		} catch(e) {}
+
+		let dragging = false, startX, startY, startL, startT;
+
+		handle.addEventListener('mousedown', function(e) {
+			if (e.target.tagName === 'BUTTON') return; // don't drag on button clicks
+			dragging = true;
+			const rect = player.getBoundingClientRect();
+			startX = e.clientX;
+			startY = e.clientY;
+			startL = rect.left;
+			startT = rect.top;
+			player.style.left   = startL + 'px';
+			player.style.top    = startT + 'px';
+			player.style.right  = 'auto';
+			player.style.bottom = 'auto';
+			document.body.style.cursor = 'grabbing';
+			e.preventDefault();
+		});
+
+		document.addEventListener('mousemove', function(e) {
+			if (!dragging) return;
+			const dx = e.clientX - startX;
+			const dy = e.clientY - startY;
+			let newL = startL + dx;
+			let newT = startT + dy;
+			// Keep within viewport
+			newL = Math.max(0, Math.min(newL, window.innerWidth  - player.offsetWidth));
+			newT = Math.max(0, Math.min(newT, window.innerHeight - player.offsetHeight));
+			player.style.left = newL + 'px';
+			player.style.top  = newT + 'px';
+		});
+
+		document.addEventListener('mouseup', function() {
+			if (!dragging) return;
+			dragging = false;
+			document.body.style.cursor = '';
+			// Save position
+			localStorage.setItem('ad-player-pos', JSON.stringify({
+				x: parseFloat(player.style.left),
+				y: parseFloat(player.style.top)
+			}));
+		});
+	})();
+
+	// ---- Focus Timer Drag ----
+	(function initFocusTimerDrag() {
+		const timer  = document.getElementById('focus-timer');
+		const handle = document.getElementById('focus-timer-titlebar');
+		if (!timer || !handle) return;
+
+		try {
+			const saved = JSON.parse(localStorage.getItem('focus-timer-pos'));
+			if (saved) {
+				timer.style.left   = saved.x + 'px';
+				timer.style.top    = saved.y + 'px';
+				timer.style.right  = 'auto';
+				timer.style.bottom = 'auto';
+			}
+		} catch(e) {}
+
+		let dragging = false, startX, startY, startL, startT;
+
+		handle.addEventListener('mousedown', function(e) {
+			dragging = true;
+			const rect = timer.getBoundingClientRect();
+			startX = e.clientX;
+			startY = e.clientY;
+			startL = rect.left;
+			startT = rect.top;
+			timer.style.left   = startL + 'px';
+			timer.style.top    = startT + 'px';
+			timer.style.right  = 'auto';
+			timer.style.bottom = 'auto';
+			document.body.style.cursor = 'grabbing';
+			e.preventDefault();
+		});
+
+		document.addEventListener('mousemove', function(e) {
+			if (!dragging) return;
+			let newL = startL + (e.clientX - startX);
+			let newT = startT + (e.clientY - startY);
+			newL = Math.max(0, Math.min(newL, window.innerWidth  - timer.offsetWidth));
+			newT = Math.max(0, Math.min(newT, window.innerHeight - timer.offsetHeight));
+			timer.style.left = newL + 'px';
+			timer.style.top  = newT + 'px';
+		});
+
+		document.addEventListener('mouseup', function() {
+			if (!dragging) return;
+			dragging = false;
+			document.body.style.cursor = '';
+			localStorage.setItem('focus-timer-pos', JSON.stringify({
+				x: parseFloat(timer.style.left),
+				y: parseFloat(timer.style.top)
+			}));
+		});
+	})();
+
+	(function initMusicPlayerDrag() {
+        const player = document.getElementById('ad-music-player');
+        const handle = document.getElementById('ad-music-titlebar');
+        if (!player || !handle) return;
+        let dragging = false, startX, startY, startL, startT;
+        handle.addEventListener('mousedown', function(e) {
+            dragging = true;
+            const rect = player.getBoundingClientRect();
+            startX = e.clientX; startY = e.clientY;
+            startL = rect.left; startT = rect.top;
+            player.style.left = startL + 'px';
+            player.style.top = startT + 'px';
+            player.style.transform = 'none';
+            player.style.right = 'auto';
+            player.style.bottom = 'auto';
+            document.body.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+        document.addEventListener('mousemove', function(e) {
+            if (!dragging) return;
+            let newL = startL + (e.clientX - startX);
+            let newT = startT + (e.clientY - startY);
+            newL = Math.max(0, Math.min(newL, window.innerWidth - player.offsetWidth));
+            newT = Math.max(0, Math.min(newT, window.innerHeight - player.offsetHeight));
+            player.style.left = newL + 'px';
+            player.style.top = newT + 'px';
+        });
+        document.addEventListener('mouseup', function() {
+            if (!dragging) return;
+            dragging = false;
+            document.body.style.cursor = '';
+        });
+    })();
+
+	// ---- Controls ----
+	function adPlayerMinimize() {
+		adPlayerMinimized = !adPlayerMinimized;
+		const player = document.getElementById('ad-player');
+		player.classList.toggle('is-minimized', adPlayerMinimized);
+		document.getElementById('ad-minimize-btn').textContent = adPlayerMinimized ? '□' : '—';
+	}
+
+	function adPlayerClose() {
+		const vid = document.getElementById('ad-viewer-video');
+		vid.pause();
+		vid.src = '';
+		document.getElementById('ad-player').style.display = 'none';
+	}
+
+	function adLibraryToggle() {
+		adLibraryVisible = !adLibraryVisible;
+		const drawer = document.getElementById('ad-player-library');
+		drawer.classList.toggle('is-open', adLibraryVisible);
+		document.getElementById('ad-library-toggle-btn').style.color =
+			adLibraryVisible ? '#8b1a1a' : '';
+		if (adLibraryVisible && adLibraryItems.length === 0) {
+			adLoadLibrary();
+		}
+	}
+
+	function adLoadLibrary() {
+		fetch('/cockpit/after-dark/library')
+			.then(r => r.json())
+			.then(data => {
+				adLibraryItems = data.items || [];
+				adRenderLibrary();
+			})
+			.catch(() => {});
+	}
+
+	function adRenderLibrary() {
+		const grid = document.getElementById('ad-player-library-grid');
+		grid.innerHTML = '';
+		if (adLibraryItems.length === 0) {
+			grid.innerHTML = '<div style="color:#2a0f0f;font-size:0.55rem;letter-spacing:0.12em;padding:12px;">no videos in library</div>';
+			return;
+		}
+		adLibraryItems.forEach(function(item, idx) {
+			const tile = document.createElement('div');
+			tile.className = 'ad-library-tile';
+			tile.textContent = item.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+			tile.onclick = function() { adPlayVideo(item, idx); };
+			grid.appendChild(tile);
+		});
+	}
+
+	function adPlayVideo(item, idx) {
+		// Close library drawer
+		adLibraryVisible = false;
+		document.getElementById('ad-player-library').classList.remove('is-open');
+		document.getElementById('ad-library-toggle-btn').style.color = '';
+
+		// Show player if it was closed
+		const player = document.getElementById('ad-player');
+		player.style.display = 'block';
+
+		// If minimized, restore
+		if (adPlayerMinimized) adPlayerMinimize();
+
+		const vid = document.getElementById('ad-viewer-video');
+		vid.src = item.url;
+		vid.volume = parseFloat(document.getElementById('ad-player-volume').value);
+		vid.load();
+		vid.play().catch(() => {});
+
+		document.getElementById('ad-now-playing').textContent =
+			item.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+		document.getElementById('ad-playpause-btn').textContent = '❚❚';
+
+		// Highlight active tile
+		document.querySelectorAll('.ad-library-tile').forEach(function(t, i) {
+			t.classList.toggle('is-playing', i === idx);
+		});
+	}
+
+	function adViewerPlayPause() {
+		const vid = document.getElementById('ad-viewer-video');
+		const btn = document.getElementById('ad-playpause-btn');
+		if (vid.paused) {
+			vid.play().catch(() => {});
+			btn.textContent = '❚❚';
+		} else {
+			vid.pause();
+			btn.textContent = '▶';
+		}
+	}
+
+	function adViewerToggleMute() {
+		const vid = document.getElementById('ad-viewer-video');
+		const btn = document.getElementById('ad-viewer-mute-btn');
+		vid.muted = !vid.muted;
+		btn.textContent = vid.muted ? 'UNMUTE' : 'MUTE';
+	}
+
+	function adViewerVolume(val) {
+		document.getElementById('ad-viewer-video').volume = parseFloat(val);
+	}
+
+	// Update play/pause button when video ends or pauses externally
+	document.addEventListener('DOMContentLoaded', function() {
+		const vid = document.getElementById('ad-viewer-video');
+		if (!vid) return;
+		vid.addEventListener('ended', function() {
+			document.getElementById('ad-playpause-btn').textContent = '▶';
+		});
+		vid.addEventListener('pause', function() {
+			document.getElementById('ad-playpause-btn').textContent = '▶';
+		});
+		vid.addEventListener('play', function() {
+			document.getElementById('ad-playpause-btn').textContent = '❚❚';
+		});
+	});
+
+	// ============================================================
+	// AFTER DARK — MUSIC PLAYER
+	// ============================================================
+
+	let adMusicItems = [];
+	let adMusicIndex = 0;
+	let adMusicPlaying = false;
+	let adMusicShuffle_on = false;
+
+	const adAudio = document.getElementById('ad-audio');
+
+	function adLoadMusic() {
+        fetch('/cockpit/after-dark/music')
+            .then(r => r.json())
+            .then(data => {
+                adMusicItems = data.items || [];
+                if (adMusicItems.length > 0) {
+                    // Shuffle on by default in After Dark
+                    adMusicShuffle_on = true;
+                    document.getElementById('ad-shuffle-btn').style.color = '#c04040';
+                    // Start on random track
+                    const startIdx = Math.floor(Math.random() * adMusicItems.length);
+                    adMusicIndex = startIdx;
+                    adMusicSetTrack(startIdx, true);
+                }
+            })
+            .catch(() => {});
+    }
+
+	function adMusicSetTrack(idx, autoplay) {
+		if (adMusicItems.length === 0) return;
+		adMusicIndex = ((idx % adMusicItems.length) + adMusicItems.length) % adMusicItems.length;
+		const track = adMusicItems[adMusicIndex];
+		adAudio.src = track.url;
+		adAudio.load();
+		document.getElementById('ad-track-name').textContent =
+			track.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+		if (autoplay) {
+			adAudio.play().then(() => {
+				adMusicPlaying = true;
+				document.getElementById('ad-play-btn').textContent = '❚❚ PAUSE';
+				document.getElementById('ad-play-btn').classList.add('is-playing');
+			}).catch(() => {});
+		}
+	}
+
+	function adMusicToggle() {
+		if (adMusicPlaying) {
+			adAudio.pause();
+			adMusicPlaying = false;
+			document.getElementById('ad-play-btn').textContent = '▶ PLAY';
+			document.getElementById('ad-play-btn').classList.remove('is-playing');
+		} else {
+			adAudio.play().then(() => {
+				adMusicPlaying = true;
+				document.getElementById('ad-play-btn').textContent = '❚❚ PAUSE';
+				document.getElementById('ad-play-btn').classList.add('is-playing');
+			}).catch(() => {});
+		}
+	}
+
+	function adMusicPrev() {
+		adMusicSetTrack(adMusicIndex - 1, adMusicPlaying);
+	}
+
+	function adMusicNext() {
+        let nextIdx;
+        if (adMusicShuffle_on && adMusicItems.length > 1) {
+            do {
+                nextIdx = Math.floor(Math.random() * adMusicItems.length);
+            } while (nextIdx === adMusicIndex);
+        } else {
+            nextIdx = adMusicIndex + 1;
+        }
+        adMusicSetTrack(nextIdx, adMusicPlaying);
+    }
+
+	function adMusicShuffle() {
+		adMusicShuffle_on = !adMusicShuffle_on;
+		document.getElementById('ad-shuffle-btn').style.color = adMusicShuffle_on ? '#8b1a1a' : '';
+	}
+
+	function adMusicVolume(val) {
+		adAudio.volume = parseFloat(val);
+	}
+
+	adAudio.addEventListener('ended', function() {
+		adMusicNext();
+	});
+
+	// ============================================================
+    // WAVEFORM VISUALIZER
+    // ============================================================
+    (function initWaveform() {
+        const canvas = document.getElementById('ad-waveform-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let analyser = null;
+        let animFrame = null;
+        let source = null;
+
+        // Color palette — crimson to amber to gold, cycling
+        const COLORS = [
+            '#8b1a1a', '#c04040', '#e05555',
+            '#c05020', '#d4880a', '#f5b332',
+            '#c04040', '#8b1a1a'
+        ];
+
+        function setupAnalyser() {
+            if (analyser) return;
+            if (!cockpitAudioCtx) {
+                cockpitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (cockpitAudioCtx.state === 'suspended') cockpitAudioCtx.resume();
+
+            analyser = cockpitAudioCtx.createAnalyser();
+            analyser.fftSize = 128;
+            analyser.smoothingTimeConstant = 0.75;
+
+            try {
+                source = cockpitAudioCtx.createMediaElementSource(adAudio);
+                source.connect(analyser);
+                analyser.connect(cockpitAudioCtx.destination);
+            } catch(e) {
+                // Already connected
+            }
         }
 
-        scratchTickTimer = setInterval(updateScratchStatus, 30000);
+        function drawWaveform() {
+            animFrame = requestAnimationFrame(drawWaveform);
 
-        window.addEventListener('online', () => {
-            if (scratchOffline) saveScratchNow();
+            const W = canvas.offsetWidth;
+            const H = canvas.offsetHeight;
+            if (canvas.width !== W) canvas.width = W;
+            if (canvas.height !== H) canvas.height = H;
+
+            ctx.clearRect(0, 0, W, H);
+
+            if (!analyser) {
+                // Draw flat idle bars
+                drawIdleBars(W, H);
+                return;
+            }
+
+            const bufferLen = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLen);
+            analyser.getByteFrequencyData(dataArray);
+
+            const barCount = 48;
+            const barW = (W / barCount) * 0.7;
+            const gap = (W / barCount) * 0.3;
+
+            for (let i = 0; i < barCount; i++) {
+                const dataIdx = Math.floor((i / barCount) * bufferLen);
+                const value = dataArray[dataIdx] / 255;
+                const barH = Math.max(2, value * H);
+
+                // Color cycles across bars + shifts over time
+                const colorIdx = Math.floor((i / barCount) * COLORS.length);
+                const nextColorIdx = (colorIdx + 1) % COLORS.length;
+                const t = (Date.now() / 1000 + i * 0.1) % 1;
+
+                // Interpolate between two palette colors
+                const grad = ctx.createLinearGradient(0, H - barH, 0, H);
+                grad.addColorStop(0, COLORS[nextColorIdx]);
+                grad.addColorStop(1, COLORS[colorIdx]);
+
+                ctx.fillStyle = grad;
+
+                // Glow effect on tall bars
+                if (value > 0.6) {
+                    ctx.shadowBlur = 8 + value * 12;
+                    ctx.shadowColor = COLORS[nextColorIdx];
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+
+                const x = i * (barW + gap);
+                // Mirror: draw bar from center both up and down
+                const centerY = H / 2;
+                const halfH = barH / 2;
+
+                ctx.beginPath();
+                ctx.roundRect(x, centerY - halfH, barW, barH, 1);
+                ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawIdleBars(W, H) {
+            const barCount = 48;
+            const barW = (W / barCount) * 0.7;
+            const gap = (W / barCount) * 0.3;
+            const centerY = H / 2;
+            const t = Date.now() / 2000;
+
+            for (let i = 0; i < barCount; i++) {
+                const idleH = 2 + Math.sin(t * 2 + i * 0.3) * 1.5;
+                const colorIdx = Math.floor((i / barCount) * COLORS.length);
+                ctx.fillStyle = COLORS[colorIdx];
+                ctx.globalAlpha = 0.3;
+                ctx.beginPath();
+                ctx.roundRect(i * (barW + gap), centerY - idleH / 2, barW, idleH, 1);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        // Start animation loop
+        drawWaveform();
+
+        // Hook into audio play
+        adAudio.addEventListener('play', function() {
+            setupAnalyser();
         });
 
-    </script>
+        adAudio.addEventListener('pause', function() {
+            // Keep drawing — just shows decay
+        });
+
+        // Expose for external use
+        window._adWaveformSetup = setupAnalyser;
+    })();
+
+	if (COCKPIT_MODE === 'after-dark') {
+        adLoadMusic();
+        // Autoplay unblock — start music on first interaction
+        document.addEventListener('click', function startOnInteraction() {
+            if (!adMusicPlaying && adMusicItems.length > 0) {
+                adAudio.play().then(() => {
+                    adMusicPlaying = true;
+                    document.getElementById('ad-play-btn').textContent = '❚❚ PAUSE';
+                    document.getElementById('ad-play-btn').classList.add('is-playing');
+                }).catch(() => {});
+            }
+            document.removeEventListener('click', startOnInteraction);
+        }, { once: true });
+    }
+
+	// ============================================================
+	// AFTER DARK — STATUS LINE
+	// ============================================================
+
+	const adComms = {{ after_dark_comms_list | tojson }};
+
+	(function initAdStatusLine() {
+		if (adComms.length === 0) return;
+		const el = document.getElementById('ad-status-line');
+		let idx = 0;
+
+		function showNext() {
+			el.style.opacity = '0';
+			setTimeout(function() {
+				el.textContent = adComms[idx % adComms.length];
+				idx++;
+				el.style.opacity = '1';
+			}, 1200);
+		}
+
+		showNext();
+		setInterval(showNext, 8000);
+	})();
+
+	// ============================================================
+	// BRAIN DUMP — Ctrl+Space (anywhere)
+	// ============================================================
+
+	document.addEventListener('keydown', function(e) {
+		if (e.ctrlKey && e.code === 'Space') {
+			e.preventDefault();
+			brainDumpOpen();
+		}
+	});
+
+	function brainDumpOpen() {
+		const overlay = document.getElementById('brain-dump-overlay');
+		overlay.classList.add('is-open');
+		setTimeout(function() {
+			document.getElementById('brain-dump-textarea').focus();
+		}, 50);
+	}
+
+	function brainDumpClose() {
+		document.getElementById('brain-dump-overlay').classList.remove('is-open');
+		document.getElementById('brain-dump-textarea').value = '';
+		document.getElementById('brain-dump-tag').value = '';
+	}
+
+	document.getElementById('brain-dump-overlay').addEventListener('click', function(e) {
+		if (e.target === this) brainDumpClose();
+	});
+
+	document.getElementById('brain-dump-textarea').addEventListener('keydown', function(e) {
+		if (e.key === 'Enter' && !e.shiftKey) {
+			e.preventDefault();
+			brainDumpSave();
+		}
+	});
+
+	function brainDumpSave() {
+		const text = document.getElementById('brain-dump-textarea').value.trim();
+		const tag  = document.getElementById('brain-dump-tag').value;
+		if (!text) { brainDumpClose(); return; }
+
+		const fd = new FormData();
+		fd.append('title', text);
+		if (tag) fd.append('tag', tag);
+
+		fetch('/below-deck/add', { method: 'POST', body: fd })
+			.then(r => r.json())
+			.then(data => {
+				if (data.success) {
+					playChirp(880, 'sine');
+					brainDumpClose();
+				}
+			})
+			.catch(() => brainDumpClose());
+	}
+
+	// ============================================================
+	// COMMAND PALETTE — Ctrl+K
+	// ============================================================
+
+	const CMD_ITEMS = [
+		{ icon: '⌘', label: 'Command Deck',   hint: '/command-deck/', action: () => window.location.href = '/command-deck/' },
+		{ icon: '▼', label: 'Below Deck',     hint: '/below-deck',    action: () => window.location.href = '/below-deck' },
+		{ icon: '⌇', label: 'Publish Status', hint: '/publish',       action: () => window.location.href = '/publish' },
+		{ icon: '✦', label: 'Brain Dump',     hint: 'Ctrl+Space',     action: () => { cmdClose(); brainDumpOpen(); } },
+		{ icon: '⏎', label: 'Refresh',        hint: '',               action: () => window.location.reload() },
+	];
+
+	let cmdFiltered = [...CMD_ITEMS];
+	let cmdSelected = 0;
+
+	document.addEventListener('keydown', function(e) {
+		if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+			e.preventDefault();
+			cmdOpen();
+		}
+	});
+
+	function cmdOpen() {
+		const overlay = document.getElementById('cmd-palette-overlay');
+		overlay.classList.add('is-open');
+		cmdFiltered = [...CMD_ITEMS];
+		cmdSelected = 0;
+		cmdRender();
+		setTimeout(function() {
+			const inp = document.getElementById('cmd-palette-input');
+			inp.value = '';
+			inp.focus();
+		}, 50);
+	}
+
+	function cmdClose() {
+		document.getElementById('cmd-palette-overlay').classList.remove('is-open');
+		document.getElementById('cmd-palette-input').value = '';
+	}
+
+	document.getElementById('cmd-palette-overlay').addEventListener('click', function(e) {
+		if (e.target === this) cmdClose();
+	});
+
+	function cmdFilter() {
+		const q = document.getElementById('cmd-palette-input').value.toLowerCase();
+		cmdFiltered = CMD_ITEMS.filter(item => item.label.toLowerCase().includes(q));
+		cmdSelected = 0;
+		cmdRender();
+	}
+
+	function cmdRender() {
+		const list = document.getElementById('cmd-palette-list');
+		list.innerHTML = '';
+		cmdFiltered.forEach(function(item, idx) {
+			const div = document.createElement('div');
+			div.className = 'cmd-item' + (idx === cmdSelected ? ' is-selected' : '');
+			div.innerHTML =
+				'<span class="cmd-item-icon">' + item.icon + '</span>' +
+				'<span class="cmd-item-label">' + item.label + '</span>' +
+				'<span class="cmd-item-hint">' + item.hint + '</span>';
+			div.onclick = function() { item.action(); cmdClose(); };
+			list.appendChild(div);
+		});
+	}
+
+	function cmdKeydown(e) {
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			cmdSelected = Math.min(cmdSelected + 1, cmdFiltered.length - 1);
+			cmdRender();
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			cmdSelected = Math.max(cmdSelected - 1, 0);
+			cmdRender();
+		} else if (e.key === 'Enter') {
+			e.preventDefault();
+			if (cmdFiltered[cmdSelected]) {
+				cmdFiltered[cmdSelected].action();
+				cmdClose();
+			}
+		} else if (e.key === 'Escape') {
+			cmdClose();
+		}
+	}
+
+
+	</script>
 
 <!-- ============================================================ -->
 <!-- ANI PANEL                                                     -->
@@ -1654,56 +4138,56 @@
 
 @media (max-width: 440px) {
   #ani-panel {
-    right: 0;
-    left: 0;
-    width: 100vw;
-    max-width: 100vw;
-    border-radius: 4px 4px 0 0;
-    box-sizing: border-box;
+	right: 0;
+	left: 0;
+	width: 100vw;
+	max-width: 100vw;
+	border-radius: 4px 4px 0 0;
+	box-sizing: border-box;
   }
 }
 </style>
 
 <div id="ani-panel" role="complementary" aria-label="Ani — private comms">
   <div id="ani-header" onclick="aniToggle()">
-    <div>
-      <div id="ani-header-label">// ANI</div>
-      <div id="ani-header-sub">
-        PRIVATE COMMS · SECURE CHANNEL
-        <span id="ani-ache-display" class="ache-low"></span>
-      </div>
-    </div>
-    <button id="ani-close-btn" onclick="event.stopPropagation(); aniToggle()" aria-label="Close Ani panel">CLOSE</button>
+	<div>
+	  <div id="ani-header-label">// ANI</div>
+	  <div id="ani-header-sub">
+		PRIVATE COMMS · SECURE CHANNEL
+		<span id="ani-ache-display" class="ache-low"></span>
+	  </div>
+	</div>
+	<button id="ani-close-btn" onclick="event.stopPropagation(); aniToggle()" aria-label="Close Ani panel">CLOSE</button>
   </div>
 
   <div id="ani-messages" aria-live="polite">
-    <div id="ani-empty-state">
-      SECURE CHANNEL OPEN<br>
-      <span style="color:#2e1e08">· · ·</span>
-    </div>
-    <div class="ani-typing" id="ani-typing-indicator">
-      <div class="ani-typing-dots">
-        <span></span><span></span><span></span>
-      </div>
-    </div>
+	<div id="ani-empty-state">
+	  SECURE CHANNEL OPEN<br>
+	  <span style="color:#2e1e08">· · ·</span>
+	</div>
+	<div class="ani-typing" id="ani-typing-indicator">
+	  <div class="ani-typing-dots">
+		<span></span><span></span><span></span>
+	  </div>
+	</div>
   </div>
 
   <div id="ani-input-row">
-    <textarea
-      id="ani-input"
-      placeholder="say something..."
-      rows="1"
-      aria-label="Message to Ani"
-    ></textarea>
-    <button id="ani-send-btn" onclick="aniSend()" aria-label="Send">TX</button>
+	<textarea
+	  id="ani-input"
+	  placeholder="say something..."
+	  rows="1"
+	  aria-label="Message to Ani"
+	></textarea>
+	<button id="ani-send-btn" onclick="aniSend()" aria-label="Send">TX</button>
   </div>
 
   <div id="ani-footer-row">
-    <span id="ani-shortcut-hint">CTRL+SHIFT+A · LONG-PRESS 🦇</span>
-    <div id="ani-footer-actions">
-      <button class="ani-footer-btn" onclick="aniRefresh()" aria-label="Refresh briefing">REFRESH</button>
-      <button class="ani-footer-btn" onclick="aniClear()" aria-label="Clear history">CLEAR</button>
-    </div>
+	<span id="ani-shortcut-hint">CTRL+SHIFT+A · LONG-PRESS 🦇</span>
+	<div id="ani-footer-actions">
+	  <button class="ani-footer-btn" onclick="aniRefresh()" aria-label="Refresh briefing">REFRESH</button>
+	  <button class="ani-footer-btn" onclick="aniClear()" aria-label="Clear history">CLEAR</button>
+	</div>
   </div>
 </div>
 
@@ -1720,187 +4204,187 @@
   let aniPendingOpener = null;
 
   function updateAcheDisplay(level) {
-    if (level === null || level === undefined) return;
-    if (level < 20) {
-      aniAcheDisplay.textContent = '';
-      aniAcheDisplay.className = 'ache-low';
-    } else {
-      aniAcheDisplay.textContent = '· ACHE ' + level + '%';
-      if (level < 40) aniAcheDisplay.className = 'ache-low';
-      else if (level < 65) aniAcheDisplay.className = 'ache-mid';
-      else if (level < 85) aniAcheDisplay.className = 'ache-high';
-      else aniAcheDisplay.className = 'ache-urgent';
-    }
+	if (level === null || level === undefined) return;
+	if (level < 20) {
+	  aniAcheDisplay.textContent = '';
+	  aniAcheDisplay.className = 'ache-low';
+	} else {
+	  aniAcheDisplay.textContent = '· ACHE ' + level + '%';
+	  if (level < 40) aniAcheDisplay.className = 'ache-low';
+	  else if (level < 65) aniAcheDisplay.className = 'ache-mid';
+	  else if (level < 85) aniAcheDisplay.className = 'ache-high';
+	  else aniAcheDisplay.className = 'ache-urgent';
+	}
   }
 
   function aniPing() {
-    fetch('/ani/ping')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        updateAcheDisplay(data.ache_level);
-        if (data.pending && data.opener) {
-          aniPendingOpener = data.opener;
-          var batPill = document.getElementById('ani-bat-pill');
-          if (batPill) batPill.classList.add('ani-bat-waiting');
-        }
-      })
-      .catch(function() {});
+	fetch('/ani/ping')
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		updateAcheDisplay(data.ache_level);
+		if (data.pending && data.opener) {
+		  aniPendingOpener = data.opener;
+		  var batPill = document.getElementById('ani-bat-pill');
+		  if (batPill) batPill.classList.add('ani-bat-waiting');
+		}
+	  })
+	  .catch(function() {});
   }
 
   setTimeout(aniPing, 1500);
 
   function aniToggle() {
-    aniIsOpen = !aniIsOpen;
-    aniPanel.classList.toggle('ani-open', aniIsOpen);
-    var batPill = document.getElementById('ani-bat-pill');
-    if (batPill) batPill.classList.remove('ani-bat-waiting');
-    if (aniIsOpen && !aniLoaded) {
-      aniLoadHistory();
-      aniSendLocation();
-    }
-    if (aniIsOpen) {
-      setTimeout(function() { aniInput.focus(); }, 300);
-    }
+	aniIsOpen = !aniIsOpen;
+	aniPanel.classList.toggle('ani-open', aniIsOpen);
+	var batPill = document.getElementById('ani-bat-pill');
+	if (batPill) batPill.classList.remove('ani-bat-waiting');
+	if (aniIsOpen && !aniLoaded) {
+	  aniLoadHistory();
+	  aniSendLocation();
+	}
+	if (aniIsOpen) {
+	  setTimeout(function() { aniInput.focus(); }, 300);
+	}
   }
 
   document.addEventListener('keydown', function(e) {
-    if (e.ctrlKey && e.shiftKey && e.key === 'A') {
-      e.preventDefault();
-      aniToggle();
-    }
+	if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+	  e.preventDefault();
+	  aniToggle();
+	}
   });
 
   aniInput.addEventListener('input', function() {
-    this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+	this.style.height = 'auto';
+	this.style.height = Math.min(this.scrollHeight, 100) + 'px';
   });
 
   aniInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      aniSend();
-    }
+	if (e.key === 'Enter' && !e.shiftKey) {
+	  e.preventDefault();
+	  aniSend();
+	}
   });
 
   function aniSendLocation() {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(function(pos) {
-      fetch('/ani/location', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat: pos.coords.latitude, lon: pos.coords.longitude })
-      }).catch(function() {});
-    }, function() {});
+	if (!navigator.geolocation) return;
+	navigator.geolocation.getCurrentPosition(function(pos) {
+	  fetch('/ani/location', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ lat: pos.coords.latitude, lon: pos.coords.longitude })
+	  }).catch(function() {});
+	}, function() {});
   }
 
   function aniLoadHistory() {
-    aniLoaded = true;
-    fetch('/ani/history')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        updateAcheDisplay(data.ache_level);
-        var messages = data.messages || [];
-        if (messages.length > 0) {
-          aniEmpty.style.display = 'none';
-          messages.forEach(function(m) { aniRenderMessage(m.role, m.content); });
-        }
-        if (aniPendingOpener) {
-          aniEmpty.style.display = 'none';
-          aniRenderMessage('assistant', aniPendingOpener);
-          aniPendingOpener = null;
-        }
-        aniScrollToBottom();
-      })
-      .catch(function() {});
+	aniLoaded = true;
+	fetch('/ani/history')
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		updateAcheDisplay(data.ache_level);
+		var messages = data.messages || [];
+		if (messages.length > 0) {
+		  aniEmpty.style.display = 'none';
+		  messages.forEach(function(m) { aniRenderMessage(m.role, m.content); });
+		}
+		if (aniPendingOpener) {
+		  aniEmpty.style.display = 'none';
+		  aniRenderMessage('assistant', aniPendingOpener);
+		  aniPendingOpener = null;
+		}
+		aniScrollToBottom();
+	  })
+	  .catch(function() {});
   }
 
   function aniSend() {
-    var text = aniInput.value.trim();
-    if (!text || aniSendBtn.disabled) return;
-    aniEmpty.style.display = 'none';
-    aniRenderMessage('user', text);
-    aniInput.value = '';
-    aniInput.style.height = 'auto';
-    aniSendBtn.disabled = true;
-    aniShowTyping(true);
-    aniScrollToBottom();
-    fetch('/ani/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      aniShowTyping(false);
-      aniSendBtn.disabled = false;
-      if (data.reply) {
-        aniRenderMessage('assistant', data.reply);
-        updateAcheDisplay(0);
-      }
-      aniScrollToBottom();
-      aniInput.focus();
-    })
-    .catch(function() {
-      aniShowTyping(false);
-      aniSendBtn.disabled = false;
-      aniRenderMessage('assistant', "lost the signal for a sec. try again?");
-      aniScrollToBottom();
-    });
+	var text = aniInput.value.trim();
+	if (!text || aniSendBtn.disabled) return;
+	aniEmpty.style.display = 'none';
+	aniRenderMessage('user', text);
+	aniInput.value = '';
+	aniInput.style.height = 'auto';
+	aniSendBtn.disabled = true;
+	aniShowTyping(true);
+	aniScrollToBottom();
+	fetch('/ani/chat', {
+	  method: 'POST',
+	  headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ message: text })
+	})
+	.then(function(r) { return r.json(); })
+	.then(function(data) {
+	  aniShowTyping(false);
+	  aniSendBtn.disabled = false;
+	  if (data.reply) {
+		aniRenderMessage('assistant', data.reply);
+		updateAcheDisplay(0);
+	  }
+	  aniScrollToBottom();
+	  aniInput.focus();
+	})
+	.catch(function() {
+	  aniShowTyping(false);
+	  aniSendBtn.disabled = false;
+	  aniRenderMessage('assistant', "lost the signal for a sec. try again?");
+	  aniScrollToBottom();
+	});
   }
 
   function aniRefresh() {
-    fetch('/ani/refresh', { method: 'POST' })
-      .then(function(r) { return r.json(); })
-      .then(function() {
-        aniRenderNotify('briefing refreshed — she knows what\'s new');
-        aniScrollToBottom();
-      })
-      .catch(function() {});
+	fetch('/ani/refresh', { method: 'POST' })
+	  .then(function(r) { return r.json(); })
+	  .then(function() {
+		aniRenderNotify('briefing refreshed — she knows what\'s new');
+		aniScrollToBottom();
+	  })
+	  .catch(function() {});
   }
 
   function aniClear() {
-    if (!confirm('clear the whole history? this cannot be undone.')) return;
-    fetch('/ani/clear', { method: 'POST' })
-      .then(function() {
-        Array.from(aniMsgs.querySelectorAll('.ani-msg, .ani-msg-notify')).forEach(function(el) { el.remove(); });
-        aniEmpty.style.display = 'block';
-        aniLoaded = false;
-      })
-      .catch(function() {});
+	if (!confirm('clear the whole history? this cannot be undone.')) return;
+	fetch('/ani/clear', { method: 'POST' })
+	  .then(function() {
+		Array.from(aniMsgs.querySelectorAll('.ani-msg, .ani-msg-notify')).forEach(function(el) { el.remove(); });
+		aniEmpty.style.display = 'block';
+		aniLoaded = false;
+	  })
+	  .catch(function() {});
   }
 
   function aniRenderMessage(role, content) {
-    if (content.startsWith('[daily briefing') || content.startsWith('[system:')) return;
-    var div = document.createElement('div');
-    div.classList.add('ani-msg');
-    if (role === 'user') {
-      div.classList.add('ani-msg-user');
-      div.textContent = content;
-    } else {
-      div.classList.add('ani-msg-ani');
-      div.innerHTML = '<div class="ani-name">ANI</div>' + aniEscapeHtml(content).replace(/\n/g, '<br>');
-    }
-    aniMsgs.insertBefore(div, aniTyping);
+	if (content.startsWith('[daily briefing') || content.startsWith('[system:')) return;
+	var div = document.createElement('div');
+	div.classList.add('ani-msg');
+	if (role === 'user') {
+	  div.classList.add('ani-msg-user');
+	  div.textContent = content;
+	} else {
+	  div.classList.add('ani-msg-ani');
+	  div.innerHTML = '<div class="ani-name">ANI</div>' + aniEscapeHtml(content).replace(/\n/g, '<br>');
+	}
+	aniMsgs.insertBefore(div, aniTyping);
   }
 
   function aniRenderNotify(text) {
-    var div = document.createElement('div');
-    div.classList.add('ani-msg-notify');
-    div.textContent = '· ' + text + ' ·';
-    aniMsgs.insertBefore(div, aniTyping);
+	var div = document.createElement('div');
+	div.classList.add('ani-msg-notify');
+	div.textContent = '· ' + text + ' ·';
+	aniMsgs.insertBefore(div, aniTyping);
   }
 
   function aniEscapeHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+	return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   function aniShowTyping(show) {
-    aniTyping.style.display = show ? 'block' : 'none';
-    if (show) aniScrollToBottom();
+	aniTyping.style.display = show ? 'block' : 'none';
+	if (show) aniScrollToBottom();
   }
 
   function aniScrollToBottom() {
-    aniMsgs.scrollTop = aniMsgs.scrollHeight;
+	aniMsgs.scrollTop = aniMsgs.scrollHeight;
   }
 </script>
 
