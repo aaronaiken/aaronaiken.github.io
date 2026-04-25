@@ -1201,8 +1201,6 @@
 		white-space: nowrap;
 	}
 
-	/* ---- AFTER DARK VIEWER PANEL ---- */
-
 
 	/* ---- AFTER DARK MUSIC PLAYER ---- */
 	#ad-music-player {
@@ -1626,7 +1624,7 @@ body.mode-after-dark {
     }
 
     /* Make player a flex column so video fills remaining space */
-    #ad-player {
+   .mode-after-dark #ad-player {
     	display: flex;
     	flex-direction: column;
     }
@@ -2607,12 +2605,20 @@ body.mode-after-dark {
             dot.classList.add('is-active-work');
             document.getElementById('scratch-body').classList.remove('is-collapsed');
             document.getElementById('scratch-arrow').classList.remove('is-collapsed');
+            setTimeout(function() {
+                scratchCurrentTab = 'desk';
+                initScratchWork();
+            }, 300);
         }
         if (COCKPIT_MODE === 'after-dark') {
             dot.classList.add('is-active-after-dark');
             // Force scratch open
             document.getElementById('scratch-body').classList.remove('is-collapsed');
             document.getElementById('scratch-arrow').classList.remove('is-collapsed');
+            // Reload scratch content after DOM settles
+            setTimeout(function() {
+                initScratch();
+            }, 300);
         }
     })();
 
@@ -3189,14 +3195,16 @@ body.mode-after-dark {
 
 		// Restore saved position
 		try {
-			const saved = JSON.parse(localStorage.getItem('ad-player-pos'));
-			if (saved) {
-				player.style.left = saved.x + 'px';
-				player.style.top  = saved.y + 'px';
-				player.style.right  = 'auto';
-				player.style.bottom = 'auto';
-			}
-		} catch(e) {}
+            const saved = JSON.parse(localStorage.getItem('ad-player-pos'));
+            if (saved) {
+                const clampedX = Math.min(saved.x, window.innerWidth - 340);
+                const clampedY = Math.min(saved.y, window.innerHeight - 200);
+                player.style.left = Math.max(0, clampedX) + 'px';
+                player.style.top  = Math.max(0, clampedY) + 'px';
+                player.style.right  = 'auto';
+                player.style.bottom = 'auto';
+            }
+        } catch(e) {}
 
 		let dragging = false, startX, startY, startL, startT;
 
