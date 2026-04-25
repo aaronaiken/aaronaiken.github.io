@@ -2483,6 +2483,7 @@ body.mode-after-dark {
 			const btn = document.getElementById('scratch-save-btn');
 			// Keep localStorage in sync
 			localStorage.setItem('cockpit-scratch', val);
+			if (!val && !scratchLastSaved) return; // never overwrite with empty on first load
 			fetch('/scratch', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -2794,10 +2795,11 @@ body.mode-after-dark {
 	let workScratchSaveTimer = null;
 
 	function switchScratchTab(tab) {
-		if (tab === scratchCurrentTab) return;
-		// Save current tab before switching
-		saveScratchNow();
-		scratchCurrentTab = tab;
+        if (tab === scratchCurrentTab) return;
+        // Only save if textarea has content — never save empty during init
+        const currentVal = document.getElementById('scratch-input').value;
+        if (currentVal.trim()) saveScratchNow();
+        scratchCurrentTab = tab;
 
 		const homeBtn = document.getElementById('scratch-tab-home');
 		const deskBtn = document.getElementById('scratch-tab-desk');
@@ -2852,6 +2854,7 @@ body.mode-after-dark {
 		const status = document.getElementById('scratch-status');
 		const btn = document.getElementById('scratch-save-btn');
 		localStorage.setItem('cockpit-scratch-work', val);
+		if (!val && !workScratchLastSaved) return; // never overwrite with empty on first load
 		fetch('/scratch/work', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
