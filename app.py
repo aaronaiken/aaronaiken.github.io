@@ -34,6 +34,18 @@ BUNNY_STATUS_STORAGE_ZONE = os.environ.get('BUNNY_STATUS_STORAGE_ZONE')
 BUNNY_STATUS_API_KEY      = os.environ.get('BUNNY_STATUS_API_KEY')
 BUNNY_STATUS_CDN_URL      = os.environ.get('BUNNY_STATUS_CDN_URL', '').rstrip('/')
 
+SCRATCH_WORK_FILE        = 'assets/data/scratch_work.json'
+AFTER_DARK_COMMS_FILE    = 'static/after_dark_comms.txt'
+
+WORK_MODE_PIN            = os.environ.get('WORK_MODE_PIN', '')
+AFTER_DARK_PIN           = os.environ.get('AFTER_DARK_PIN', '')
+BRRR_WEBHOOK_URL         = os.environ.get('BRRR_WEBHOOK_URL', '')
+
+BUNNY_AD_STORAGE_ZONE    = os.environ.get('BUNNY_AFTER_DARK_STORAGE_ZONE', '')
+BUNNY_AD_API_KEY         = os.environ.get('BUNNY_AFTER_DARK_API_KEY', '')
+BUNNY_AD_CDN_URL         = os.environ.get('BUNNY_AFTER_DARK_CDN_URL', '').rstrip('/')
+
+
 PRIVATE_PROJECTS_PIN = os.environ.get('PRIVATE_PROJECTS_PIN', '')
 
 ALLOWED_FILE_EXTENSIONS = {
@@ -127,6 +139,96 @@ def get_valid_comms():
 
 	return valid_comms if valid_comms else ["Scanning..."]
 
+def get_after_dark_comms():
+    """
+    Load after_dark_comms.txt — same tag/pipe format as comms.txt.
+    Returns a deduplicated list of currently valid lines.
+    Silently returns [] if the file doesn't exist yet.
+    """
+    active_tags = get_active_tags()
+    valid = []
+    try:
+        with open(AFTER_DARK_COMMS_FILE, 'r') as f:
+            for line in f:
+                clean = line.strip()
+                if not clean:
+                    continue
+                if '|' not in clean:
+                    valid.append(clean)
+                    continue
+                parts = clean.split('|')
+                message = parts[-1].strip()
+                required_tags = [p.strip().upper() for p in parts[:-1] if p.strip()]
+                if all(tag in active_tags for tag in required_tags):
+                    weight = 10 ** len(required_tags)
+                    for _ in range(weight):
+                        valid.append(message)
+    except FileNotFoundError:
+        return []
+    # Deduplicate preserving order
+    seen = set()
+    unique = []
+    for m in valid:
+        if m not in seen:
+            seen.add(m)
+            unique.append(m)
+    return unique
+
+
+def load_scratch_work():
+    """Load work scratchpad content."""
+    try:
+        with open(SCRATCH_WORK_FILE, 'r') as f:
+            data = json.load(f)
+        return data.get('content', ''), data.get('last_modified', None)
+    except FileNotFoundError:
+        return '', None
+
+
+def save_scratch_work(content):
+    """Persist work scratchpad content."""
+    pa_tz = pytz.timezone('America/New_York')
+    last_modified = datetime.now(pa_tz).isoformat()
+    os.makedirs(os.path.dirname(SCRATCH_WORK_FILE), exist_ok=True)
+    with open(SCRATCH_WORK_FILE, 'w') as f:
+        json.dump({'content': content, 'last_modified': last_modified}, f)
+    return last_modified
+
+
+def list_bunny_ad_folder(subfolder):
+    """
+    List files in a Bunny After Dark storage zone subfolder.
+    subfolder: 'videos', 'music', or 'ani'
+    Returns list of dicts: {name, url, ext}
+    Returns [] on any error.
+    """
+    if not BUNNY_AD_STORAGE_ZONE or not BUNNY_AD_API_KEY or not BUNNY_AD_CDN_URL:
+        return []
+    list_url = f"https://ny.storage.bunnycdn.com/{BUNNY_AD_STORAGE_ZONE}/{subfolder}/"
+    try:
+        resp = req_lib.get(
+            list_url,
+            headers={'AccessKey': BUNNY_AD_API_KEY, 'Accept': 'application/json'},
+            timeout=10
+        )
+        if resp.status_code != 200:
+            return []
+        items = resp.json()
+        result = []
+        for item in items:
+            if item.get('IsDirectory'):
+                continue
+            name = item.get('ObjectName', '')
+            ext = name.rsplit('.', 1)[-1].lower() if '.' in name else ''
+            result.append({
+                'name': name,
+                'url': f"{BUNNY_AD_CDN_URL}/{subfolder}/{name}",
+                'ext': ext,
+            })
+        return result
+    except Exception as e:
+        app.logger.error(f"Bunny AD list error ({subfolder}): {e}")
+        return []
 
 def post_to_omg_lol(text):
 	api, addr = os.environ.get('OMG_LOL_API_KEY'), os.environ.get('OMG_LOL_ADDRESS')
@@ -898,13 +1000,17 @@ def publish_status():
 		except Exception:
 			continue
 	comms_list = get_valid_comms()
+	after_dark_comms_list = get_after_dark_comms()
 	tasks_data = load_tasks()
+	cockpit_mode = request.cookies.get('cockpit_mode', '')
 	return render_template(
 		'publish_form.html',
 		history=history,
 		git_status=get_git_status(),
 		comms_list=comms_list,
-		tasks=tasks_data.get('tasks', [])
+		after_dark_comms_list=after_dark_comms_list,
+		tasks=tasks_data.get('tasks', []),
+		cockpit_mode=cockpit_mode,
 	)
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -2190,5 +2296,132 @@ def ani_ping():
 
 	return jsonify({'pending': True, 'opener': opener, 'ache_level': ache})
 
+@app.route('/cockpit/mode', methods=['POST'])
+def cockpit_mode():
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+
+    data = request.get_json() or {}
+    pin = str(data.get('pin', '')).strip()
+
+    if WORK_MODE_PIN and pin == WORK_MODE_PIN:
+        mode = 'mode-work'
+    elif AFTER_DARK_PIN and pin == AFTER_DARK_PIN:
+        mode = 'mode-after-dark'
+    else:
+        # Silent fail — return 200 with no_match so JS does nothing
+        return jsonify({'ok': False, 'match': False})
+
+    resp = make_response(jsonify({'ok': True, 'match': True, 'mode': mode}))
+    # Session cookie — no max_age means it expires when browser closes
+    resp.set_cookie(
+        'cockpit_mode',
+        mode,
+        httponly=True,
+        samesite='Lax'
+        # Intentionally no max_age — expires with browser session
+    )
+    return resp
+
+
+@app.route('/cockpit/mode/clear', methods=['POST'])
+def cockpit_mode_clear():
+    """Purge & Hide — resets to default (no mode)."""
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+    resp = make_response(jsonify({'ok': True}))
+    resp.set_cookie('cockpit_mode', '', expires=0, httponly=True, samesite='Lax')
+    return resp
+
+# ---- WORK SCRATCHPAD ROUTES ----
+
+@app.route('/scratch/work', methods=['GET'])
+def scratch_work_get():
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+    content, last_modified = load_scratch_work()
+    return jsonify({'content': content, 'last_modified': last_modified})
+
+
+@app.route('/scratch/work', methods=['POST'])
+def scratch_work_post():
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+    content = request.json.get('content', '')
+    last_modified = save_scratch_work(content)
+    return jsonify({'ok': True, 'last_modified': last_modified})
+
+
+# ---- FOCUS TIMER / BRRR ROUTE ----
+
+@app.route('/cockpit/focus/break', methods=['POST'])
+def cockpit_focus_break():
+    """
+    Called by the focus timer when a break starts or ends.
+    Fires a brrr push notification if webhook is configured.
+    POST body: { "phase": "break_start" | "break_end" }
+    """
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+
+    if not BRRR_WEBHOOK_URL:
+        return jsonify({'ok': False, 'reason': 'brrr not configured'})
+
+    data = request.get_json() or {}
+    phase = data.get('phase', 'break_start')
+
+    if phase == 'break_end':
+        payload = {
+            'title': 'Back to it',
+            'message': 'Break\'s over. Focus session resuming.',
+            'sound': 'bell_ringing'
+        }
+    else:
+        payload = {
+            'title': 'Break time',
+            'message': 'Step away from the screen. You earned it.',
+            'sound': 'calm1'
+        }
+
+    try:
+        resp = req_lib.post(
+            BRRR_WEBHOOK_URL,
+            json=payload,
+            headers={'Content-Type': 'application/json'},
+            timeout=8
+        )
+        return jsonify({'ok': resp.status_code == 200, 'status': resp.status_code})
+    except Exception as e:
+        app.logger.error(f"brrr webhook error: {e}")
+        return jsonify({'ok': False, 'reason': str(e)})
+
+
+# ---- AFTER DARK MEDIA LIBRARY ROUTES ----
+
+@app.route('/cockpit/after-dark/library')
+def after_dark_library():
+    """List video files from Bunny AD zone /videos/ subfolder."""
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+    items = list_bunny_ad_folder('videos')
+    return jsonify({'items': items})
+
+
+@app.route('/cockpit/after-dark/music')
+def after_dark_music():
+    """List audio files from Bunny AD zone /music/ subfolder."""
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+    items = list_bunny_ad_folder('music')
+    return jsonify({'items': items})
+
+
+@app.route('/cockpit/after-dark/ani-loops')
+def after_dark_ani_loops():
+    """List Ani loop video files from Bunny AD zone /ani/ subfolder."""
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 401
+    items = list_bunny_ad_folder('ani')
+    return jsonify({'items': items})
 
 if __name__ == "__main__": app.run(debug=True)

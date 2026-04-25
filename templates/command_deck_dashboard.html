@@ -844,6 +844,118 @@ function cdShowAssign(id, context) {
   });
 })();
 
+// ============================================================
+// COMMAND PALETTE — Ctrl+K
+// ============================================================
+(function() {
+    // Inject styles
+    const style = document.createElement('style');
+    style.textContent = `
+        #ck-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.75); z-index: 10015;
+            align-items: flex-start; justify-content: center;
+            padding-top: 15vh;
+        }
+        #ck-overlay.open { display: flex; }
+        #ck-box {
+            background: #0d1008; border: 1px solid #5a3c18;
+            border-radius: 3px; width: 380px; max-width: 92vw;
+            box-shadow: 0 0 40px rgba(0,0,0,0.9);
+            overflow: hidden; font-family: 'Share Tech Mono', monospace;
+        }
+        #ck-input {
+            width: 100%; background: #080a06; border: none;
+            border-bottom: 1px solid #2e1e08; color: #d4880a;
+            font-family: 'Share Tech Mono', monospace; font-size: 0.85rem;
+            padding: 12px 16px; outline: none; box-sizing: border-box;
+        }
+        #ck-input::placeholder { color: #5a3c18; }
+        .ck-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 16px; cursor: pointer;
+            border-bottom: 1px solid #1e1608; transition: background 0.1s;
+        }
+        .ck-item:last-child { border-bottom: none; }
+        .ck-item:hover, .ck-item.sel { background: #3d2804; }
+        .ck-icon { font-size: 0.8rem; width: 16px; text-align: center; flex-shrink: 0; }
+        .ck-label { font-size: 0.7rem; color: #c89040; letter-spacing: 0.1em; flex: 1; }
+        .ck-hint { font-size: 0.52rem; color: #7a5020; letter-spacing: 0.1em; }
+    `;
+    document.head.appendChild(style);
+
+    // Inject HTML
+    const overlay = document.createElement('div');
+    overlay.id = 'ck-overlay';
+    overlay.innerHTML = `
+        <div id="ck-box">
+            <input type="text" id="ck-input" placeholder="where to..." autocomplete="off">
+            <div id="ck-list"></div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Items — ADJUST PER PAGE (see note below)
+    const ITEMS = [
+        { icon: '⌘', label: 'Bridge',        hint: '/command-deck/', action: () => location.href = '/command-deck/' },
+        { icon: '▼', label: 'Below Deck',    hint: '/below-deck',    action: () => location.href = '/below-deck' },
+        { icon: '⌇', label: 'Cockpit',       hint: '/publish',       action: () => location.href = '/publish' },
+        { icon: '◫', label: 'Projects',      hint: '/command-deck/projects/', action: () => location.href = '/command-deck/projects/' },
+        { icon: '⏎', label: 'Refresh',       hint: '',               action: () => location.reload() },
+    ];
+
+    let filtered = [...ITEMS], selected = 0, isOpen = false;
+
+    function open() {
+        isOpen = true;
+        overlay.classList.add('open');
+        filtered = [...ITEMS]; selected = 0; render();
+        setTimeout(() => {
+            const inp = document.getElementById('ck-input');
+            inp.value = ''; inp.focus();
+        }, 50);
+    }
+
+    function close() {
+        isOpen = false;
+        overlay.classList.remove('open');
+        document.getElementById('ck-input').value = '';
+    }
+
+    function render() {
+        const list = document.getElementById('ck-list');
+        list.innerHTML = '';
+        filtered.forEach(function(item, idx) {
+            const div = document.createElement('div');
+            div.className = 'ck-item' + (idx === selected ? ' sel' : '');
+            div.innerHTML = `<span class="ck-icon">${item.icon}</span><span class="ck-label">${item.label}</span><span class="ck-hint">${item.hint}</span>`;
+            div.onclick = function() { item.action(); close(); };
+            list.appendChild(div);
+        });
+    }
+
+    document.getElementById('ck-input').addEventListener('input', function() {
+        const q = this.value.toLowerCase();
+        filtered = ITEMS.filter(i => i.label.toLowerCase().includes(q));
+        selected = 0; render();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            isOpen ? close() : open();
+            return;
+        }
+        if (!isOpen) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); selected = Math.min(selected + 1, filtered.length - 1); render(); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); selected = Math.max(selected - 1, 0); render(); }
+        else if (e.key === 'Enter') { e.preventDefault(); if (filtered[selected]) { filtered[selected].action(); close(); } }
+        else if (e.key === 'Escape') close();
+    });
+
+    overlay.addEventListener('click', function(e) { if (e.target === this) close(); });
+})();
+
 </script>
 
 </body>
