@@ -1,6 +1,13 @@
 {
   "tasks": [
     {
+      "id": "1777154492",
+      "title": "Clean out washing machine",
+      "status": "open",
+      "created": "2026-04-25T18:01:32.333905-04:00",
+      "completed": null
+    },
+    {
       "id": "1776800881",
       "title": "Build \"Command Deck\"",
       "status": "complete",
