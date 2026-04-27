@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{{ project.title }} — Command Deck</title>
   <link rel="stylesheet" href="/static/command_deck.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
@@ -25,6 +25,8 @@
         BELOW DECK
         <span class="cd-bd-badge" id="bdBadge"></span>
       </a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/today/" class="cd-nav-link">TODAY</a>
       <span class="cd-nav-sep">·</span>
       <a href="/publish" class="cd-nav-link">COCKPIT</a>
     </nav>
@@ -1287,5 +1289,7 @@ function cdEditTask(id) {
 
 </script>
 
+
+{% include 'includes/today_panel.html' %}
 </body>
 </html>

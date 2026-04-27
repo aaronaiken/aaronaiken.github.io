@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Command Deck</title>
   <link rel="stylesheet" href="/static/command_deck.css">
 </head>
@@ -24,6 +24,8 @@
         BELOW DECK
         <span class="cd-bd-badge" id="bdBadge"></span>
       </a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/today/" class="cd-nav-link">TODAY</a>
       <span class="cd-nav-sep">·</span>
       <a href="/publish" class="cd-nav-link">COCKPIT</a>
     </nav>
@@ -87,6 +89,20 @@
             <div class="cd-empty" id="bdEmpty">All clear.</div>
           {% endif %}
 
+        </div>
+      </div>
+
+      <!-- TODAY CALLOUT -->
+      <div class="cd-panel cd-mb" id="todayCallout"
+           data-today-count="{{ today_count }}"
+           style="display:none;">
+        <div class="cd-panel-body" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+          <span style="font-family:var(--cd-font-ui);font-size:0.65rem;letter-spacing:0.08em;color:var(--cd-text-dim);line-height:1.6;">
+            No tasks selected for today.
+            <a href="/today/" style="color:var(--cd-amber);text-decoration:underline;text-underline-offset:2px;font-family:inherit;font-size:inherit;letter-spacing:inherit;">Choose what's worth doing</a>
+            &mdash; or dismiss this if you're taking a break from the list world today.
+          </span>
+          <button id="todayCalloutDismiss" style="background:none;border:1px solid rgba(212,136,10,0.2);padding:3px 10px;font-family:var(--cd-font-ui);font-size:0.55rem;letter-spacing:0.15em;color:rgba(212,136,10,0.4);cursor:pointer;border-radius:2px;white-space:nowrap;">DISMISS</button>
         </div>
       </div>
 
@@ -958,5 +974,7 @@ function cdShowAssign(id, context) {
 
 </script>
 
+
+{% include 'includes/today_panel.html' %}
 </body>
 </html>

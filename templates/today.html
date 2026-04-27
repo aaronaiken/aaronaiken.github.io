@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Today — Command Deck</title>
+  <link rel="stylesheet" href="/static/command_deck.css">
+</head>
+<body class="command-deck">
+<div class="cd-shell">
+
+  <!-- HEADER -->
+  <header class="cd-header">
+    <div class="cd-header-left">
+      <a href="/command-deck/" class="cd-wordmark">COMMAND DECK</a>
+      <span class="cd-ident">TODAY · SELECT YOUR FOCUS</span>
+    </div>
+    <nav class="cd-header-nav">
+      <a href="/command-deck/" class="cd-nav-link">BRIDGE</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/projects/" class="cd-nav-link">PROJECTS</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/below-deck" class="cd-nav-link">
+        BELOW DECK
+        <span class="cd-bd-badge" id="bdBadge"></span>
+      </a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/today/" class="cd-nav-link active">TODAY</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/publish" class="cd-nav-link">COCKPIT</a>
+    </nav>
+  </header>
+
+  <!-- MAIN -->
+  <div class="cd-main full-width">
+    <div class="cd-content">
+
+      <div class="cd-flex-between cd-mb">
+        <h1 class="cd-page-title">Today</h1>
+        <span id="todayCountLabel" style="font-family:var(--cd-font-ui);font-size:0.62rem;letter-spacing:0.15em;color:var(--cd-text-dim);">— tasks selected</span>
+      </div>
+
+      <div id="masterList">
+        <div class="cd-panel cd-mb">
+          <div class="cd-panel-body">
+            <div class="cd-empty" id="masterLoading">Loading tasks...</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="cd-footer">
+    <div class="cd-footer-links">
+      <a href="/command-deck/" class="cd-footer-link">Bridge</a>
+      <a href="/publish" class="cd-footer-link">Cockpit</a>
+      <a href="/below-deck" class="cd-footer-link">Below Deck</a>
+    </div>
+    <span class="cd-footer-ident">YT-1300F · COMMAND DECK · SECURE</span>
+  </footer>
+
+</div>
+
+{% include 'includes/today_panel.html' %}
+
+<style>
+.today-group {
+  margin-bottom: 1.5rem;
+}
+.today-group-header {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  color: var(--cd-text-dim);
+  text-transform: uppercase;
+  padding: 0 0 6px 0;
+  border-bottom: 1px solid rgba(212,136,10,0.1);
+  margin-bottom: 4px;
+}
+.today-master-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 2px;
+  transition: background 0.12s;
+  cursor: default;
+}
+.today-master-row:hover {
+  background: rgba(212,136,10,0.05);
+}
+.today-master-title {
+  font-family: var(--cd-font-mono, 'Share Tech Mono', monospace);
+  font-size: 0.78rem;
+  color: var(--cd-text, rgba(212,136,10,0.85));
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+}
+.today-master-title.is-starred {
+  color: var(--cd-amber, #d4880a);
+}
+.today-star-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  line-height: 1;
+  color: rgba(212,136,10,0.2);
+  transition: color 0.15s, transform 0.15s;
+  border-radius: 2px;
+}
+.today-star-btn:hover {
+  color: rgba(212,136,10,0.7);
+  transform: scale(1.2);
+}
+.today-star-btn.starred {
+  color: #d4880a;
+  text-shadow: 0 0 8px rgba(212,136,10,0.4);
+}
+.today-empty-group {
+  padding: 8px 12px;
+  font-family: var(--cd-font-ui);
+  font-size: 0.6rem;
+  color: var(--cd-text-dim);
+  letter-spacing: 0.08em;
+}
+</style>
+
+<script>
+(function() {
+  'use strict';
+
+  var currentCount = 0;
+
+  function escHtml(str) {
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(str || ''));
+    return d.innerHTML;
+  }
+
+  function updateCountLabel(n) {
+    currentCount = n;
+    var el = document.getElementById('todayCountLabel');
+    if (el) {
+      el.textContent = n === 1 ? '1 task selected' : n + ' tasks selected';
+    }
+  }
+
+  function loadMasterList() {
+    fetch('/today/data')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        renderMasterList(data.below_deck || [], data.projects || [], data.today_open || []);
+        updateCountLabel((data.today_open || []).length);
+      })
+      .catch(function() {
+        document.getElementById('masterList').innerHTML =
+          '<div class="cd-panel"><div class="cd-panel-body"><div class="cd-empty">Could not load tasks.</div></div></div>';
+      });
+  }
+
+  function renderMasterList(belowDeck, projects, todayOpen) {
+    var todayIds = {};
+    todayOpen.forEach(function(t) { todayIds[t.id] = true; });
+
+    var totalTasks = belowDeck.length + projects.reduce(function(s, p) { return s + p.tasks.length; }, 0);
+
+    if (totalTasks === 0) {
+      document.getElementById('masterList').innerHTML =
+        '<div class="cd-panel"><div class="cd-panel-body"><div class="cd-empty">No open tasks anywhere. You\'re all clear.</div></div></div>';
+      return;
+    }
+
+    var html = '';
+
+    // Below Deck group
+    if (belowDeck.length > 0) {
+      html += '<div class="cd-panel cd-mb today-group">';
+      html += '<div class="cd-panel-header"><span class="cd-panel-title">// Below Deck</span></div>';
+      html += '<div class="cd-panel-body" style="padding:4px 0;">';
+      belowDeck.forEach(function(t) {
+        var starred = todayIds[t.id] || t.today == 1;
+        html += taskRow(t, starred);
+      });
+      html += '</div></div>';
+    }
+
+    // Project groups
+    projects.forEach(function(proj) {
+      if (!proj.tasks || proj.tasks.length === 0) return;
+      html += '<div class="cd-panel cd-mb today-group">';
+      html += '<div class="cd-panel-header"><span class="cd-panel-title">// ' + escHtml(proj.title) + '</span></div>';
+      html += '<div class="cd-panel-body" style="padding:4px 0;">';
+      proj.tasks.forEach(function(t) {
+        var starred = todayIds[t.id] || t.today == 1;
+        html += taskRow(t, starred);
+      });
+      html += '</div></div>';
+    });
+
+    document.getElementById('masterList').innerHTML = html;
+
+    // Bind star buttons
+    document.querySelectorAll('.today-star-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        starTask(btn.getAttribute('data-id'), btn);
+      });
+    });
+  }
+
+  function taskRow(t, starred) {
+    return '<div class="today-master-row" data-id="' + t.id + '">' +
+      '<button class="today-star-btn' + (starred ? ' starred' : '') + '" ' +
+              'data-id="' + t.id + '" ' +
+              'title="' + (starred ? 'Remove from Today' : 'Add to Today') + '">' +
+        (starred ? '★' : '☆') +
+      '</button>' +
+      '<span class="today-master-title' + (starred ? ' is-starred' : '') + '">' +
+        escHtml(t.title) +
+      '</span>' +
+      '</div>';
+  }
+
+  function starTask(id, btn) {
+    var wasStarred = btn.classList.contains('starred');
+    // Optimistic UI
+    toggleStar(btn, !wasStarred);
+
+    var fd = new FormData();
+    fd.append('id', id);
+    fetch('/today/star', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success) {
+          toggleStar(btn, wasStarred); // revert on failure
+          return;
+        }
+        updateCountLabel(data.count);
+      })
+      .catch(function() {
+        toggleStar(btn, wasStarred); // revert on error
+      });
+  }
+
+  function toggleStar(btn, on) {
+    var titleEl = btn.closest('.today-master-row').querySelector('.today-master-title');
+    if (on) {
+      btn.classList.add('starred');
+      btn.textContent = '★';
+      btn.title = 'Remove from Today';
+      if (titleEl) titleEl.classList.add('is-starred');
+    } else {
+      btn.classList.remove('starred');
+      btn.textContent = '☆';
+      btn.title = 'Add to Today';
+      if (titleEl) titleEl.classList.remove('is-starred');
+    }
+  }
+
+  // Badge
+  fetch('/below-deck/count').then(function(r) { return r.json(); }).then(function(data) {
+    var badge = document.getElementById('bdBadge');
+    if (!badge || data.count === 0) return;
+    badge.classList.add(data.count <= 3 ? 'green' : data.count <= 6 ? 'amber' : 'red');
+  });
+
+  loadMasterList();
+
+})();
+</script>
+
+</body>
+</html>

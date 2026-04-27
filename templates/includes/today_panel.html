@@ -1,0 +1,498 @@
+<!-- ============================================================ -->
+<!-- TODAY PANEL INCLUDE                                           -->
+<!-- Slim bar + slide-down panel showing Today list only.         -->
+<!-- Master task list lives at /today/                            -->
+<!-- Keyboard: Ctrl+Shift+T · Esc to close                        -->
+<!-- ============================================================ -->
+
+<style>
+/* ---- TODAY BAR ---- */
+#today-bar {
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(10, 10, 8, 0.92);
+  border-bottom: 1px solid rgba(212, 136, 10, 0.3);
+  cursor: pointer;
+  user-select: none;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: border-color 0.2s;
+}
+#today-bar:hover {
+  border-bottom-color: rgba(212, 136, 10, 0.7);
+}
+#today-bar-label {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  color: rgba(212, 136, 10, 0.6);
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
+#today-bar:hover #today-bar-label { color: rgba(212, 136, 10, 0.9); }
+#today-bar-count {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: #d4880a;
+  min-width: 14px;
+  text-align: left;
+}
+#today-bar-count.has-tasks {
+  color: #f0a830;
+  text-shadow: 0 0 8px rgba(240, 168, 48, 0.4);
+}
+#today-bar-chevron {
+  font-size: 0.5rem;
+  color: rgba(212, 136, 10, 0.4);
+  transition: transform 0.25s, color 0.2s;
+  line-height: 1;
+}
+#today-bar.panel-open #today-bar-chevron {
+  transform: rotate(180deg);
+  color: rgba(212, 136, 10, 0.7);
+}
+
+/* ---- TODAY PANEL ---- */
+#today-panel {
+  position: fixed;
+  top: calc(28px + env(safe-area-inset-top, 0px));
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  max-height: 60vh;
+  background: #0a0a08;
+  border-bottom: 1px solid rgba(212, 136, 10, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  transform: translateY(-100%);
+  transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+#today-panel.today-open { transform: translateY(0); }
+
+#today-panel-header {
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid rgba(212, 136, 10, 0.12);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#today-panel-title {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  color: rgba(212, 136, 10, 0.55);
+  text-transform: uppercase;
+}
+#today-panel-manage {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  color: rgba(212, 136, 10, 0.4);
+  text-decoration: none;
+  border: 1px solid rgba(212, 136, 10, 0.2);
+  padding: 3px 8px;
+  border-radius: 2px;
+  transition: all 0.15s;
+}
+#today-panel-manage:hover {
+  color: rgba(212, 136, 10, 0.8);
+  border-color: rgba(212, 136, 10, 0.5);
+}
+
+#today-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+#today-panel-footer {
+  flex-shrink: 0;
+  padding: 7px 16px;
+  border-top: 1px solid rgba(212, 136, 10, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#today-panel-hint {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  color: rgba(212, 136, 10, 0.25);
+}
+#today-close-btn {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  color: rgba(212, 136, 10, 0.4);
+  background: none;
+  border: 1px solid rgba(212, 136, 10, 0.2);
+  padding: 3px 8px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.15s;
+}
+#today-close-btn:hover {
+  color: rgba(212, 136, 10, 0.8);
+  border-color: rgba(212, 136, 10, 0.5);
+}
+
+/* ---- TASK ROWS ---- */
+.today-task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px;
+  transition: background 0.12s;
+}
+.today-task-row:hover { background: rgba(212, 136, 10, 0.05); }
+.today-task-row.is-done .today-task-title {
+  text-decoration: line-through;
+  color: rgba(212, 136, 10, 0.3);
+}
+.today-task-title {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: 0.72rem;
+  color: rgba(212, 136, 10, 0.85);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+.today-task-source {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+  color: rgba(212, 136, 10, 0.3);
+  white-space: nowrap;
+}
+.today-check-btn {
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  border: 1px solid rgba(212, 136, 10, 0.35);
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+}
+.today-check-btn:hover {
+  border-color: rgba(212, 136, 10, 0.7);
+  background: rgba(212, 136, 10, 0.08);
+}
+.today-check-btn.checked {
+  background: rgba(212, 136, 10, 0.15);
+  border-color: rgba(212, 136, 10, 0.5);
+}
+.today-check-btn svg {
+  width: 9px; height: 9px;
+  stroke: rgba(212, 136, 10, 0.7);
+  fill: none; stroke-width: 2.5;
+  stroke-linecap: round; stroke-linejoin: round;
+  display: none;
+}
+.today-check-btn.checked svg { display: block; }
+
+/* Empty / loading */
+.today-empty, .today-loading {
+  padding: 20px 16px;
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: 0.62rem;
+  color: rgba(212, 136, 10, 0.25);
+  letter-spacing: 0.1em;
+  text-align: center;
+  line-height: 1.8;
+}
+.today-loading { animation: today-pulse 1.2s ease-in-out infinite; }
+@keyframes today-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@media (max-width: 640px) {
+  #today-panel { max-height: 75vh; }
+}
+
+/* ---- LIGHT MODE ---- */
+@media (prefers-color-scheme: light) {
+  #today-bar {
+    background: rgba(245, 240, 230, 0.95);
+    border-bottom-color: rgba(122, 62, 0, 0.25);
+  }
+  #today-bar:hover {
+    border-bottom-color: rgba(122, 62, 0, 0.5);
+  }
+  #today-bar-label {
+    color: rgba(122, 62, 0, 0.55);
+  }
+  #today-bar:hover #today-bar-label {
+    color: rgba(122, 62, 0, 0.85);
+  }
+  #today-bar-count {
+    color: #7a3e00;
+  }
+  #today-bar-count.has-tasks {
+    color: #5a2e00;
+    text-shadow: none;
+  }
+  #today-bar-chevron {
+    color: rgba(122, 62, 0, 0.35);
+  }
+  #today-bar.panel-open #today-bar-chevron {
+    color: rgba(122, 62, 0, 0.65);
+  }
+  #today-panel {
+    background: #faf6ef;
+    border-bottom-color: rgba(122, 62, 0, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  }
+  #today-panel-header {
+    border-bottom-color: rgba(122, 62, 0, 0.1);
+  }
+  #today-panel-title {
+    color: rgba(122, 62, 0, 0.5);
+  }
+  #today-panel-manage {
+    color: rgba(122, 62, 0, 0.4);
+    border-color: rgba(122, 62, 0, 0.15);
+  }
+  #today-panel-manage:hover {
+    color: rgba(122, 62, 0, 0.75);
+    border-color: rgba(122, 62, 0, 0.4);
+  }
+  #today-panel-footer {
+    border-top-color: rgba(122, 62, 0, 0.08);
+  }
+  #today-panel-hint {
+    color: rgba(122, 62, 0, 0.2);
+  }
+  #today-close-btn {
+    color: rgba(122, 62, 0, 0.4);
+    border-color: rgba(122, 62, 0, 0.15);
+  }
+  #today-close-btn:hover {
+    color: rgba(122, 62, 0, 0.75);
+    border-color: rgba(122, 62, 0, 0.4);
+  }
+  .today-task-row:hover {
+    background: rgba(122, 62, 0, 0.04);
+  }
+  .today-task-title {
+    color: rgba(58, 30, 10, 0.85);
+  }
+  .today-task-row.is-done .today-task-title {
+    color: rgba(58, 30, 10, 0.3);
+  }
+  .today-task-source {
+    color: rgba(122, 62, 0, 0.3);
+  }
+  .today-check-btn {
+    border-color: rgba(122, 62, 0, 0.3);
+  }
+  .today-check-btn:hover {
+    border-color: rgba(122, 62, 0, 0.6);
+    background: rgba(122, 62, 0, 0.06);
+  }
+  .today-check-btn.checked {
+    background: rgba(122, 62, 0, 0.1);
+    border-color: rgba(122, 62, 0, 0.4);
+  }
+  .today-check-btn svg {
+    stroke: rgba(122, 62, 0, 0.65);
+  }
+  .today-empty,
+  .today-loading {
+    color: rgba(122, 62, 0, 0.3);
+  }
+}
+</style>
+
+<!-- TODAY BAR -->
+<div id="today-bar" role="button" aria-label="Today task list" tabindex="0">
+  <span id="today-bar-label">TODAY</span>
+  <span id="today-bar-count">·</span>
+  <span id="today-bar-chevron">▾</span>
+</div>
+
+<!-- TODAY PANEL -->
+<div id="today-panel" role="dialog" aria-label="Today panel" aria-hidden="true">
+  <div id="today-panel-header">
+    <span id="today-panel-title">Today</span>
+    <a href="/today/" id="today-panel-manage">MANAGE LIST →</a>
+  </div>
+  <div id="today-panel-body">
+    <div class="today-loading">LOADING...</div>
+  </div>
+  <div id="today-panel-footer">
+    <span id="today-panel-hint">Ctrl+Shift+T · Esc to close</span>
+    <button id="today-close-btn">CLOSE</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var panelOpen = false;
+  var currentCount = 0;
+
+  var bar      = document.getElementById('today-bar');
+  var panel    = document.getElementById('today-panel');
+  var barCount = document.getElementById('today-bar-count');
+  var body     = document.getElementById('today-panel-body');
+  var closeBtn = document.getElementById('today-close-btn');
+
+  function escHtml(str) {
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(str || ''));
+    return d.innerHTML;
+  }
+
+  function updateBarCount(n) {
+    currentCount = n;
+    barCount.textContent = n > 0 ? n : '·';
+    if (n > 0) { barCount.classList.add('has-tasks'); }
+    else { barCount.classList.remove('has-tasks'); }
+  }
+
+  function openPanel() {
+    panelOpen = true;
+    panel.classList.add('today-open');
+    panel.setAttribute('aria-hidden', 'false');
+    bar.classList.add('panel-open');
+    loadTodayList();
+  }
+
+  function closePanel() {
+    panelOpen = false;
+    panel.classList.remove('today-open');
+    panel.setAttribute('aria-hidden', 'true');
+    bar.classList.remove('panel-open');
+  }
+
+  function togglePanel() {
+    if (panelOpen) { closePanel(); } else { openPanel(); }
+  }
+
+  function fetchCount() {
+    fetch('/today/count')
+      .then(function(r) { return r.json(); })
+      .then(function(data) { updateBarCount(data.count || 0); })
+      .catch(function() {});
+  }
+
+  function loadTodayList() {
+    body.innerHTML = '<div class="today-loading">LOADING...</div>';
+    fetch('/today/data')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        renderList(data.today_open || [], data.today_done || []);
+        updateBarCount((data.today_open || []).length);
+      })
+      .catch(function() {
+        body.innerHTML = '<div class="today-empty">Could not load.</div>';
+      });
+  }
+
+  function renderList(open, done) {
+    if (open.length === 0 && done.length === 0) {
+      body.innerHTML = '<div class="today-empty">Nothing here yet.<br><a href="/today/" style="color:rgba(212,136,10,0.5);text-decoration:underline;">Add tasks from the master list →</a></div>';
+      return;
+    }
+    var html = '';
+    open.forEach(function(t) {
+      var source = t.project_title || 'Below Deck';
+      html += '<div class="today-task-row" data-id="' + t.id + '">' +
+        '<button class="today-check-btn" data-id="' + t.id + '" title="Mark complete">' +
+          '<svg viewBox="0 0 12 10"><polyline points="1.5,5 4.5,8.5 10.5,1.5"/></svg>' +
+        '</button>' +
+        '<span class="today-task-title">' + escHtml(t.title) + '</span>' +
+        '<span class="today-task-source">' + escHtml(source) + '</span>' +
+        '</div>';
+    });
+    done.forEach(function(t) {
+      var source = t.project_title || 'Below Deck';
+      html += '<div class="today-task-row is-done" data-id="' + t.id + '">' +
+        '<button class="today-check-btn checked" disabled title="Completed">' +
+          '<svg viewBox="0 0 12 10"><polyline points="1.5,5 4.5,8.5 10.5,1.5"/></svg>' +
+        '</button>' +
+        '<span class="today-task-title">' + escHtml(t.title) + '</span>' +
+        '<span class="today-task-source">' + escHtml(source) + '</span>' +
+        '</div>';
+    });
+    body.innerHTML = html;
+    body.querySelectorAll('.today-check-btn:not([disabled])').forEach(function(btn) {
+      btn.addEventListener('click', function() { completeTask(btn.getAttribute('data-id'), btn); });
+    });
+  }
+
+  function completeTask(id, btn) {
+    btn.classList.add('checked');
+    btn.disabled = true;
+    var fd = new FormData();
+    fd.append('id', id);
+    fetch('/today/complete', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success) return;
+        var row = btn.closest('.today-task-row');
+        if (row) row.classList.add('is-done');
+        updateBarCount(Math.max(0, currentCount - 1));
+      })
+      .catch(function() {
+        btn.classList.remove('checked');
+        btn.disabled = false;
+      });
+  }
+
+  bar.addEventListener('click', togglePanel);
+  bar.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePanel(); }
+  });
+  closeBtn.addEventListener('click', closePanel);
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'T') { e.preventDefault(); togglePanel(); }
+    if (e.key === 'Escape' && panelOpen) closePanel();
+  });
+
+  // Init
+  fetchCount();
+  setInterval(fetchCount, 60000);
+
+  // Dashboard callout — show if today_count is 0 and not dismissed today
+  var callout = document.getElementById('todayCallout');
+  if (callout) {
+    var count = parseInt(callout.getAttribute('data-today-count') || '0', 10);
+    var dismissKey = 'today-callout-dismissed-' + new Date().toISOString().slice(0, 10);
+    if (count === 0 && !localStorage.getItem(dismissKey)) {
+      callout.style.display = '';
+    }
+    var dismissBtn = document.getElementById('todayCalloutDismiss');
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', function() {
+        localStorage.setItem(dismissKey, '1');
+        callout.style.display = 'none';
+      });
+    }
+  }
+
+})();
+</script>
