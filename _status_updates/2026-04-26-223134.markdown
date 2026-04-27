@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-04-26 22:31:34 -0400
+layout: status_update
+author: aaron
+source: web
+---
+📖 reading before bed. Been a while!
