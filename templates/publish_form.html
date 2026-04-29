@@ -2693,8 +2693,13 @@ body.mode-after-dark {
     // ============================================================
     let lastEscapeTime = 0;
     let familyHidden = false;
-    const FAMILY_HIDE_IDS = ['ad-panel', 'ad-player', 'ani-panel', 'secret-comm'];
+    const FAMILY_HIDE_IDS = ['ad-panel', 'ad-player', 'ani-panel', 'ad-status-line'];
     const familyHiddenState = {};
+    // Transform-based panels stay at display:flex even when slid off-screen,
+    // so we can't use computed display to detect their actual visibility.
+    // Track their "open" state separately so restore can re-open them.
+    let familyAniWasOpen      = false;
+    let familyAdLoungeWasOpen = false;
 
     document.addEventListener('keydown', function(e) {
         if (e.key !== 'Escape') return;
@@ -2708,30 +2713,31 @@ body.mode-after-dark {
             lastEscapeTime = 0;
 
             if (!familyHidden) {
-                // Hide NSFW panels — only those currently visible
+                // Hide NSFW panels — only those actually visible right now
                 familyHidden = true;
+                familyAniWasOpen      = (typeof aniIsOpen !== 'undefined' && aniIsOpen);
+                familyAdLoungeWasOpen = !!adAniOpen;
+
                 FAMILY_HIDE_IDS.forEach(function(id) {
                     const el = document.getElementById(id);
                     if (!el) return;
-                    const wasVisible = window.getComputedStyle(el).display !== 'none';
+                    let wasVisible;
+                    if (id === 'ani-panel')      wasVisible = familyAniWasOpen;
+                    else if (id === 'ad-panel')  wasVisible = familyAdLoungeWasOpen;
+                    else                         wasVisible = window.getComputedStyle(el).display !== 'none';
                     familyHiddenState[id] = wasVisible;
                     if (!wasVisible) return;
-                    if (id === 'secret-comm') {
-                        // Bypass its opacity fade — kill it instantly
-                        el.style.opacity = '0';
-                        el.style.display = 'none';
-                    } else {
-                        el.classList.add('ad-family-hidden');
-                    }
+                    el.classList.add('ad-family-hidden');
                 });
-                // Also close ani panel properly
-                const adPanel = document.getElementById('ad-panel');
-                if (adPanel) adPanel.classList.remove('ad-panel-open');
-                adAniOpen = false;
-                // Close ani chat
-                if (typeof aniIsOpen !== 'undefined' && aniIsOpen) {
-                    if (typeof aniToggle === 'function') aniToggle();
+
+                // Close the ad lounge if it was slid open
+                if (familyAdLoungeWasOpen) {
+                    const adPanel = document.getElementById('ad-panel');
+                    if (adPanel) adPanel.classList.remove('ad-panel-open');
+                    adAniOpen = false;
                 }
+                // Close ani chat if it was open
+                if (familyAniWasOpen && typeof aniToggle === 'function') aniToggle();
             } else {
                 // Restore — only elements that were visible before the hide
                 familyHidden = false;
@@ -2739,14 +2745,19 @@ body.mode-after-dark {
                     const el = document.getElementById(id);
                     if (!el) return;
                     if (!familyHiddenState[id]) return;
-                    if (id === 'secret-comm') {
-                        el.style.display = 'flex';
-                        el.style.opacity = '1';
-                    } else {
-                        el.classList.remove('ad-family-hidden');
-                        if (id === 'ad-player') el.style.display = '';
-                    }
+                    el.classList.remove('ad-family-hidden');
+                    if (id === 'ad-player') el.style.display = '';
                 });
+                // Re-slide the ad lounge back on if it was open
+                if (familyAdLoungeWasOpen) {
+                    const adPanel = document.getElementById('ad-panel');
+                    if (adPanel) adPanel.classList.add('ad-panel-open');
+                    adAniOpen = true;
+                }
+                // Re-open ani chat if it was open (aniToggle is a state flip)
+                if (familyAniWasOpen && typeof aniToggle === 'function' && !aniIsOpen) {
+                    aniToggle();
+                }
             }
             return;
         }
