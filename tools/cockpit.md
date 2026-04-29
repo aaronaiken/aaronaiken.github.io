@@ -8,7 +8,7 @@ author: aaron
 
 The Cockpit is a private, password-protected web application I built to publish status updates to this site from anywhere — a phone, a tablet, a borrowed computer. It lives on [PythonAnywhere](https://pythonanywhere.com) and handles everything from writing the update to pushing it live.
 
-It is not publicly accessible. This page is just the technical manual.
+It has since grown into something larger. It is now the entry point to a small private suite of tools: a task kneeboard, a scratch pad, and a project knowledge base. None of it is publicly accessible. This page is just the technical manual.
 
 ---
 
@@ -55,21 +55,50 @@ The app builds a weighted list of valid messages based on the current time — m
 
 ---
 
+## Below Deck
+
+Below Deck is a private task kneeboard accessible from the Cockpit. It is intentionally minimal — no projects, no priorities, no due dates. Just a quick place to capture what needs doing.
+
+Tasks have optional tags (work, home, errand, personal) and support drag-to-reorder. Completed tasks surface in a Today's Wins section and auto-clear at 4am. The kneeboard is a kneeboard. It does not try to be anything else.
+
+Tasks that grow into something larger can be promoted to the Command Deck with one tap.
+
+---
+
+## Scratch Pad
+
+A private cross-device notepad that lives inside the Cockpit. Notes sync to the server automatically and fall back to localStorage if the network is unavailable. Accessible from the Cockpit and from anywhere in the Command Deck via a keyboard shortcut.
+
+---
+
+## The Command Deck
+
+The Command Deck is a private project knowledge base that lives inside the same application as the Cockpit. It is where tasks that outgrow the kneeboard go — projects with notes, checklists, file attachments, and context.
+
+Each project is its own page. Notes are freeform. Checklists track what's in progress. Files are stored on a CDN. Projects can be marked private and hidden behind a PIN.
+
+The Command Deck has its own AI companion named Huyang — named after the ancient archivist droid from *Ahsoka*. When you're on a project page, Huyang has read everything in it and can answer questions about it precisely. He is not Ani. He does not have a personality agenda. He reads what is in front of him and answers carefully.
+
+---
+
 ## The Stack
 
 - **Python** — core language
 - **Flask** — web framework
 - **Pillow** — image processing
-- **GitPython / subprocess** — git operations
+- **subprocess** — git operations
+- **SQLite** — Below Deck and Command Deck data
 - **PythonAnywhere** — hosting
 - **omg.lol API** — status mirroring
+- **Anthropic Claude API** — Huyang
+- **Bunny.net** — file storage for Command Deck
 - **Jekyll** — the site that receives the published files
 
 ---
 
 ## What It Is Not
 
-The Cockpit is not a CMS. It does not have a dashboard, an edit history, a delete function, or a draft mode. It publishes and that is all. Every update is permanent and public the moment it is transmitted.
+The Cockpit is not a CMS. It does not have an edit history, a delete function, or a draft mode beyond a local buffer. It publishes and that is all. Every status update is permanent and public the moment it is transmitted.
 
 That is a feature, not a limitation. It encourages writing things worth saying.
 

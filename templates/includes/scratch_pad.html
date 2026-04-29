@@ -28,6 +28,7 @@
 			<div class="scratch-btns">
 				<button class="scratch-btn" id="scratch-save-btn" onclick="scratchSaveNow()">SAVE</button>
 				<button class="scratch-btn" id="scratch-copy-btn" onclick="scratchCopy()">COPY</button>
+				<button class="scratch-btn scratch-btn-ghost" id="scratch-clear-btn" onclick="scratchClear()">CLEAR</button>
 			</div>
 		</div>
 	</div>
@@ -47,6 +48,7 @@
 	<div class="cd-scratch-footer">
 		<span class="cd-scratch-hint">Ctrl+Shift+S · Esc to close</span>
 		<div style="display:flex;gap:0.5rem;">
+			<button class="cd-btn sm ghost" id="scratch-clear-btn">CLEAR</button>
 			<button class="cd-btn sm ghost" id="scratch-copy-btn">COPY</button>
 			<button class="cd-btn sm" id="scratch-save-btn">SAVE</button>
 		</div>
@@ -273,6 +275,24 @@
 			.catch(function() {});
 	}
 
+	// ---- Clear ----
+	function scratchClear() {
+		if (!confirm('Clear scratch pad?')) return;
+		var ta = el('scratch-input');
+		if (ta) ta.value = '';
+		localStorage.removeItem('cockpit-scratch');
+		var isDesk = (scratchCurrentTab === 'desk' && SCRATCH_MODE === 'inline');
+		if (isDesk) localStorage.removeItem('cockpit-scratch-work');
+		fetch(isDesk ? '/scratch/work' : '/scratch', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ content: '', force: true })
+		})
+		.then(function(r) { return r.json(); })
+		.then(function() { scratchSetStatus('cleared'); })
+		.catch(function() {});
+	}
+
 	// ---- Init home scratch ----
 	function scratchInitHome() {
 		fetch('/scratch')
@@ -328,10 +348,12 @@
 	}
 
 	// ---- Wire up buttons ----
-	var saveBtn = el('scratch-save-btn');
-	var copyBtn = el('scratch-copy-btn');
-	if (saveBtn) saveBtn.addEventListener('click', scratchSaveNow);
-	if (copyBtn) copyBtn.addEventListener('click', scratchCopy);
+	var saveBtn  = el('scratch-save-btn');
+	var copyBtn  = el('scratch-copy-btn');
+	var clearBtn = el('scratch-clear-btn');
+	if (saveBtn)  saveBtn.addEventListener('click', scratchSaveNow);
+	if (copyBtn)  copyBtn.addEventListener('click', scratchCopy);
+	if (clearBtn) clearBtn.addEventListener('click', scratchClear);
 
 	// ---- Keyboard shortcut + overlay close (overlay mode) ----
 	if (SCRATCH_MODE === 'overlay') {
@@ -374,6 +396,7 @@
 	window.scratchScheduleSave = scratchScheduleSave;
 	window.scratchSaveNow      = scratchSaveNow;
 	window.scratchCopy         = scratchCopy;
+	window.scratchClear        = scratchClear;
 	window.scratchInitHome     = scratchInitHome;
 	window.scratchInitWork     = scratchInitWork;
 	window.scratchSetOffline   = scratchSetOffline;
