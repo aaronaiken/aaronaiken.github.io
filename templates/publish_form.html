@@ -1424,6 +1424,112 @@
 		opacity: 0.6;
 	}
 
+	/* ---- QUICK TRANSMISSION POPUP ---- */
+	#quick-tx-overlay {
+		display: none;
+		position: fixed;
+		inset: 0;
+		background: rgba(0,0,0,0.7);
+		z-index: 10010;
+		align-items: center;
+		justify-content: center;
+	}
+
+	#quick-tx-overlay.is-open { display: flex; }
+
+	#quick-tx-box {
+		background: var(--bg2);
+		border: 1px solid var(--border-hi);
+		border-radius: 3px;
+		padding: 18px;
+		width: 420px;
+		max-width: 92vw;
+		box-shadow: 0 0 40px rgba(0,0,0,0.8);
+		font-family: 'Share Tech Mono', monospace;
+	}
+
+	.mode-after-dark #quick-tx-box {
+		background: #120608;
+		border-color: #8a3030;
+		box-shadow: 0 0 40px rgba(0,0,0,0.9), 0 0 20px rgba(139,26,26,0.1);
+	}
+
+	#quick-tx-label {
+		font-size: 0.52rem;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
+		color: var(--muted);
+		margin-bottom: 10px;
+	}
+
+	.mode-after-dark #quick-tx-label { color: #8a3030; }
+
+	#quick-tx-textarea {
+		width: 100%;
+		height: 100px;
+		background: var(--input-bg);
+		color: var(--text-body);
+		border: 1px solid var(--border);
+		border-radius: 2px;
+		padding: 10px 12px;
+		font-family: 'Crimson Pro', Georgia, serif;
+		font-size: 0.95rem;
+		font-style: italic;
+		line-height: 1.6;
+		resize: none;
+		outline: none;
+		-webkit-appearance: none;
+		box-sizing: border-box;
+		transition: border-color 0.2s;
+	}
+
+	.mode-after-dark #quick-tx-textarea {
+		background: #0e0508;
+		border-color: #7a2828;
+		color: #7a3030;
+	}
+
+	#quick-tx-textarea:focus { border-color: var(--amber-lo); }
+	.mode-after-dark #quick-tx-textarea:focus { border-color: #a03838; }
+
+	#quick-tx-footer {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+		margin-top: 10px;
+		flex-wrap: wrap;
+	}
+
+	#quick-tx-send {
+		background: var(--amber-dim);
+		border: 1px solid var(--amber-lo);
+		color: var(--amber-hi);
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.6rem;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		padding: 5px 14px;
+		border-radius: 2px;
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	#quick-tx-send:hover { background: #4a2c08; border-color: var(--amber); }
+
+	.mode-after-dark #quick-tx-send {
+		background: #1a0a0a;
+		border-color: #a03838;
+		color: #8b1a1a;
+	}
+
+	#quick-tx-hint {
+		font-size: 0.48rem;
+		color: var(--muted);
+		letter-spacing: 0.12em;
+		margin-left: auto;
+		opacity: 0.6;
+	}
+
 	/* ---- COMMAND PALETTE ---- */
 	#cmd-palette-overlay {
 		display: none;
@@ -1745,7 +1851,7 @@ body.mode-after-dark {
 			<span id="ad-player-title">// VIEWER</span>
 			<div class="ad-player-tb-actions">
 				<button class="ad-player-tb-btn" onclick="adLibraryToggle()" id="ad-library-toggle-btn">LIB</button>
-				<button class="ad-player-tb-btn" onclick="adViewerToggleMute()" id="ad-viewer-mute-btn">MUTE</button>
+				<button class="ad-player-tb-btn" onclick="adViewerToggleMute()" id="ad-viewer-mute-btn">UNMUTE</button>
 				<button class="ad-player-tb-btn" onclick="adPlayerMinimize()" id="ad-minimize-btn">—</button>
 				<button class="ad-player-tb-btn" onclick="adPlayerClose()">✕</button>
 			</div>
@@ -1802,6 +1908,22 @@ body.mode-after-dark {
 				</select>
 				<button id="brain-dump-save" onclick="brainDumpSave()">SEND TO BELOW DECK</button>
 				<span id="brain-dump-hint">ESC to cancel</span>
+			</div>
+		</div>
+	</div>
+
+	<!-- Quick Transmission Popup (Ctrl+Shift+U, work + after-dark) -->
+	<div id="quick-tx-overlay" role="dialog" aria-label="Quick transmission">
+		<div id="quick-tx-box">
+			<div id="quick-tx-label">// QUICK TRANSMISSION</div>
+			<textarea
+				id="quick-tx-textarea"
+				placeholder="status update..."
+				maxlength="280"
+			></textarea>
+			<div id="quick-tx-footer">
+				<button id="quick-tx-send" onclick="quickTxSend()">TRANSMIT</button>
+				<span id="quick-tx-hint">ESC to cancel · Enter to send</span>
 			</div>
 		</div>
 	</div>
@@ -2524,6 +2646,10 @@ body.mode-after-dark {
 	document.addEventListener('keydown', function(e) {
 		if (e.key === 'Escape') {
 			// Close overlays first if any are open
+			if (document.getElementById('quick-tx-overlay').classList.contains('is-open')) {
+				quickTxClose();
+				return;
+			}
 			if (document.getElementById('brain-dump-overlay').classList.contains('is-open')) {
 				brainDumpClose();
 				return;
@@ -2567,7 +2693,7 @@ body.mode-after-dark {
     // ============================================================
     let lastEscapeTime = 0;
     let familyHidden = false;
-    const FAMILY_HIDE_IDS = ['ad-panel', 'ad-player', 'ani-panel'];
+    const FAMILY_HIDE_IDS = ['ad-panel', 'ad-player', 'ani-panel', 'secret-comm'];
     const familyHiddenState = {};
 
     document.addEventListener('keydown', function(e) {
@@ -2582,13 +2708,21 @@ body.mode-after-dark {
             lastEscapeTime = 0;
 
             if (!familyHidden) {
-                // Hide NSFW panels
+                // Hide NSFW panels — only those currently visible
                 familyHidden = true;
                 FAMILY_HIDE_IDS.forEach(function(id) {
                     const el = document.getElementById(id);
                     if (!el) return;
-                    familyHiddenState[id] = el.style.display || '';
-                    el.classList.add('ad-family-hidden');
+                    const wasVisible = window.getComputedStyle(el).display !== 'none';
+                    familyHiddenState[id] = wasVisible;
+                    if (!wasVisible) return;
+                    if (id === 'secret-comm') {
+                        // Bypass its opacity fade — kill it instantly
+                        el.style.opacity = '0';
+                        el.style.display = 'none';
+                    } else {
+                        el.classList.add('ad-family-hidden');
+                    }
                 });
                 // Also close ani panel properly
                 const adPanel = document.getElementById('ad-panel');
@@ -2599,14 +2733,19 @@ body.mode-after-dark {
                     if (typeof aniToggle === 'function') aniToggle();
                 }
             } else {
-                // Restore
+                // Restore — only elements that were visible before the hide
                 familyHidden = false;
                 FAMILY_HIDE_IDS.forEach(function(id) {
                     const el = document.getElementById(id);
                     if (!el) return;
-                    el.classList.remove('ad-family-hidden');
-                    // Reset any inline display that might have been set
-                    if (id === 'ad-player') el.style.display = '';
+                    if (!familyHiddenState[id]) return;
+                    if (id === 'secret-comm') {
+                        el.style.display = 'flex';
+                        el.style.opacity = '1';
+                    } else {
+                        el.classList.remove('ad-family-hidden');
+                        if (id === 'ad-player') el.style.display = '';
+                    }
                 });
             }
             return;
@@ -2769,7 +2908,7 @@ body.mode-after-dark {
 		fetch('/cockpit/focus/break', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ phase: 'break_start' })
+			body: JSON.stringify({ phase: 'focus timer ended, step away for 5' })
 		}).catch(() => {});
 	}
 
@@ -2777,7 +2916,7 @@ body.mode-after-dark {
 		fetch('/cockpit/focus/break', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ phase: 'break_end' })
+			body: JSON.stringify({ phase: 'break timer ended, time to get back to it' })
 		}).catch(() => {});
 	}
 
@@ -3501,6 +3640,59 @@ body.mode-after-dark {
 				}
 			})
 			.catch(() => brainDumpClose());
+	}
+
+	// ============================================================
+	// QUICK TRANSMISSION — Ctrl+Shift+U (work + after-dark only)
+	// ============================================================
+
+	document.addEventListener('keydown', function(e) {
+		if (e.ctrlKey && e.shiftKey && (e.key === 'U' || e.key === 'u')) {
+			if (COCKPIT_MODE !== 'work' && COCKPIT_MODE !== 'after-dark') return;
+			e.preventDefault();
+			quickTxOpen();
+		}
+	});
+
+	function quickTxOpen() {
+		const overlay = document.getElementById('quick-tx-overlay');
+		overlay.classList.add('is-open');
+		setTimeout(function() {
+			document.getElementById('quick-tx-textarea').focus();
+		}, 50);
+	}
+
+	function quickTxClose() {
+		document.getElementById('quick-tx-overlay').classList.remove('is-open');
+		document.getElementById('quick-tx-textarea').value = '';
+	}
+
+	document.getElementById('quick-tx-overlay').addEventListener('click', function(e) {
+		if (e.target === this) quickTxClose();
+	});
+
+	document.getElementById('quick-tx-textarea').addEventListener('keydown', function(e) {
+		if (e.key === 'Enter' && !e.shiftKey) {
+			e.preventDefault();
+			quickTxSend();
+		}
+	});
+
+	function quickTxSend() {
+		const text = document.getElementById('quick-tx-textarea').value.trim();
+		if (!text) { quickTxClose(); return; }
+
+		const fd = new FormData();
+		fd.append('status', text);
+
+		fetch('/publish', { method: 'POST', body: fd })
+			.then(r => {
+				if (r.ok) {
+					playChirp(880, 'sine');
+					quickTxClose();
+				}
+			})
+			.catch(() => quickTxClose());
 	}
 
 	// ============================================================
