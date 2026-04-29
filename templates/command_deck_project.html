@@ -279,22 +279,8 @@
 </div>
 
 <!-- SCRATCH PAD -->
-<div class="cd-scratch-overlay" id="scratchOverlay"></div>
-<div class="cd-scratch-panel" id="scratchPanel">
-  <div class="cd-scratch-panel-header">
-    <span class="cd-scratch-title">// Scratch</span>
-    <span class="cd-scratch-status" id="scratchStatus">—</span>
-  </div>
-  <textarea class="cd-scratch-textarea" id="scratchTextarea"
-    placeholder="quick thoughts, clipboard, anything..."></textarea>
-  <div class="cd-scratch-footer">
-    <span class="cd-scratch-hint">Ctrl+Shift+S · Esc to close</span>
-    <div style="display:flex;gap:0.5rem;">
-      <button class="cd-btn sm ghost" id="scratchCopy">COPY</button>
-      <button class="cd-btn sm" id="scratchSave">SAVE</button>
-    </div>
-  </div>
-</div>
+{% set scratch_mode = 'overlay' %}
+{% include 'includes/scratch_pad.html' %}
 
 <script>
 const PROJECT_ID   = {{ project.id }};
@@ -943,54 +929,6 @@ document.getElementById('deleteProjectBtn').addEventListener('click',function(){
   form.method='POST';form.action=`/command-deck/projects/${PROJECT_SLUG}/delete`;
   document.body.appendChild(form);form.submit();
 });
-
-// ============================================================
-// SCRATCH PAD — Ctrl+Shift+S
-// ============================================================
-(function(){
-  const overlay=document.getElementById('scratchOverlay');
-  const panel=document.getElementById('scratchPanel');
-  const textarea=document.getElementById('scratchTextarea');
-  const status=document.getElementById('scratchStatus');
-  const saveBtn=document.getElementById('scratchSave');
-  const copyBtn=document.getElementById('scratchCopy');
-  let open=false,debounce=null,saveTimer=null;
-  function openPanel(){open=true;overlay.classList.add('open');panel.classList.add('open');fetchScratch();setTimeout(()=>textarea.focus(),300);}
-  function closePanel(){open=false;overlay.classList.remove('open');panel.classList.remove('open');}
-  document.addEventListener('keydown',e=>{
-    if(e.ctrlKey&&e.shiftKey&&e.key==='S'){e.preventDefault();open?closePanel():openPanel();}
-    if(e.key==='Escape'&&open) closePanel();
-  });
-  overlay.addEventListener('click',closePanel);
-  function setStatus(m){status.textContent=m;}
-  function fetchScratch(){
-    setStatus('loading...');
-    fetch('/scratch').then(r=>r.json()).then(data=>{
-      textarea.value=data.content||'';
-      setStatus(data.last_modified?'synced':'—');
-      if(!data.content){const l=localStorage.getItem('cockpit-scratch');if(l){textarea.value=l;setStatus('local');}}
-    }).catch(()=>{const l=localStorage.getItem('cockpit-scratch');if(l)textarea.value=l;setStatus('· OFFLINE');});
-  }
-  function saveScratch(){
-    const content=textarea.value;localStorage.setItem('cockpit-scratch',content);
-    fetch('/scratch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: content })
-    })
-    .then(r=>r.json()).then(()=>{setStatus('saved');if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(()=>setStatus('—'),3000);})
-    .catch(()=>setStatus('· OFFLINE'));
-  }
-  textarea.addEventListener('input',function(){
-    localStorage.setItem('cockpit-scratch',textarea.value);
-    if(debounce)clearTimeout(debounce);setStatus('...');debounce=setTimeout(saveScratch,1500);
-  });
-  saveBtn.addEventListener('click',saveScratch);
-  copyBtn.addEventListener('click',function(){
-    navigator.clipboard.writeText(textarea.value).then(()=>{const o=copyBtn.textContent;copyBtn.textContent='COPIED';setTimeout(()=>copyBtn.textContent=o,1500);});
-  });
-  window.addEventListener('online',saveScratch);
-})();
 
 // ============================================================
 // UTILS
