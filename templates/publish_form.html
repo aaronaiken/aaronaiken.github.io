@@ -2861,21 +2861,29 @@ body.mode-after-dark {
 
 		focusSecondsLeft = focusComputeSecondsLeft();
 
-		// Catch up phase boundaries crossed while the tab was throttled / suspended.
-		// Each crossing fires its tone + webhook.
-		while (focusSecondsLeft <= 0 && focusRunning) {
+		// Phase ended → fire tone + webhook, swap to the next phase, then PAUSE.
+		// Manual gating: user must press START to begin the next phase.
+		if (focusSecondsLeft <= 0) {
 			if (focusPhase === 'focus') {
-				focusPhase = 'break';
-				focusEndTime += breakDurationMins() * 60 * 1000;
 				focusPlayTone('focus_end');
 				focusNotifyBreakStart();
+				focusPhase = 'break';
+				focusSecondsLeft = breakDurationMins() * 60;
 			} else {
-				focusPhase = 'focus';
-				focusEndTime += focusDurationMins() * 60 * 1000;
 				focusPlayTone('break_end');
 				focusNotifyBreakEnd();
+				focusPhase = 'focus';
+				focusSecondsLeft = focusDurationMins() * 60;
 			}
-			focusSecondsLeft = focusComputeSecondsLeft();
+			clearInterval(focusInterval);
+			focusInterval = null;
+			focusRunning = false;
+			focusEndTime = null;
+			const btn = document.getElementById('focus-start-btn');
+			if (btn) {
+				btn.textContent = 'START';
+				btn.classList.remove('is-running');
+			}
 		}
 
 		focusPersistState();
@@ -2916,6 +2924,16 @@ body.mode-after-dark {
 				focusSecondsLeft = state.secondsLeft;
 				focusEndTime = null;
 				focusUpdateDisplay();
+				const btn = document.getElementById('focus-start-btn');
+				if (btn) {
+					// Phase-boundary pause (manual gating) shows START;
+					// mid-phase pause shows RESUME.
+					const phaseFullDuration = focusPhase === 'focus'
+						? focusDurationMins() * 60
+						: breakDurationMins() * 60;
+					btn.textContent = (focusSecondsLeft === phaseFullDuration) ? 'START' : 'RESUME';
+					btn.classList.remove('is-running');
+				}
 				return;
 			}
 			// Was running — restore the end-time anchor (fall back to savedAt math for old state shapes)
