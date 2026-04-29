@@ -2846,6 +2846,7 @@ body.mode-after-dark {
 				// Fresh start
 				focusSecondsLeft = focusDurationMins() * 60;
 			}
+			focusRequestNotificationPermission();
 			focusRunning = true;
 			focusEndTime = Date.now() + focusSecondsLeft * 1000;
 			btn.textContent = 'PAUSE';
@@ -2867,11 +2868,13 @@ body.mode-after-dark {
 			if (focusPhase === 'focus') {
 				focusPlayTone('focus_end');
 				focusNotifyBreakStart();
+				focusDesktopNotify('focus_end');
 				focusPhase = 'break';
 				focusSecondsLeft = breakDurationMins() * 60;
 			} else {
 				focusPlayTone('break_end');
 				focusNotifyBreakEnd();
+				focusDesktopNotify('break_end');
 				focusPhase = 'focus';
 				focusSecondsLeft = focusDurationMins() * 60;
 			}
@@ -2957,7 +2960,7 @@ body.mode-after-dark {
 		fetch('/cockpit/focus/break', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ phase: 'focus timer ended, step away for 5' })
+			body: JSON.stringify({ phase: 'break_start' })
 		}).catch(() => {});
 	}
 
@@ -2965,8 +2968,32 @@ body.mode-after-dark {
 		fetch('/cockpit/focus/break', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ phase: 'break timer ended, time to get back to it' })
+			body: JSON.stringify({ phase: 'break_end' })
 		}).catch(() => {});
+	}
+
+	function focusRequestNotificationPermission() {
+		if (!('Notification' in window)) return;
+		if (Notification.permission === 'default') {
+			Notification.requestPermission().catch(() => {});
+		}
+	}
+
+	function focusDesktopNotify(type) {
+		if (!('Notification' in window) || Notification.permission !== 'granted') return;
+		try {
+			if (type === 'focus_end') {
+				new Notification('Focus session ended', {
+					body: 'Step away. Break starts when you press START.',
+					tag: 'cockpit-focus'
+				});
+			} else {
+				new Notification('Break\'s up', {
+					body: 'Back to it when you\'re ready.',
+					tag: 'cockpit-focus'
+				});
+			}
+		} catch (e) { /* ignore */ }
 	}
 
 	function focusPlayTone(type) {
