@@ -1,0 +1,382 @@
+{# ============================================================
+   SCRATCH PAD — unified include
+   Usage:
+     {% set scratch_mode = 'inline' %}   (Cockpit — collapsible section)
+     {% set scratch_mode = 'overlay' %}  (Command Deck — Ctrl+Shift+S panel)
+   ============================================================ #}
+
+{% if scratch_mode == 'inline' %}
+{# ---- INLINE MODE — Cockpit collapsible section ---- #}
+<div class="scratch-section">
+	<div class="log-header tasks-toggle" onclick="scratchToggle()">
+		<span>// Scratch<span class="scratch-offline-badge" id="scratch-offline-badge">· OFFLINE</span></span>
+		<span class="tasks-toggle-arrow" id="scratch-arrow">▾</span>
+	</div>
+	<div class="tasks-body" id="scratch-body">
+		<div id="scratch-tab-row">
+			<button class="scratch-tab is-active" id="scratch-tab-home" onclick="scratchSwitchTab('home')">HOME</button>
+			<button class="scratch-tab" id="scratch-tab-desk" onclick="scratchSwitchTab('desk')">DESK</button>
+		</div>
+		<textarea
+			class="scratch-textarea"
+			id="scratch-input"
+			placeholder="Notes, links, half-baked ideas..."
+			oninput="scratchScheduleSave()"
+		></textarea>
+		<div class="scratch-action-row">
+			<div class="scratch-status" id="scratch-status"></div>
+			<div class="scratch-btns">
+				<button class="scratch-btn" id="scratch-save-btn" onclick="scratchSaveNow()">SAVE</button>
+				<button class="scratch-btn" id="scratch-copy-btn" onclick="scratchCopy()">COPY</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+{% else %}
+{# ---- OVERLAY MODE — Command Deck slide-up panel ---- #}
+<div class="cd-scratch-overlay" id="scratchOverlay"></div>
+<div class="cd-scratch-panel" id="scratchPanel">
+	<div class="cd-scratch-panel-header">
+		<span class="cd-scratch-title">// Scratch</span>
+		<span class="cd-scratch-status" id="scratch-status">—</span>
+	</div>
+	<textarea class="cd-scratch-textarea" id="scratch-input"
+		placeholder="Notes, links, half-baked ideas..."
+		oninput="scratchScheduleSave()"></textarea>
+	<div class="cd-scratch-footer">
+		<span class="cd-scratch-hint">Ctrl+Shift+S · Esc to close</span>
+		<div style="display:flex;gap:0.5rem;">
+			<button class="cd-btn sm ghost" id="scratch-copy-btn">COPY</button>
+			<button class="cd-btn sm" id="scratch-save-btn">SAVE</button>
+		</div>
+	</div>
+</div>
+{% endif %}
+
+<script>
+(function() {
+	// ============================================================
+	// SCRATCH PAD — shared logic
+	// scratch_mode: '{{ scratch_mode }}'
+	// ============================================================
+
+	const SCRATCH_MODE = '{{ scratch_mode }}';
+
+	// ---- State ----
+	let scratchSaveTimer      = null;
+	let scratchLastSaved      = null;
+	let scratchTickTimer      = null;
+	let scratchOffline        = false;
+	let scratchPanelOpen      = false;   // overlay mode only
+	let scratchLoaded         = false;   // guard: never save before first load
+	let scratchCurrentTab     = 'home';  // inline mode only
+	let workScratchLastSaved  = null;    // inline mode only
+	let workScratchSaveTimer  = null;    // inline mode only
+
+	// ---- DOM helpers ----
+	function el(id) { return document.getElementById(id); }
+
+	function scratchSetStatus(msg) {
+		var s = el('scratch-status');
+		if (s) s.textContent = msg;
+	}
+
+	// ---- Offline badge (inline mode only) ----
+	function scratchSetOffline(isOffline) {
+		scratchOffline = isOffline;
+		var badge  = el('scratch-offline-badge');
+		var btn    = el('scratch-save-btn');
+		var status = el('scratch-status');
+		if (isOffline) {
+			if (badge)  badge.classList.add('visible');
+			if (btn)    { btn.classList.add('is-offline'); btn.classList.remove('is-success'); }
+			if (status) { status.textContent = 'Saved locally · no network'; status.style.color = 'var(--amber)'; }
+		} else {
+			if (badge)  badge.classList.remove('visible');
+			if (btn)    btn.classList.remove('is-offline');
+			if (status) status.style.color = '';
+		}
+	}
+
+	// ---- "Saved N ago" ticker (inline mode only) ----
+	function scratchUpdateStatus() {
+		if (scratchOffline) return;
+		if (!scratchLastSaved) return;
+		var now     = new Date();
+		var diffSec = Math.floor((now - scratchLastSaved) / 1000);
+		var label;
+		if (diffSec < 10)   label = 'Saved · just now';
+		else if (diffSec < 60)   label = 'Saved · ' + diffSec + 's ago';
+		else if (diffSec < 3600) label = 'Saved · ' + Math.floor(diffSec / 60) + 'm ago';
+		else                     label = 'Saved · ' + Math.floor(diffSec / 3600) + 'h ago';
+		scratchSetStatus(label);
+	}
+
+	// ---- Overlay open/close ----
+	function scratchOpenPanel() {
+		scratchPanelOpen = true;
+		var overlay = el('scratchOverlay');
+		var panel   = el('scratchPanel');
+		if (overlay) overlay.classList.add('open');
+		if (panel)   panel.classList.add('open');
+		scratchInitHome();
+		setTimeout(function() { var ta = el('scratch-input'); if (ta) ta.focus(); }, 300);
+	}
+
+	function scratchClosePanel() {
+		scratchPanelOpen = false;
+		var overlay = el('scratchOverlay');
+		var panel   = el('scratchPanel');
+		if (overlay) overlay.classList.remove('open');
+		if (panel)   panel.classList.remove('open');
+	}
+
+	// ---- Inline collapse toggle ----
+	function scratchToggle() {
+		var body  = el('scratch-body');
+		var arrow = el('scratch-arrow');
+		if (!body || !arrow) return;
+		var isCollapsed = arrow.classList.contains('is-collapsed');
+		body.classList.toggle('is-collapsed');
+		arrow.classList.toggle('is-collapsed');
+		localStorage.setItem('cockpit-scratch-collapsed', isCollapsed ? '0' : '1');
+		if (isCollapsed) { scratchInitHome(); }
+	}
+
+	// ---- Tab switcher (inline mode only) ----
+	function scratchSwitchTab(tab) {
+		if (tab === scratchCurrentTab) return;
+		var currentVal = el('scratch-input') ? el('scratch-input').value : '';
+		if (currentVal.trim()) scratchSaveNow();
+		scratchCurrentTab = tab;
+
+		var homeBtn = el('scratch-tab-home');
+		var deskBtn = el('scratch-tab-desk');
+		if (homeBtn) homeBtn.classList.toggle('is-active', tab === 'home');
+		if (deskBtn) deskBtn.classList.toggle('is-active', tab === 'desk');
+
+		var ta = el('scratch-input');
+		if (ta) {
+			ta.placeholder = tab === 'desk' ? 'Work notes, desk thoughts...' : 'Notes, links, half-baked ideas...';
+			ta.value = '';
+		}
+		scratchSetStatus('');
+
+		if (tab === 'desk') { scratchInitWork(); }
+		else                { scratchInitHome(); }
+	}
+
+	// ---- Schedule save (routes by tab in inline mode) ----
+	function scratchScheduleSave() {
+		var val = el('scratch-input') ? el('scratch-input').value : '';
+		if (scratchCurrentTab === 'desk' && SCRATCH_MODE === 'inline') {
+			localStorage.setItem('cockpit-scratch-work', val);
+			clearTimeout(workScratchSaveTimer);
+			workScratchSaveTimer = setTimeout(scratchSaveNow, 1500);
+		} else {
+			localStorage.setItem('cockpit-scratch', val);
+			clearTimeout(scratchSaveTimer);
+			scratchSaveTimer = setTimeout(scratchSaveNow, 1500);
+		}
+	}
+
+	// ---- Save now (routes by tab in inline mode) ----
+	function scratchSaveNow() {
+		if (scratchCurrentTab === 'desk' && SCRATCH_MODE === 'inline') {
+			scratchSaveWorkNow();
+		} else {
+			scratchSaveHomeNow();
+		}
+	}
+
+	function scratchSaveHomeNow() {
+		clearTimeout(scratchSaveTimer);
+		var val    = el('scratch-input') ? el('scratch-input').value : '';
+		var btn    = el('scratch-save-btn');
+		localStorage.setItem('cockpit-scratch', val);
+		// Guard: never overwrite with empty before first successful load
+		if (!val && !scratchLoaded) return;
+		fetch('/scratch', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ content: val })
+		})
+		.then(function(r) { return r.json(); })
+		.then(function(data) {
+			if (data.ok) {
+				scratchLastSaved = new Date();
+				if (SCRATCH_MODE === 'inline') {
+					scratchSetOffline(false);
+					scratchUpdateStatus();
+				} else {
+					scratchSetStatus('saved');
+					clearTimeout(scratchSaveTimer);
+					scratchSaveTimer = setTimeout(function() { scratchSetStatus('—'); }, 3000);
+				}
+				if (btn) {
+					btn.textContent = 'SAVED ✓';
+					btn.classList.add('is-success');
+					setTimeout(function() { btn.textContent = 'SAVE'; btn.classList.remove('is-success'); }, 1500);
+				}
+			}
+		})
+		.catch(function() {
+			if (SCRATCH_MODE === 'inline') {
+				scratchSetOffline(true);
+			} else {
+				scratchSetStatus('· OFFLINE');
+			}
+		});
+	}
+
+	function scratchSaveWorkNow() {
+		clearTimeout(workScratchSaveTimer);
+		var val = el('scratch-input') ? el('scratch-input').value : '';
+		var btn = el('scratch-save-btn');
+		localStorage.setItem('cockpit-scratch-work', val);
+		// Guard: never overwrite with empty before first successful load
+		if (!val && !workScratchLastSaved) return;
+		fetch('/scratch/work', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ content: val })
+		})
+		.then(function(r) { return r.json(); })
+		.then(function(data) {
+			if (data.ok) {
+				workScratchLastSaved = new Date();
+				if (btn) {
+					btn.textContent = 'SAVED ✓';
+					btn.classList.add('is-success');
+					setTimeout(function() { btn.textContent = 'SAVE'; btn.classList.remove('is-success'); }, 1500);
+				}
+			}
+		})
+		.catch(function() {
+			if (btn) { btn.textContent = 'OFFLINE'; btn.classList.add('is-offline'); }
+		});
+	}
+
+	// ---- Copy ----
+	function scratchCopy() {
+		var val = el('scratch-input') ? el('scratch-input').value : '';
+		var btn = el('scratch-copy-btn');
+		navigator.clipboard.writeText(val)
+			.then(function() {
+				if (btn) {
+					btn.textContent = 'COPIED ✓';
+					btn.classList.add('is-success');
+					setTimeout(function() { btn.textContent = 'COPY'; btn.classList.remove('is-success'); }, 2000);
+				}
+			})
+			.catch(function() {});
+	}
+
+	// ---- Init home scratch ----
+	function scratchInitHome() {
+		fetch('/scratch')
+			.then(function(r) { return r.json(); })
+			.then(function(data) {
+				var ta = el('scratch-input');
+				if (!ta) return;
+				if (data.content !== null && data.content !== undefined) {
+					ta.value = data.content;
+					localStorage.setItem('cockpit-scratch', data.content);
+				} else {
+					var local = localStorage.getItem('cockpit-scratch');
+					if (local) ta.value = local;
+				}
+				scratchLoaded = true;
+				if (data.last_modified) {
+					scratchLastSaved = new Date(data.last_modified);
+					if (SCRATCH_MODE === 'inline') scratchUpdateStatus();
+					else scratchSetStatus('synced');
+				} else {
+					if (SCRATCH_MODE === 'overlay') scratchSetStatus('—');
+				}
+			})
+			.catch(function() {
+				var ta    = el('scratch-input');
+				var local = localStorage.getItem('cockpit-scratch');
+				if (ta && local) ta.value = local;
+				if (SCRATCH_MODE === 'inline') scratchSetOffline(true);
+				else scratchSetStatus('· OFFLINE');
+			});
+	}
+
+	// ---- Init work scratch (inline mode only) ----
+	function scratchInitWork() {
+		fetch('/scratch/work')
+			.then(function(r) { return r.json(); })
+			.then(function(data) {
+				var ta = el('scratch-input');
+				if (!ta) return;
+				if (data.content !== null && data.content !== undefined) {
+					ta.value = data.content;
+					localStorage.setItem('cockpit-scratch-work', data.content);
+				} else {
+					var local = localStorage.getItem('cockpit-scratch-work');
+					if (local) ta.value = local;
+				}
+			})
+			.catch(function() {
+				var ta    = el('scratch-input');
+				var local = localStorage.getItem('cockpit-scratch-work');
+				if (ta && local) ta.value = local;
+			});
+	}
+
+	// ---- Wire up buttons ----
+	var saveBtn = el('scratch-save-btn');
+	var copyBtn = el('scratch-copy-btn');
+	if (saveBtn) saveBtn.addEventListener('click', scratchSaveNow);
+	if (copyBtn) copyBtn.addEventListener('click', scratchCopy);
+
+	// ---- Keyboard shortcut + overlay close (overlay mode) ----
+	if (SCRATCH_MODE === 'overlay') {
+		document.addEventListener('keydown', function(e) {
+			if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+				e.preventDefault();
+				scratchPanelOpen ? scratchClosePanel() : scratchOpenPanel();
+			}
+			if (e.key === 'Escape' && scratchPanelOpen) scratchClosePanel();
+		});
+		var overlay = el('scratchOverlay');
+		if (overlay) overlay.addEventListener('click', scratchClosePanel);
+	}
+
+	// ---- Online handler — safe: only fires if already known offline ----
+	window.addEventListener('online', function() {
+		if (scratchOffline) scratchSaveHomeNow();
+	});
+
+	// ---- Init on load ----
+	if (SCRATCH_MODE === 'inline') {
+		// Restore collapse state
+		if (localStorage.getItem('cockpit-scratch-collapsed') === '1') {
+			var body  = el('scratch-body');
+			var arrow = el('scratch-arrow');
+			if (body)  body.classList.add('is-collapsed');
+			if (arrow) arrow.classList.add('is-collapsed');
+		} else {
+			scratchInitHome();
+		}
+		// Tick the "saved N ago" status every 30s
+		scratchTickTimer = setInterval(scratchUpdateStatus, 30000);
+	}
+	// Overlay mode: init happens on panel open, not on page load
+
+	// ---- Expose to global scope for external callers ----
+	// (Cockpit mode JS calls these by name)
+	window.scratchToggle       = scratchToggle;
+	window.scratchSwitchTab    = scratchSwitchTab;
+	window.scratchScheduleSave = scratchScheduleSave;
+	window.scratchSaveNow      = scratchSaveNow;
+	window.scratchCopy         = scratchCopy;
+	window.scratchInitHome     = scratchInitHome;
+	window.scratchInitWork     = scratchInitWork;
+	window.scratchSetOffline   = scratchSetOffline;
+
+})();
+</script>

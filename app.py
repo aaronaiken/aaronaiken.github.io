@@ -185,13 +185,23 @@ def load_scratch_work():
         return '', None
 
 
-def save_scratch_work(content):
+def save_scratch_work(content, force=False):
     """Persist work scratchpad content."""
+    if not content and not force:
+        try:
+            with open(SCRATCH_WORK_FILE, 'r') as f:
+                existing = json.load(f)
+            if existing.get('content', ''):
+                return existing.get('last_modified')
+        except FileNotFoundError:
+            pass
     pa_tz = pytz.timezone('America/New_York')
     last_modified = datetime.now(pa_tz).isoformat()
     os.makedirs(os.path.dirname(SCRATCH_WORK_FILE), exist_ok=True)
-    with open(SCRATCH_WORK_FILE, 'w') as f:
+    tmp = SCRATCH_WORK_FILE + '.tmp'
+    with open(tmp, 'w') as f:
         json.dump({'content': content, 'last_modified': last_modified}, f)
+    os.replace(tmp, SCRATCH_WORK_FILE)
     return last_modified
 
 
@@ -1260,12 +1270,25 @@ def scratch_get():
 def scratch_post():
 	if not is_authenticated():
 		return jsonify({'error': 'unauthorized'}), 401
-	content = request.json.get('content', '')
+	data = request.json or {}
+	content = data.get('content', '')
+	force = data.get('force', False)
+	# Guard: refuse to overwrite non-empty content with empty unless force=True
+	if not content and not force:
+		try:
+			with open(SCRATCH_FILE, 'r') as f:
+				existing = json.load(f)
+			if existing.get('content', ''):
+				return jsonify({'ok': False, 'reason': 'empty_rejected'}), 200
+		except FileNotFoundError:
+			pass
 	pa_tz = pytz.timezone('America/New_York')
 	last_modified = datetime.now(pa_tz).isoformat()
 	os.makedirs(os.path.dirname(SCRATCH_FILE), exist_ok=True)
-	with open(SCRATCH_FILE, 'w') as f:
+	tmp = SCRATCH_FILE + '.tmp'
+	with open(tmp, 'w') as f:
 		json.dump({'content': content, 'last_modified': last_modified}, f)
+	os.replace(tmp, SCRATCH_FILE)
 	return jsonify({'ok': True, 'last_modified': last_modified})
 
 # ---- WEATHER ROUTE ----
@@ -2494,8 +2517,10 @@ def scratch_work_get():
 def scratch_work_post():
     if not is_authenticated():
         return jsonify({'error': 'unauthorized'}), 401
-    content = request.json.get('content', '')
-    last_modified = save_scratch_work(content)
+    data = request.json or {}
+    content = data.get('content', '')
+    force = data.get('force', False)
+    last_modified = save_scratch_work(content, force=force)
     return jsonify({'ok': True, 'last_modified': last_modified})
 
 

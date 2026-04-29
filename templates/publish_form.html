@@ -1971,31 +1971,8 @@ body.mode-after-dark {
 		</div><!-- end tasks-section -->
 
 		<!-- SCRATCH PAD -->
-		<div class="scratch-section">
-			<div class="log-header tasks-toggle" onclick="toggleScratch()">
-				<span>// Scratch<span class="scratch-offline-badge" id="scratch-offline-badge">· OFFLINE</span></span>
-				<span class="tasks-toggle-arrow" id="scratch-arrow">▾</span>
-			</div>
-			<div class="tasks-body" id="scratch-body">
-				<div id="scratch-tab-row">
-					<button class="scratch-tab is-active" id="scratch-tab-home" onclick="switchScratchTab('home')">HOME</button>
-					<button class="scratch-tab" id="scratch-tab-desk" onclick="switchScratchTab('desk')">DESK</button>
-				</div>
-				<textarea
-					class="scratch-textarea"
-					id="scratch-input"
-					placeholder="Notes, links, half-baked ideas..."
-					oninput="scheduleScratchSave()"
-				></textarea>
-				<div class="scratch-action-row">
-					<div class="scratch-status" id="scratch-status"></div>
-					<div class="scratch-btns">
-						<button class="scratch-btn" id="scratch-save-btn" onclick="saveScratchNow()">SAVE</button>
-						<button class="scratch-btn" id="scratch-copy-btn" onclick="copyScratch()">COPY</button>
-					</div>
-				</div>
-			</div>
-		</div>
+		{% set scratch_mode = 'inline' %}
+		{% include 'includes/scratch_pad.html' %}
 
 		<footer class="cockpit__footer">
 			<a href="https://aaronaiken.me">← Site</a>
@@ -2434,154 +2411,6 @@ body.mode-after-dark {
 			localStorage.setItem('cockpit-tasks-collapsed', isCollapsed ? '0' : '1');
 		}
 
-		function toggleScratch() {
-			const body = document.getElementById('scratch-body');
-			const arrow = document.getElementById('scratch-arrow');
-			const isCollapsed = arrow.classList.contains('is-collapsed');
-			body.classList.toggle('is-collapsed');
-			arrow.classList.toggle('is-collapsed');
-			localStorage.setItem('cockpit-scratch-collapsed', isCollapsed ? '0' : '1');
-			if (isCollapsed) { initScratch(); }
-		}
-
-		// ---- SCRATCH PAD ----
-		let scratchSaveTimer = null;
-		let scratchLastSaved = null;
-		let scratchTickTimer = null;
-		let scratchOffline = false;
-
-		function setScratchOffline(isOffline) {
-			scratchOffline = isOffline;
-			const badge = document.getElementById('scratch-offline-badge');
-			const btn = document.getElementById('scratch-save-btn');
-			const status = document.getElementById('scratch-status');
-			if (isOffline) {
-				badge.classList.add('visible');
-				btn.classList.add('is-offline');
-				btn.classList.remove('is-success');
-				status.textContent = 'Saved locally · no network';
-				status.style.color = 'var(--amber)';
-			} else {
-				badge.classList.remove('visible');
-				btn.classList.remove('is-offline');
-				status.style.color = '';
-			}
-		}
-
-		function scheduleScratchSave() {
-			// Always write to localStorage immediately — offline safety net
-			const val = document.getElementById('scratch-input').value;
-			localStorage.setItem('cockpit-scratch', val);
-			clearTimeout(scratchSaveTimer);
-			scratchSaveTimer = setTimeout(saveScratchNow, 1500);
-		}
-
-		function saveScratchNow() {
-			clearTimeout(scratchSaveTimer);
-			const val = document.getElementById('scratch-input').value;
-			const status = document.getElementById('scratch-status');
-			const btn = document.getElementById('scratch-save-btn');
-			// Keep localStorage in sync
-			localStorage.setItem('cockpit-scratch', val);
-			if (!val && !scratchLastSaved) return; // never overwrite with empty on first load
-			fetch('/scratch', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ content: val })
-			})
-			.then(r => r.json())
-			.then(data => {
-				if (data.ok) {
-					scratchLastSaved = new Date();
-					setScratchOffline(false);
-					updateScratchStatus();
-					btn.textContent = 'SAVED ✓';
-					btn.classList.add('is-success');
-					setTimeout(() => {
-						btn.textContent = 'SAVE';
-						btn.classList.remove('is-success');
-					}, 1500);
-				}
-			})
-			.catch(() => {
-				setScratchOffline(true);
-			});
-		}
-
-		function copyScratch() {
-			const val = document.getElementById('scratch-input').value;
-			const btn = document.getElementById('scratch-copy-btn');
-			navigator.clipboard.writeText(val)
-				.then(() => {
-					btn.textContent = 'COPIED ✓';
-					btn.classList.add('is-success');
-					setTimeout(() => {
-						btn.textContent = 'COPY';
-						btn.classList.remove('is-success');
-					}, 2000);
-				})
-				.catch(() => {});
-		}
-
-		function updateScratchStatus() {
-			if (scratchOffline) return; // offline state owns the status line
-			if (!scratchLastSaved) return;
-			const status = document.getElementById('scratch-status');
-			const now = new Date();
-			const diffSec = Math.floor((now - scratchLastSaved) / 1000);
-			let label;
-			if (diffSec < 10) label = 'Saved · just now';
-			else if (diffSec < 60) label = `Saved · ${diffSec}s ago`;
-			else if (diffSec < 3600) label = `Saved · ${Math.floor(diffSec / 60)}m ago`;
-			else label = `Saved · ${Math.floor(diffSec / 3600)}h ago`;
-			status.textContent = label;
-		}
-
-		function initScratch() {
-			fetch('/scratch')
-				.then(r => r.json())
-				.then(data => {
-					if (data.content !== null && data.content !== undefined) {
-						// Trust the server — even an empty string is intentional
-						document.getElementById('scratch-input').value = data.content;
-						localStorage.setItem('cockpit-scratch', data.content);
-					} else {
-						// Server returned nothing — check localStorage fallback
-						const local = localStorage.getItem('cockpit-scratch');
-						if (local) document.getElementById('scratch-input').value = local;
-					}
-					if (data.last_modified) {
-						scratchLastSaved = new Date(data.last_modified);
-						updateScratchStatus();
-					}
-				})
-				.catch(() => {
-					// Server unreachable — load from localStorage
-					const local = localStorage.getItem('cockpit-scratch');
-					if (local) document.getElementById('scratch-input').value = local;
-					setScratchOffline(true);
-				});
-		}
-
-		// ---- INIT ----
-		if (localStorage.getItem('cockpit-tasks-collapsed') === '1') {
-			document.getElementById('tasks-body').classList.add('is-collapsed');
-			document.getElementById('tasks-arrow').classList.add('is-collapsed');
-		}
-
-		if (localStorage.getItem('cockpit-scratch-collapsed') === '1') {
-			document.getElementById('scratch-body').classList.add('is-collapsed');
-			document.getElementById('scratch-arrow').classList.add('is-collapsed');
-		} else {
-			initScratch();
-		}
-
-		scratchTickTimer = setInterval(updateScratchStatus, 30000);
-
-		window.addEventListener('online', () => {
-			if (scratchOffline) saveScratchNow();
-		});
-
 	</script>
 
 	<script id="cockpit-modes-js">
@@ -2608,7 +2437,7 @@ body.mode-after-dark {
             document.getElementById('scratch-arrow').classList.remove('is-collapsed');
             setTimeout(function() {
                 scratchCurrentTab = 'desk';
-                initScratchWork();
+                scratchInitWork();
             }, 300);
         }
         if (COCKPIT_MODE === 'after-dark') {
@@ -2618,7 +2447,7 @@ body.mode-after-dark {
             document.getElementById('scratch-arrow').classList.remove('is-collapsed');
             // Reload scratch content after DOM settles
             setTimeout(function() {
-                initScratch();
+                scratchInitHome();
             }, 300);
         }
     })();
@@ -2786,120 +2615,10 @@ body.mode-after-dark {
 			.catch(() => window.location.reload());
 	}
 
-	// ============================================================
-	// SCRATCH TAB SWITCHER
-	// ============================================================
-
-	let scratchCurrentTab = 'home'; // 'home' or 'desk'
-	let workScratchLastSaved = null;
-	let workScratchSaveTimer = null;
-
-	function switchScratchTab(tab) {
-        if (tab === scratchCurrentTab) return;
-        // Only save if textarea has content — never save empty during init
-        const currentVal = document.getElementById('scratch-input').value;
-        if (currentVal.trim()) saveScratchNow();
-        scratchCurrentTab = tab;
-
-		const homeBtn = document.getElementById('scratch-tab-home');
-		const deskBtn = document.getElementById('scratch-tab-desk');
-		homeBtn.classList.toggle('is-active', tab === 'home');
-		deskBtn.classList.toggle('is-active', tab === 'desk');
-
-		// Update placeholder
-		const ta = document.getElementById('scratch-input');
-		ta.placeholder = tab === 'desk'
-			? 'Work notes, desk thoughts...'
-			: 'Notes, links, half-baked ideas...';
-
-		// Clear and load
-		ta.value = '';
-		document.getElementById('scratch-status').textContent = '';
-
-		if (tab === 'desk') {
-			initScratchWork();
-		} else {
-			initScratch();
-		}
-	}
-
-	// Override scheduleScratchSave to route by active tab
-	const _origScheduleScratchSave = scheduleScratchSave;
-	scheduleScratchSave = function() {
-		const val = document.getElementById('scratch-input').value;
-		if (scratchCurrentTab === 'desk') {
-			localStorage.setItem('cockpit-scratch-work', val);
-			clearTimeout(workScratchSaveTimer);
-			workScratchSaveTimer = setTimeout(saveScratchNow, 1500);
-		} else {
-			localStorage.setItem('cockpit-scratch', val);
-			clearTimeout(scratchSaveTimer);
-			scratchSaveTimer = setTimeout(saveScratchNow, 1500);
-		}
-	};
-
-	// Override saveScratchNow to route by active tab
-	const _origSaveScratchNow = saveScratchNow;
-	saveScratchNow = function() {
-		if (scratchCurrentTab === 'desk') {
-			saveScratchWorkNow();
-		} else {
-			_origSaveScratchNow();
-		}
-	};
-
-	function saveScratchWorkNow() {
-		clearTimeout(workScratchSaveTimer);
-		const val = document.getElementById('scratch-input').value;
-		const status = document.getElementById('scratch-status');
-		const btn = document.getElementById('scratch-save-btn');
-		localStorage.setItem('cockpit-scratch-work', val);
-		if (!val && !workScratchLastSaved) return; // never overwrite with empty on first load
-		fetch('/scratch/work', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ content: val })
-		})
-		.then(r => r.json())
-		.then(data => {
-			if (data.ok) {
-				workScratchLastSaved = new Date();
-				btn.textContent = 'SAVED ✓';
-				btn.classList.add('is-success');
-				setTimeout(() => {
-					btn.textContent = 'SAVE';
-					btn.classList.remove('is-success');
-				}, 1500);
-			}
-		})
-		.catch(() => {
-			btn.textContent = 'OFFLINE';
-			btn.classList.add('is-offline');
-		});
-	}
-
-	function initScratchWork() {
-		fetch('/scratch/work')
-			.then(r => r.json())
-			.then(data => {
-				if (data.content !== null && data.content !== undefined) {
-					document.getElementById('scratch-input').value = data.content;
-					localStorage.setItem('cockpit-scratch-work', data.content);
-				} else {
-					const local = localStorage.getItem('cockpit-scratch-work');
-					if (local) document.getElementById('scratch-input').value = local;
-				}
-			})
-			.catch(() => {
-				const local = localStorage.getItem('cockpit-scratch-work');
-				if (local) document.getElementById('scratch-input').value = local;
-			});
-	}
-
 	// On Work Mode load, default to DESK tab
     if (COCKPIT_MODE === 'work') {
         document.addEventListener('DOMContentLoaded', function() {
-            switchScratchTab('desk');
+            scratchSwitchTab('desk');
         });
     }
 
