@@ -2808,6 +2808,7 @@ body.mode-after-dark {
 	let focusPhase = 'focus'; // 'focus' | 'break'
 	let focusSecondsLeft = 25 * 60;
 	let focusInterval = null;
+	let focusEndTime = null; // wall-clock ms timestamp when current phase ends; null when paused
 
 	function focusDurationMins()  { return parseInt(document.getElementById('focus-duration-input').value) || 25; }
 	function breakDurationMins()  { return parseInt(document.getElementById('break-duration-input').value) || 5; }
@@ -2823,51 +2824,62 @@ body.mode-after-dark {
 		document.getElementById('focus-timer-phase').textContent = focusPhase === 'focus' ? 'FOCUS' : 'BREAK';
 	}
 
+	function focusComputeSecondsLeft() {
+		if (!focusEndTime) return focusSecondsLeft;
+		return Math.max(0, Math.ceil((focusEndTime - Date.now()) / 1000));
+	}
+
 	function focusToggle() {
 		const btn = document.getElementById('focus-start-btn');
 		if (focusRunning) {
-			// Pause
+			// Pause — freeze remaining seconds, clear end time
 			clearInterval(focusInterval);
+			focusSecondsLeft = focusComputeSecondsLeft();
+			focusEndTime = null;
 			focusRunning = false;
 			btn.textContent = 'RESUME';
 			btn.classList.remove('is-running');
+			focusPersistState();
 		} else {
-			// Start / Resume
-			if (!focusRunning && focusSecondsLeft === focusDurationMins() * 60 && focusPhase === 'focus') {
+			// Start / Resume — anchor an end timestamp
+			if (focusSecondsLeft === focusDurationMins() * 60 && focusPhase === 'focus') {
 				// Fresh start
 				focusSecondsLeft = focusDurationMins() * 60;
 			}
 			focusRunning = true;
+			focusEndTime = Date.now() + focusSecondsLeft * 1000;
 			btn.textContent = 'PAUSE';
 			btn.classList.add('is-running');
 			focusTick(); // immediate first tick
 			focusInterval = setInterval(focusTick, 1000);
-			// Persist state
 			focusPersistState();
 		}
 	}
 
 	function focusTick() {
-		focusSecondsLeft--;
-		focusPersistState();
-		focusUpdateDisplay();
+		if (!focusRunning) return;
 
-		if (focusSecondsLeft <= 0) {
+		focusSecondsLeft = focusComputeSecondsLeft();
+
+		// Catch up phase boundaries crossed while the tab was throttled / suspended.
+		// Each crossing fires its tone + webhook.
+		while (focusSecondsLeft <= 0 && focusRunning) {
 			if (focusPhase === 'focus') {
-				// Focus ended → break starts
 				focusPhase = 'break';
-				focusSecondsLeft = breakDurationMins() * 60;
+				focusEndTime += breakDurationMins() * 60 * 1000;
 				focusPlayTone('focus_end');
 				focusNotifyBreakStart();
 			} else {
-				// Break ended → focus starts
 				focusPhase = 'focus';
-				focusSecondsLeft = focusDurationMins() * 60;
+				focusEndTime += focusDurationMins() * 60 * 1000;
 				focusPlayTone('break_end');
 				focusNotifyBreakEnd();
 			}
-			focusUpdateDisplay();
+			focusSecondsLeft = focusComputeSecondsLeft();
 		}
+
+		focusPersistState();
+		focusUpdateDisplay();
 	}
 
 	function focusReset() {
@@ -2875,6 +2887,7 @@ body.mode-after-dark {
 		focusRunning = false;
 		focusPhase = 'focus';
 		focusSecondsLeft = focusDurationMins() * 60;
+		focusEndTime = null;
 		focusUpdateDisplay();
 		const btn = document.getElementById('focus-start-btn');
 		btn.textContent = 'START';
@@ -2887,6 +2900,7 @@ body.mode-after-dark {
 			phase: focusPhase,
 			secondsLeft: focusSecondsLeft,
 			running: focusRunning,
+			endTime: focusEndTime,
 			savedAt: Date.now()
 		}));
 	}
@@ -2896,24 +2910,30 @@ body.mode-after-dark {
 			const raw = localStorage.getItem('cockpit-focus-state');
 			if (!raw) return;
 			const state = JSON.parse(raw);
+			focusPhase = state.phase;
 			if (!state.running) {
-				// Was paused — restore as-is
-				focusPhase = state.phase;
+				// Was paused — restore frozen seconds, no end time
 				focusSecondsLeft = state.secondsLeft;
+				focusEndTime = null;
 				focusUpdateDisplay();
 				return;
 			}
-			// Was running — account for time elapsed since save
-			const elapsed = Math.floor((Date.now() - state.savedAt) / 1000);
-			let secs = state.secondsLeft - elapsed;
-			if (secs < 0) secs = 0;
-			focusPhase = state.phase;
-			focusSecondsLeft = secs;
-			focusUpdateDisplay();
-			// Auto-resume
-			focusToggle();
+			// Was running — restore the end-time anchor (fall back to savedAt math for old state shapes)
+			focusEndTime = state.endTime || (state.savedAt + state.secondsLeft * 1000);
+			focusRunning = true;
+			const btn = document.getElementById('focus-start-btn');
+			if (btn) { btn.textContent = 'PAUSE'; btn.classList.add('is-running'); }
+			focusTick(); // catches up any phase boundaries crossed while the page was closed
+			focusInterval = setInterval(focusTick, 1000);
 		} catch (e) { /* ignore */ }
 	}
+
+	// Re-tick the moment the tab becomes visible again — the running setInterval may have
+	// been throttled or fully paused while backgrounded, so the displayed countdown
+	// could be stale and unfired phase transitions need to fire.
+	document.addEventListener('visibilitychange', function() {
+		if (!document.hidden && focusRunning) focusTick();
+	});
 
 	function focusNotifyBreakStart() {
 		fetch('/cockpit/focus/break', {
