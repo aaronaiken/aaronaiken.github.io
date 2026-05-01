@@ -5,6 +5,7 @@ _site
 vendor
 __pycache__/
 *.pyc
+.venv/
 
 # Sensitive credentials
 .env
