@@ -11,6 +11,6 @@ def cd_auth_required(f):
 	@wraps(f)
 	def decorated(*args, **kwargs):
 		if not is_authenticated():
-			return redirect(url_for('login'))
+			return redirect(url_for('cockpit.login'))
 		return f(*args, **kwargs)
 	return decorated

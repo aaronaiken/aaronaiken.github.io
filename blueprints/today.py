@@ -34,7 +34,7 @@ def _today_autoclear(conn):
 @today_bp.route('/today')
 def today_page():
 	if not is_authenticated():
-		return redirect(url_for('login'))
+		return redirect(url_for('cockpit.login'))
 	return render_template('today.html')
 
 
