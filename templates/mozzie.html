@@ -808,6 +808,14 @@
                 <option value="live">LIVE</option>
             </select>
         </div>
+        <label style="display:flex;align-items:center;gap:8px;font-family:'VT323',monospace;font-size:0.95rem;color:var(--text-body);padding:6px 0;cursor:pointer;">
+            <input type="checkbox" id="new-past" onchange="togglePastGameMode()" style="margin:0;cursor:pointer;">
+            <span>// PAST GAME (already final, enter score directly)</span>
+        </label>
+        <div class="form-row" id="past-scores-row" style="display:none;">
+            <input class="moz-input" type="number" id="new-mozzie-score" placeholder="MOZZIE FINAL" min="0" max="200">
+            <input class="moz-input" type="number" id="new-opp-score" placeholder="OPP FINAL" min="0" max="200">
+        </div>
         <button class="moz-btn" onclick="addGame()">+ ADD GAME</button>
     </div>
 
@@ -1016,6 +1024,14 @@
                     <div style="font-size:0.8rem;color:var(--text-dim);font-family:'Crimson Pro',Georgia,serif;line-height:1.5;">{{ game.notes }}</div>
                 </div>
                 {% endif %}
+
+                <!-- Subtle remove option, only visible when the finished card is expanded -->
+                <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
+                    <button onclick="event.stopPropagation(); deleteGame({{ game.id }})"
+                            style="background:transparent;border:none;color:var(--text-dim);font-family:'VT323',monospace;font-size:0.85rem;cursor:pointer;padding:4px 8px;">
+                        × remove game
+                    </button>
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -1173,33 +1189,55 @@ function ensureActiveSection() {
     return section;
 }
 
+// ---- Past-game mode toggle ----
+function togglePastGameMode() {
+    const isPast = document.getElementById('new-past').checked;
+    document.getElementById('past-scores-row').style.display = isPast ? 'flex' : 'none';
+    document.getElementById('new-status').disabled = isPast;
+    document.getElementById('new-status').style.opacity = isPast ? '0.4' : '1';
+}
+
 // ---- Add game ----
 function addGame() {
     const opponent = document.getElementById('new-opponent').value.trim();
     const date     = document.getElementById('new-date').value;
     const location = document.getElementById('new-location').value;
-    const status   = document.getElementById('new-status').value;
+    const isPast   = document.getElementById('new-past').checked;
 
     if (!opponent) { showToast('// OPPONENT REQUIRED'); return; }
+
+    let body = { opponent: opponent, date: date, location: location };
+    if (isPast) {
+        body.status      = 'final';
+        body.mozzieScore = parseInt(document.getElementById('new-mozzie-score').value, 10) || 0;
+        body.oppScore    = parseInt(document.getElementById('new-opp-score').value,    10) || 0;
+    } else {
+        body.status = document.getElementById('new-status').value;
+    }
 
     fetch('/mozzie/api/games', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ opponent: opponent, date: date, location: location, status: status })
+        body: JSON.stringify(body)
     })
     .then(function(r) { return r.json(); })
     .then(function(game) {
         if (game.error) { showToast('// ERROR: ' + game.error); return; }
 
-        // Inject the new card directly — no full-page reload.
+        if (isPast) {
+            // Past game lands in the Season Log (different section, conditional render with photo
+            // strip + plays log etc.) — simplest is a full page reload to render it natively.
+            showToast('// PAST GAME RECORDED');
+            setTimeout(function() { location.reload(); }, 600);
+            return;
+        }
+
+        // Active/upcoming game — inject the new card directly, no reload.
         const section = ensureActiveSection();
         if (section) {
             const divider = section.querySelector('.section-divider');
-            const html = renderActiveGameCard(game);
-            divider.insertAdjacentHTML('afterend', html);
+            divider.insertAdjacentHTML('afterend', renderActiveGameCard(game));
         }
-
-        // Reset form (keep date as today + location/status defaults)
         document.getElementById('new-opponent').value = '';
         document.getElementById('new-status').value = 'upcoming';
         showToast('// GAME ADDED');

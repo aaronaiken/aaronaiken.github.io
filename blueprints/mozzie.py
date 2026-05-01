@@ -194,6 +194,10 @@ def mozzie_api_games_get():
 
 @mozzie_bp.route('/mozzie/api/games', methods=['POST'])
 def mozzie_api_games_post():
+	"""
+	Add a game. For past-game backfill the client may pass status='final' along with
+	mozzieScore/oppScore/notes — recap_drafted stays False (past games don't need a recap).
+	"""
 	if not is_authenticated():
 		return jsonify({'error': 'unauthorized'}), 401
 	data = request.get_json() or {}
@@ -206,11 +210,11 @@ def mozzie_api_games_post():
 		'date':            data.get('date', datetime.now(pytz.timezone('America/New_York')).strftime('%Y-%m-%d')),
 		'location':        data.get('location', 'home'),
 		'status':          data.get('status', 'upcoming'),
-		'mozzieScore':     0,
-		'oppScore':        0,
+		'mozzieScore':     int(data.get('mozzieScore') or 0),
+		'oppScore':        int(data.get('oppScore') or 0),
 		'plays':           [],
 		'photos':          [],
-		'notes':           '',
+		'notes':           (data.get('notes') or '').strip(),
 		'draft_status':    '',
 		'recap_drafted':   False,
 		'recap_published': False,
