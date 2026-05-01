@@ -9,7 +9,8 @@ import requests as req_lib
 import uuid
 from functools import wraps
 
-# Local dev only: load .env if present. No-op on PythonAnywhere (no .env file).
+# Load .env if python-dotenv is available. load_dotenv() never overrides
+# already-set env vars, so it's safe alongside whatever PA uses to populate them.
 try:
 	from dotenv import load_dotenv
 	load_dotenv()
