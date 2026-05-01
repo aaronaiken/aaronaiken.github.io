@@ -9,11 +9,18 @@ import requests as req_lib
 import uuid
 from functools import wraps
 
+# Local dev only: load .env if present. No-op on PythonAnywhere (no .env file).
+try:
+	from dotenv import load_dotenv
+	load_dotenv()
+except ImportError:
+	pass
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY')
 PASSWORD = os.environ.get('FLASK_PASSWORD')
 
-UPLOAD_FOLDER = '/home/aaronaiken/status_update/assets/img/status/'
+UPLOAD_FOLDER = os.environ.get('COCKPIT_UPLOAD_FOLDER', '/home/aaronaiken/status_update/assets/img/status/')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -22,7 +29,7 @@ SCRATCH_FILE = 'assets/data/scratch.json'
 BELOW_DECK_FILE = 'assets/data/below_deck.json'
 ANI_CONVERSATION_FILE = 'ani_conversation.json'
 ANI_MEMORY_FILE = 'static/ani_memory.txt'
-REPO_ROOT = '/home/aaronaiken/status_update'
+REPO_ROOT = os.environ.get('COCKPIT_REPO_ROOT', '/home/aaronaiken/status_update')
 
 DB_FILE           = os.path.join(REPO_ROOT, 'assets/data/command_deck.db')
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
