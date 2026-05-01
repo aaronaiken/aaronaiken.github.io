@@ -24,6 +24,8 @@ static/ani_memory.txt
 assets/data/scratch.json
 assets/data/below_deck.json
 assets/data/command_deck.db
+assets/data/command_deck.db-shm
+assets/data/command_deck.db-wal
 static/after_dark_comms.txt
 assets/data/scratch_work.json
 CLAUDE.md
