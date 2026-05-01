@@ -158,20 +158,9 @@ def upload_status_image_to_bunny(image_bytes, filename):
     return f"{BUNNY_STATUS_CDN_URL}/status/{filename}"
 
 
-# ---- TASKS HELPERS ----
+# ---- TASKS HELPERS ---- (load/save to helpers/tasks_json.py; post_task_status stays for cockpit blueprint)
 
-def load_tasks():
-	try:
-		with open(TASKS_FILE, 'r') as f:
-			return json.load(f)
-	except FileNotFoundError:
-		return {"tasks": []}
-
-
-def save_tasks(data):
-	os.makedirs(os.path.dirname(TASKS_FILE), exist_ok=True)
-	with open(TASKS_FILE, 'w') as f:
-		json.dump(data, f, indent=2)
+from helpers.tasks_json import load_tasks, save_tasks
 
 
 def post_task_status(title):
