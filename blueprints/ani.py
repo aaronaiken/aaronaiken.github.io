@@ -9,17 +9,25 @@ import json
 import subprocess
 import glob
 import re
+import time
 from datetime import datetime, timedelta
 import pytz
 import requests
 from flask import Blueprint, request, jsonify
 
 from helpers.auth import is_authenticated
-from helpers.comms import get_active_tags
+from helpers.comms import get_active_tags, get_valid_comms
 
 # Path constants for Ani's runtime files (gitignored, server-state).
 ANI_CONVERSATION_FILE = 'ani_conversation.json'
 ANI_MEMORY_FILE = 'static/ani_memory.txt'
+
+# Ani helpers shell out to git (recent-status, recent-git-log) — needs repo cwd.
+REPO_ROOT = os.environ.get('COCKPIT_REPO_ROOT', '/home/aaronaiken/status_update')
+
+# Comms cache (5-minute TTL) — populated by ani_get_comms() for context-building.
+_comms_cache = {'data': None, 'timestamp': 0}
+COMMS_CACHE_TTL = 300
 
 ani_bp = Blueprint('ani', __name__)
 
