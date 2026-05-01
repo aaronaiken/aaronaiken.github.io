@@ -2,7 +2,7 @@
 # Safe to run multiple times — checks if column exists before altering.
 import sqlite3, os
 
-DB_FILE = os.path.join('/home/aaronaiken/status_update', 'assets/data/command_deck.db')
+DB_FILE = os.path.join(os.environ.get('COCKPIT_REPO_ROOT', '/home/aaronaiken/status_update'), 'assets/data/command_deck.db')
 
 conn = sqlite3.connect(DB_FILE)
 cur = conn.cursor()
