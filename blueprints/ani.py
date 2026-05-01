@@ -757,40 +757,6 @@ def ani_ping():
 
 	return jsonify({'pending': True, 'opener': opener, 'ache_level': ache})
 
-@ani_bp.route('/cockpit/mode', methods=['POST'])
-def cockpit_mode():
-    if not is_authenticated():
-        return jsonify({'error': 'unauthorized'}), 401
-
-    data = request.get_json() or {}
-    pin = str(data.get('pin', '')).strip()
-
-    if WORK_MODE_PIN and pin == WORK_MODE_PIN:
-        mode = 'mode-work'
-    elif AFTER_DARK_PIN and pin == AFTER_DARK_PIN:
-        mode = 'mode-after-dark'
-    else:
-        # Silent fail — return 200 with no_match so JS does nothing
-        return jsonify({'ok': False, 'match': False})
-
-    resp = make_response(jsonify({'ok': True, 'match': True, 'mode': mode}))
-    # Session cookie — no max_age means it expires when browser closes
-    resp.set_cookie(
-        'cockpit_mode',
-        mode,
-        httponly=True,
-        samesite='Lax'
-        # Intentionally no max_age — expires with browser session
-    )
-    return resp
-
-
-@ani_bp.route('/cockpit/mode/clear', methods=['POST'])
-def cockpit_mode_clear():
-    """Purge & Hide — resets to default (no mode)."""
-    if not is_authenticated():
-        return jsonify({'error': 'unauthorized'}), 401
-    resp = make_response(jsonify({'ok': True}))
-    resp.set_cookie('cockpit_mode', '', expires=0, httponly=True, samesite='Lax')
-    return resp
+# /cockpit/mode and /cockpit/mode/clear routes moved to blueprints/cockpit.py
+# (they got pulled in here during sub-phase 4's range extraction by mistake).
 

@@ -13,7 +13,7 @@ below_deck_bp = Blueprint('below_deck', __name__)
 @below_deck_bp.route('/below-deck')
 def below_deck():
 	if not is_authenticated():
-		return redirect(url_for('login'))
+		return redirect(url_for('cockpit.login'))
 
 	conn = get_db()
 
