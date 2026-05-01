@@ -28,4 +28,5 @@ assets/data/command_deck.db-shm
 assets/data/command_deck.db-wal
 static/after_dark_comms.txt
 assets/data/scratch_work.json
+mozzie_games.json
 CLAUDE.md
