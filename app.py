@@ -133,12 +133,14 @@ from blueprints.below_deck import below_deck_bp
 from blueprints.ani import ani_bp
 from blueprints.cockpit import cockpit_bp
 from blueprints.command_deck import command_deck_bp
+from blueprints.mozzie import mozzie_bp
 app.register_blueprint(tasks_bp)
 app.register_blueprint(today_bp)
 app.register_blueprint(below_deck_bp)
 app.register_blueprint(ani_bp)
 app.register_blueprint(cockpit_bp)
 app.register_blueprint(command_deck_bp)
+app.register_blueprint(mozzie_bp)
 
 
 if __name__ == "__main__": app.run(debug=True)

@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>MOZZIE // FLAG FOOTBALL</title>
+
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Crimson+Pro:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+
+    <style>
+    :root {
+        --bg:           #080a06;
+        --bg2:          #0d1008;
+        --amber:        #d4880a;
+        --amber-hi:     #f5b332;
+        --amber-lo:     #9a6018;
+        --amber-dim:    #3d2804;
+        --green:        #4dbb6a;
+        --green-lo:     #2a6b3c;
+        --red:          #cc3322;
+        --scan:         rgba(0,0,0,0.18);
+        --text:         #d4880a;
+        --text-body:    #c89040;
+        --text-dim:     #7a5020;
+        --border:       #2e1e08;
+        --border-hi:    #5a3c18;
+        --muted:        #7a5020;
+        --input-bg:     #0d1008;
+        --gold:         #FFB612;
+        --gold-dim:     #3a2c00;
+        --scan-speed:   10s;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Share Tech Mono', 'Courier New', monospace;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        overscroll-behavior-y: contain;
+        overflow-x: hidden;
+        padding-top: env(safe-area-inset-top, 20px);
+        font-size: 14px;
+    }
+
+    @keyframes scanline-drift {
+        0%   { transform: translateY(0); }
+        100% { transform: translateY(100%); }
+    }
+
+    body::before {
+        content: " ";
+        display: block;
+        position: fixed;
+        top: 0; left: 0; bottom: 0; right: 0;
+        background: repeating-linear-gradient(
+            to bottom,
+            transparent 0px, transparent 3px,
+            var(--scan) 3px, var(--scan) 4px
+        );
+        z-index: 9998;
+        pointer-events: none;
+        animation: scanline-drift var(--scan-speed) linear infinite;
+        opacity: 0.6;
+    }
+
+    body::after {
+        content: '';
+        position: fixed; inset: 0;
+        background: radial-gradient(ellipse at 50% 40%, transparent 40%, rgba(0,0,0,0.65) 100%);
+        pointer-events: none;
+        z-index: 9997;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 520px;
+        padding: 28px 24px 64px;
+        position: relative;
+        align-self: flex-start;
+        z-index: 10;
+    }
+
+    @media (min-width: 768px) {
+        .container {
+            margin-top: 40px;
+            border: 1px solid var(--border);
+        }
+    }
+
+    /* ---- HEADER ---- */
+    .moz-header {
+        margin-bottom: 20px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .moz-header__left { flex: 1; min-width: 0; }
+
+    .moz-logo {
+        font-family: 'VT323', monospace;
+        font-size: 2.2rem;
+        color: var(--gold);
+        text-shadow: 0 0 18px rgba(255,182,18,0.45), 0 0 50px rgba(255,182,18,0.15);
+        letter-spacing: 0.04em;
+        animation: logo-glow 5s ease-in-out infinite;
+        line-height: 1;
+    }
+
+    @keyframes logo-glow {
+        0%,100% { text-shadow: 0 0 18px rgba(255,182,18,0.45), 0 0 50px rgba(255,182,18,0.15); }
+        50%      { text-shadow: 0 0 32px rgba(255,182,18,0.8), 0 0 80px rgba(255,182,18,0.3); }
+    }
+
+    .moz-record {
+        font-size: 0.72rem;
+        letter-spacing: 0.18em;
+        color: var(--muted);
+        margin-top: 4px;
+    }
+
+    .moz-record__w { color: var(--green); }
+    .moz-record__l { color: var(--red); }
+    .moz-record__t { color: var(--amber-lo); }
+
+    .moz-back {
+        font-size: 0.6rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--muted);
+        text-decoration: none;
+        display: block;
+        margin-top: 6px;
+        transition: color 0.15s;
+    }
+    .moz-back:hover { color: var(--amber); }
+
+    /* Pixel sprite */
+    .sprite-wrap {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    /* ---- ADD GAME FORM ---- */
+    .section-label {
+        font-size: 0.6rem;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 8px;
+    }
+
+    .add-game-form {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        padding: 14px;
+        margin-bottom: 24px;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .form-row.full { grid-template-columns: 1fr; }
+
+    .moz-input, .moz-select {
+        background: var(--input-bg);
+        border: 1px solid var(--border);
+        color: var(--text-body);
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.8rem;
+        padding: 10px 12px;
+        width: 100%;
+        outline: none;
+        -webkit-appearance: none;
+        border-radius: 0;
+        transition: border-color 0.15s;
+    }
+
+    .moz-input:focus, .moz-select:focus { border-color: var(--amber-lo); }
+    .moz-input::placeholder { color: var(--border-hi); }
+
+    /* Restore the native calendar-picker icon (the parent's `-webkit-appearance: none` strips it). */
+    .moz-input[type="date"] {
+        -webkit-appearance: auto;
+        appearance: auto;
+        cursor: pointer;
+    }
+    .moz-input[type="date"]::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        opacity: 0.7;
+        filter: invert(55%) sepia(60%) saturate(700%) hue-rotate(0deg);  /* tint amber */
+    }
+    @media (prefers-color-scheme: light) {
+        .moz-input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(20%) sepia(30%) saturate(1500%) hue-rotate(15deg);  /* deeper amber for light bg */
+        }
+    }
+
+    .moz-select option { background: #0d1008; }
+
+    .moz-btn {
+        background: var(--amber-dim);
+        border: 1px solid var(--amber-lo);
+        color: var(--amber);
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.72rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 10px 16px;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s, color 0.15s;
+        -webkit-appearance: none;
+        border-radius: 0;
+        width: 100%;
+    }
+
+    .moz-btn:hover, .moz-btn:active {
+        background: var(--amber-lo);
+        border-color: var(--amber);
+        color: var(--amber-hi);
+    }
+
+    .moz-btn.danger {
+        background: transparent;
+        border-color: #3a1008;
+        color: #7a2010;
+        font-size: 0.62rem;
+    }
+
+    .moz-btn.danger:hover {
+        background: #1a0804;
+        border-color: var(--red);
+        color: var(--red);
+    }
+
+    .moz-btn.gold {
+        background: var(--gold-dim);
+        border-color: var(--gold);
+        color: var(--gold);
+    }
+
+    .moz-btn.gold:hover {
+        background: #5a3e00;
+        color: #ffe066;
+    }
+
+    .moz-btn.green {
+        background: #0a1a0e;
+        border-color: var(--green-lo);
+        color: var(--green);
+    }
+
+    .moz-btn.green:hover {
+        background: #112210;
+        border-color: var(--green);
+    }
+
+    /* ---- GAME CARDS ---- */
+    .games-section { margin-bottom: 32px; }
+
+    .section-divider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+
+    .section-divider__label {
+        font-size: 0.6rem;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--muted);
+        white-space: nowrap;
+    }
+
+    .section-divider__line {
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+    }
+
+    .game-card {
+        border: 1px solid var(--border);
+        margin-bottom: 12px;
+        background: var(--bg2);
+        transition: border-color 0.15s;
+    }
+
+    .game-card.live { border-color: var(--green-lo); }
+
+    .game-card.finished {
+        opacity: 0.55;
+        transition: opacity 0.2s;
+    }
+
+    .game-card.finished:hover { opacity: 0.85; }
+
+    .game-card__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        gap: 8px;
+        cursor: pointer;
+    }
+
+    .game-card__opponent {
+        font-family: 'VT323', monospace;
+        font-size: 1.3rem;
+        color: var(--amber-hi);
+        line-height: 1;
+    }
+
+    .game-card__meta {
+        font-size: 0.58rem;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        margin-top: 2px;
+    }
+
+    .badge {
+        font-size: 0.58rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        padding: 3px 7px;
+        border-radius: 1px;
+        border: 1px solid;
+        white-space: nowrap;
+    }
+
+    .badge--upcoming { color: var(--amber-lo); border-color: var(--border-hi); }
+    .badge--live     { color: var(--green);    border-color: var(--green-lo);  animation: dot-pulse 1.6s ease-in-out infinite; }
+    .badge--w        { color: var(--green);    border-color: var(--green-lo); }
+    .badge--l        { color: var(--red);      border-color: #5a1808; }
+    .badge--t        { color: var(--amber-lo); border-color: var(--border-hi); }
+
+    @keyframes dot-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* Scoreboard */
+    .scoreboard {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .score-col {
+        flex: 1;
+        text-align: center;
+    }
+
+    .score-label {
+        font-size: 0.55rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 2px;
+    }
+
+    .score-num {
+        font-family: 'VT323', monospace;
+        font-size: 3.2rem;
+        line-height: 1;
+    }
+
+    .score-num--mozzie { color: var(--green); text-shadow: 0 0 12px rgba(77,187,106,0.4); }
+    .score-num--opp    { color: var(--amber); }
+
+    .score-sep {
+        font-family: 'VT323', monospace;
+        font-size: 2rem;
+        color: var(--border-hi);
+        padding: 0 6px;
+        align-self: center;
+    }
+
+    /* Finished game photo strip */
+    .photo-strip {
+        display: flex;
+        gap: 6px;
+        padding: 10px 12px;
+        overflow-x: auto;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .photo-strip::-webkit-scrollbar { display: none; }
+
+    .photo-strip img {
+        width: 72px;
+        height: 72px;
+        object-fit: cover;
+        border: 1px solid var(--border);
+        flex-shrink: 0;
+        border-radius: 1px;
+    }
+
+    /* Play buttons */
+    .play-panel {
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .play-panel__cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .play-col__label {
+        font-size: 0.58rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+    }
+
+    .play-col__label--mozzie { color: var(--green); }
+    .play-col__label--opp    { color: var(--amber-lo); }
+
+    .play-btn {
+        display: block;
+        width: 100%;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--text-body);
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.68rem;
+        letter-spacing: 0.06em;
+        padding: 10px 8px;
+        cursor: pointer;
+        text-align: left;
+        margin-bottom: 5px;
+        transition: border-color 0.12s, background 0.12s, color 0.12s;
+        -webkit-appearance: none;
+        border-radius: 0;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .play-btn:last-child { margin-bottom: 0; }
+
+    .play-btn .pts {
+        float: right;
+        color: var(--muted);
+        font-size: 0.62rem;
+    }
+
+    .play-btn--divider {
+        border-top: 1px solid var(--border);
+        margin-top: 4px;
+        padding-top: 10px;
+    }
+
+    .play-btn--mozzie:hover, .play-btn--mozzie:active {
+        border-color: var(--green-lo);
+        background: #0a180e;
+        color: var(--green);
+    }
+
+    .play-btn--opp:hover, .play-btn--opp:active {
+        border-color: var(--amber-lo);
+        background: var(--amber-dim);
+        color: var(--amber-hi);
+    }
+
+    .undo-row {
+        margin-top: 8px;
+        text-align: right;
+    }
+
+    .undo-btn {
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.6rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        cursor: pointer;
+        padding: 0;
+        transition: color 0.15s;
+    }
+
+    .undo-btn:hover { color: var(--red); }
+
+    /* Plays log */
+    .plays-log {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .plays-log__title {
+        font-size: 0.55rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 6px;
+    }
+
+    .play-entry {
+        font-size: 0.68rem;
+        color: var(--text-dim);
+        padding: 2px 0;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .play-entry--mozzie .play-entry__team { color: var(--green); }
+    .play-entry--opp    .play-entry__team { color: var(--amber-lo); }
+
+    .play-entry__pts { color: var(--muted); font-size: 0.6rem; }
+
+    /* Card footer */
+    .card-footer {
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .notes-input {
+        background: var(--input-bg);
+        border: 1px solid var(--border);
+        color: var(--text-body);
+        font-family: 'Crimson Pro', Georgia, serif;
+        font-size: 0.9rem;
+        padding: 10px 12px;
+        width: 100%;
+        outline: none;
+        resize: none;
+        height: 60px;
+        border-radius: 0;
+        -webkit-appearance: none;
+        transition: border-color 0.15s;
+    }
+
+    .notes-input:focus { border-color: var(--amber-lo); }
+    .notes-input::placeholder { color: var(--border-hi); font-style: italic; }
+
+    .photo-upload-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .photo-label {
+        background: var(--input-bg);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.65rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 8px 12px;
+        cursor: pointer;
+        transition: border-color 0.15s, color 0.15s;
+        flex: 1;
+        text-align: center;
+    }
+
+    .photo-label:hover { border-color: var(--amber-lo); color: var(--amber); }
+
+    .photo-filename {
+        font-size: 0.6rem;
+        color: var(--muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 120px;
+    }
+
+    .card-btns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    /* Final confirm modal */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.92);
+        z-index: 10000;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+        background: var(--bg2);
+        border: 1px solid var(--border-hi);
+        padding: 20px;
+        width: 100%;
+        max-width: 380px;
+    }
+
+    .modal__title {
+        font-family: 'VT323', monospace;
+        font-size: 1.4rem;
+        color: var(--amber-hi);
+        margin-bottom: 6px;
+    }
+
+    .modal__sub {
+        font-size: 0.62rem;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        margin-bottom: 14px;
+    }
+
+    .modal textarea {
+        width: 100%;
+        height: 80px;
+        background: var(--input-bg);
+        border: 1px solid var(--border);
+        color: var(--text-body);
+        font-family: 'Crimson Pro', Georgia, serif;
+        font-size: 0.95rem;
+        padding: 10px 12px;
+        outline: none;
+        resize: none;
+        border-radius: 0;
+        -webkit-appearance: none;
+        margin-bottom: 10px;
+        transition: border-color 0.15s;
+    }
+
+    .modal textarea:focus { border-color: var(--amber-lo); }
+    .modal textarea::placeholder { color: var(--border-hi); font-style: italic; }
+
+    .modal__photo-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    .modal__btns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    /* Collapsed finished card body */
+    .finished-body { display: none; }
+    .finished-body.open { display: block; }
+
+    /* Spinner */
+    .spinner {
+        display: inline-block;
+        width: 10px; height: 10px;
+        border: 2px solid var(--border-hi);
+        border-top-color: var(--amber);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        vertical-align: middle;
+        margin-right: 4px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast */
+    .toast {
+        position: fixed;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: var(--bg2);
+        border: 1px solid var(--border-hi);
+        color: var(--amber-hi);
+        font-size: 0.68rem;
+        letter-spacing: 0.12em;
+        padding: 10px 20px;
+        z-index: 20000;
+        opacity: 0;
+        transition: opacity 0.25s, transform 0.25s;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+
+    /* ---- LIGHT MODE ---- (sideline use in afternoon sun) */
+    @media (prefers-color-scheme: light) {
+        :root {
+            --bg:        #fdf9f3;
+            --bg2:       #faf4e8;
+            --amber:     #7a3e00;
+            --amber-hi:  #5a2e00;
+            --amber-lo:  #a06020;
+            --amber-dim: #f0e6d0;
+            --text:      #3a2a10;
+            --text-body: #4a3818;
+            --text-dim:  #8a7858;
+            --border:    #ddd0b8;
+            --border-hi: #c4b090;
+            --muted:     #8a7858;
+            --input-bg:  #faf4e8;
+            --green:     #2a6e3f;
+            --green-lo:  #4a8c60;
+            --red:       #a8281a;
+            --scan:      transparent;
+            --gold:      #b8860b;
+            --gold-dim:  #f0e6d0;
+        }
+        body { background: var(--bg); color: var(--text); }
+        body::before, body::after { display: none; }
+        textarea, input, select { color: #3a2a10; background: var(--input-bg); }
+        textarea::placeholder, input::placeholder { color: #c4b090; }
+        .moz-btn.gold { background: var(--gold); border-color: var(--gold); color: #fdf9f3; }
+        .moz-btn.gold:hover { background: #966500; border-color: #966500; }
+        .badge--live { color: #2a6e3f; border-color: #4a8c60; }
+        .badge--w    { color: #2a6e3f; }
+        .badge--l    { color: #a8281a; }
+        .play-btn--mozzie { background: #2a6e3f; color: #fdf9f3; border-color: #2a6e3f; }
+        .play-btn--mozzie:hover { background: #1f5530; border-color: #1f5530; }
+        .play-btn--opp { background: var(--amber-dim); color: #3a2a10; border-color: var(--border-hi); }
+        .play-btn--opp:hover { background: #e8dcc0; }
+        .undo-btn { color: var(--amber-lo); border-color: var(--border-hi); }
+    }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- HEADER -->
+    <header class="moz-header">
+        <div class="moz-header__left">
+            <div class="moz-logo">MOZZIE <span style="color:var(--amber-lo)">//</span> FLAG FOOTBALL</div>
+            <div class="moz-record">
+                SEASON &nbsp;
+                <span class="moz-record__w">{{ wins }}W</span> ·
+                <span class="moz-record__l">{{ losses }}L</span> ·
+                <span class="moz-record__t">{{ ties }}T</span>
+            </div>
+            <a class="moz-back" href="/publish">← COCKPIT</a>
+        </div>
+        <div class="sprite-wrap">
+            <!-- Steelers player — 8×16 pixel art SVG -->
+            <svg width="48" height="96" viewBox="0 0 8 16" style="image-rendering:pixelated; display:block;">
+                <!-- Helmet -->
+                <rect x="1" y="0" width="6" height="1" fill="#1a1a1a"/>
+                <rect x="0" y="1" width="8" height="1" fill="#1a1a1a"/>
+                <!-- Facemask -->
+                <rect x="2" y="1" width="1" height="1" fill="#c0c0c0"/>
+                <rect x="5" y="1" width="1" height="1" fill="#c0c0c0"/>
+                <!-- Face -->
+                <rect x="1" y="2" width="6" height="1" fill="#f5c5a3"/>
+                <!-- Jersey body — gold with black center stripe -->
+                <rect x="0" y="3" width="8" height="5" fill="#FFB612"/>
+                <rect x="3" y="3" width="2" height="5" fill="#101010"/>
+                <!-- Arms -->
+                <rect x="0" y="3" width="1" height="4" fill="#FFB612"/>
+                <rect x="7" y="3" width="1" height="4" fill="#FFB612"/>
+                <!-- Hands/wrists -->
+                <rect x="0" y="7" width="1" height="1" fill="#f5c5a3"/>
+                <rect x="7" y="7" width="1" height="1" fill="#f5c5a3"/>
+                <!-- Waistband -->
+                <rect x="0" y="8" width="8" height="2" fill="#101010"/>
+                <!-- Pants — white -->
+                <rect x="0" y="10" width="8" height="4" fill="#f0f0f0"/>
+                <!-- Pants stripe -->
+                <rect x="1" y="10" width="1" height="4" fill="#FFB612"/>
+                <rect x="6" y="10" width="1" height="4" fill="#FFB612"/>
+                <!-- Cleats -->
+                <rect x="0" y="14" width="3" height="2" fill="#1a1a1a"/>
+                <rect x="5" y="14" width="3" height="2" fill="#1a1a1a"/>
+            </svg>
+        </div>
+    </header>
+
+    <!-- ADD GAME FORM -->
+    <div class="section-label">// NEW GAME</div>
+    <div class="add-game-form">
+        <div class="form-row">
+            <input class="moz-input" type="text" id="new-opponent" placeholder="OPPONENT" autocomplete="off" autocapitalize="words">
+            <input class="moz-input" type="date" id="new-date">
+        </div>
+        <div class="form-row">
+            <select class="moz-select" id="new-location">
+                <option value="home">HOME</option>
+                <option value="away">AWAY</option>
+            </select>
+            <select class="moz-select" id="new-status">
+                <option value="upcoming">UPCOMING</option>
+                <option value="live">LIVE</option>
+            </select>
+        </div>
+        <button class="moz-btn" onclick="addGame()">+ ADD GAME</button>
+    </div>
+
+    <!-- ACTIVE / UPCOMING GAMES -->
+    <div class="games-section" id="active-section">
+        {% if active %}
+        <div class="section-divider">
+            <span class="section-divider__label">// ACTIVE</span>
+            <span class="section-divider__line"></span>
+        </div>
+        {% for game in active %}
+        <div class="game-card {% if game.status == 'live' %}live{% endif %}" id="card-{{ game.id }}">
+            <!-- Card header -->
+            <div class="game-card__header">
+                <div>
+                    <div class="game-card__opponent">vs. {{ game.opponent }}</div>
+                    <div class="game-card__meta">{{ game.date }} · {{ 'HOME' if game.location == 'home' else 'AWAY' }}</div>
+                </div>
+                {% if game.status == 'live' %}
+                <span class="badge badge--live">● LIVE</span>
+                {% else %}
+                <span class="badge badge--upcoming">UPCOMING</span>
+                {% endif %}
+            </div>
+
+            <!-- Scoreboard -->
+            <div class="scoreboard" id="score-{{ game.id }}">
+                <div class="score-col">
+                    <div class="score-label">MOZZIE</div>
+                    <div class="score-num score-num--mozzie" id="mozzie-score-{{ game.id }}">{{ game.mozzieScore }}</div>
+                </div>
+                <div class="score-sep">–</div>
+                <div class="score-col">
+                    <div class="score-label">{{ game.opponent | upper }}</div>
+                    <div class="score-num score-num--opp" id="opp-score-{{ game.id }}">{{ game.oppScore }}</div>
+                </div>
+            </div>
+
+            {% if game.status != 'live' %}
+            <!-- Pre-game: prominent GO LIVE -->
+            <div style="padding:10px 14px;border-top:1px solid var(--border);">
+                <button class="moz-btn" onclick="goLive({{ game.id }})" style="width:100%;background:transparent;border:1px solid var(--green-lo);color:var(--green);font-size:1rem;padding:10px;">
+                    ● GO LIVE
+                </button>
+            </div>
+            {% endif %}
+
+            {% if game.status == 'live' %}
+            <!-- Play buttons — only when live -->
+            <div class="play-panel">
+                <div class="play-panel__cols">
+                    <div>
+                        <div class="play-col__label play-col__label--mozzie">MOZZIE</div>
+                        {% for play in plays %}
+                        <button
+                            class="play-btn play-btn--mozzie{% if play.group == 'pat' %} play-btn--divider{% endif %}"
+                            onclick="logPlay({{ game.id }}, 'mozzie', '{{ play.id }}')">
+                            {{ play.label }}<span class="pts">+{{ play.pts }}</span>
+                        </button>
+                        {% endfor %}
+                    </div>
+                    <div>
+                        <div class="play-col__label play-col__label--opp">{{ game.opponent | upper }}</div>
+                        {% for play in plays %}
+                        <button
+                            class="play-btn play-btn--opp{% if play.group == 'pat' %} play-btn--divider{% endif %}"
+                            onclick="logPlay({{ game.id }}, 'opp', '{{ play.id }}')">
+                            {{ play.label }}<span class="pts">+{{ play.pts }}</span>
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="undo-row">
+                    <button class="undo-btn" onclick="undoPlay({{ game.id }})">↩ UNDO LAST</button>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Plays log -->
+            {% if game.plays %}
+            <div class="plays-log">
+                <div class="plays-log__title">SCORING LOG</div>
+                {% set recent = game.plays[-5:] | reverse | list %}
+                {% for p in recent %}
+                <div class="play-entry play-entry--{{ p.team }}">
+                    <span class="play-entry__team">{{ 'MOZZIE' if p.team == 'mozzie' else game.opponent | upper }}</span>
+                    <span>{{ p.playId }}</span>
+                    <span class="play-entry__pts">+{{ p.pts }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Footer: notes, photo, actions -->
+            <div class="card-footer">
+                <textarea
+                    class="notes-input"
+                    id="notes-{{ game.id }}"
+                    placeholder="notes..."
+                    onblur="saveNotes({{ game.id }})">{{ game.notes }}</textarea>
+
+                <div class="photo-upload-row">
+                    <label class="photo-label" for="photo-{{ game.id }}">📎 ATTACH PHOTO</label>
+                    <input type="file" id="photo-{{ game.id }}" accept="image/*" style="display:none"
+                        onchange="uploadPhoto({{ game.id }}, this)">
+                    <span class="photo-filename" id="photo-name-{{ game.id }}"></span>
+                </div>
+
+                <div class="card-btns">
+                    {% if game.status == 'live' %}
+                    <button class="moz-btn gold" onclick="openFinalModal({{ game.id }}, '{{ game.opponent }}')">
+                        ✓ MARK FINAL
+                    </button>
+                    {% endif %}
+                    <button class="moz-btn danger" onclick="deleteGame({{ game.id }})">
+                        × REMOVE
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- SEASON LOG (finished games) -->
+    {% if finished %}
+    <div class="games-section">
+        <div class="section-divider">
+            <span class="section-divider__label">// SEASON LOG</span>
+            <span class="section-divider__line"></span>
+        </div>
+        {% for game in finished %}
+        {% set mozzie = game.mozzieScore %}
+        {% set opp = game.oppScore %}
+        {% if mozzie > opp %}{% set result = 'w' %}
+        {% elif mozzie < opp %}{% set result = 'l' %}
+        {% else %}{% set result = 't' %}{% endif %}
+        <div class="game-card finished" id="card-{{ game.id }}">
+            <!-- Tappable header to expand -->
+            <div class="game-card__header" onclick="toggleFinished({{ game.id }})">
+                <div>
+                    <div class="game-card__opponent">vs. {{ game.opponent }}</div>
+                    <div class="game-card__meta">
+                        {{ game.date }} · {{ 'HOME' if game.location == 'home' else 'AWAY' }}
+                        {% if game.recap_published %}
+                        · <span style="color:var(--green)">✅ recap published</span>
+                        {% elif game.recap_drafted %}
+                        · <span style="color:var(--amber-lo)">📝 recap drafted</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-family:'VT323',monospace;font-size:1.3rem;color:{% if result == 'w' %}var(--green){% elif result == 'l' %}var(--red){% else %}var(--amber-lo){% endif %}">
+                        {{ mozzie }}–{{ opp }}
+                    </span>
+                    <span class="badge badge--{{ result }}">{{ result | upper }}·FINAL</span>
+                </div>
+            </div>
+
+            {% if game.recap_drafted and not game.recap_published %}
+            <!-- Recap is staged but not yet published — show a Publish button outside the collapsed body so it's discoverable -->
+            <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
+                <button class="moz-btn gold" onclick="event.stopPropagation(); openRecapModal({{ game.id }}, '{{ game.opponent }}')" style="font-size:0.85rem;padding:6px 12px;">
+                    📝 PUBLISH RECAP
+                </button>
+            </div>
+            {% endif %}
+
+            <!-- Collapsed body — photo strip + plays -->
+            <div class="finished-body" id="finished-body-{{ game.id }}">
+                {% if game.photos %}
+                <div class="photo-strip">
+                    {% for url in game.photos %}
+                    <img src="{{ url }}" alt="Game photo" loading="lazy">
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="scoreboard">
+                    <div class="score-col">
+                        <div class="score-label">MOZZIE</div>
+                        <div class="score-num score-num--mozzie">{{ mozzie }}</div>
+                    </div>
+                    <div class="score-sep">–</div>
+                    <div class="score-col">
+                        <div class="score-label">{{ game.opponent | upper }}</div>
+                        <div class="score-num score-num--opp">{{ opp }}</div>
+                    </div>
+                </div>
+
+                {% if game.plays %}
+                <div class="plays-log">
+                    <div class="plays-log__title">SCORING LOG</div>
+                    {% for p in game.plays %}
+                    <div class="play-entry play-entry--{{ p.team }}">
+                        <span class="play-entry__team">{{ 'MOZZIE' if p.team == 'mozzie' else game.opponent | upper }}</span>
+                        <span>{{ p.playId }}</span>
+                        <span class="play-entry__pts">+{{ p.pts }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if game.notes %}
+                <div class="card-footer" style="padding-top:8px;padding-bottom:8px;">
+                    <div style="font-size:0.8rem;color:var(--text-dim);font-family:'Crimson Pro',Georgia,serif;line-height:1.5;">{{ game.notes }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div><!-- /container -->
+
+<!-- RECAP DRAFT MODAL -->
+<div class="modal-overlay" id="final-modal">
+    <div class="modal">
+        <div class="modal__title" id="modal-title">RECAP DRAFT</div>
+        <div class="modal__sub">// EDIT BEFORE SENDING TO STATUS FEED</div>
+        <textarea id="modal-recap" placeholder="recap text..." style="min-height:120px"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0 10px;font-family:'VT323',monospace;font-size:0.85rem;color:var(--text-dim)">
+            <span id="modal-photo-source-hint"></span>
+            <a href="#" onclick="resetRecapToAuto(event)" style="color:var(--amber-lo);text-decoration:none">↺ RESET TO AUTO-DRAFT</a>
+        </div>
+        <div class="modal__photo-row">
+            <label class="photo-label" for="modal-photo" style="flex:1">📎 ATTACH PHOTO (OPTIONAL)</label>
+            <input type="file" id="modal-photo" accept="image/*" style="display:none"
+                onchange="document.getElementById('modal-photo-name').textContent = this.files[0]?.name || ''">
+            <span class="photo-filename" id="modal-photo-name"></span>
+        </div>
+        <div class="modal__btns">
+            <button class="moz-btn gold" id="modal-publish-btn" onclick="publishRecap()">PUBLISH RECAP</button>
+            <button class="moz-btn" id="modal-save-btn" onclick="saveDraftOnly()" style="background:transparent;border:1px solid var(--amber-lo);color:var(--amber)">SAVE DRAFT</button>
+            <button class="moz-btn danger" onclick="closeFinalModal()">CANCEL</button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// Server-rendered plays list (the buttons that appear when a game is live).
+window.MOZZIE_PLAYS = {{ plays|tojson }};
+
+// ---- State ----
+let _pendingFinalId = null;
+
+// Set today's date as default for new game form
+(function() {
+    const d = document.getElementById('new-date');
+    if (d) {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm   = String(now.getMonth() + 1).padStart(2, '0');
+        const dd   = String(now.getDate()).padStart(2, '0');
+        d.value = `${yyyy}-${mm}-${dd}`;
+    }
+})();
+
+// ---- Toast ----
+function showToast(msg, duration) {
+    duration = duration || 2200;
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, duration);
+}
+
+// ---- Card rendering (mirrors the active-game Jinja block in this file) ----
+function escHTML(s) {
+    return String(s).replace(/[&<>"']/g, function(c) {
+        return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+}
+
+function renderActiveGameCard(game) {
+    const id    = game.id;
+    const opp   = escHTML(game.opponent);
+    const oppU  = escHTML((game.opponent || '').toUpperCase());
+    const oppJs = (game.opponent || '').replace(/'/g, "\\'");
+    const isLive = game.status === 'live';
+    const loc   = game.location === 'home' ? 'HOME' : 'AWAY';
+
+    let playPanel = '';
+    if (isLive) {
+        const colMozzie = window.MOZZIE_PLAYS.map(function(p) {
+            return '<button class="play-btn play-btn--mozzie' + (p.group === 'pat' ? ' play-btn--divider' : '') + '" ' +
+                   'onclick="logPlay(' + id + ', \'mozzie\', \'' + p.id + '\')">' +
+                   escHTML(p.label) + '<span class="pts">+' + p.pts + '</span></button>';
+        }).join('');
+        const colOpp = window.MOZZIE_PLAYS.map(function(p) {
+            return '<button class="play-btn play-btn--opp' + (p.group === 'pat' ? ' play-btn--divider' : '') + '" ' +
+                   'onclick="logPlay(' + id + ', \'opp\', \'' + p.id + '\')">' +
+                   escHTML(p.label) + '<span class="pts">+' + p.pts + '</span></button>';
+        }).join('');
+        playPanel =
+            '<div class="play-panel">' +
+                '<div class="play-panel__cols">' +
+                    '<div><div class="play-col__label play-col__label--mozzie">MOZZIE</div>' + colMozzie + '</div>' +
+                    '<div><div class="play-col__label play-col__label--opp">' + oppU + '</div>' + colOpp + '</div>' +
+                '</div>' +
+                '<div class="undo-row"><button class="undo-btn" onclick="undoPlay(' + id + ')">↩ UNDO LAST</button></div>' +
+            '</div>';
+    }
+
+    const goLiveBlock = isLive ? '' :
+        '<div style="padding:10px 14px;border-top:1px solid var(--border);">' +
+            '<button class="moz-btn" onclick="goLive(' + id + ')" style="width:100%;background:transparent;border:1px solid var(--green-lo);color:var(--green);font-size:1rem;padding:10px;">' +
+                '● GO LIVE' +
+            '</button>' +
+        '</div>';
+
+    const markFinalBtn = isLive
+        ? '<button class="moz-btn gold" onclick="openFinalModal(' + id + ', \'' + oppJs + '\')">✓ MARK FINAL</button>'
+        : '';
+
+    return (
+        '<div class="game-card' + (isLive ? ' live' : '') + '" id="card-' + id + '">' +
+            '<div class="game-card__header">' +
+                '<div>' +
+                    '<div class="game-card__opponent">vs. ' + opp + '</div>' +
+                    '<div class="game-card__meta">' + escHTML(game.date) + ' · ' + loc + '</div>' +
+                '</div>' +
+                (isLive
+                    ? '<span class="badge badge--live">● LIVE</span>'
+                    : '<span class="badge badge--upcoming">UPCOMING</span>') +
+            '</div>' +
+            '<div class="scoreboard" id="score-' + id + '">' +
+                '<div class="score-col"><div class="score-label">MOZZIE</div><div class="score-num score-num--mozzie" id="mozzie-score-' + id + '">' + (game.mozzieScore || 0) + '</div></div>' +
+                '<div class="score-sep">–</div>' +
+                '<div class="score-col"><div class="score-label">' + oppU + '</div><div class="score-num score-num--opp" id="opp-score-' + id + '">' + (game.oppScore || 0) + '</div></div>' +
+            '</div>' +
+            goLiveBlock +
+            playPanel +
+            '<div class="card-footer">' +
+                '<textarea class="notes-input" id="notes-' + id + '" placeholder="notes..." onblur="saveNotes(' + id + ')">' + escHTML(game.notes || '') + '</textarea>' +
+                '<div class="photo-upload-row">' +
+                    '<label class="photo-label" for="photo-' + id + '">📎 ATTACH PHOTO</label>' +
+                    '<input type="file" id="photo-' + id + '" accept="image/*" style="display:none" onchange="uploadPhoto(' + id + ', this)">' +
+                    '<span class="photo-filename" id="photo-name-' + id + '"></span>' +
+                '</div>' +
+                '<div class="card-btns">' +
+                    markFinalBtn +
+                    '<button class="moz-btn danger" onclick="deleteGame(' + id + ')">× REMOVE</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>'
+    );
+}
+
+function ensureActiveSection() {
+    let section = document.getElementById('active-section');
+    if (!section) return null;
+    // If empty (no games yet), inject the section divider before adding cards
+    if (!section.querySelector('.section-divider')) {
+        section.insertAdjacentHTML('afterbegin',
+            '<div class="section-divider"><span class="section-divider__label">// ACTIVE</span><span class="section-divider__line"></span></div>'
+        );
+    }
+    return section;
+}
+
+// ---- Add game ----
+function addGame() {
+    const opponent = document.getElementById('new-opponent').value.trim();
+    const date     = document.getElementById('new-date').value;
+    const location = document.getElementById('new-location').value;
+    const status   = document.getElementById('new-status').value;
+
+    if (!opponent) { showToast('// OPPONENT REQUIRED'); return; }
+
+    fetch('/mozzie/api/games', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ opponent: opponent, date: date, location: location, status: status })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(game) {
+        if (game.error) { showToast('// ERROR: ' + game.error); return; }
+
+        // Inject the new card directly — no full-page reload.
+        const section = ensureActiveSection();
+        if (section) {
+            const divider = section.querySelector('.section-divider');
+            const html = renderActiveGameCard(game);
+            divider.insertAdjacentHTML('afterend', html);
+        }
+
+        // Reset form (keep date as today + location/status defaults)
+        document.getElementById('new-opponent').value = '';
+        document.getElementById('new-status').value = 'upcoming';
+        showToast('// GAME ADDED');
+    })
+    .catch(function() { showToast('// CONNECTION LOST'); });
+}
+
+// ---- Go live (transition upcoming → live) ----
+function goLive(gameId) {
+    fetch('/mozzie/api/games/' + gameId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'live' })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(game) {
+        if (game.error) { showToast('// ERROR: ' + game.error); return; }
+        // Re-render the card in place — play buttons appear, MARK FINAL takes over
+        const old = document.getElementById('card-' + gameId);
+        if (old) old.outerHTML = renderActiveGameCard(game);
+        showToast('// LIVE — GO STEELERS', 1800);
+    })
+    .catch(function() { showToast('// CONNECTION LOST'); });
+}
+
+// ---- Log a play ----
+function logPlay(gameId, team, playId) {
+    fetch('/mozzie/api/games/' + gameId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ play: { team: team, playId: playId } })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(game) {
+        if (game.error) { showToast('// ERROR: ' + game.error); return; }
+        document.getElementById('mozzie-score-' + gameId).textContent = game.mozzieScore;
+        document.getElementById('opp-score-'    + gameId).textContent = game.oppScore;
+        // Reload for plays log update
+        setTimeout(function() { location.reload(); }, 300);
+    })
+    .catch(function() { showToast('// CONNECTION LOST'); });
+}
+
+// ---- Undo last play ----
+function undoPlay(gameId) {
+    fetch('/mozzie/api/games/' + gameId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ undo: true })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(game) {
+        if (game.error) { showToast('// ERROR: ' + game.error); return; }
+        showToast('// PLAY UNDONE');
+        setTimeout(function() { location.reload(); }, 400);
+    })
+    .catch(function() { showToast('// CONNECTION LOST'); });
+}
+
+// ---- Save notes (on blur) ----
+function saveNotes(gameId) {
+    const notes = document.getElementById('notes-' + gameId).value;
+    fetch('/mozzie/api/games/' + gameId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: notes })
+    }).catch(function() {});
+}
+
+// ---- Photo upload (active game card) ----
+function uploadPhoto(gameId, input) {
+    const file = input.files[0];
+    if (!file) return;
+    document.getElementById('photo-name-' + gameId).textContent = file.name;
+    const fd = new FormData();
+    fd.append('photo', file);
+    showToast('// UPLOADING...');
+    fetch('/mozzie/api/games/' + gameId + '/photo', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) { showToast('// UPLOAD ERROR'); return; }
+        showToast('// PHOTO UPLOADED');
+    })
+    .catch(function() { showToast('// UPLOAD FAILED'); });
+}
+
+// ---- Delete game ----
+function deleteGame(gameId) {
+    if (!confirm('Remove this game?')) return;
+    fetch('/mozzie/api/games/' + gameId, { method: 'DELETE' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            var card = document.getElementById('card-' + gameId);
+            if (card) card.remove();
+            showToast('// GAME REMOVED');
+        }
+    })
+    .catch(function() { showToast('// CONNECTION LOST'); });
+}
+
+// ---- Recap draft modal ----
+// _recapAutoText is the auto-generated draft for the current game (used by the Reset link).
+let _recapAutoText = '';
+
+// Called from "✓ MARK FINAL" on an active game card. POSTs /final to flip status + generate
+// the auto-draft, then opens the modal in draft-edit mode (no publish until user hits PUBLISH).
+function openFinalModal(gameId, opponent) {
+    _pendingFinalId = gameId;
+    document.getElementById('modal-title').textContent = 'FINAL — vs. ' + opponent.toUpperCase();
+    document.getElementById('modal-recap').value = 'generating draft...';
+    document.getElementById('modal-photo').value = '';
+    document.getElementById('modal-photo-name').textContent = '';
+    document.getElementById('modal-photo-source-hint').textContent = '';
+    document.getElementById('final-modal').classList.add('open');
+
+    fetch('/mozzie/api/games/' + gameId + '/final', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) {
+            showToast('// ERROR: ' + data.error, 3500);
+            closeFinalModal();
+            return;
+        }
+        _recapAutoText = data.draft || '';
+        document.getElementById('modal-recap').value = _recapAutoText;
+        document.getElementById('modal-photo-source-hint').textContent =
+            (data.game && data.game.photos && data.game.photos.length)
+                ? '// fallback: gallery photo will be used if none attached'
+                : '';
+    })
+    .catch(function() {
+        showToast('// CONNECTION LOST');
+        closeFinalModal();
+    });
+}
+
+// Called from "📝 PUBLISH RECAP" on a drafted-but-unpublished finished game card.
+// Game is already final on the server; this fetches the saved draft and opens for editing.
+function openRecapModal(gameId, opponent) {
+    _pendingFinalId = gameId;
+    document.getElementById('modal-title').textContent = 'RECAP — vs. ' + opponent.toUpperCase();
+    document.getElementById('modal-recap').value = 'loading draft...';
+    document.getElementById('modal-photo').value = '';
+    document.getElementById('modal-photo-name').textContent = '';
+    document.getElementById('modal-photo-source-hint').textContent = '';
+    document.getElementById('final-modal').classList.add('open');
+
+    fetch('/mozzie/api/games/' + gameId + '/draft')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) {
+            showToast('// ERROR: ' + data.error, 3500);
+            closeFinalModal();
+            return;
+        }
+        _recapAutoText = data.auto || '';
+        document.getElementById('modal-recap').value = data.draft || _recapAutoText;
+        document.getElementById('modal-photo-source-hint').textContent = data.has_gallery_photo
+            ? '// fallback: first gallery photo will be used if none attached'
+            : '';
+    })
+    .catch(function() {
+        showToast('// CONNECTION LOST');
+        closeFinalModal();
+    });
+}
+
+function closeFinalModal() {
+    _pendingFinalId = null;
+    _recapAutoText = '';
+    document.getElementById('final-modal').classList.remove('open');
+}
+
+function resetRecapToAuto(e) {
+    if (e) e.preventDefault();
+    if (!_recapAutoText) return;
+    document.getElementById('modal-recap').value = _recapAutoText;
+    showToast('// reset to auto-draft', 1400);
+}
+
+function saveDraftOnly() {
+    if (!_pendingFinalId) return;
+    var btn  = document.getElementById('modal-save-btn');
+    var text = document.getElementById('modal-recap').value;
+
+    btn.disabled = true;
+    var origLabel = btn.textContent;
+    btn.textContent = 'SAVING...';
+
+    fetch('/mozzie/api/games/' + _pendingFinalId + '/draft', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) {
+            showToast('// ERROR: ' + data.error, 3500);
+            btn.disabled = false;
+            btn.textContent = origLabel;
+            return;
+        }
+        closeFinalModal();
+        showToast('// DRAFT SAVED', 1800);
+        setTimeout(function() { location.reload(); }, 800);
+    })
+    .catch(function() {
+        showToast('// CONNECTION LOST');
+        btn.disabled = false;
+        btn.textContent = origLabel;
+    });
+}
+
+function publishRecap() {
+    if (!_pendingFinalId) return;
+    var btn   = document.getElementById('modal-publish-btn');
+    var text  = document.getElementById('modal-recap').value;
+    var photo = document.getElementById('modal-photo').files[0];
+
+    if (!text || !text.trim()) {
+        showToast('// RECAP TEXT REQUIRED', 2400);
+        return;
+    }
+
+    btn.innerHTML = '<span class="spinner"></span> TRANSMITTING...';
+    btn.disabled = true;
+
+    var fd = new FormData();
+    fd.append('text', text);
+    if (photo) fd.append('photo', photo);
+
+    fetch('/mozzie/api/games/' + _pendingFinalId + '/publish-recap', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) {
+            showToast('// ERROR: ' + (data.detail || data.error), 3500);
+            btn.innerHTML = 'PUBLISH RECAP';
+            btn.disabled = false;
+            return;
+        }
+        closeFinalModal();
+        showToast('// TRANSMITTED — RECAP PUBLISHED', 2800);
+        setTimeout(function() { location.reload(); }, 1200);
+    })
+    .catch(function() {
+        showToast('// CONNECTION LOST');
+        btn.innerHTML = 'PUBLISH RECAP';
+        btn.disabled = false;
+    });
+}
+
+// ---- Toggle finished game body ----
+function toggleFinished(gameId) {
+    var body = document.getElementById('finished-body-' + gameId);
+    if (body) body.classList.toggle('open');
+}
+
+// Close modal on overlay click
+document.getElementById('final-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeFinalModal();
+});
+</script>
+</body>
+</html>
