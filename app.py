@@ -72,24 +72,10 @@ COMMS_CACHE_TTL = 300  # 5 minutes
 # ---- AUTH ---- (moved to helpers/auth.py)
 
 from helpers.auth import is_authenticated, cd_auth_required
+from helpers.git import get_git_status, perform_git_ops
 
 
-# ---- GIT / COMMS HELPERS ----
-
-def get_git_status():
-	try:
-		subprocess.run(["git", "fetch"], check=True, capture_output=True, timeout=5)
-		status = subprocess.check_output(["git", "status", "-sb"], encoding='utf-8')
-		if "ahead" in status:
-			return "syncing"
-		elif "behind" in status:
-			return "offline"
-		else:
-			return "online"
-	except Exception as e:
-		print(f"Git Status Error: {e}")
-		return False
-
+# ---- COMMS HELPERS ----
 
 def get_active_tags():
 	pa_tz = pytz.timezone('America/New_York')
@@ -258,22 +244,6 @@ def post_to_omg_lol(text):
 		payload["emoji"] = found[0]['emoji']
 		payload["content"] = text[len(found[0]['emoji']):].strip()
 	requests.post(url, json=payload, headers={"Authorization": f"Bearer {api}"})
-
-
-def perform_git_ops(filename):
-	stash = subprocess.run(
-		["git", "stash"], capture_output=True, encoding='utf-8'
-	)
-	stashed = "No local changes" not in stash.stdout
-
-	subprocess.run(["git", "pull", "--rebase", "origin", "main"], check=True)
-
-	if stashed:
-		subprocess.run(["git", "stash", "pop"], check=True)
-
-	subprocess.run(["git", "add", "."], check=True)
-	subprocess.run(["git", "commit", "-m", "update from cockpit"], check=True)
-	subprocess.run(["git", "push", "origin", "main"], check=True)
 
 
 def optimize_image(input_path, max_width=1200):
