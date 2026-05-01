@@ -6,11 +6,15 @@ Internal helpers: _huyang_build_context, _huyang_build_system_with_content.
 PIN-gated for private projects via cd_auth_required decorator (in helpers/auth.py).
 """
 import os
+import io
 import json
 import re
+import uuid
+import logging
 from datetime import datetime
 import pytz
 import anthropic
+import requests as req_lib
 from flask import (
 	Blueprint, request, redirect, url_for, jsonify, render_template, make_response,
 )
@@ -18,12 +22,21 @@ from werkzeug.utils import secure_filename
 
 from helpers.auth import is_authenticated, cd_auth_required
 from helpers.db import get_db, slugify, unique_slug, et_now
-from helpers.bunny import _allowed_file, _upload_to_bunny
+from helpers.bunny import (
+	_allowed_file, _upload_to_bunny,
+	BUNNY_STORAGE_ZONE, BUNNY_API_KEY, BUNNY_CDN_URL,
+)
+
+
+logger = logging.getLogger(__name__)
 
 
 # Module constants — read from env at import time.
 PRIVATE_PROJECTS_PIN = os.environ.get('PRIVATE_PROJECTS_PIN', '')
 ANTHROPIC_API_KEY    = os.environ.get('ANTHROPIC_API_KEY')
+
+# File-upload size cap (MB) — used by /command-deck/projects/<slug>/upload.
+MAX_FILE_SIZE_MB = 25
 
 
 command_deck_bp = Blueprint('command_deck', __name__)
@@ -561,7 +574,7 @@ def cd_file_upload(slug):
 			from PIL import Image
 			import io
 			img = Image.open(file)
-			img.thumbnail((1200, 1200), Image.LANCZOS)
+			img.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
 			buf = io.BytesIO()
 			save_format = 'JPEG' if ext in ('jpg', 'jpeg') else ext.upper()
 			if save_format == 'JPG':
@@ -573,7 +586,7 @@ def cd_file_upload(slug):
 			cdn_url = _upload_to_bunny(file, unique_name, content_type)
 	except Exception as e:
 		conn.close()
-		app.logger.error(f"Bunny upload error: {e}")
+		logger.error(f"Bunny upload error: {e}")
 		return jsonify({'error': 'upload failed'}), 500
 
 	cursor = conn.execute('''
@@ -614,7 +627,7 @@ def cd_file_delete(slug, file_id):
 				timeout=15
 			)
 		except Exception as e:
-			app.logger.error(f"Bunny delete error: {e}")
+			logger.error(f"Bunny delete error: {e}")
 			# Continue — remove from DB regardless
 
 		conn.execute('DELETE FROM files WHERE id = ?', (file_id,))
@@ -753,7 +766,7 @@ def cd_chat():
 		)
 		reply = response.content[0].text
 	except Exception as e:
-		app.logger.error(f"Huyang API error: {e}")
+		logger.error(f"Huyang API error: {e}")
 		conn.close()
 		return jsonify({'error': 'Huyang is unavailable right now.'}), 500
 
