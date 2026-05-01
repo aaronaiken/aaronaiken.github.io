@@ -69,10 +69,9 @@ _comms_cache = {'data': None, 'timestamp': 0}
 COMMS_CACHE_TTL = 300  # 5 minutes
 
 
-# ---- AUTH ----
+# ---- AUTH ---- (moved to helpers/auth.py)
 
-def is_authenticated():
-	return request.cookies.get('auth_token') == 'authenticated_user'
+from helpers.auth import is_authenticated, cd_auth_required
 
 
 # ---- GIT / COMMS HELPERS ----
@@ -1524,14 +1523,6 @@ def task_assign(task_id):
 	return jsonify({'success': True})
 
 # ---- COMMAND DECK ROUTES ----
-
-def cd_auth_required(f):
-	@wraps(f)
-	def decorated(*args, **kwargs):
-		if not is_authenticated():
-			return redirect(url_for('login'))
-		return f(*args, **kwargs)
-	return decorated
 
 @app.route('/command-deck/verify-pin', methods=['POST'])
 @cd_auth_required
