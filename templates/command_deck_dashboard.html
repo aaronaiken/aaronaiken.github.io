@@ -249,6 +249,13 @@
             {% endif %}
           </div>
 
+          <div class="cd-huyang-search-row">
+            <button class="cd-huyang-search-toggle" id="huyangSearchToggle" type="button"
+                    title="Toggle search-work mode" aria-pressed="false">
+              <span class="cd-huyang-search-icon">🔍</span>
+              <span class="cd-huyang-search-label">SEARCH WORK</span>
+            </button>
+          </div>
           <div class="cd-huyang-input-row">
             <textarea class="cd-huyang-textarea" id="huyangInput"
               placeholder="ask Huyang..." rows="1"></textarea>
@@ -595,6 +602,26 @@ function updateBadge() {
     return div;
   }
 
+  // Search-work mode toggle (Work tab only — toggle button hidden on Personal
+  // tab via CSS). Resets to off on page reload AND on tab switch (§9.1).
+  let searchWorkActive = false;
+  const searchToggle = document.getElementById('huyangSearchToggle');
+  function setSearchWork(on) {
+    searchWorkActive = !!on;
+    if (!searchToggle) return;
+    searchToggle.classList.toggle('is-active', searchWorkActive);
+    searchToggle.setAttribute('aria-pressed', searchWorkActive ? 'true' : 'false');
+    input.placeholder = searchWorkActive
+      ? 'Search across all work projects...'
+      : 'ask Huyang...';
+  }
+  if (searchToggle) {
+    searchToggle.addEventListener('click', function () { setSearchWork(!searchWorkActive); });
+  }
+  document.addEventListener('cd-tab-changed', function (e) {
+    if (e.detail && e.detail.tab === 'personal' && searchWorkActive) setSearchWork(false);
+  });
+
   function sendMessage() {
     const msg = input.value.trim();
     if (!msg) return;
@@ -605,10 +632,13 @@ function updateBadge() {
     const thinking = showThinking();
     sendBtn.disabled = true;
 
+    const payload = { message: msg, project_id: null };
+    if (searchWorkActive) payload.mode = 'search_work';
+
     fetch('/command-deck/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: msg, project_id: null })
+      body: JSON.stringify(payload)
     })
     .then(r => r.json())
     .then(data => {
