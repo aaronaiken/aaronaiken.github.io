@@ -2452,3 +2452,44 @@ body[data-area="fdot"] .cd-fdot-palm {
 	body[data-area="fdot"] .cd-fdot-palm { display: none; }
 }
 
+
+/* ============================================================ */
+/* HUYANG SEARCH-WORK TOGGLE (Work tab only) — §9.1              */
+/* ============================================================ */
+
+.cd-huyang-search-row {
+	padding: 6px 10px 0;
+	display: flex;
+	justify-content: flex-start;
+}
+body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
+
+.cd-huyang-search-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	background: none;
+	border: 1px dashed rgba(212, 136, 10, 0.3);
+	color: rgba(212, 136, 10, 0.55);
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.55rem;
+	letter-spacing: 0.18em;
+	padding: 4px 9px;
+	border-radius: 2px;
+	cursor: pointer;
+	text-transform: uppercase;
+	transition: all 0.15s;
+}
+.cd-huyang-search-toggle:hover {
+	border-color: rgba(212, 136, 10, 0.55);
+	color: var(--cd-amber-hi, #f5b332);
+}
+.cd-huyang-search-toggle.is-active {
+	border-style: solid;
+	border-color: var(--cd-amber-hi, #f5b332);
+	background: rgba(245, 179, 50, 0.1);
+	color: var(--cd-amber-hi, #f5b332);
+	box-shadow: 0 0 8px rgba(245, 179, 50, 0.25);
+}
+.cd-huyang-search-icon { font-size: 0.7rem; line-height: 1; }
+
