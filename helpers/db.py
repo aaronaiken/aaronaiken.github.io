@@ -13,11 +13,20 @@ DB_FILE = os.path.join(
 
 
 def get_db():
-	"""Open a SQLite connection with WAL mode and foreign keys on."""
+	"""Open a SQLite connection with NFS-safe rollback journal + foreign keys on.
+
+	NOTE on journal_mode: PythonAnywhere's home directory is NFS-backed.
+	SQLite's WAL mode is explicitly unsafe on NFS — file-locking semantics
+	differ from local disk, and concurrent writers can corrupt the main DB
+	file during a checkpoint. We learned this the hard way on 2026-05-02 when
+	a prod DB went all-zeros mid-Phase-1.5 testing. DELETE is the default
+	rollback journal mode (safer everywhere, slower under high concurrency,
+	which we don't have anyway — single user, low write rate).
+	"""
 	conn = sqlite3.connect(DB_FILE)
 	conn.row_factory = sqlite3.Row
 	conn.execute("PRAGMA foreign_keys = ON")
-	conn.execute("PRAGMA journal_mode = WAL")
+	conn.execute("PRAGMA journal_mode = DELETE")
 	return conn
 
 
