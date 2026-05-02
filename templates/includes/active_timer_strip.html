@@ -94,6 +94,16 @@
   text-transform: uppercase;
   flex-shrink: 0;
 }
+.tt-row-ctx {
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  color: rgba(212, 136, 10, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
+}
 .tt-row-desc {
   flex: 1;
   color: rgba(212, 136, 10, 0.92);
@@ -240,9 +250,13 @@
       var color = e.area_color || '#d4880a';
       var areaName = e.area_title || 'Personal';
       var desc = e.description || e.project_title || '';
+      var ctx = '';
+      if (e.task_title) ctx = '<span class="tt-row-ctx">[task: ' + escHtml(e.task_title) + ']</span>';
+      else if (e.checklist_item_text) ctx = '<span class="tt-row-ctx">[item: ' + escHtml(e.checklist_item_text) + ']</span>';
       return '<div class="tt-row" data-id="' + e.id + '">' +
         '<span class="tt-row-dot" style="background:' + color + ';"></span>' +
         '<span class="tt-row-area">' + escHtml(areaName) + '</span>' +
+        ctx +
         '<span class="tt-row-desc">' + escHtml(desc) + '</span>' +
         '<span class="tt-row-elapsed">' + TTC.formatElapsed(TTC.elapsedSeconds(e)) + '</span>' +
         '<button class="tt-row-stop" data-id="' + e.id + '" type="button">STOP</button>' +

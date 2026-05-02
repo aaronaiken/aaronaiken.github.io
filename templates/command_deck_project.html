@@ -1392,8 +1392,15 @@ function cdEditTask(id) {
         const isRunning = !e.ended_at;
         const elapsed = e.duration_seconds != null ? e.duration_seconds : Math.floor((Date.now() - new Date(e.started_at).getTime()) / 1000);
         total += Math.max(0, elapsed|0);
+        let contextBadge = '';
+        if (e.task_title) {
+          contextBadge = '<span class="cd-tt-entry-context task">[task: ' + escHtml(e.task_title) + ']</span>';
+        } else if (e.checklist_item_text) {
+          contextBadge = '<span class="cd-tt-entry-context item">[item: ' + escHtml(e.checklist_item_text) + ']</span>';
+        }
         return '<div class="cd-tt-entry' + (isRunning ? ' is-running' : '') + '" data-id="' + e.id + '">' +
           '<span class="cd-tt-entry-time">' + fmtTimeOfDay(e.started_at) + '–' + (e.ended_at ? fmtTimeOfDay(e.ended_at) : 'now') + '</span>' +
+          contextBadge +
           '<span class="cd-tt-entry-desc">' + (escHtml(e.description) || '<em class="cd-text-dim">no description</em>') + '</span>' +
           '<span class="cd-tt-entry-elapsed">' + fmt(elapsed) + '</span>' +
           (isRunning
@@ -1587,6 +1594,39 @@ function cdEditTask(id) {
     clearTimeout(toastEl._t);
     toastEl._t = setTimeout(function () { toastEl.classList.remove('show'); }, 2200);
   }
+
+  // ---- Auto-stop on task/item completion (Phase 1.5 §4.5) ----
+  // Fires alongside the existing complete/toggle handlers — both POSTs run
+  // independently, the user sees "task done + timer stopped" near-simultaneously.
+  document.addEventListener('change', function (e) {
+    if (!window.TimeTrackerCore) return;
+    if (!e.target.checked) return; // un-check does not auto-restart anything
+    if (e.target.classList.contains('project-task-check')) {
+      const taskId = e.target.dataset.id;
+      const active = window.TimeTrackerCore.current().find(function (en) {
+        return String(en.task_id) === String(taskId);
+      });
+      if (active) {
+        window.TimeTrackerCore.stopTimer(active.id).then(function (r) {
+          if (r.ok && r.data && r.data.entry) {
+            showToast('Stopped after ' + fmt(r.data.entry.duration_seconds || 0) + '.');
+          }
+        });
+      }
+    } else if (e.target.dataset.itemId) {
+      const itemId = e.target.dataset.itemId;
+      const active = window.TimeTrackerCore.current().find(function (en) {
+        return String(en.checklist_item_id) === String(itemId);
+      });
+      if (active) {
+        window.TimeTrackerCore.stopTimer(active.id).then(function (r) {
+          if (r.ok && r.data && r.data.entry) {
+            showToast('Stopped after ' + fmt(r.data.entry.duration_seconds || 0) + '.');
+          }
+        });
+      }
+    }
+  });
 
   // ---- Wire to TimeTrackerCore ----
   if (window.TimeTrackerCore) {
