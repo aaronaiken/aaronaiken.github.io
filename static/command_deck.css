@@ -2320,6 +2320,118 @@ body.cd-strip-visible .cd-shell { padding-top: 32px; }
 
 
 /* ============================================================ */
+/* PHASE 1.5 — ⏱ buttons on task rows + checklist items          */
+/* ============================================================ */
+
+/* Base button — small, dim, monospaced */
+.cd-tt-row-btn {
+	background: none;
+	border: 1px solid transparent;
+	color: var(--cd-amber-lo, rgba(212, 136, 10, 0.55));
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.7rem;
+	letter-spacing: 0.05em;
+	padding: 1px 6px;
+	border-radius: 2px;
+	cursor: pointer;
+	flex-shrink: 0;
+	font-variant-numeric: tabular-nums;
+	transition: all 0.15s;
+	min-width: 22px;
+	line-height: 1.1;
+}
+.cd-tt-row-btn:hover {
+	border-color: var(--card-area-color, var(--cd-amber, #d4880a));
+	color: var(--cd-amber-hi, #f5b332);
+}
+
+/* Running state — area color, persistent border, live elapsed */
+.cd-tt-row-btn[data-running="1"] {
+	border-color: var(--card-area-color, var(--cd-amber, #d4880a));
+	color: var(--cd-amber-hi, #f5b332);
+	background: rgba(245, 179, 50, 0.08);
+}
+
+/* Pulsing dot on the row when its timer is running */
+.cd-task-item.cd-tt-running::before,
+.cd-checklist-item.cd-tt-running::before {
+	content: '';
+	display: inline-block;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--card-area-color, var(--cd-amber, #d4880a));
+	margin-right: 0.4rem;
+	flex-shrink: 0;
+	animation: cd-tt-row-pulse 1.8s ease-in-out infinite;
+}
+@keyframes cd-tt-row-pulse {
+	0%, 100% { opacity: 0.65; transform: scale(1); }
+	50%      { opacity: 1;    transform: scale(1.2); }
+}
+
+/* Checklist item ⏱ — hidden until row hover (desktop), low-opacity always (mobile) */
+.cd-tt-item-btn {
+	opacity: 0;
+	transition: opacity 0.15s;
+}
+.cd-checklist-item:hover .cd-tt-item-btn,
+.cd-checklist-item.cd-tt-running .cd-tt-item-btn,
+.cd-checklist-item .cd-tt-item-btn:focus {
+	opacity: 1;
+}
+@media (hover: none) {
+	/* Touch devices have no hover — show at reduced opacity */
+	.cd-tt-item-btn { opacity: 0.55; }
+	.cd-checklist-item.cd-tt-running .cd-tt-item-btn { opacity: 1; }
+}
+
+/* "today: H:MM" tag on task rows */
+.cd-tt-today-tag {
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.55rem;
+	letter-spacing: 0.1em;
+	color: var(--card-area-color, var(--cd-amber-lo, rgba(212, 136, 10, 0.6)));
+	background: rgba(212, 136, 10, 0.06);
+	padding: 1px 6px;
+	border-radius: 2px;
+	flex-shrink: 0;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Toast — bottom-center, brief */
+.cd-tt-toast {
+	position: fixed;
+	bottom: 32px;
+	left: 50%;
+	transform: translateX(-50%) translateY(20px);
+	background: rgba(10, 10, 8, 0.95);
+	color: var(--cd-amber-hi, #f5b332);
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.7rem;
+	letter-spacing: 0.12em;
+	padding: 8px 16px;
+	border: 1px solid var(--cd-border-amber, rgba(212, 136, 10, 0.3));
+	border-radius: 3px;
+	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.18s, transform 0.18s;
+	z-index: 11000;
+}
+.cd-tt-toast.show {
+	opacity: 1;
+	transform: translateX(-50%) translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.cd-task-item.cd-tt-running::before,
+	.cd-checklist-item.cd-tt-running::before { animation: none; opacity: 0.85; }
+	.cd-tt-toast { transition: opacity 0.05s; }
+}
+
+
+/* ============================================================ */
 /* PER-AREA: Corporate (CAI) — "The Mothership"                  */
 /* Slate-blue, cargo-hold vibes, // CAI // prefix on title.       */
 /* ============================================================ */
