@@ -44,6 +44,11 @@
 		panes.forEach(function (p) {
 			p.hidden = p.getAttribute('data-tab') !== name;
 		});
+		// Mirror the active tab onto <body> so CSS can scope per-tab chrome
+		// (e.g. hiding the Huyang search-work toggle on the Personal tab).
+		try { document.body.dataset.cdTab = name; } catch (e) {}
+		// Notify subscribers (the dashboard's inline JS listens to reset state).
+		try { document.dispatchEvent(new CustomEvent('cd-tab-changed', { detail: { tab: name } })); } catch (e) {}
 		// Reset search inputs in the newly-shown pane (per spec §8: "Clears on tab switch")
 		var input = document.querySelector('.cd-tab-search[data-tab="' + name + '"]');
 		if (input) {
