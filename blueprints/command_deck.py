@@ -42,6 +42,55 @@ MAX_FILE_SIZE_MB = 25
 command_deck_bp = Blueprint('command_deck', __name__)
 
 
+# ---- Project-query helpers (Phase 1 time-tracking) ----
+
+def _fetch_work_areas(conn):
+	"""Work areas with sub-project, open-task, and active-timer counts."""
+	return conn.execute('''
+		SELECT a.id, a.title, a.slug, a.description, a.area_color,
+		       a.is_private, a.created, a.updated, a.is_favorite,
+		       (SELECT COUNT(*) FROM projects sp
+		        WHERE sp.parent_project_id = a.id
+		          AND sp.project_type = 'work_subproject') AS subproject_count,
+		       (SELECT COUNT(*) FROM tasks t
+		        JOIN projects sp ON t.project_id = sp.id
+		        WHERE sp.parent_project_id = a.id
+		          AND t.status = 'open') AS open_task_count,
+		       (SELECT COUNT(*) FROM time_entries te
+		        JOIN projects sp ON te.project_id = sp.id
+		        WHERE sp.parent_project_id = a.id
+		          AND te.ended_at IS NULL) AS active_timer_count
+		FROM projects a
+		WHERE a.project_type = 'work_area'
+		ORDER BY a.title ASC
+	''').fetchall()
+
+
+def _fetch_subprojects(conn, area_id=None, favorites_only=False):
+	"""Sub-projects with parent area joined. Optional filters by area or favorite."""
+	sql = '''
+		SELECT sp.*,
+		       parent.id         AS area_id,
+		       parent.title      AS area_title,
+		       parent.slug       AS area_slug,
+		       parent.area_color AS area_color,
+		       (SELECT COUNT(*) FROM tasks t WHERE t.project_id = sp.id AND t.status = 'open') AS open_task_count,
+		       (SELECT COUNT(*) FROM blocks b WHERE b.project_id = sp.id) AS block_count,
+		       (SELECT id FROM time_entries WHERE project_id = sp.id AND ended_at IS NULL LIMIT 1) AS active_timer_id
+		FROM projects sp
+		LEFT JOIN projects parent ON sp.parent_project_id = parent.id
+		WHERE sp.project_type = 'work_subproject'
+	'''
+	args = []
+	if area_id is not None:
+		sql += ' AND sp.parent_project_id = ?'
+		args.append(area_id)
+	if favorites_only:
+		sql += ' AND sp.is_favorite = 1'
+	sql += ' ORDER BY sp.updated DESC'
+	return conn.execute(sql, args).fetchall()
+
+
 # ---- COMMAND DECK ROUTES ----
 
 @command_deck_bp.route('/command-deck/verify-pin', methods=['POST'])
@@ -67,14 +116,20 @@ def cd_dashboard():
 		ORDER BY "order" ASC, id ASC
 	''').fetchall()
 
-	# All projects, most recently updated first
+	# Personal projects only — work areas + sub-projects flow through
+	# work_areas / favorited_subprojects below. (§3.2 partitioning)
 	projects = conn.execute('''
-        SELECT p.*,
-               (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.status = 'open') AS open_task_count,
-               (SELECT COUNT(*) FROM blocks b WHERE b.project_id = p.id) AS block_count
-        FROM projects p
-        ORDER BY p.updated DESC
-    ''').fetchall()
+		SELECT p.*,
+		       (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.status = 'open') AS open_task_count,
+		       (SELECT COUNT(*) FROM blocks b WHERE b.project_id = p.id) AS block_count,
+		       (SELECT id FROM time_entries WHERE project_id = p.id AND ended_at IS NULL LIMIT 1) AS active_timer_id
+		FROM projects p
+		WHERE p.project_type = 'personal'
+		ORDER BY p.updated DESC
+	''').fetchall()
+
+	work_areas = _fetch_work_areas(conn)
+	favorited_subprojects = _fetch_subprojects(conn, favorites_only=True)
 
 	# Recent chat messages (last 3 — dashboard preview)
 	recent_chat = conn.execute('''
@@ -93,6 +148,8 @@ def cd_dashboard():
 		'command_deck_dashboard.html',
 		bd_tasks=[dict(t) for t in bd_tasks],
 		projects=[dict(p) for p in projects],
+		work_areas=[dict(a) for a in work_areas],
+		favorited_subprojects=[dict(s) for s in favorited_subprojects],
 		recent_chat=[dict(m) for m in reversed(recent_chat)],
 		private_projects_enabled=bool(PRIVATE_PROJECTS_PIN),
 		today_count=today_count
@@ -108,14 +165,24 @@ def cd_projects():
 	conn = get_db()
 	projects = conn.execute('''
 		SELECT p.*,
-			   (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.status = 'open') AS open_task_count,
-			   (SELECT COUNT(*) FROM blocks b WHERE b.project_id = p.id) AS block_count,
-			   (SELECT COUNT(*) FROM files f WHERE f.project_id = p.id) AS file_count
+		       (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.status = 'open') AS open_task_count,
+		       (SELECT COUNT(*) FROM blocks b WHERE b.project_id = p.id) AS block_count,
+		       (SELECT COUNT(*) FROM files f WHERE f.project_id = p.id) AS file_count,
+		       (SELECT id FROM time_entries WHERE project_id = p.id AND ended_at IS NULL LIMIT 1) AS active_timer_id
 		FROM projects p
+		WHERE p.project_type = 'personal'
 		ORDER BY p.updated DESC
 	''').fetchall()
+	work_areas = _fetch_work_areas(conn)
+	subprojects = _fetch_subprojects(conn)
 	conn.close()
-	return render_template('command_deck_projects.html', projects=[dict(p) for p in projects], private_projects_enabled=bool(PRIVATE_PROJECTS_PIN))
+	return render_template(
+		'command_deck_projects.html',
+		projects=[dict(p) for p in projects],
+		work_areas=[dict(a) for a in work_areas],
+		subprojects=[dict(s) for s in subprojects],
+		private_projects_enabled=bool(PRIVATE_PROJECTS_PIN),
+	)
 
 
 @command_deck_bp.route('/command-deck/projects/new', methods=['POST'])
@@ -239,6 +306,99 @@ def cd_project_delete(slug):
 		conn.commit()
 	conn.close()
 	return redirect(url_for('cd_projects'))
+
+
+@command_deck_bp.route('/command-deck/projects/<slug>/favorite', methods=['POST'])
+@cd_auth_required
+def cd_project_favorite(slug):
+	conn = get_db()
+	project = conn.execute('SELECT * FROM projects WHERE slug = ?', (slug,)).fetchone()
+	if not project:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+	new_state = 0 if project['is_favorite'] else 1
+	conn.execute(
+		'UPDATE projects SET is_favorite = ?, updated = ? WHERE id = ?',
+		(new_state, et_now(), project['id'])
+	)
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True, 'is_favorite': bool(new_state)})
+
+
+@command_deck_bp.route('/command-deck/projects/<slug>/tracking', methods=['POST'])
+@cd_auth_required
+def cd_project_tracking(slug):
+	conn = get_db()
+	project = conn.execute('SELECT * FROM projects WHERE slug = ?', (slug,)).fetchone()
+	if not project:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+	# tracking_enabled only meaningful on work_subproject + personal (§2.1)
+	if project['project_type'] not in ('work_subproject', 'personal'):
+		conn.close()
+		return jsonify({
+			'error': 'project_not_trackable',
+			'project_type': project['project_type'],
+		}), 400
+	new_state = 0 if project['tracking_enabled'] else 1
+	conn.execute(
+		'UPDATE projects SET tracking_enabled = ?, updated = ? WHERE id = ?',
+		(new_state, et_now(), project['id'])
+	)
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True, 'tracking_enabled': bool(new_state)})
+
+
+@command_deck_bp.route('/command-deck/areas/<slug>/subprojects/new', methods=['POST'])
+@cd_auth_required
+def cd_area_subproject_new(slug):
+	data = request.get_json(silent=True) or request.form
+	title = (data.get('title') or '').strip()
+	description = (data.get('description') or '').strip() or None
+	tracking_enabled = 1 if data.get('tracking_enabled') in (True, '1', 1, 'true', 'True') else 0
+	if not title:
+		return jsonify({'error': 'title required'}), 400
+
+	conn = get_db()
+	area = conn.execute(
+		"SELECT * FROM projects WHERE slug = ? AND project_type = 'work_area'",
+		(slug,)
+	).fetchone()
+	if not area:
+		conn.close()
+		return jsonify({'error': 'area_not_found'}), 404
+
+	new_slug = unique_slug(title, conn)
+	now = et_now()
+	cur = conn.execute('''
+		INSERT INTO projects
+			(title, slug, description, is_private,
+			 project_type, parent_project_id, tracking_enabled,
+			 is_favorite, area_color, created, updated)
+		VALUES (?, ?, ?, 0, 'work_subproject', ?, ?, 0, NULL, ?, ?)
+	''', (title, new_slug, description, area['id'], tracking_enabled, now, now))
+	new_id = cur.lastrowid
+	conn.commit()
+	sp = conn.execute('SELECT * FROM projects WHERE id = ?', (new_id,)).fetchone()
+	conn.close()
+	return jsonify({
+		'success': True,
+		'subproject': {
+			'id': sp['id'],
+			'title': sp['title'],
+			'slug': sp['slug'],
+			'description': sp['description'],
+			'parent_project_id': sp['parent_project_id'],
+			'area_id': area['id'],
+			'area_title': area['title'],
+			'area_slug': area['slug'],
+			'area_color': area['area_color'],
+			'tracking_enabled': bool(sp['tracking_enabled']),
+			'is_favorite': bool(sp['is_favorite']),
+		}
+	})
 
 
 # --- Blocks ---
