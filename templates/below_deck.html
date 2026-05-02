@@ -17,7 +17,8 @@
         --text-dim:#7a5020;--border:#1e1608;--border-hi:#3a2c10;--muted:#5a3c18;--input-bg:#0a0c08;
     }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono','Courier New',monospace;min-height:100vh;padding:env(safe-area-inset-top,20px) 0 60px;font-size:14px;overscroll-behavior-y:contain;}
+    body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono','Courier New',monospace;min-height:100vh;padding:env(safe-area-inset-top,20px) 0 60px;font-size:14px;overscroll-behavior-y:contain;transition:padding-top 0.18s ease;}
+    body.cd-strip-visible{padding-top:calc(env(safe-area-inset-top,20px) + 32px);}
     .bd-container{width:100%;max-width:480px;margin:0 auto;padding:24px 20px 60px;}
     @media(min-width:768px){.bd-container{margin-top:40px;border:1px solid var(--border);}}
     .bd-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:24px;padding-bottom:12px;border-bottom:1px solid var(--border);}
@@ -158,6 +159,7 @@
 </div>
 <script>
     const BD_PROJECTS = {{ projects | tojson }};
+    const BD_PICKER_GROUPS = {{ picker_groups | tojson }};
     const bdList=document.getElementById('bd-list'),bdWinsList=document.getElementById('bd-wins-list'),bdWinsSection=document.getElementById('bd-wins-section');
     let selectedTag=null,dragSrc=null,dragClone=null,touchDragging=false;
 
@@ -210,10 +212,18 @@
     function bdShowAssign(id){
         const li=document.querySelector(`.bd-item[data-id="${id}"]`);if(!li)return;
         if(li.querySelector('.bd-assign-select'))return;
-        if(!BD_PROJECTS||!BD_PROJECTS.length){alert('No projects yet. Create one in Command Deck first.');return;}
+        const groups=(typeof BD_PICKER_GROUPS!=='undefined'&&BD_PICKER_GROUPS&&BD_PICKER_GROUPS.length)
+            ? BD_PICKER_GROUPS
+            : (BD_PROJECTS&&BD_PROJECTS.length ? [{label:'',projects:BD_PROJECTS}] : []);
+        if(!groups.length){alert('No projects yet. Create one in Command Deck first.');return;}
         const select=document.createElement('select');select.className='bd-assign-select';
         const ph=document.createElement('option');ph.value='';ph.textContent='→ project...';ph.disabled=true;ph.selected=true;select.appendChild(ph);
-        BD_PROJECTS.forEach(p=>{const opt=document.createElement('option');opt.value=p.id;opt.textContent=p.title;select.appendChild(opt);});
+        groups.forEach(g=>{
+            const og=g.label?document.createElement('optgroup'):select;
+            if(g.label){og.label=g.label;}
+            g.projects.forEach(p=>{const opt=document.createElement('option');opt.value=p.id;opt.textContent=p.title;og.appendChild(opt);});
+            if(g.label)select.appendChild(og);
+        });
         const deleteBtn=li.querySelector('.bd-delete');li.insertBefore(select,deleteBtn);
         select.focus();
         select.addEventListener('change',function(){
