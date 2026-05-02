@@ -213,11 +213,13 @@
     var TTC = window.TimeTrackerCore;
     if (!entries || entries.length === 0) {
       strip.classList.remove('tt-active', 'tt-expanded');
+      document.body.classList.remove('cd-strip-visible');
       expanded = false;
       rows.innerHTML = '';
       return;
     }
     strip.classList.add('tt-active');
+    document.body.classList.add('cd-strip-visible');
 
     var totalSecs = entries.reduce(function (acc, e) { return acc + TTC.elapsedSeconds(e); }, 0);
 

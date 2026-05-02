@@ -4,7 +4,7 @@ import pytz
 from flask import Blueprint, request, redirect, url_for, jsonify, render_template
 
 from helpers.auth import is_authenticated
-from helpers.db import get_db, et_now
+from helpers.db import get_db, et_now, fetch_assign_picker_groups
 
 
 below_deck_bp = Blueprint('below_deck', __name__)
@@ -47,11 +47,12 @@ def below_deck():
 		ORDER BY completed_date DESC
 	''').fetchall()
 
-	# Projects for the assign-to-project picker
-	# Only show non-private projects (or all if PIN not configured)
-	projects = conn.execute(
-		"SELECT id, title FROM projects WHERE is_private = 0 OR is_private IS NULL ORDER BY title ASC"
-	).fetchall()
+	# Projects for the assign-to-project picker — work sub-projects grouped
+	# under their area, personal projects in their own group, work_areas
+	# excluded (containers, not assignable). Same shape used by the dashboard
+	# sidebar BD panel.
+	picker_groups = fetch_assign_picker_groups(conn)
+	flat_projects = [p for g in picker_groups for p in g['projects']]
 
 	conn.close()
 
@@ -59,7 +60,8 @@ def below_deck():
 		'below_deck.html',
 		tasks=[dict(t) for t in open_tasks],
 		completed_tasks=[dict(t) for t in completed_tasks],
-		projects=[dict(p) for p in projects]
+		projects=flat_projects,
+		picker_groups=picker_groups,
 	)
 
 

@@ -143,25 +143,27 @@
         <div class="cd-section-label cd-mb-sm">Areas of Responsibility</div>
         <div class="cd-area-grid cd-mb">
           {% for area in work_areas %}
-            <a href="/command-deck/areas/{{ area.slug }}/"
-               class="cd-area-card"
-               data-search="{{ area.title|lower }} {{ (area.description or '')|lower }}"
-               data-area="{{ area.slug }}"
-               style="--card-area-color: {{ area.area_color or '#d4880a' }};">
-              <span class="cd-area-stripe"></span>
-              <div class="cd-area-card-body">
-                <div class="cd-area-card-title">{{ area.title }}</div>
-                {% if area.description %}
-                  <div class="cd-area-card-desc">{{ area.description }}</div>
-                {% endif %}
-                <div class="cd-area-card-meta">
-                  <span>{{ area.subproject_count }} sub-project{{ 's' if area.subproject_count != 1 }}</span>
-                  {% if area.open_task_count %}<span>·</span><span>{{ area.open_task_count }} open task{{ 's' if area.open_task_count != 1 }}</span>{% endif %}
-                  {% if area.active_timer_count %}<span>·</span><span class="cd-timer-dot" style="background: {{ area.area_color or '#d4880a' }}"></span><span>{{ area.active_timer_count }} running</span>{% endif %}
+            <div class="cd-area-card-wrap"
+                 data-search="{{ area.title|lower }} {{ (area.description or '')|lower }}"
+                 data-area="{{ area.slug }}"
+                 style="--card-area-color: {{ area.area_color or '#d4880a' }};">
+              <a href="/command-deck/areas/{{ area.slug }}/" class="cd-area-card">
+                <span class="cd-area-stripe"></span>
+                <div class="cd-area-card-body">
+                  <div class="cd-area-card-title">{{ area.title }}</div>
+                  {% if area.description %}
+                    <div class="cd-area-card-desc">{{ area.description }}</div>
+                  {% endif %}
+                  <div class="cd-area-card-meta">
+                    <span>{{ area.subproject_count }} sub-project{{ 's' if area.subproject_count != 1 }}</span>
+                    {% if area.open_task_count %}<span>·</span><span>{{ area.open_task_count }} open task{{ 's' if area.open_task_count != 1 }}</span>{% endif %}
+                    {% if area.active_timer_count %}<span>·</span><span class="cd-timer-dot" style="background: {{ area.area_color or '#d4880a' }}"></span><span>{{ area.active_timer_count }} running</span>{% endif %}
+                  </div>
+                  <div class="cd-area-card-link">VIEW AREA →</div>
                 </div>
-                <div class="cd-area-card-link">VIEW AREA →</div>
-              </div>
-            </a>
+              </a>
+              <a href="/command-deck/areas/{{ area.slug }}/?new=1" class="cd-area-card-add" title="New sub-project under {{ area.title }}">+ NEW SUB-PROJECT</a>
+            </div>
           {% endfor %}
         </div>
         <div class="cd-tab-empty" data-tab-empty="work" hidden>No areas match.</div>
@@ -299,13 +301,36 @@
 <div class="cd-modal-overlay" id="newProjectModal">
   <div class="cd-modal">
     <div class="cd-modal-title">// New Project</div>
+    <label style="display:block;font-family:var(--cd-font-ui);font-size:0.55rem;letter-spacing:0.18em;color:var(--cd-text-dim);text-transform:uppercase;margin-bottom:3px;">TYPE</label>
+    <select class="cd-input cd-mb-sm" id="newProjectType" style="margin-bottom:0.5rem;">
+      <option value="personal">Personal project</option>
+      {% for area in work_areas %}
+        <option value="work:{{ area.slug }}">Sub-project under {{ area.title }}</option>
+      {% endfor %}
+    </select>
     <input type="text" class="cd-input cd-mb-sm" id="newProjectTitle" placeholder="Project title..." style="margin-bottom:0.5rem;">
     <input type="text" class="cd-input" id="newProjectDesc" placeholder="Brief description (optional)...">
-    <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;">
-      <input type="checkbox" id="newProjectPrivate" style="width:14px;height:14px;accent-color:var(--cd-amber);">
-      <label for="newProjectPrivate" style="font-family:var(--cd-font-ui);font-size:0.62rem;letter-spacing:0.1em;color:var(--cd-text-dim);cursor:pointer;">
-        PRIVATE PROJECT
-      </label>
+    <div id="newProjectPersonalOpts" style="margin-top:0.5rem;">
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <input type="checkbox" id="newProjectPrivate" style="width:14px;height:14px;accent-color:var(--cd-amber);">
+        <label for="newProjectPrivate" style="font-family:var(--cd-font-ui);font-size:0.62rem;letter-spacing:0.1em;color:var(--cd-text-dim);cursor:pointer;">
+          PRIVATE PROJECT
+        </label>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem;">
+        <input type="checkbox" id="newProjectTrackingPersonal" style="width:14px;height:14px;accent-color:var(--cd-amber);">
+        <label for="newProjectTrackingPersonal" style="font-family:var(--cd-font-ui);font-size:0.62rem;letter-spacing:0.1em;color:var(--cd-text-dim);cursor:pointer;">
+          ⏱ TIME TRACKING
+        </label>
+      </div>
+    </div>
+    <div id="newProjectWorkOpts" style="margin-top:0.5rem;display:none;">
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <input type="checkbox" id="newProjectTracking" checked style="width:14px;height:14px;accent-color:var(--cd-amber);">
+        <label for="newProjectTracking" style="font-family:var(--cd-font-ui);font-size:0.62rem;letter-spacing:0.1em;color:var(--cd-text-dim);cursor:pointer;">
+          ⏱ TIME TRACKING
+        </label>
+      </div>
     </div>
     <div class="cd-modal-actions">
       <button class="cd-btn ghost" id="newProjectCancelBtn">CANCEL</button>
@@ -338,6 +363,7 @@
 <script>
 
 const BD_PROJECTS = {{ projects | tojson }};
+const BD_PICKER_GROUPS = {{ picker_groups | tojson }};
 
 // ============================================================
 // BELOW DECK QUICK PANEL
@@ -540,19 +566,54 @@ function updateBadge() {
     if (e.target === this) this.classList.remove('open');
   });
 
-  document.getElementById('newProjectConfirmBtn').addEventListener('click', function() {
+  // Show/hide private vs tracking option blocks based on selected type
+  const typeSelect = document.getElementById('newProjectType');
+  const personalOpts = document.getElementById('newProjectPersonalOpts');
+  const workOpts = document.getElementById('newProjectWorkOpts');
+  function syncTypeOpts() {
+    const isWork = typeSelect.value.indexOf('work:') === 0;
+    personalOpts.style.display = isWork ? 'none' : '';
+    workOpts.style.display = isWork ? '' : 'none';
+  }
+  typeSelect.addEventListener('change', syncTypeOpts);
+  syncTypeOpts();
+
+  document.getElementById('newProjectConfirmBtn').addEventListener('click', async function() {
     const title = document.getElementById('newProjectTitle').value.trim();
     const desc  = document.getElementById('newProjectDesc').value.trim();
     if (!title) return;
 
+    const typeVal = typeSelect.value;
+    if (typeVal.indexOf('work:') === 0) {
+      // Work sub-project — POST JSON to area's subprojects endpoint
+      const areaSlug = typeVal.split(':')[1];
+      const tracking = document.getElementById('newProjectTracking').checked;
+      const r = await fetch(`/command-deck/areas/${areaSlug}/subprojects/new`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        credentials: 'same-origin',
+        body: JSON.stringify({title, description: desc, tracking_enabled: tracking})
+      });
+      const data = await r.json();
+      if (data && data.success) {
+        window.location.href = `/command-deck/projects/${data.subproject.slug}/`;
+      } else {
+        alert('Could not create sub-project.');
+      }
+      return;
+    }
+
+    // Personal project — existing form-submit flow
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '/command-deck/projects/new';
     const isPrivate = document.getElementById('newProjectPrivate').checked ? '1' : '0';
+    const trackPers = document.getElementById('newProjectTrackingPersonal').checked ? '1' : '0';
     form.innerHTML = `
       <input name="title" value="${escapeHtml(title)}">
       <input name="description" value="${escapeHtml(desc)}">
       <input name="is_private" value="${isPrivate}">
+      <input name="tracking_enabled" value="${trackPers}">
     `;
     document.body.appendChild(form);
     form.submit();
@@ -737,17 +798,27 @@ function cdShowAssign(id, context) {
   const li = document.querySelector(`[data-id="${id}"]`);
   if (!li) return;
   if (li.querySelector('.cd-assign-select')) return;
-  // Use projects from BD_PROJECTS if available, else fetch
-  const projects = (typeof BD_PROJECTS !== 'undefined' && BD_PROJECTS) ? BD_PROJECTS : [];
-  if (!projects.length) { alert('No projects yet.'); return; }
+  // Prefer grouped picker (Work areas + Personal); fall back to flat list.
+  const groups = (typeof BD_PICKER_GROUPS !== 'undefined' && BD_PICKER_GROUPS && BD_PICKER_GROUPS.length)
+	? BD_PICKER_GROUPS
+	: ((typeof BD_PROJECTS !== 'undefined' && BD_PROJECTS && BD_PROJECTS.length)
+		? [{label: '', projects: BD_PROJECTS}]
+		: []);
+  if (!groups.length) { alert('No projects yet.'); return; }
   const select = document.createElement('select');
   select.className = 'cd-assign-select';
   const ph = document.createElement('option');
   ph.value = ''; ph.textContent = '→ project...'; ph.disabled = true; ph.selected = true;
   select.appendChild(ph);
-  projects.forEach(p => {
-	const opt = document.createElement('option'); opt.value = p.id; opt.textContent = p.title;
-	select.appendChild(opt);
+  groups.forEach(g => {
+	const target = g.label ? document.createElement('optgroup') : select;
+	if (g.label) target.label = g.label;
+	g.projects.forEach(p => {
+	  const opt = document.createElement('option');
+	  opt.value = p.id; opt.textContent = p.title;
+	  target.appendChild(opt);
+	});
+	if (g.label) select.appendChild(target);
   });
   const deleteBtn = li.querySelector('.cd-task-delete, .cd-btn.danger');
   if (deleteBtn) li.insertBefore(select, deleteBtn);

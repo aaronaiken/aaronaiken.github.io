@@ -21,7 +21,7 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 from helpers.auth import is_authenticated, cd_auth_required
-from helpers.db import get_db, slugify, unique_slug, et_now
+from helpers.db import get_db, slugify, unique_slug, et_now, fetch_assign_picker_groups
 from helpers.bunny import (
 	_allowed_file, _upload_to_bunny,
 	BUNNY_STORAGE_ZONE, BUNNY_API_KEY, BUNNY_CDN_URL,
@@ -130,6 +130,9 @@ def cd_dashboard():
 
 	work_areas = _fetch_work_areas(conn)
 	favorited_subprojects = _fetch_subprojects(conn, favorites_only=True)
+	# BD assign picker — same shape as standalone /below-deck so sub-projects
+	# show up grouped under their area, not buried in a flat personal list.
+	picker_groups = fetch_assign_picker_groups(conn)
 
 	# Recent chat messages (last 3 — dashboard preview)
 	recent_chat = conn.execute('''
@@ -150,6 +153,7 @@ def cd_dashboard():
 		projects=[dict(p) for p in projects],
 		work_areas=[dict(a) for a in work_areas],
 		favorited_subprojects=[dict(s) for s in favorited_subprojects],
+		picker_groups=picker_groups,
 		recent_chat=[dict(m) for m in reversed(recent_chat)],
 		private_projects_enabled=bool(PRIVATE_PROJECTS_PIN),
 		today_count=today_count
@@ -191,20 +195,22 @@ def cd_project_new():
 	title = request.form.get('title', '').strip()
 	description = request.form.get('description', '').strip() or None
 	is_private = 1 if request.form.get('is_private') == '1' else 0
+	tracking_enabled = 1 if request.form.get('tracking_enabled') in ('1', 'true', 'on') else 0
 
 	if not title:
-		return redirect(url_for('cd_projects'))
+		return redirect(url_for('command_deck.cd_projects'))
 
 	conn = get_db()
 	slug = unique_slug(title, conn)
 	now = et_now()
 	conn.execute('''
-		INSERT INTO projects (title, slug, description, is_private, created, updated)
-		VALUES (?, ?, ?, ?, ?, ?)
-	''', (title, slug, description, is_private, now, now))
+		INSERT INTO projects (title, slug, description, is_private,
+		                      project_type, tracking_enabled, created, updated)
+		VALUES (?, ?, ?, ?, 'personal', ?, ?, ?)
+	''', (title, slug, description, is_private, tracking_enabled, now, now))
 	conn.commit()
 	conn.close()
-	return redirect(url_for('cd_project', slug=slug))
+	return redirect(url_for('command_deck.cd_project', slug=slug))
 
 
 # --- Individual project ---
@@ -287,7 +293,7 @@ def cd_project_update(slug):
 	is_private = 1 if request.form.get('is_private') == '1' else 0
 
 	if not title:
-		return redirect(url_for('cd_project', slug=slug))
+		return redirect(url_for('command_deck.cd_project', slug=slug))
 
 	conn = get_db()
 	project = conn.execute('SELECT * FROM projects WHERE slug = ?', (slug,)).fetchone()
@@ -302,7 +308,7 @@ def cd_project_update(slug):
 	''', (title, new_slug, description, is_private, et_now(), project['id']))
 	conn.commit()
 	conn.close()
-	return redirect(url_for('cd_project', slug=new_slug))
+	return redirect(url_for('command_deck.cd_project', slug=new_slug))
 
 
 @command_deck_bp.route('/command-deck/projects/<slug>/delete', methods=['POST'])
@@ -316,7 +322,7 @@ def cd_project_delete(slug):
 		conn.execute('DELETE FROM projects WHERE id = ?', (project['id'],))
 		conn.commit()
 	conn.close()
-	return redirect(url_for('cd_projects'))
+	return redirect(url_for('command_deck.cd_projects'))
 
 
 @command_deck_bp.route('/command-deck/areas/<slug>/')
