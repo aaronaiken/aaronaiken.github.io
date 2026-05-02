@@ -1963,3 +1963,111 @@ body.command-deck {
 	.cd-tab { padding: 10px 12px; font-size: 0.65rem; }
 }
 
+
+/* ---- Sub-project listing (Work tab on /command-deck/projects/) ---- */
+
+.cd-area-section { margin-bottom: 1.75rem; }
+.cd-area-section-header {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	margin-bottom: 0.6rem;
+	padding-bottom: 0.4rem;
+	border-bottom: 1px solid var(--cd-border, rgba(212, 136, 10, 0.15));
+}
+.cd-area-section-title {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-family: var(--cd-font-title, 'Fraunces', serif);
+	font-size: 1.15rem;
+	color: var(--card-area-color, var(--cd-text, #d4880a));
+	text-decoration: none;
+	letter-spacing: 0.02em;
+}
+.cd-area-section-title:hover { text-decoration: underline; text-underline-offset: 3px; }
+.cd-area-section-stripe {
+	display: inline-block;
+	width: 4px;
+	height: 18px;
+	background: var(--card-area-color, #d4880a);
+	border-radius: 1px;
+}
+.cd-area-section-count {
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.55rem;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.5));
+	margin-left: auto;
+}
+.cd-area-section-empty {
+	padding: 0.8rem 1rem;
+	font-family: var(--cd-font-body, 'Crimson Pro', serif);
+	font-size: 0.85rem;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.5));
+	font-style: italic;
+}
+.cd-area-section-empty a {
+	color: var(--card-area-color, var(--cd-amber));
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.cd-subproject-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+	gap: 0.7rem;
+}
+.cd-subproject-card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+	padding: 10px 12px 12px;
+	border: 1px solid var(--cd-border, rgba(212, 136, 10, 0.18));
+	border-left: 3px solid var(--card-area-color, #d4880a);
+	border-radius: 2px;
+	background: rgba(212, 136, 10, 0.02);
+	text-decoration: none;
+	transition: border-color 0.15s, transform 0.15s;
+}
+.cd-subproject-card:hover {
+	border-color: var(--card-area-color, #d4880a);
+	transform: translateY(-1px);
+}
+.cd-subproject-title {
+	display: flex;
+	align-items: baseline;
+	gap: 0.4rem;
+	font-family: var(--cd-font-title, 'Fraunces', serif);
+	font-size: 1rem;
+	color: var(--cd-text, #d4880a);
+	line-height: 1.2;
+}
+.cd-subproject-desc {
+	font-family: var(--cd-font-body, 'Crimson Pro', serif);
+	font-size: 0.82rem;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.6));
+	line-height: 1.4;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+.cd-subproject-meta {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	margin-top: auto;
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.55rem;
+	letter-spacing: 0.1em;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.5));
+	flex-wrap: wrap;
+}
+.cd-fav-icon {
+	font-size: 0.8rem;
+	color: var(--cd-amber-hi, #f5b332);
+	margin-left: auto;
+}
+
