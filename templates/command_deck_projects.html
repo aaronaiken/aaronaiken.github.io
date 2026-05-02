@@ -61,6 +61,7 @@
                 {{ area.title }}
               </a>
               <span class="cd-area-section-count">{{ area_subs|length }} sub-project{{ 's' if area_subs|length != 1 }}</span>
+              <a href="/command-deck/areas/{{ area.slug }}/?new=1" class="cd-area-section-add" title="New sub-project under {{ area.title }}">+ NEW</a>
             </div>
             {% if area_subs %}
               <div class="cd-subproject-grid">
@@ -165,15 +166,38 @@
 <div class="cd-modal-overlay" id="newProjectModal">
   <div class="cd-modal">
     <div class="cd-modal-title">// New Project</div>
+    <label style="display:block;font-family:var(--cd-font-ui);font-size:0.55rem;letter-spacing:0.18em;color:var(--cd-text-dim);text-transform:uppercase;margin-bottom:3px;">TYPE</label>
+    <select class="cd-input cd-mb-sm" id="newProjectType" style="margin-bottom:0.5rem;">
+      <option value="personal">Personal project</option>
+      {% for area in work_areas %}
+        <option value="work:{{ area.slug }}">Sub-project under {{ area.title }}</option>
+      {% endfor %}
+    </select>
     <input type="text" class="cd-input cd-mb-sm" id="newProjectTitle"
       placeholder="Project title..." style="margin-bottom:0.5rem;">
     <input type="text" class="cd-input" id="newProjectDesc"
       placeholder="Brief description (optional)...">
-      <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;">
-      <input type="checkbox" id="newProjectPrivate" style="width:14px;height:14px;accent-color:var(--cd-amber);">
-      <label for="newProjectPrivate" style="font-family:var(--cd-font-ui);font-size:0.62rem;letter-spacing:0.1em;color:var(--cd-text-dim);cursor:pointer;">
-        PRIVATE PROJECT
-      </label>
+    <div id="newProjectPersonalOpts" style="margin-top:0.5rem;">
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <input type="checkbox" id="newProjectPrivate" style="width:14px;height:14px;accent-color:var(--cd-amber);">
+        <label for="newProjectPrivate" style="font-family:var(--cd-font-ui);font-size:0.62rem;letter-spacing:0.1em;color:var(--cd-text-dim);cursor:pointer;">
+          PRIVATE PROJECT
+        </label>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem;">
+        <input type="checkbox" id="newProjectTrackingPersonal" style="width:14px;height:14px;accent-color:var(--cd-amber);">
+        <label for="newProjectTrackingPersonal" style="font-family:var(--cd-font-ui);font-size:0.62rem;letter-spacing:0.1em;color:var(--cd-text-dim);cursor:pointer;">
+          ⏱ TIME TRACKING
+        </label>
+      </div>
+    </div>
+    <div id="newProjectWorkOpts" style="margin-top:0.5rem;display:none;">
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <input type="checkbox" id="newProjectTracking" checked style="width:14px;height:14px;accent-color:var(--cd-amber);">
+        <label for="newProjectTracking" style="font-family:var(--cd-font-ui);font-size:0.62rem;letter-spacing:0.1em;color:var(--cd-text-dim);cursor:pointer;">
+          ⏱ TIME TRACKING
+        </label>
+      </div>
     </div>
     <div class="cd-modal-actions">
       <button class="cd-btn ghost" id="cancelBtn">CANCEL</button>
@@ -237,17 +261,49 @@ fetch('/below-deck/count').then(r=>r.json()).then(data=>{
   document.getElementById('newProjectModal').addEventListener('click',function(e){
     if(e.target===this) this.classList.remove('open');
   });
-  function submit(){
+  // Show/hide the per-type option block
+  const typeSelect = document.getElementById('newProjectType');
+  const personalOpts = document.getElementById('newProjectPersonalOpts');
+  const workOpts = document.getElementById('newProjectWorkOpts');
+  function syncTypeOpts(){
+    const isWork = typeSelect.value.indexOf('work:') === 0;
+    personalOpts.style.display = isWork ? 'none' : '';
+    workOpts.style.display = isWork ? '' : 'none';
+  }
+  typeSelect.addEventListener('change', syncTypeOpts);
+  syncTypeOpts();
+
+  async function submit(){
     const title = document.getElementById('newProjectTitle').value.trim();
     const desc  = document.getElementById('newProjectDesc').value.trim();
     if(!title) return;
+    const typeVal = typeSelect.value;
+    if(typeVal.indexOf('work:') === 0){
+      const areaSlug = typeVal.split(':')[1];
+      const tracking = document.getElementById('newProjectTracking').checked;
+      const r = await fetch(`/command-deck/areas/${areaSlug}/subprojects/new`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'same-origin',
+        body: JSON.stringify({title, description: desc, tracking_enabled: tracking})
+      });
+      const data = await r.json();
+      if(data && data.success){
+        window.location.href = `/command-deck/projects/${data.subproject.slug}/`;
+      } else {
+        alert('Could not create sub-project.');
+      }
+      return;
+    }
     const form = document.createElement('form');
     form.method='POST'; form.action='/command-deck/projects/new';
     const isPrivate = document.getElementById('newProjectPrivate').checked ? '1' : '0';
+    const trackPers = document.getElementById('newProjectTrackingPersonal').checked ? '1' : '0';
     form.innerHTML = `
       <input name="title" value="${escapeHtml(title)}">
       <input name="description" value="${escapeHtml(desc)}">
       <input name="is_private" value="${isPrivate}">
+      <input name="tracking_enabled" value="${trackPers}">
     `;
     document.body.appendChild(form); form.submit();
   }

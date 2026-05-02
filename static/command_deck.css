@@ -133,7 +133,11 @@ body.command-deck {
   margin: 0 auto;
   padding: 0 1.5rem;
   width: 100%;
+  transition: padding-top 0.18s ease;
 }
+/* Reserve top space when the active timer strip is visible so the Command
+   Deck nav doesn't disappear under the strip + Today bar stack. */
+body.cd-strip-visible .cd-shell { padding-top: 32px; }
 
 /* ============================================================
    HEADER
@@ -1933,6 +1937,56 @@ body.command-deck {
 }
 .cd-area-card:hover .cd-area-card-link {
 	color: var(--card-area-color, #f5b332);
+}
+
+/* "+ NEW SUB-PROJECT" quick-create on dashboard area cards */
+.cd-area-card-wrap {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+}
+.cd-area-card-wrap .cd-area-card { flex: 1; }
+.cd-area-card-add {
+	display: block;
+	text-align: center;
+	margin-top: 4px;
+	padding: 6px 10px;
+	border: 1px dashed var(--card-area-color, rgba(212, 136, 10, 0.4));
+	border-radius: 2px;
+	background: rgba(212, 136, 10, 0.02);
+	color: var(--card-area-color, var(--cd-amber-lo, rgba(212, 136, 10, 0.6)));
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.55rem;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+	text-decoration: none;
+	opacity: 0.65;
+	transition: all 0.15s;
+}
+.cd-area-card-add:hover {
+	opacity: 1;
+	background: rgba(212, 136, 10, 0.06);
+	border-style: solid;
+}
+
+/* "+ NEW" mini-link on projects-list Work-tab area-section headers */
+.cd-area-section-add {
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.55rem;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: var(--card-area-color, var(--cd-amber-lo, rgba(212, 136, 10, 0.55)));
+	text-decoration: none;
+	border: 1px dashed currentColor;
+	padding: 3px 8px;
+	border-radius: 2px;
+	margin-left: 0.6rem;
+	opacity: 0.6;
+	transition: opacity 0.15s, background 0.15s;
+}
+.cd-area-section-add:hover {
+	opacity: 1;
+	background: rgba(212, 136, 10, 0.06);
 }
 
 /* ---- Indicators ---- */

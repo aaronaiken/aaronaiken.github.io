@@ -234,10 +234,15 @@
 
   // ---- New sub-project modal ----
   const newModal = document.getElementById('newSubprojectModal');
-  const newOpen  = () => { newModal.classList.add('is-open'); document.getElementById('newSpTitle').focus(); };
-  const newClose = () => newModal.classList.remove('is-open');
+  const newOpen  = () => { newModal.classList.add('open'); document.getElementById('newSpTitle').focus(); };
+  const newClose = () => newModal.classList.remove('open');
   document.getElementById('newSubprojectBtn')?.addEventListener('click', newOpen);
   document.getElementById('newSubprojectBtnEmpty')?.addEventListener('click', newOpen);
+  // Auto-open when arriving with ?new=1 (from "+ NEW" affordance on dashboard / projects list)
+  if (new URLSearchParams(window.location.search).has('new')) {
+    setTimeout(newOpen, 50);
+    history.replaceState(null, '', window.location.pathname);
+  }
   document.getElementById('newSpCancel').addEventListener('click', newClose);
   newModal.addEventListener('click', e => { if (e.target === newModal) newClose(); });
   document.getElementById('newSpCreate').addEventListener('click', async () => {
@@ -261,9 +266,9 @@
 
   // ---- Edit area modal ----
   const editModal = document.getElementById('editAreaModal');
-  document.getElementById('editAreaBtn').addEventListener('click', () => editModal.classList.add('is-open'));
-  document.getElementById('editAreaCancel').addEventListener('click', () => editModal.classList.remove('is-open'));
-  editModal.addEventListener('click', e => { if (e.target === editModal) editModal.classList.remove('is-open'); });
+  document.getElementById('editAreaBtn').addEventListener('click', () => editModal.classList.add('open'));
+  document.getElementById('editAreaCancel').addEventListener('click', () => editModal.classList.remove('open'));
+  editModal.addEventListener('click', e => { if (e.target === editModal) editModal.classList.remove('open'); });
   document.getElementById('editAreaSave').addEventListener('click', async () => {
     const fd = new FormData();
     fd.append('title', document.getElementById('editAreaTitle').value);
