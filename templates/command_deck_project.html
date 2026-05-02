@@ -131,12 +131,15 @@
               {% elif block.type == 'checklist' %}
                 <ul class="cd-checklist" data-block-id="{{ block.id }}">
                   {% for item in block['items'] %}
-                    <li class="cd-checklist-item {% if item.checked %}checked{% endif %}" data-item-id="{{ item.id }}">
+                    <li class="cd-checklist-item {% if item.checked %}checked{% endif %}" data-item-id="{{ item.id }}" data-item-text="{{ item.text }}">
                       <input type="checkbox"
                         {% if item.checked %}checked{% endif %}
                         data-item-id="{{ item.id }}"
                         data-slug="{{ project.slug }}">
                       <label>{{ item.text }}</label>
+                      {% if project.tracking_enabled %}
+                        <button class="cd-tt-row-btn cd-tt-item-btn" data-tt-item-id="{{ item.id }}" data-tt-text="{{ item.text }}" title="Start timer on this item" type="button">⏱</button>
+                      {% endif %}
                       <button class="cd-btn ghost sm checklist-item-delete" data-id="{{ item.id }}" data-slug="{{ project.slug }}">✕</button>
                     </li>
                   {% endfor %}
@@ -171,9 +174,13 @@
           {% if project_tasks %}
             <ul class="cd-task-list" id="projectTaskList">
               {% for task in project_tasks %}
-                <li class="cd-task-item" data-id="{{ task.id }}">
+                <li class="cd-task-item" data-id="{{ task.id }}" data-task-title="{{ task.title }}">
                   <input type="checkbox" class="cd-task-check project-task-check" data-id="{{ task.id }}" data-slug="{{ project.slug }}">
                   <span class="cd-task-title">{{ task.title }}</span>
+                  {% if project.tracking_enabled %}
+                    <span class="cd-tt-today-tag" data-task-today-tag="{{ task.id }}" hidden></span>
+                    <button class="cd-tt-row-btn cd-tt-task-btn" data-tt-task-id="{{ task.id }}" data-tt-text="{{ task.title }}" title="Start timer on this task" type="button">⏱</button>
+                  {% endif %}
                   <button class="cd-task-edit" data-id="{{ task.id }}" title="Edit">✎</button>
                   <button class="cd-btn ghost sm project-task-delete" data-id="{{ task.id }}" data-slug="{{ project.slug }}">✕</button>
                 </li>
@@ -1427,6 +1434,172 @@ function cdEditTask(id) {
         }
       });
     }
+  }
+})();
+
+// ============================================================
+// PHASE 1.5 — ⏱ buttons on task rows + checklist items
+// ============================================================
+(function () {
+  'use strict';
+
+  const PROJECT_ID = {{ project.id | tojson }};
+  const PROJECT_TITLE = {{ project.title | tojson }};
+
+  function fmt(s) {
+    if (window.TimeTrackerCore) return window.TimeTrackerCore.formatElapsed(s);
+    s = Math.max(0, s|0);
+    const h=(s/3600)|0, m=((s%3600)/60)|0, sec=s%60, pad=n=>n<10?'0'+n:''+n;
+    return h>0 ? h+':'+pad(m)+':'+pad(sec) : m+':'+pad(sec);
+  }
+
+  // ---- Click handlers (delegated, so dynamically-added rows work too) ----
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.cd-tt-row-btn');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (btn.dataset.running === '1') {
+      // Stop this row's running timer
+      const entryId = btn.dataset.entryId;
+      if (!entryId) return;
+      btn.disabled = true;
+      window.TimeTrackerCore.stopTimer(entryId).then(function (r) {
+        btn.disabled = false;
+        if (r.ok && r.data && r.data.entry) {
+          const secs = r.data.entry.duration_seconds || 0;
+          showToast('Stopped after ' + fmt(secs) + '.');
+        }
+      });
+      return;
+    }
+    // Start a timer
+    const taskId = btn.dataset.ttTaskId || null;
+    const itemId = btn.dataset.ttItemId || null;
+    const text   = btn.dataset.ttText || '';
+    startWithConflictGuard({task_id: taskId, checklist_item_id: itemId, description: text});
+  });
+
+  function startWithConflictGuard(payload) {
+    const TTC = window.TimeTrackerCore;
+    if (!TTC || !TTC.isLoaded()) return;  // saved-state guard
+    const existing = TTC.current().find(function (e) { return String(e.project_id) === String(PROJECT_ID); });
+    if (existing) {
+      const prev = (existing.description || existing.project_title || 'current timer') +
+                   ' · ' + fmt(TTC.elapsedSeconds(existing));
+      const next = payload.description || 'this timer';
+      if (!confirm("You're tracking " + PROJECT_TITLE + " right now (" + prev + "). " +
+                   "Stop that and start tracking '" + next + "' instead?")) return;
+      TTC.stopTimer(existing.id).then(function () {
+        startTimerExt(payload).then(function (r) { if (r.ok) showToast('Switched to ' + next + '.'); });
+      });
+    } else {
+      startTimerExt(payload);
+    }
+  }
+
+  // Phase 1.5 extension: pass task_id / checklist_item_id through to /time/start.
+  // (TimeTrackerCore.startTimer only sends project_id + description today.)
+  function startTimerExt(payload) {
+    const body = {project_id: PROJECT_ID, description: payload.description || ''};
+    if (payload.task_id) body.task_id = payload.task_id;
+    if (payload.checklist_item_id) body.checklist_item_id = payload.checklist_item_id;
+    return fetch('/time/start', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'same-origin',
+      body: JSON.stringify(body)
+    }).then(function (r) {
+      return r.json().then(function (data) {
+        const result = {ok: r.ok, status: r.status, data: data};
+        if (r.ok && window.TimeTrackerCore) window.TimeTrackerCore.refresh();
+        else if (r.status === 409) showToast('Already tracking this project.');
+        else if (r.status === 400) showToast(data.error || 'Could not start timer.');
+        return result;
+      });
+    });
+  }
+
+  // ---- Render running state on task/item rows ----
+  function syncRowStates(entries) {
+    const myEntries = (entries || []).filter(function (e) { return String(e.project_id) === String(PROJECT_ID); });
+    // Reset all rows
+    document.querySelectorAll('.cd-tt-row-btn').forEach(function (btn) {
+      btn.dataset.running = '0';
+      btn.dataset.entryId = '';
+      btn.textContent = '⏱';
+      btn.title = 'Start timer';
+      const row = btn.closest('.cd-task-item, .cd-checklist-item');
+      if (row) row.classList.remove('cd-tt-running');
+    });
+    // Mark active ones
+    myEntries.forEach(function (e) {
+      let btn = null;
+      if (e.task_id) btn = document.querySelector('.cd-tt-task-btn[data-tt-task-id="' + e.task_id + '"]');
+      else if (e.checklist_item_id) btn = document.querySelector('.cd-tt-item-btn[data-tt-item-id="' + e.checklist_item_id + '"]');
+      if (!btn) return;
+      btn.dataset.running = '1';
+      btn.dataset.entryId = e.id;
+      btn.textContent = '■ ' + fmt(window.TimeTrackerCore.elapsedSeconds(e));
+      btn.title = 'Stop timer';
+      const row = btn.closest('.cd-task-item, .cd-checklist-item');
+      if (row) row.classList.add('cd-tt-running');
+    });
+  }
+
+  // ---- Today-tag totals on task rows ----
+  function syncTodayTags() {
+    fetch('/time/today/' + PROJECT_ID, {credentials: 'same-origin'})
+      .then(function (r) { return r.ok ? r.json() : {entries: []}; })
+      .then(function (data) {
+        const totals = {};
+        (data.entries || []).forEach(function (e) {
+          if (!e.task_id) return;
+          const dur = e.duration_seconds != null
+            ? e.duration_seconds
+            : Math.floor((Date.now() - new Date(e.started_at).getTime()) / 1000);
+          totals[e.task_id] = (totals[e.task_id] || 0) + Math.max(0, dur);
+        });
+        document.querySelectorAll('[data-task-today-tag]').forEach(function (tag) {
+          const tid = tag.getAttribute('data-task-today-tag');
+          const total = totals[tid];
+          if (total && total > 0) {
+            tag.textContent = 'today: ' + fmt(total);
+            tag.hidden = false;
+          } else {
+            tag.hidden = true;
+          }
+        });
+      })
+      .catch(function () {});
+  }
+
+  // ---- Toast (one-shot, brief) ----
+  let toastEl = null;
+  function showToast(msg) {
+    if (!toastEl) {
+      toastEl = document.createElement('div');
+      toastEl.className = 'cd-tt-toast';
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastEl._t);
+    toastEl._t = setTimeout(function () { toastEl.classList.remove('show'); }, 2200);
+  }
+
+  // ---- Wire to TimeTrackerCore ----
+  if (window.TimeTrackerCore) {
+    window.TimeTrackerCore.subscribe(function (entries) {
+      syncRowStates(entries);
+    });
+    // Refresh today-tags on load + when active count for this project changes
+    let lastSig = '';
+    syncTodayTags();
+    window.TimeTrackerCore.subscribe(function (entries) {
+      const sig = entries.filter(function (e) { return String(e.project_id) === String(PROJECT_ID); }).length;
+      if (sig !== lastSig) { lastSig = sig; syncTodayTags(); }
+    });
   }
 })();
 </script>
