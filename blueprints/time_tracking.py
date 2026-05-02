@@ -67,8 +67,27 @@ def _et_today_bounds_utc():
 # ---- Serializers ----
 
 
+def _row_get(row, key, default=None):
+	"""sqlite3.Row doesn't support .get() — this fills the gap for optional join cols."""
+	try:
+		return row[key]
+	except (IndexError, KeyError):
+		return default
+
+
+def _fetch_entry_with_context(conn, entry_id):
+	"""Re-fetch a time_entries row with task + checklist_item context joined."""
+	return conn.execute('''
+		SELECT te.*, t.title AS task_title, ci.text AS checklist_item_text
+		FROM time_entries te
+		LEFT JOIN tasks t ON te.task_id = t.id
+		LEFT JOIN checklist_items ci ON te.checklist_item_id = ci.id
+		WHERE te.id = ?
+	''', (entry_id,)).fetchone()
+
+
 def _serialize_active_entry(row):
-	"""Active-entry shape per spec §3.1."""
+	"""Active-entry shape — Phase 1 §3.1 + Phase 1.5 task/item context."""
 	started = _parse_iso_utc(row['started_at'])
 	elapsed = int((datetime.now(pytz.UTC) - started).total_seconds()) if started else 0
 	return {
@@ -81,6 +100,10 @@ def _serialize_active_entry(row):
 		'description': row['description'],
 		'started_at': row['started_at'],
 		'elapsed_seconds': max(0, elapsed),
+		'task_id': _row_get(row, 'task_id'),
+		'task_title': _row_get(row, 'task_title'),
+		'checklist_item_id': _row_get(row, 'checklist_item_id'),
+		'checklist_item_text': _row_get(row, 'checklist_item_text'),
 	}
 
 
@@ -90,6 +113,9 @@ def _serialize_entry(row):
 		'id': row['id'],
 		'project_id': row['project_id'],
 		'task_id': row['task_id'],
+		'checklist_item_id': _row_get(row, 'checklist_item_id'),
+		'task_title': _row_get(row, 'task_title'),
+		'checklist_item_text': _row_get(row, 'checklist_item_text'),
 		'description': row['description'],
 		'started_at': row['started_at'],
 		'ended_at': row['ended_at'],
@@ -109,14 +135,19 @@ def time_active():
 	conn = get_db()
 	rows = conn.execute('''
 		SELECT te.id, te.project_id, te.description, te.started_at,
+		       te.task_id, te.checklist_item_id,
 		       p.title             AS project_title,
 		       p.parent_project_id,
 		       parent.id           AS area_id,
 		       parent.title        AS area_title,
-		       parent.area_color   AS area_color
+		       parent.area_color   AS area_color,
+		       t.title             AS task_title,
+		       ci.text             AS checklist_item_text
 		FROM time_entries te
 		JOIN projects p ON te.project_id = p.id
 		LEFT JOIN projects parent ON p.parent_project_id = parent.id
+		LEFT JOIN tasks t ON te.task_id = t.id
+		LEFT JOIN checklist_items ci ON te.checklist_item_id = ci.id
 		WHERE te.ended_at IS NULL
 		ORDER BY te.started_at ASC
 	''').fetchall()
@@ -131,8 +162,15 @@ def time_start():
 	data = request.get_json(silent=True) or request.form
 	project_id = data.get('project_id')
 	description = (data.get('description') or '').strip()
+	task_id = data.get('task_id')
+	checklist_item_id = data.get('checklist_item_id')
+
 	if not project_id:
 		return jsonify({'error': 'project_id required'}), 400
+
+	# Phase 1.5 — mutual exclusion of task vs checklist item
+	if task_id and checklist_item_id:
+		return jsonify({'error': 'task_or_item_not_both'}), 400
 
 	conn = get_db()
 	project = conn.execute(
@@ -147,6 +185,39 @@ def time_start():
 			'error': 'project_not_trackable',
 			'project_type': project['project_type'],
 		}), 400
+
+	# Phase 1.5 — task_id must point to a task on this project
+	if task_id:
+		task = conn.execute(
+			'SELECT id, project_id FROM tasks WHERE id = ?', (task_id,)
+		).fetchone()
+		if not task:
+			conn.close()
+			return jsonify({'error': 'task_not_found'}), 404
+		if task['project_id'] != int(project_id):
+			conn.close()
+			return jsonify({
+				'error': 'task_project_mismatch',
+				'task_project_id': task['project_id'],
+			}), 400
+
+	# Phase 1.5 — checklist_item_id must reach this project via blocks
+	if checklist_item_id:
+		item = conn.execute('''
+			SELECT ci.id, b.project_id
+			FROM checklist_items ci
+			JOIN blocks b ON ci.block_id = b.id
+			WHERE ci.id = ?
+		''', (checklist_item_id,)).fetchone()
+		if not item:
+			conn.close()
+			return jsonify({'error': 'checklist_item_not_found'}), 404
+		if item['project_id'] != int(project_id):
+			conn.close()
+			return jsonify({
+				'error': 'item_project_mismatch',
+				'item_project_id': item['project_id'],
+			}), 400
 
 	# §0a.2 #3 — 409 on concurrent same-project timer
 	existing = conn.execute(
@@ -163,12 +234,18 @@ def time_start():
 	now = _utc_now_iso()
 	cur = conn.execute('''
 		INSERT INTO time_entries
-			(project_id, description, started_at, created, updated)
-		VALUES (?, ?, ?, ?, ?)
-	''', (project_id, description, now, now, now))
+			(project_id, task_id, checklist_item_id, description,
+			 started_at, created, updated)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	''', (
+		project_id,
+		int(task_id) if task_id else None,
+		int(checklist_item_id) if checklist_item_id else None,
+		description, now, now, now,
+	))
 	new_id = cur.lastrowid
 	conn.commit()
-	row = conn.execute('SELECT * FROM time_entries WHERE id = ?', (new_id,)).fetchone()
+	row = _fetch_entry_with_context(conn, new_id)
 	conn.close()
 	return jsonify({'success': True, 'entry': _serialize_entry(row)})
 
@@ -199,7 +276,7 @@ def time_stop(entry_id):
 		WHERE id = ?
 	''', (now_iso, max(0, duration), now_iso, entry_id))
 	conn.commit()
-	row = conn.execute('SELECT * FROM time_entries WHERE id = ?', (entry_id,)).fetchone()
+	row = _fetch_entry_with_context(conn, entry_id)
 	conn.close()
 	return jsonify({'success': True, 'entry': _serialize_entry(row)})
 
@@ -267,7 +344,7 @@ def time_update(entry_id):
 		WHERE id = ?
 	''', (new_description, new_started, new_ended, new_duration, now_iso, entry_id))
 	conn.commit()
-	row = conn.execute('SELECT * FROM time_entries WHERE id = ?', (entry_id,)).fetchone()
+	row = _fetch_entry_with_context(conn, entry_id)
 	conn.close()
 	return jsonify({'success': True, 'entry': _serialize_entry(row)})
 
@@ -341,11 +418,14 @@ def time_today(project_id):
 	start_utc, end_utc = _et_today_bounds_utc()
 	conn = get_db()
 	rows = conn.execute('''
-		SELECT * FROM time_entries
-		WHERE project_id = ?
-		  AND started_at >= ?
-		  AND started_at <  ?
-		ORDER BY started_at ASC
+		SELECT te.*, t.title AS task_title, ci.text AS checklist_item_text
+		FROM time_entries te
+		LEFT JOIN tasks t ON te.task_id = t.id
+		LEFT JOIN checklist_items ci ON te.checklist_item_id = ci.id
+		WHERE te.project_id = ?
+		  AND te.started_at >= ?
+		  AND te.started_at <  ?
+		ORDER BY te.started_at ASC
 	''', (project_id, start_utc, end_utc)).fetchall()
 	conn.close()
 	return jsonify({
