@@ -1754,3 +1754,212 @@ body.command-deck {
   .cd-huyang-panel { height: 400px; }
   .cd-files-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+
+/* ============================================================ */
+/* WORK / PERSONAL TABS — Phase 1 time tracking                  */
+/* Shared across dashboard + projects-list pages.                */
+/* Per-area visual identity (Corporate/PennDOT/FDOT) lands in    */
+/* commit 9 — this commit ships baseline area-card chrome only.  */
+/* ============================================================ */
+
+.cd-tabs {
+	display: flex;
+	gap: 0;
+	border-bottom: 1px solid var(--cd-border, rgba(212, 136, 10, 0.18));
+	margin-bottom: 1rem;
+}
+.cd-tab {
+	background: none;
+	border: none;
+	border-bottom: 2px solid transparent;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.5));
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.7rem;
+	letter-spacing: 0.22em;
+	padding: 10px 18px;
+	cursor: pointer;
+	text-transform: uppercase;
+	transition: color 0.15s, border-color 0.15s;
+	margin-bottom: -1px;
+}
+.cd-tab:hover { color: var(--cd-amber, #d4880a); }
+.cd-tab[aria-selected="true"] {
+	color: var(--cd-amber-hi, #f5b332);
+	border-bottom-color: var(--cd-amber-hi, #f5b332);
+}
+.cd-tab-pane[hidden] { display: none; }
+
+.cd-tab-search-row { margin-bottom: 1rem; }
+.cd-tab-search { width: 100%; max-width: 480px; }
+
+.cd-tab-empty {
+	padding: 2rem 1rem;
+	text-align: center;
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.7rem;
+	letter-spacing: 0.15em;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.4));
+	text-transform: uppercase;
+}
+
+/* ---- Favorites strip (Work tab) ---- */
+
+.cd-favorites-strip { margin-bottom: 1.5rem; }
+.cd-favorites-label {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	margin-bottom: 0.5rem;
+}
+.cd-favorites-row {
+	display: flex;
+	gap: 0.6rem;
+	overflow-x: auto;
+	padding-bottom: 4px;
+	-webkit-overflow-scrolling: touch;
+}
+.cd-favorite-card {
+	flex: 0 0 auto;
+	min-width: 180px;
+	max-width: 240px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 8px 10px 10px;
+	border: 1px solid var(--cd-border, rgba(212, 136, 10, 0.2));
+	border-left: 3px solid var(--card-area-color, #d4880a);
+	border-radius: 2px;
+	text-decoration: none;
+	transition: border-color 0.15s, transform 0.15s;
+	background: rgba(212, 136, 10, 0.02);
+}
+.cd-favorite-card:hover {
+	border-color: var(--card-area-color, #d4880a);
+	transform: translateY(-1px);
+}
+.cd-favorite-area {
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.5rem;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+	color: var(--card-area-color, #d4880a);
+	opacity: 0.8;
+}
+.cd-favorite-title {
+	font-family: var(--cd-font-title, 'Fraunces', serif);
+	font-size: 0.95rem;
+	color: var(--cd-text, #d4880a);
+	line-height: 1.2;
+}
+.cd-favorite-meta {
+	display: flex;
+	gap: 0.4rem;
+	align-items: center;
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.55rem;
+	letter-spacing: 0.1em;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.5));
+}
+
+/* ---- Area cards (Work tab) ---- */
+
+.cd-area-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: 1rem;
+}
+.cd-area-card {
+	display: flex;
+	flex-direction: row;
+	min-height: 130px;
+	border: 1px solid var(--cd-border, rgba(212, 136, 10, 0.2));
+	border-radius: 3px;
+	text-decoration: none;
+	overflow: hidden;
+	background: rgba(212, 136, 10, 0.02);
+	transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+	position: relative;
+}
+.cd-area-card:hover {
+	border-color: var(--card-area-color, #d4880a);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+.cd-area-stripe {
+	flex: 0 0 6px;
+	background: var(--card-area-color, #d4880a);
+	box-shadow: inset -1px 0 4px rgba(0, 0, 0, 0.4);
+}
+.cd-area-card-body {
+	flex: 1;
+	padding: 12px 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
+.cd-area-card-title {
+	font-family: var(--cd-font-title, 'Fraunces', serif);
+	font-size: 1.4rem;
+	color: var(--card-area-color, var(--cd-text, #d4880a));
+	letter-spacing: 0.02em;
+	line-height: 1.1;
+}
+.cd-area-card-desc {
+	font-family: var(--cd-font-body, 'Crimson Pro', serif);
+	font-size: 0.85rem;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.6));
+	line-height: 1.4;
+}
+.cd-area-card-meta {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	margin-top: auto;
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.58rem;
+	letter-spacing: 0.1em;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.5));
+	flex-wrap: wrap;
+}
+.cd-area-card-link {
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.55rem;
+	letter-spacing: 0.22em;
+	color: var(--cd-amber-lo, rgba(212, 136, 10, 0.55));
+	text-transform: uppercase;
+	margin-top: 0.3rem;
+	transition: color 0.15s;
+}
+.cd-area-card:hover .cd-area-card-link {
+	color: var(--card-area-color, #f5b332);
+}
+
+/* ---- Indicators ---- */
+
+.cd-tracking-icon {
+	font-size: 0.7rem;
+	color: var(--cd-amber-lo, #9a6018);
+	cursor: help;
+}
+.cd-timer-dot {
+	display: inline-block;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--cd-amber, #d4880a);
+	animation: cd-timer-pulse 1.8s ease-in-out infinite;
+}
+@keyframes cd-timer-pulse {
+	0%, 100% { opacity: 0.65; transform: scale(1); }
+	50%      { opacity: 1;    transform: scale(1.2); }
+}
+@media (prefers-reduced-motion: reduce) {
+	.cd-timer-dot { animation: none; opacity: 0.85; }
+}
+
+@media (max-width: 600px) {
+	.cd-area-grid { grid-template-columns: 1fr; }
+	.cd-tab { padding: 10px 12px; font-size: 0.65rem; }
+}
+

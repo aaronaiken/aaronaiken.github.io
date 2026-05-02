@@ -106,47 +106,115 @@
         </div>
       </div>
 
-      <!-- PROJECTS -->
-      <div class="cd-mb-sm">
-        <div class="cd-section-label">Projects</div>
+      <!-- WORK / PERSONAL TABS -->
+      <div class="cd-tabs" role="tablist" aria-label="Project category">
+        <button class="cd-tab" role="tab" data-tab="work" aria-selected="true">WORK</button>
+        <button class="cd-tab" role="tab" data-tab="personal" aria-selected="false">PERSONAL</button>
       </div>
 
-      {% if projects %}
-        <div class="cd-project-grid cd-mb">
-          {% for project in projects %}
-            <a href="/command-deck/projects/{{ project.slug }}/"
-               class="cd-project-card {% if project.is_private == 1 or project.is_private == '1' %}is-private private-hidden{% endif %}"
-               data-private="{{ '1' if project.is_private else '0' }}">
-              <div class="cd-project-card-title">
-                  {{ project.title }}
-                  {% if project.is_private == 1 or project.is_private == '1' %}<span class="cd-private-badge">🔒 private</span>{% endif %}
-              </div>
-              {% if project.description %}
-                <div class="cd-project-card-desc">{{ project.description }}</div>
-              {% endif %}
-              <div class="cd-project-card-meta">
-                {% if project.open_task_count %}
-                  <span>{{ project.open_task_count }} task{{ 's' if project.open_task_count != 1 }}</span>
+      <!-- WORK TAB -->
+      <div class="cd-tab-pane" data-tab="work" role="tabpanel">
+        <div class="cd-tab-search-row">
+          <input type="text" class="cd-input cd-tab-search" data-tab="work" placeholder="Search areas + sub-projects..." autocomplete="off">
+        </div>
+
+        {% if favorited_subprojects and favorited_subprojects|length > 0 %}
+          <div class="cd-favorites-strip cd-mb">
+            <div class="cd-section-label cd-favorites-label">★ FAVORITES</div>
+            <div class="cd-favorites-row">
+              {% for sp in favorited_subprojects %}
+                <a href="/command-deck/projects/{{ sp.slug }}/"
+                   class="cd-favorite-card"
+                   data-search="{{ sp.title|lower }} {{ (sp.description or '')|lower }} {{ (sp.area_title or '')|lower }}"
+                   style="--card-area-color: {{ sp.area_color or '#d4880a' }};">
+                  <span class="cd-favorite-area">{{ sp.area_title }}</span>
+                  <span class="cd-favorite-title">{{ sp.title }}</span>
+                  <span class="cd-favorite-meta">
+                    {% if sp.tracking_enabled %}<span class="cd-tracking-icon" title="Time tracking enabled">⏱</span>{% endif %}
+                    {% if sp.active_timer_id %}<span class="cd-timer-dot" style="background: {{ sp.area_color or '#d4880a' }}"></span>{% endif %}
+                    {% if sp.open_task_count %}{{ sp.open_task_count }}t{% endif %}
+                  </span>
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        <div class="cd-section-label cd-mb-sm">Areas of Responsibility</div>
+        <div class="cd-area-grid cd-mb">
+          {% for area in work_areas %}
+            <a href="/command-deck/areas/{{ area.slug }}/"
+               class="cd-area-card"
+               data-search="{{ area.title|lower }} {{ (area.description or '')|lower }}"
+               data-area="{{ area.slug }}"
+               style="--card-area-color: {{ area.area_color or '#d4880a' }};">
+              <span class="cd-area-stripe"></span>
+              <div class="cd-area-card-body">
+                <div class="cd-area-card-title">{{ area.title }}</div>
+                {% if area.description %}
+                  <div class="cd-area-card-desc">{{ area.description }}</div>
                 {% endif %}
-                {% if project.block_count %}
-                  <span>{{ project.block_count }} block{{ 's' if project.block_count != 1 }}</span>
-                {% endif %}
+                <div class="cd-area-card-meta">
+                  <span>{{ area.subproject_count }} sub-project{{ 's' if area.subproject_count != 1 }}</span>
+                  {% if area.open_task_count %}<span>·</span><span>{{ area.open_task_count }} open task{{ 's' if area.open_task_count != 1 }}</span>{% endif %}
+                  {% if area.active_timer_count %}<span>·</span><span class="cd-timer-dot" style="background: {{ area.area_color or '#d4880a' }}"></span><span>{{ area.active_timer_count }} running</span>{% endif %}
+                </div>
+                <div class="cd-area-card-link">VIEW AREA →</div>
               </div>
             </a>
           {% endfor %}
+        </div>
+        <div class="cd-tab-empty" data-tab-empty="work" hidden>No areas match.</div>
+      </div>
 
-          <!-- New project card -->
-          <button class="cd-project-card new-project" id="newProjectBtn">
-            + NEW PROJECT
-          </button>
+      <!-- PERSONAL TAB -->
+      <div class="cd-tab-pane" data-tab="personal" role="tabpanel" hidden>
+        <div class="cd-tab-search-row">
+          <input type="text" class="cd-input cd-tab-search" data-tab="personal" placeholder="Search personal projects..." autocomplete="off">
         </div>
-      {% else %}
-        <div class="cd-panel cd-mb">
-          <div class="cd-panel-body">
-            <div class="cd-empty">No projects yet. <button class="cd-btn ghost sm" id="newProjectBtn" style="display:inline-flex;">Start one</button></div>
+
+        {% if projects %}
+          <div class="cd-project-grid cd-mb">
+            {% for project in projects %}
+              <a href="/command-deck/projects/{{ project.slug }}/"
+                 class="cd-project-card {% if project.is_private == 1 or project.is_private == '1' %}is-private private-hidden{% endif %}"
+                 data-private="{{ '1' if project.is_private else '0' }}"
+                 data-search="{{ project.title|lower }} {{ (project.description or '')|lower }}">
+                <div class="cd-project-card-title">
+                    {{ project.title }}
+                    {% if project.is_private == 1 or project.is_private == '1' %}<span class="cd-private-badge">🔒 private</span>{% endif %}
+                </div>
+                {% if project.description %}
+                  <div class="cd-project-card-desc">{{ project.description }}</div>
+                {% endif %}
+                <div class="cd-project-card-meta">
+                  {% if project.open_task_count %}
+                    <span>{{ project.open_task_count }} task{{ 's' if project.open_task_count != 1 }}</span>
+                  {% endif %}
+                  {% if project.block_count %}
+                    <span>{{ project.block_count }} block{{ 's' if project.block_count != 1 }}</span>
+                  {% endif %}
+                  {% if project.active_timer_id %}
+                    <span class="cd-timer-dot" style="background: var(--cd-amber)"></span>
+                  {% endif %}
+                </div>
+              </a>
+            {% endfor %}
+
+            <!-- New project card -->
+            <button class="cd-project-card new-project" id="newProjectBtn">
+              + NEW PROJECT
+            </button>
           </div>
-        </div>
-      {% endif %}
+        {% else %}
+          <div class="cd-panel cd-mb">
+            <div class="cd-panel-body">
+              <div class="cd-empty">No personal projects yet. <button class="cd-btn ghost sm" id="newProjectBtn" style="display:inline-flex;">Start one</button></div>
+            </div>
+          </div>
+        {% endif %}
+        <div class="cd-tab-empty" data-tab-empty="personal" hidden>No projects match.</div>
+      </div>
 
     </div>
 
@@ -865,6 +933,9 @@ function cdShowAssign(id, context) {
 </script>
 
 
+<script src="{{ url_for('static', filename='command_deck_tabs.js') }}"></script>
+
 {% include 'includes/today_panel.html' %}
+{% include 'includes/active_timer_strip.html' %}
 </body>
 </html>
