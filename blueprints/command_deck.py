@@ -855,12 +855,184 @@ def _huyang_build_system_with_content(project, blocks, project_tasks, files):
 	return system
 
 
+def _huyang_search_work_content(query, k=5):
+	"""
+	Search work areas + sub-projects for keyword matches in titles, descriptions,
+	note blocks, open task titles, and checklist items. Excludes private projects
+	(per spec §9.4). Token-AND-ish ranking — more matched tokens = higher score;
+	title hits weighted 2x.
+
+	Returns up to k items with shape:
+	  {breadcrumb, source_type, content_snippet, project_slug}
+	"""
+	tokens = [t.lower() for t in re.split(r'\s+', (query or '').strip()) if t and len(t) >= 2]
+	if not tokens:
+		return []
+
+	def score(text):
+		if not text:
+			return 0
+		tl = text.lower()
+		return sum(1 for t in tokens if t in tl)
+
+	def snippet(text, n=160):
+		if not text:
+			return ''
+		tl = text.lower()
+		hits = [tl.find(t) for t in tokens if t in tl]
+		pos = min(hits) if hits else -1
+		if pos == -1:
+			return text[:n] + ('...' if len(text) > n else '')
+		start = max(0, pos - n // 2)
+		end = min(len(text), pos + n // 2)
+		s = text[start:end].strip()
+		if start > 0:
+			s = '...' + s
+		if end < len(text):
+			s = s + '...'
+		return s
+
+	def crumb(area_title, project_title, ptype, source_type=None):
+		"""area_title is the parent for sub-projects; the project's own title for areas."""
+		if ptype == 'work_area':
+			parts = [project_title]
+		else:
+			parts = [area_title, project_title]
+		if source_type:
+			parts.append(source_type)
+		return ' > '.join(p for p in parts if p)
+
+	conn = get_db()
+	matches = []
+
+	# 1. Work project titles + descriptions
+	for row in conn.execute('''
+		SELECT p.id, p.title, p.slug, p.description, p.project_type AS ptype,
+		       parent.title AS area_title
+		FROM projects p
+		LEFT JOIN projects parent ON p.parent_project_id = parent.id
+		WHERE p.project_type IN ('work_area', 'work_subproject')
+		  AND p.is_private = 0
+	''').fetchall():
+		ts = score(row['title'])
+		if ts > 0:
+			matches.append({
+				'breadcrumb': crumb(row['area_title'], row['title'], row['ptype']),
+				'source_type': 'title',
+				'content_snippet': row['title'],
+				'project_slug': row['slug'],
+				'score': ts * 2,
+			})
+		ds = score(row['description'])
+		if ds > 0:
+			matches.append({
+				'breadcrumb': crumb(row['area_title'], row['title'], row['ptype'], 'description'),
+				'source_type': 'description',
+				'content_snippet': snippet(row['description']),
+				'project_slug': row['slug'],
+				'score': ds,
+			})
+
+	# 2. Note blocks
+	for row in conn.execute('''
+		SELECT b.content,
+		       p.title AS project_title, p.slug AS project_slug,
+		       p.project_type AS ptype,
+		       parent.title AS area_title
+		FROM blocks b
+		JOIN projects p ON b.project_id = p.id
+		LEFT JOIN projects parent ON p.parent_project_id = parent.id
+		WHERE b.type = 'note'
+		  AND p.project_type IN ('work_area', 'work_subproject')
+		  AND p.is_private = 0
+	''').fetchall():
+		s = score(row['content'])
+		if s > 0:
+			matches.append({
+				'breadcrumb': crumb(row['area_title'], row['project_title'], row['ptype'], 'note'),
+				'source_type': 'note',
+				'content_snippet': snippet(row['content']),
+				'project_slug': row['project_slug'],
+				'score': s,
+			})
+
+	# 3. Open task titles
+	for row in conn.execute('''
+		SELECT t.title AS task_title,
+		       p.title AS project_title, p.slug AS project_slug,
+		       p.project_type AS ptype,
+		       parent.title AS area_title
+		FROM tasks t
+		JOIN projects p ON t.project_id = p.id
+		LEFT JOIN projects parent ON p.parent_project_id = parent.id
+		WHERE t.status = 'open'
+		  AND p.project_type IN ('work_area', 'work_subproject')
+		  AND p.is_private = 0
+	''').fetchall():
+		s = score(row['task_title'])
+		if s > 0:
+			matches.append({
+				'breadcrumb': crumb(row['area_title'], row['project_title'], row['ptype'], 'task'),
+				'source_type': 'task',
+				'content_snippet': row['task_title'],
+				'project_slug': row['project_slug'],
+				'score': s,
+			})
+
+	# 4. Checklist items
+	for row in conn.execute('''
+		SELECT ci.text AS item_text,
+		       p.title AS project_title, p.slug AS project_slug,
+		       p.project_type AS ptype,
+		       parent.title AS area_title
+		FROM checklist_items ci
+		JOIN blocks b ON ci.block_id = b.id
+		JOIN projects p ON b.project_id = p.id
+		LEFT JOIN projects parent ON p.parent_project_id = parent.id
+		WHERE p.project_type IN ('work_area', 'work_subproject')
+		  AND p.is_private = 0
+	''').fetchall():
+		s = score(row['item_text'])
+		if s > 0:
+			matches.append({
+				'breadcrumb': crumb(row['area_title'], row['project_title'], row['ptype'], 'checklist'),
+				'source_type': 'checklist',
+				'content_snippet': row['item_text'],
+				'project_slug': row['project_slug'],
+				'score': s,
+			})
+
+	conn.close()
+	matches.sort(key=lambda m: m['score'], reverse=True)
+	return matches[:k]
+
+
+def _huyang_build_search_work_system(matches):
+	"""System prompt for search_work mode, with matched excerpts injected (§9.3)."""
+	base = _huyang_build_context()
+	preamble = (
+		"\n\nThe user is searching across their work archive. Below are the "
+		"relevant excerpts found. Cite the project breadcrumb when you reference "
+		"content. If no excerpts match the question, say so plainly."
+	)
+	if not matches:
+		return base + preamble + "\n\nSEARCH RESULTS: (none)"
+
+	lines = [base + preamble, '', f"SEARCH RESULTS (top {len(matches)} matches across work projects):", '']
+	for i, m in enumerate(matches, 1):
+		lines.append(f"{i}. [{m['breadcrumb']}]")
+		lines.append(f'   "{m["content_snippet"]}"')
+		lines.append('')
+	return '\n'.join(lines)
+
+
 @command_deck_bp.route('/command-deck/chat', methods=['POST'])
 @cd_auth_required
 def cd_chat():
 	data = request.get_json()
 	message = (data.get('message') or '').strip()
 	project_id = data.get('project_id')  # int or None
+	mode = data.get('mode')  # 'search_work' (Phase 1), or absent/'general'/'project'
 
 	if not message:
 		return jsonify({'error': 'message required'}), 400
@@ -869,9 +1041,15 @@ def cd_chat():
 		return jsonify({'error': 'Anthropic API key not configured'}), 500
 
 	conn = get_db()
+	persist_mode = None
 
-	# Build system prompt
-	if project_id:
+	# Build system prompt — mode wins over project_id
+	if mode == 'search_work':
+		matches = _huyang_search_work_content(message, k=5)
+		system = _huyang_build_search_work_system(matches)
+		persist_mode = 'search_work'
+		project_id = None  # search_work history is dashboard-bound
+	elif project_id:
 		project = conn.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone()
 		if project:
 			project = dict(project)
@@ -930,15 +1108,15 @@ def cd_chat():
 		conn.close()
 		return jsonify({'error': 'Huyang is unavailable right now.'}), 500
 
-	# Save both messages
+	# Save both messages — mode tags search_work turns (§0a.2 #5)
 	now = et_now()
 	conn.execute(
-		'INSERT INTO chat_messages (role, content, project_id, created) VALUES (?, ?, ?, ?)',
-		('user', message, project_id, now)
+		'INSERT INTO chat_messages (role, content, project_id, created, mode) VALUES (?, ?, ?, ?, ?)',
+		('user', message, project_id, now, persist_mode)
 	)
 	conn.execute(
-		'INSERT INTO chat_messages (role, content, project_id, created) VALUES (?, ?, ?, ?)',
-		('assistant', reply, project_id, now)
+		'INSERT INTO chat_messages (role, content, project_id, created, mode) VALUES (?, ?, ?, ?, ?)',
+		('assistant', reply, project_id, now, persist_mode)
 	)
 	conn.commit()
 	conn.close()
