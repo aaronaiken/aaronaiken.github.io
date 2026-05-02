@@ -222,6 +222,16 @@ def cd_project(slug):
 
 	project = dict(project)
 
+	# Parent area (for breadcrumb + per-area styling on sub-projects)
+	parent_area = None
+	if project.get('project_type') == 'work_subproject' and project.get('parent_project_id'):
+		parent_row = conn.execute(
+			"SELECT id, title, slug, area_color FROM projects WHERE id = ?",
+			(project['parent_project_id'],)
+		).fetchone()
+		if parent_row:
+			parent_area = dict(parent_row)
+
 	blocks_raw = conn.execute('''
 		SELECT * FROM blocks WHERE project_id = ? ORDER BY "order" ASC, id ASC
 	''', (project['id'],)).fetchall()
@@ -261,6 +271,7 @@ def cd_project(slug):
 	return render_template(
 		'command_deck_project.html',
 		project=project,
+		parent_area=parent_area,
 		blocks=blocks,
 		project_tasks=[dict(t) for t in project_tasks],
 		files=[dict(f) for f in files],
@@ -306,6 +317,57 @@ def cd_project_delete(slug):
 		conn.commit()
 	conn.close()
 	return redirect(url_for('cd_projects'))
+
+
+@command_deck_bp.route('/command-deck/areas/<slug>/')
+@command_deck_bp.route('/command-deck/areas/<slug>')
+@cd_auth_required
+def cd_area(slug):
+	conn = get_db()
+	area = conn.execute(
+		"SELECT * FROM projects WHERE slug = ? AND project_type = 'work_area'",
+		(slug,)
+	).fetchone()
+	if not area:
+		conn.close()
+		return "Area not found", 404
+	area = dict(area)
+
+	subprojects = [dict(s) for s in _fetch_subprojects(conn, area_id=area['id'])]
+
+	chat_history = conn.execute('''
+		SELECT * FROM chat_messages
+		WHERE project_id = ?
+		ORDER BY id ASC
+		LIMIT 50
+	''', (area['id'],)).fetchall()
+
+	active_timer_count = conn.execute('''
+		SELECT COUNT(*) AS cnt
+		FROM time_entries te
+		JOIN projects sp ON te.project_id = sp.id
+		WHERE sp.parent_project_id = ? AND te.ended_at IS NULL
+	''', (area['id'],)).fetchone()['cnt']
+
+	# Lifetime time-entry count for the PennDOT mile-marker easter egg
+	# (computed for all areas, harmless to over-fetch)
+	lifetime_entry_count = conn.execute('''
+		SELECT COUNT(*) AS cnt
+		FROM time_entries te
+		JOIN projects sp ON te.project_id = sp.id
+		WHERE sp.parent_project_id = ?
+	''', (area['id'],)).fetchone()['cnt']
+
+	conn.close()
+	return render_template(
+		'command_deck_area.html',
+		area=area,
+		subprojects=subprojects,
+		chat_history=[dict(m) for m in chat_history],
+		active_timer_count=active_timer_count,
+		lifetime_entry_count=lifetime_entry_count,
+		private_projects_enabled=bool(PRIVATE_PROJECTS_PIN),
+	)
 
 
 @command_deck_bp.route('/command-deck/projects/<slug>/favorite', methods=['POST'])
@@ -855,6 +917,71 @@ def _huyang_build_system_with_content(project, blocks, project_tasks, files):
 	return system
 
 
+def _huyang_load_project_content(conn, project_id):
+	"""Blocks (with checklist items), open tasks, files for a single project."""
+	blocks_raw = conn.execute(
+		'SELECT * FROM blocks WHERE project_id = ? ORDER BY "order" ASC', (project_id,)
+	).fetchall()
+	blocks = []
+	for b in blocks_raw:
+		block = dict(b)
+		if block['type'] == 'checklist':
+			items = conn.execute(
+				'SELECT * FROM checklist_items WHERE block_id = ? ORDER BY id ASC',
+				(block['id'],)
+			).fetchall()
+			block['items'] = [dict(i) for i in items]
+		blocks.append(block)
+	project_tasks = [dict(t) for t in conn.execute(
+		'SELECT * FROM tasks WHERE project_id = ? AND status = "open"', (project_id,)
+	).fetchall()]
+	files = [dict(f) for f in conn.execute(
+		'SELECT * FROM files WHERE project_id = ?', (project_id,)
+	).fetchall()]
+	return blocks, project_tasks, files
+
+
+def _huyang_load_area_content(conn, area_id):
+	"""
+	Aggregate blocks, open tasks, files across all (non-private) sub-projects
+	under a work area. Used for area-scoped Huyang chat.
+	"""
+	sub_ids = [r['id'] for r in conn.execute(
+		'SELECT id FROM projects WHERE parent_project_id = ? AND is_private = 0',
+		(area_id,)
+	).fetchall()]
+	if not sub_ids:
+		return [], [], []
+	placeholders = ','.join('?' * len(sub_ids))
+	blocks_raw = conn.execute(
+		f'SELECT b.*, p.title AS project_title FROM blocks b '
+		f'JOIN projects p ON b.project_id = p.id '
+		f'WHERE b.project_id IN ({placeholders}) ORDER BY p.title, b."order"',
+		sub_ids
+	).fetchall()
+	blocks = []
+	for b in blocks_raw:
+		bd = dict(b)
+		if bd['type'] == 'checklist':
+			items = conn.execute(
+				'SELECT * FROM checklist_items WHERE block_id = ? ORDER BY id ASC',
+				(bd['id'],)
+			).fetchall()
+			bd['items'] = [dict(i) for i in items]
+		blocks.append(bd)
+	project_tasks = [dict(t) for t in conn.execute(
+		f'SELECT t.*, p.title AS project_title FROM tasks t '
+		f'JOIN projects p ON t.project_id = p.id '
+		f'WHERE t.project_id IN ({placeholders}) AND t.status = "open" ORDER BY p.title',
+		sub_ids
+	).fetchall()]
+	files = [dict(f) for f in conn.execute(
+		f'SELECT * FROM files WHERE project_id IN ({placeholders})',
+		sub_ids
+	).fetchall()]
+	return blocks, project_tasks, files
+
+
 def _huyang_search_work_content(query, k=5):
 	"""
 	Search work areas + sub-projects for keyword matches in titles, descriptions,
@@ -1053,29 +1180,10 @@ def cd_chat():
 		project = conn.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone()
 		if project:
 			project = dict(project)
-			blocks_raw = conn.execute(
-				'SELECT * FROM blocks WHERE project_id = ? ORDER BY "order" ASC', (project_id,)
-			).fetchall()
-			blocks = []
-			for b in blocks_raw:
-				block = dict(b)
-				if block['type'] == 'checklist':
-					items = conn.execute(
-						'SELECT * FROM checklist_items WHERE block_id = ? ORDER BY id ASC',
-						(block['id'],)
-					).fetchall()
-					block['items'] = [dict(i) for i in items]
-				blocks.append(block)
-			project_tasks = [
-				dict(t) for t in conn.execute(
-					'SELECT * FROM tasks WHERE project_id = ? AND status = "open"', (project_id,)
-				).fetchall()
-			]
-			files = [
-				dict(f) for f in conn.execute(
-					'SELECT * FROM files WHERE project_id = ?', (project_id,)
-				).fetchall()
-			]
+			if project.get('project_type') == 'work_area':
+				blocks, project_tasks, files = _huyang_load_area_content(conn, project['id'])
+			else:
+				blocks, project_tasks, files = _huyang_load_project_content(conn, project['id'])
 			system = _huyang_build_system_with_content(project, blocks, project_tasks, files)
 		else:
 			system = _huyang_build_context()

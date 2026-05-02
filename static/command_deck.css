@@ -2071,3 +2071,384 @@ body.command-deck {
 	margin-left: auto;
 }
 
+
+/* ============================================================ */
+/* AREA PAGE + PER-AREA VISUAL IDENTITY (§0a.3)                  */
+/* CSS variables for area primaries + accents.                   */
+/* ============================================================ */
+
+:root {
+	--area-corporate:        #5b7a99;
+	--area-corporate-accent: #c8d4e0;
+	--area-penndot:          #1f3a5f;
+	--area-penndot-accent:   #f5b332;
+	--area-fdot:             #e07050;
+	--area-fdot-gradient:    linear-gradient(135deg, #e07050 0%, #f5b332 100%);
+}
+
+/* ---- Breadcrumb ---- */
+
+.cd-breadcrumb {
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.62rem;
+	letter-spacing: 0.15em;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.5));
+	text-transform: uppercase;
+	margin-bottom: 0.6rem;
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	flex-wrap: wrap;
+}
+.cd-breadcrumb a {
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.6));
+	text-decoration: none;
+}
+.cd-breadcrumb a:hover {
+	color: var(--card-area-color, var(--cd-amber, #d4880a));
+}
+.cd-breadcrumb-sep { opacity: 0.4; }
+.cd-breadcrumb-current {
+	color: var(--card-area-color, var(--cd-text, #d4880a));
+	font-weight: 600;
+}
+
+/* ---- Area page header ---- */
+
+.cd-area-page-header {
+	display: flex;
+	align-items: stretch;
+	gap: 0;
+	border: 1px solid var(--cd-border, rgba(212, 136, 10, 0.2));
+	border-radius: 3px;
+	overflow: hidden;
+	margin-bottom: 1.5rem;
+	background: rgba(212, 136, 10, 0.02);
+}
+.cd-area-page-stripe {
+	flex: 0 0 8px;
+	background: var(--card-area-color, #d4880a);
+}
+.cd-area-page-info {
+	flex: 1;
+	padding: 18px 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+.cd-area-page-title {
+	font-family: var(--cd-font-title, 'Fraunces', serif);
+	font-size: 2.1rem;
+	color: var(--card-area-color, var(--cd-text, #d4880a));
+	letter-spacing: 0.01em;
+	line-height: 1.05;
+	margin: 0;
+	display: flex;
+	align-items: baseline;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+.cd-area-prefix {
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.85rem;
+	letter-spacing: 0.2em;
+	color: var(--card-area-color, #5b7a99);
+	opacity: 0.7;
+}
+.cd-area-page-desc {
+	font-family: var(--cd-font-body, 'Crimson Pro', serif);
+	font-size: 0.95rem;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.7));
+	line-height: 1.4;
+	margin: 0;
+}
+.cd-area-page-desc.cd-empty-desc { font-style: italic; opacity: 0.65; }
+.cd-area-page-meta {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.6rem;
+	letter-spacing: 0.12em;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.55));
+}
+.cd-area-page-actions {
+	display: flex;
+	align-items: flex-start;
+	padding: 18px 20px 0 0;
+	flex-shrink: 0;
+}
+.cd-area-empty {
+	font-family: var(--cd-font-body, 'Crimson Pro', serif);
+	font-style: italic;
+}
+
+/* ---- Time-tracking panel on sub-project detail page ---- */
+
+.cd-tt-panel { border-left: 3px solid var(--card-area-color, var(--cd-amber, #d4880a)); }
+.cd-tt-start-form {
+	display: flex;
+	gap: 0.5rem;
+	margin-bottom: 0.7rem;
+	align-items: center;
+	flex-wrap: wrap;
+}
+.cd-tt-start-form input { flex: 1; min-width: 200px; }
+.cd-tt-today-list { display: flex; flex-direction: column; gap: 0.3rem; }
+.cd-tt-today-total {
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.68rem;
+	letter-spacing: 0.15em;
+	text-transform: uppercase;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.55));
+	margin-bottom: 0.4rem;
+}
+.cd-tt-today-total strong {
+	color: var(--cd-amber-hi, #f5b332);
+	font-weight: bold;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.05em;
+}
+.cd-tt-entry {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	padding: 6px 0;
+	border-bottom: 1px solid rgba(212, 136, 10, 0.06);
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.7rem;
+	color: var(--cd-text, #d4880a);
+}
+.cd-tt-entry.is-running { color: var(--cd-amber-hi, #f5b332); }
+.cd-tt-entry-time {
+	font-size: 0.6rem;
+	letter-spacing: 0.05em;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.55));
+	min-width: 110px;
+	font-variant-numeric: tabular-nums;
+}
+.cd-tt-entry-desc { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-tt-entry-elapsed {
+	font-variant-numeric: tabular-nums;
+	min-width: 60px;
+	text-align: right;
+	font-size: 0.7rem;
+}
+
+/* ---- Title-row icons (favorite + tracking on project detail) ---- */
+
+.cd-title-icon { font-size: 0.85rem; margin-left: 0.4rem; opacity: 0.85; }
+.cd-fav-toggle {
+	background: none;
+	border: none;
+	font-size: 1rem;
+	cursor: pointer;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.4));
+	padding: 0 0 0 0.3rem;
+	transition: color 0.15s, transform 0.15s;
+	line-height: 1;
+}
+.cd-fav-toggle:hover { transform: scale(1.15); color: var(--cd-amber-hi, #f5b332); }
+.cd-fav-toggle.is-on { color: var(--cd-amber-hi, #f5b332); }
+
+.cd-checkbox-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.62rem;
+	letter-spacing: 0.1em;
+	color: var(--cd-text-dim, rgba(212, 136, 10, 0.6));
+	cursor: pointer;
+	margin-bottom: 0.5rem;
+}
+.cd-checkbox-row input[type="checkbox"] { accent-color: var(--cd-amber, #d4880a); }
+
+
+/* ============================================================ */
+/* PER-AREA: Corporate (CAI) — "The Mothership"                  */
+/* Slate-blue, cargo-hold vibes, // CAI // prefix on title.       */
+/* ============================================================ */
+
+body[data-area="corporate"] .cd-breadcrumb-current,
+body[data-area="corporate"] .cd-area-page-title { color: var(--area-corporate); }
+body[data-area="corporate"] .cd-area-page-stripe,
+body[data-area="corporate"] .cd-area-section-stripe { background: var(--area-corporate); }
+
+body[data-area="corporate"] .cd-subproject-card {
+	border-left-color: var(--area-corporate);
+	position: relative;
+}
+body[data-area="corporate"] .cd-subproject-card.cd-cargo-stamp::after {
+	content: "CARGO";
+	position: absolute;
+	top: 50%;
+	right: 12px;
+	transform: translateY(-50%) rotate(-12deg);
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 1.4rem;
+	letter-spacing: 0.18em;
+	color: var(--area-corporate);
+	opacity: 0;
+	pointer-events: none;
+	border: 2px solid var(--area-corporate);
+	padding: 2px 8px;
+	border-radius: 2px;
+	animation: cd-stamp-in 800ms ease-out forwards;
+}
+body[data-area="corporate"] .cd-subproject-card.cd-classified-stamp::after {
+	content: "CLASSIFIED";
+}
+@keyframes cd-stamp-in {
+	from { opacity: 0; transform: translateY(-50%) rotate(-12deg) scale(0.6); }
+	to   { opacity: 0.18; transform: translateY(-50%) rotate(-12deg) scale(1); }
+}
+
+body[data-area="corporate"] .cd-inventoried-flash {
+	position: absolute;
+	top: -28px; left: 50%;
+	transform: translateX(-50%);
+	background: var(--area-corporate);
+	color: #fff;
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.6rem;
+	letter-spacing: 0.18em;
+	padding: 4px 10px;
+	border-radius: 2px;
+	animation: cd-inventoried 600ms ease-out forwards;
+	pointer-events: none;
+	z-index: 5;
+}
+@keyframes cd-inventoried {
+	0%   { opacity: 0; transform: translateX(-50%) translateY(8px); }
+	30%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+	100% { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+}
+
+
+/* ============================================================ */
+/* PER-AREA: PennDOT — "The Keystone"                            */
+/* Keystone-blue + caution-yellow accent, blueprint background. */
+/* ============================================================ */
+
+body[data-area="penndot"] .cd-breadcrumb-current,
+body[data-area="penndot"] .cd-area-page-title { color: var(--area-penndot-accent); }
+body[data-area="penndot"] .cd-area-page-stripe,
+body[data-area="penndot"] .cd-area-section-stripe { background: var(--area-penndot); }
+body[data-area="penndot"] .cd-area-page-header {
+	border-color: var(--area-penndot-accent);
+	background:
+		linear-gradient(rgba(212, 136, 10, 0.02), rgba(212, 136, 10, 0.02)),
+		repeating-linear-gradient(0deg, transparent 0 40px, rgba(31, 58, 95, 0.08) 40px 41px),
+		repeating-linear-gradient(90deg, transparent 0 40px, rgba(31, 58, 95, 0.08) 40px 41px);
+}
+body[data-area="penndot"] .cd-keystone-glyph {
+	display: inline-block;
+	color: var(--area-penndot-accent);
+	font-size: 1.3rem;
+	transform: translateY(-2px);
+	margin-left: 0.3rem;
+}
+
+body[data-area="penndot"] .cd-subproject-card {
+	border-left-color: var(--area-penndot);
+	border-top: 2px solid var(--area-penndot-accent);
+}
+
+body[data-area="penndot"] .cd-mile-marker {
+	position: fixed;
+	top: 50%; left: 50%;
+	transform: translate(-50%, -50%);
+	background: var(--area-penndot);
+	color: var(--area-penndot-accent);
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 1.2rem;
+	letter-spacing: 0.25em;
+	padding: 12px 24px;
+	border: 2px solid var(--area-penndot-accent);
+	border-radius: 4px;
+	box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+	z-index: 99999;
+	animation: cd-mile-marker 1500ms ease-out forwards;
+	pointer-events: none;
+}
+@keyframes cd-mile-marker {
+	0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+	20%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+	80%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+	100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+
+/* ============================================================ */
+/* PER-AREA: FDOT — "The Sunshine"                               */
+/* Coral + sunset gradient, ☀ glyph, palm tree drift egg.        */
+/* ============================================================ */
+
+body[data-area="fdot"] .cd-breadcrumb-current,
+body[data-area="fdot"] .cd-area-page-title { color: var(--area-fdot); }
+body[data-area="fdot"] .cd-area-page-stripe,
+body[data-area="fdot"] .cd-area-section-stripe {
+	background: var(--area-fdot-gradient);
+}
+body[data-area="fdot"] .cd-area-page-title-text {
+	font-style: italic;
+}
+body[data-area="fdot"] .cd-fdot-sun {
+	display: inline-block;
+	color: #f5b332;
+	margin-left: 0.3rem;
+	font-size: 1.4rem;
+	animation: cd-fdot-sun-glow 4s ease-in-out infinite;
+}
+@keyframes cd-fdot-sun-glow {
+	0%, 100% { text-shadow: 0 0 6px rgba(245, 179, 50, 0.5); }
+	50%      { text-shadow: 0 0 14px rgba(245, 179, 50, 0.85); }
+}
+
+body[data-area="fdot"] .cd-subproject-card {
+	border-left: 3px solid transparent;
+	border-image: var(--area-fdot-gradient);
+	border-image-slice: 1;
+}
+body[data-area="fdot"] .cd-fdot-hurricane-pill {
+	display: inline-block;
+	margin-left: 0.5rem;
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.55rem;
+	letter-spacing: 0.18em;
+	padding: 3px 8px;
+	border: 1px solid var(--area-fdot);
+	border-radius: 12px;
+	color: var(--area-fdot);
+	background: rgba(224, 112, 80, 0.08);
+	vertical-align: middle;
+}
+
+body[data-area="fdot"] .cd-fdot-palm {
+	position: fixed;
+	bottom: 60px;
+	left: -100px;
+	font-size: 64px;
+	pointer-events: none;
+	z-index: 1;
+	opacity: 0;
+	animation: cd-fdot-palm-drift 1200ms ease-out forwards;
+}
+@keyframes cd-fdot-palm-drift {
+	0%   { opacity: 0; left: -100px; }
+	20%  { opacity: 0.4; }
+	80%  { opacity: 0.4; left: calc(100% - 60px); }
+	100% { opacity: 0; left: calc(100% + 60px); }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+	body[data-area="corporate"] .cd-subproject-card.cd-cargo-stamp::after,
+	body[data-area="corporate"] .cd-inventoried-flash,
+	body[data-area="penndot"] .cd-mile-marker,
+	body[data-area="fdot"] .cd-fdot-sun,
+	body[data-area="fdot"] .cd-fdot-palm { animation: none; }
+	body[data-area="fdot"] .cd-fdot-palm { display: none; }
+}
+

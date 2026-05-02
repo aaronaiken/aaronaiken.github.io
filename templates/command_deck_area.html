@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{{ area.title }} — Command Deck</title>
+  <link rel="stylesheet" href="/static/command_deck.css">
+</head>
+<body class="command-deck"
+      data-area="{{ area.slug }}"
+      data-lifetime-entries="{{ lifetime_entry_count }}"
+      style="--card-area-color: {{ area.area_color or '#d4880a' }};">
+<div class="cd-shell">
+
+  <!-- HEADER -->
+  <header class="cd-header">
+    <div class="cd-header-left">
+      <a href="/command-deck/" class="cd-wordmark">COMMAND DECK</a>
+      <span class="cd-ident">{{ area.title | upper }} · AREA</span>
+    </div>
+    <nav class="cd-header-nav">
+      <a href="/command-deck/" class="cd-nav-link">BRIDGE</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/projects/" class="cd-nav-link">PROJECTS</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/below-deck" class="cd-nav-link">
+        BELOW DECK
+        <span class="cd-bd-badge" id="bdBadge"></span>
+      </a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/today/" class="cd-nav-link">TODAY</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/publish" class="cd-nav-link">COCKPIT</a>
+    </nav>
+  </header>
+
+  <!-- MAIN GRID -->
+  <div class="cd-main">
+
+    <!-- LEFT — Area content -->
+    <div class="cd-content">
+
+      <!-- BREADCRUMB -->
+      <div class="cd-breadcrumb">
+        <a href="/command-deck/">Bridge</a>
+        <span class="cd-breadcrumb-sep">›</span>
+        <span class="cd-breadcrumb-segment">Work</span>
+        <span class="cd-breadcrumb-sep">›</span>
+        <span class="cd-breadcrumb-current">{{ area.title }}</span>
+      </div>
+
+      <!-- AREA HEADER -->
+      <div class="cd-area-page-header">
+        <div class="cd-area-page-stripe"></div>
+        <div class="cd-area-page-info">
+          <h1 class="cd-area-page-title">
+            {% if area.slug == 'corporate' %}<span class="cd-area-prefix">// CAI //</span>{% endif %}
+            <span class="cd-area-page-title-text">{{ area.title }}</span>
+            {% if area.slug == 'fdot' %}<span class="cd-fdot-sun" aria-hidden="true">☀</span>{% endif %}
+            {% if area.slug == 'penndot' %}<span class="cd-keystone-glyph" aria-hidden="true">⬡</span>{% endif %}
+          </h1>
+          {% if area.description %}
+            <p class="cd-area-page-desc" id="areaDesc">{{ area.description }}</p>
+          {% else %}
+            <p class="cd-area-page-desc cd-empty-desc" id="areaDesc">No description yet — use EDIT to add one.</p>
+          {% endif %}
+          <div class="cd-area-page-meta">
+            <span>{{ subprojects|length }} sub-project{{ 's' if subprojects|length != 1 }}</span>
+            {% if active_timer_count %}
+              <span>·</span>
+              <span class="cd-timer-dot"></span>
+              <span>{{ active_timer_count }} running</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="cd-area-page-actions">
+          <button class="cd-btn ghost sm" id="editAreaBtn">EDIT</button>
+        </div>
+      </div>
+
+      <!-- SUB-PROJECTS -->
+      <div class="cd-flex-between cd-mb-sm cd-mt">
+        <div class="cd-section-label">Sub-projects</div>
+        <button class="cd-btn primary sm" id="newSubprojectBtn">+ NEW SUB-PROJECT</button>
+      </div>
+
+      {% if subprojects %}
+        <div class="cd-subproject-grid cd-mb">
+          {% for sp in subprojects %}
+            <a href="/command-deck/projects/{{ sp.slug }}/"
+               class="cd-subproject-card"
+               data-area="{{ area.slug }}">
+              <div class="cd-subproject-title">
+                {{ sp.title }}
+                {% if sp.is_favorite %}<span class="cd-fav-icon">★</span>{% endif %}
+              </div>
+              {% if sp.description %}
+                <div class="cd-subproject-desc">{{ sp.description }}</div>
+              {% endif %}
+              <div class="cd-subproject-meta">
+                {% if sp.tracking_enabled %}<span class="cd-tracking-icon" title="Time tracking enabled">⏱</span>{% endif %}
+                {% if sp.active_timer_id %}<span class="cd-timer-dot"></span>{% endif %}
+                {% if sp.open_task_count %}<span>{{ sp.open_task_count }} task{{ 's' if sp.open_task_count != 1 }}</span>{% endif %}
+                {% if sp.block_count %}<span>{{ sp.block_count }} block{{ 's' if sp.block_count != 1 }}</span>{% endif %}
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="cd-panel cd-mb">
+          <div class="cd-panel-body">
+            <div class="cd-empty cd-area-empty">
+              {% if area.slug == 'corporate' %}
+                No active manifests. Refuel and depart.
+              {% elif area.slug == 'penndot' %}
+                DETOUR — no sub-projects yet.
+              {% elif area.slug == 'fdot' %}
+                Quiet day in the sunshine. No sub-projects yet.
+              {% else %}
+                No sub-projects yet under {{ area.title }}.
+              {% endif %}
+              <button class="cd-btn ghost sm" id="newSubprojectBtnEmpty" style="display:inline-flex;margin-left:0.5rem;">+ Add one</button>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+    </div><!-- .cd-content -->
+
+    <!-- RIGHT SIDEBAR — Huyang scoped to area + Below Deck quick-add -->
+    <div class="cd-sidebar">
+
+      <!-- HUYANG — area context -->
+      <div class="cd-panel">
+        <div class="cd-panel-header">
+          <span class="cd-panel-title">
+            <span class="cd-huyang-name">Huyang</span>
+            &nbsp;·&nbsp; {{ area.title }}
+          </span>
+          <div class="cd-panel-actions">
+            <button class="cd-btn ghost sm" id="huyangClear">CLEAR</button>
+          </div>
+        </div>
+        <div class="cd-huyang-panel">
+          <div class="cd-huyang-history" id="huyangHistory">
+            {% if chat_history %}
+              {% for msg in chat_history %}
+                <div class="cd-msg {{ msg.role }}">
+                  <div class="cd-msg-bubble">{{ msg.content }}</div>
+                  <div class="cd-msg-meta">{{ 'you' if msg.role == 'user' else 'Huyang' }}</div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="cd-huyang-empty">
+                <p class="cd-huyang-empty-text">Huyang sees everything in {{ area.title }}.<br>Ask him about any sub-project here.</p>
+              </div>
+            {% endif %}
+          </div>
+          <div class="cd-huyang-input-row">
+            <textarea class="cd-huyang-textarea" id="huyangInput"
+              placeholder="ask about {{ area.title }}..." rows="1"></textarea>
+            <button class="cd-btn primary sm" id="huyangSend">TX</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- BELOW DECK QUICK PANEL -->
+      <div class="cd-panel">
+        <div class="cd-panel-header">
+          <span class="cd-panel-title">// Below Deck</span>
+          <a href="/below-deck" class="cd-btn ghost sm">OPEN FULL</a>
+        </div>
+        <div class="cd-panel-body" id="bdQuickPanel">
+          <div class="cd-input-row cd-mb-sm">
+            <input type="text" class="cd-input" id="bdNewTask" placeholder="quick task...">
+            <button class="cd-btn primary sm" id="bdAddBtn">ADD</button>
+          </div>
+          <div class="cd-empty cd-text-dim" style="font-size:0.8rem;">Tasks load on bridge.</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- .cd-main -->
+
+  <!-- FOOTER -->
+  <footer class="cd-footer">
+    <div class="cd-footer-links">
+      <a href="/command-deck/" class="cd-footer-link">Bridge</a>
+      <a href="/command-deck/projects/" class="cd-footer-link">Projects</a>
+      <a href="/publish" class="cd-footer-link">Cockpit</a>
+    </div>
+    <span class="cd-footer-ident">YT-1300F · {{ area.title | upper }}</span>
+  </footer>
+
+</div><!-- .cd-shell -->
+
+<!-- NEW SUB-PROJECT MODAL -->
+<div class="cd-modal-overlay" id="newSubprojectModal">
+  <div class="cd-modal">
+    <div class="cd-modal-title">// New sub-project under {{ area.title }}</div>
+    <input type="text" class="cd-input cd-mb-sm" id="newSpTitle" placeholder="Sub-project title (e.g. Bridge 47 Inspection)" autocomplete="off">
+    <textarea class="cd-input cd-mb-sm" id="newSpDesc" placeholder="Optional one-line description" rows="2"></textarea>
+    <label class="cd-checkbox-row">
+      <input type="checkbox" id="newSpTracking" checked>
+      <span>Enable time tracking</span>
+    </label>
+    <div class="cd-modal-actions">
+      <button class="cd-btn ghost sm" id="newSpCancel">CANCEL</button>
+      <button class="cd-btn primary sm" id="newSpCreate">CREATE</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT AREA MODAL -->
+<div class="cd-modal-overlay" id="editAreaModal">
+  <div class="cd-modal">
+    <div class="cd-modal-title">// Edit {{ area.title }}</div>
+    <input type="text" class="cd-input cd-mb-sm" id="editAreaTitle" value="{{ area.title }}">
+    <textarea class="cd-input cd-mb-sm" id="editAreaDescription" placeholder="Description" rows="3">{{ area.description or '' }}</textarea>
+    <div class="cd-modal-actions">
+      <button class="cd-btn ghost sm" id="editAreaCancel">CANCEL</button>
+      <button class="cd-btn primary sm" id="editAreaSave">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const AREA_SLUG = {{ area.slug | tojson }};
+  const AREA_ID = {{ area.id | tojson }};
+
+  // ---- New sub-project modal ----
+  const newModal = document.getElementById('newSubprojectModal');
+  const newOpen  = () => { newModal.classList.add('is-open'); document.getElementById('newSpTitle').focus(); };
+  const newClose = () => newModal.classList.remove('is-open');
+  document.getElementById('newSubprojectBtn')?.addEventListener('click', newOpen);
+  document.getElementById('newSubprojectBtnEmpty')?.addEventListener('click', newOpen);
+  document.getElementById('newSpCancel').addEventListener('click', newClose);
+  newModal.addEventListener('click', e => { if (e.target === newModal) newClose(); });
+  document.getElementById('newSpCreate').addEventListener('click', async () => {
+    const title = document.getElementById('newSpTitle').value.trim();
+    const description = document.getElementById('newSpDesc').value.trim();
+    const tracking = document.getElementById('newSpTracking').checked;
+    if (!title) { document.getElementById('newSpTitle').focus(); return; }
+    const r = await fetch(`/command-deck/areas/${AREA_SLUG}/subprojects/new`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'same-origin',
+      body: JSON.stringify({title, description, tracking_enabled: tracking})
+    });
+    const data = await r.json();
+    if (data && data.success) {
+      window.location.href = `/command-deck/projects/${data.subproject.slug}/`;
+    } else {
+      alert('Could not create sub-project.');
+    }
+  });
+
+  // ---- Edit area modal ----
+  const editModal = document.getElementById('editAreaModal');
+  document.getElementById('editAreaBtn').addEventListener('click', () => editModal.classList.add('is-open'));
+  document.getElementById('editAreaCancel').addEventListener('click', () => editModal.classList.remove('is-open'));
+  editModal.addEventListener('click', e => { if (e.target === editModal) editModal.classList.remove('is-open'); });
+  document.getElementById('editAreaSave').addEventListener('click', async () => {
+    const fd = new FormData();
+    fd.append('title', document.getElementById('editAreaTitle').value);
+    fd.append('description', document.getElementById('editAreaDescription').value);
+    fd.append('is_private', '0');
+    const r = await fetch(`/command-deck/projects/${AREA_SLUG}/update`, {method: 'POST', body: fd, credentials: 'same-origin'});
+    if (r.ok) window.location.reload();
+  });
+
+  // ---- Huyang chat (area-scoped) ----
+  const histEl = document.getElementById('huyangHistory');
+  const inputEl = document.getElementById('huyangInput');
+  const sendBtn = document.getElementById('huyangSend');
+  const clearBtn = document.getElementById('huyangClear');
+
+  function escHtml(s) {
+    const d = document.createElement('div'); d.appendChild(document.createTextNode(s == null ? '' : String(s))); return d.innerHTML;
+  }
+  function appendMsg(role, content) {
+    const empty = histEl.querySelector('.cd-huyang-empty');
+    if (empty) empty.remove();
+    const div = document.createElement('div');
+    div.className = 'cd-msg ' + role;
+    div.innerHTML = '<div class="cd-msg-bubble">' + escHtml(content) + '</div>' +
+                    '<div class="cd-msg-meta">' + (role === 'user' ? 'you' : 'Huyang') + '</div>';
+    histEl.appendChild(div);
+    histEl.scrollTop = histEl.scrollHeight;
+  }
+  async function send() {
+    const msg = inputEl.value.trim();
+    if (!msg) return;
+    appendMsg('user', msg);
+    inputEl.value = '';
+    sendBtn.disabled = true;
+    try {
+      const r = await fetch('/command-deck/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        credentials: 'same-origin',
+        body: JSON.stringify({message: msg, project_id: AREA_ID})
+      });
+      const data = await r.json();
+      if (data && data.reply) appendMsg('assistant', data.reply);
+      else if (data && data.error) appendMsg('assistant', '[error: ' + data.error + ']');
+    } catch (e) {
+      appendMsg('assistant', '[Huyang offline]');
+    }
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+  sendBtn.addEventListener('click', send);
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+  clearBtn.addEventListener('click', async () => {
+    if (!confirm('Clear Huyang history for ' + {{ area.title | tojson }} + '?')) return;
+    await fetch('/command-deck/chat/clear', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'same-origin',
+      body: JSON.stringify({project_id: AREA_ID})
+    });
+    histEl.innerHTML = '<div class="cd-huyang-empty"><p class="cd-huyang-empty-text">Huyang cleared.</p></div>';
+  });
+
+  // Auto-scroll history on load
+  histEl.scrollTop = histEl.scrollHeight;
+})();
+</script>
+
+<script src="{{ url_for('static', filename='area_easter_eggs.js') }}"></script>
+
+{% include 'includes/today_panel.html' %}
+{% include 'includes/active_timer_strip.html' %}
+</body>
+</html>

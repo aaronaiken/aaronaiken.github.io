@@ -7,7 +7,8 @@
   <link rel="stylesheet" href="/static/command_deck.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 </head>
-<body class="command-deck">
+<body class="command-deck"
+      {% if parent_area %}data-area="{{ parent_area.slug }}" style="--card-area-color: {{ parent_area.area_color or '#d4880a' }};"{% endif %}>
 <div class="cd-shell">
 
   <!-- HEADER -->
@@ -38,10 +39,30 @@
     <!-- LEFT — Project content -->
     <div class="cd-content">
 
+      {% if parent_area %}
+      <!-- BREADCRUMB (sub-project) -->
+      <div class="cd-breadcrumb">
+        <a href="/command-deck/">Bridge</a>
+        <span class="cd-breadcrumb-sep">›</span>
+        <span class="cd-breadcrumb-segment">Work</span>
+        <span class="cd-breadcrumb-sep">›</span>
+        <a href="/command-deck/areas/{{ parent_area.slug }}/">{{ parent_area.title }}</a>
+        <span class="cd-breadcrumb-sep">›</span>
+        <span class="cd-breadcrumb-current">{{ project.title }}</span>
+      </div>
+      {% endif %}
+
       <!-- PROJECT TITLE + META -->
       <div class="cd-flex-between cd-mb-sm">
         <div>
-          <h1 class="cd-page-title" id="projectTitle">{{ project.title }}</h1>
+          <h1 class="cd-page-title" id="projectTitle">
+            {{ project.title }}
+            {% if project.tracking_enabled %}
+              <span class="cd-tracking-icon cd-title-icon" title="Time tracking enabled">⏱</span>
+            {% endif %}
+            <button class="cd-fav-toggle {% if project.is_favorite %}is-on{% endif %}" id="favoriteToggleBtn"
+                    type="button" title="Toggle favorite">{% if project.is_favorite %}★{% else %}☆{% endif %}</button>
+          </h1>
           {% if project.description %}
             <p class="cd-page-subtitle" id="projectDesc">{{ project.description }}</p>
           {% endif %}
@@ -51,6 +72,26 @@
           <button class="cd-btn sm danger" id="deleteProjectBtn">DELETE</button>
         </div>
       </div>
+
+      {% if project.tracking_enabled or project.project_type == 'work_subproject' %}
+      <!-- TIME TRACKING — start form + today's entries -->
+      <div class="cd-panel cd-mb cd-tt-panel">
+        <div class="cd-panel-header">
+          <span class="cd-panel-title">// Time</span>
+          <button class="cd-btn sm" id="startTimerBtn" type="button">+ START TIMER</button>
+        </div>
+        <div class="cd-panel-body">
+          <div id="startTimerForm" class="cd-tt-start-form" hidden>
+            <input type="text" class="cd-input" id="startTimerDesc" placeholder="What are you working on?" autocomplete="off">
+            <button class="cd-btn primary sm" id="startTimerSubmit" type="button">START</button>
+            <button class="cd-btn ghost sm" id="startTimerCancel" type="button">CANCEL</button>
+          </div>
+          <div id="todayTimeList" class="cd-tt-today-list">
+            <div class="cd-tt-loading cd-text-dim" style="font-size:0.7rem;">Loading today's entries...</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
 
       <!-- ADD BLOCK ROW -->
       <div class="cd-add-block-row">
@@ -269,6 +310,14 @@
             {% if project.is_private %}checked{% endif %}>
           <label for="editProjectPrivate" style="font-family:var(--cd-font-ui);font-size:0.62rem;letter-spacing:0.1em;color:var(--cd-text-dim);cursor:pointer;">
             PRIVATE PROJECT
+          </label>
+        </div>
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;">
+          <input type="checkbox" id="editProjectTracking"
+            style="width:14px;height:14px;accent-color:var(--cd-amber);"
+            {% if project.tracking_enabled %}checked{% endif %}>
+          <label for="editProjectTracking" style="font-family:var(--cd-font-ui);font-size:0.62rem;letter-spacing:0.1em;color:var(--cd-text-dim);cursor:pointer;">
+            ⏱ TIME TRACKING
           </label>
         </div>
     <div class="cd-modal-actions">
@@ -910,10 +959,19 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
   document.getElementById('editModal').addEventListener('click',function(e){
     if(e.target===this) this.classList.remove('open');
   });
-  document.getElementById('editConfirmBtn').addEventListener('click',function(){
+  document.getElementById('editConfirmBtn').addEventListener('click', async function(){
     const title=document.getElementById('editTitle').value.trim();
     const desc=document.getElementById('editDesc').value.trim();
     if(!title) return;
+    // Tracking toggle is a separate route — fire it first if changed, await before navigating.
+    const wantTracking = document.getElementById('editProjectTracking').checked;
+    const currentTracking = {{ project.tracking_enabled | default(0, true) | tojson }};
+    if (wantTracking !== !!currentTracking) {
+      try {
+        await fetch(`/command-deck/projects/${PROJECT_SLUG}/tracking`,
+                    {method:'POST', credentials:'same-origin'});
+      } catch(e) { /* keep going — page reload will reflect server state */ }
+    }
     const form=document.createElement('form');
     form.method='POST';form.action=`/command-deck/projects/${PROJECT_SLUG}/update`;
     const isPrivate = document.getElementById('editProjectPrivate').checked ? '1' : '0';
@@ -1227,6 +1285,154 @@ function cdEditTask(id) {
 
 </script>
 
+
+<script>
+// ============================================================
+// FAVORITE TOGGLE + START-TIMER FORM + TODAY'S TIME LIST
+// ============================================================
+(function () {
+  'use strict';
+
+  const PROJECT_SLUG = {{ project.slug | tojson }};
+  const PROJECT_ID   = {{ project.id   | tojson }};
+  const PROJECT_TITLE = {{ project.title | tojson }};
+
+  // ---- Favorite toggle ----
+  const favBtn = document.getElementById('favoriteToggleBtn');
+  if (favBtn) {
+    favBtn.addEventListener('click', async function () {
+      favBtn.disabled = true;
+      try {
+        const r = await fetch(`/command-deck/projects/${PROJECT_SLUG}/favorite`, {method:'POST', credentials:'same-origin'});
+        const data = await r.json();
+        if (data && data.success) {
+          favBtn.textContent = data.is_favorite ? '★' : '☆';
+          favBtn.classList.toggle('is-on', !!data.is_favorite);
+        }
+      } finally { favBtn.disabled = false; }
+    });
+  }
+
+  // ---- Start-timer inline form ----
+  const startBtn   = document.getElementById('startTimerBtn');
+  const formEl     = document.getElementById('startTimerForm');
+  const descInput  = document.getElementById('startTimerDesc');
+  const submitBtn  = document.getElementById('startTimerSubmit');
+  const cancelBtn  = document.getElementById('startTimerCancel');
+  const todayList  = document.getElementById('todayTimeList');
+
+  function openStartForm() {
+    if (!formEl) return;
+    formEl.hidden = false;
+    if (descInput) { descInput.value = ''; descInput.focus(); }
+  }
+  function closeStartForm() {
+    if (formEl) formEl.hidden = true;
+  }
+  if (startBtn) startBtn.addEventListener('click', openStartForm);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeStartForm);
+  if (descInput) descInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); submitBtn?.click(); }
+    if (e.key === 'Escape') closeStartForm();
+  });
+  if (submitBtn) submitBtn.addEventListener('click', async function () {
+    if (!window.TimeTrackerCore) return;
+    const description = (descInput.value || '').trim();
+    submitBtn.disabled = true;
+    const result = await window.TimeTrackerCore.startTimer(PROJECT_ID, description);
+    submitBtn.disabled = false;
+    if (result.ok) {
+      closeStartForm();
+      loadTodayTime();
+    } else if (result.status === 409) {
+      alert('A timer is already running on this project.');
+    } else {
+      alert('Could not start the timer.');
+    }
+  });
+
+  // ---- Today's time list ----
+  function fmt(secs) {
+    if (window.TimeTrackerCore) return window.TimeTrackerCore.formatElapsed(secs);
+    secs = Math.max(0, secs|0);
+    const h = (secs / 3600)|0, m = ((secs%3600)/60)|0, s = secs%60;
+    const pad = n => n < 10 ? '0'+n : ''+n;
+    return h > 0 ? h + ':' + pad(m) + ':' + pad(s) : m + ':' + pad(s);
+  }
+  function fmtTimeOfDay(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+  }
+  function escHtml(s) {
+    const d = document.createElement('div'); d.appendChild(document.createTextNode(s == null ? '' : String(s))); return d.innerHTML;
+  }
+
+  async function loadTodayTime() {
+    if (!todayList) return;
+    try {
+      const r = await fetch('/time/today/' + PROJECT_ID, {credentials: 'same-origin'});
+      if (!r.ok) { todayList.innerHTML = '<div class="cd-text-dim" style="font-size:0.7rem;">Could not load.</div>'; return; }
+      const data = await r.json();
+      const entries = data.entries || [];
+      if (entries.length === 0) {
+        todayList.innerHTML = '<div class="cd-text-dim" style="font-size:0.7rem;letter-spacing:0.1em;">No time logged today on this project yet.</div>';
+        return;
+      }
+      let total = 0;
+      const rows = entries.map(e => {
+        const isRunning = !e.ended_at;
+        const elapsed = e.duration_seconds != null ? e.duration_seconds : Math.floor((Date.now() - new Date(e.started_at).getTime()) / 1000);
+        total += Math.max(0, elapsed|0);
+        return '<div class="cd-tt-entry' + (isRunning ? ' is-running' : '') + '" data-id="' + e.id + '">' +
+          '<span class="cd-tt-entry-time">' + fmtTimeOfDay(e.started_at) + '–' + (e.ended_at ? fmtTimeOfDay(e.ended_at) : 'now') + '</span>' +
+          '<span class="cd-tt-entry-desc">' + (escHtml(e.description) || '<em class="cd-text-dim">no description</em>') + '</span>' +
+          '<span class="cd-tt-entry-elapsed">' + fmt(elapsed) + '</span>' +
+          (isRunning
+            ? '<button class="cd-btn ghost sm cd-tt-stop" data-id="' + e.id + '" type="button">STOP</button>'
+            : '<button class="cd-btn ghost sm cd-tt-delete" data-id="' + e.id + '" type="button" title="Delete">×</button>') +
+          '</div>';
+      }).join('');
+      todayList.innerHTML =
+        '<div class="cd-tt-today-total">Today total: <strong>' + fmt(total) + '</strong></div>' + rows;
+
+      todayList.querySelectorAll('.cd-tt-stop').forEach(b => b.addEventListener('click', async () => {
+        b.disabled = true;
+        await window.TimeTrackerCore.stopTimer(b.getAttribute('data-id'));
+        loadTodayTime();
+      }));
+      todayList.querySelectorAll('.cd-tt-delete').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('Delete this time entry?')) return;
+        b.disabled = true;
+        await window.TimeTrackerCore.deleteTimer(b.getAttribute('data-id'));
+        loadTodayTime();
+      }));
+    } catch (e) {
+      todayList.innerHTML = '<div class="cd-text-dim" style="font-size:0.7rem;">Could not load.</div>';
+    }
+  }
+
+  // Re-render on every tick + every TimeTrackerCore poll
+  if (todayList) {
+    loadTodayTime();
+    if (window.TimeTrackerCore) {
+      // Subscribe to drive periodic reloads when the active list changes
+      let lastActiveCount = -1;
+      window.TimeTrackerCore.subscribe(function (entries) {
+        const onThisProject = entries.filter(function (e) { return String(e.project_id) === String(PROJECT_ID); }).length;
+        if (onThisProject !== lastActiveCount) {
+          lastActiveCount = onThisProject;
+          loadTodayTime();
+        }
+      });
+    }
+  }
+})();
+</script>
+
+{% include 'includes/active_timer_strip.html' %}
+<script src="{{ url_for('static', filename='area_easter_eggs.js') }}"></script>
 
 {% include 'includes/today_panel.html' %}
 </body>
