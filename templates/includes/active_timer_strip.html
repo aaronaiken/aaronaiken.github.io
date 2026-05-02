@@ -1,0 +1,287 @@
+<!-- ============================================================ -->
+<!-- ACTIVE TIMER STRIP INCLUDE                                    -->
+<!-- Compact strip below the Today bar, showing all running timers -->
+<!-- with a chevron to expand for per-timer stop + stop-all.       -->
+<!-- Source of truth: window.TimeTrackerCore (time_tracker_core.js).-->
+<!-- Spec: .kt/spec-time-tracking-phase-1.md §6                     -->
+<!-- ============================================================ -->
+
+<style>
+#tt-strip {
+  position: fixed;
+  top: calc(28px + env(safe-area-inset-top, 0px));
+  left: 0;
+  right: 0;
+  z-index: 9998;
+  background: rgba(212, 136, 10, 0.07);
+  border-bottom: 1px solid rgba(212, 136, 10, 0.18);
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  color: rgba(212, 136, 10, 0.85);
+  display: none;
+  flex-direction: column;
+  user-select: none;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+#tt-strip.tt-active { display: flex; }
+
+#tt-strip-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 14px;
+  cursor: pointer;
+  min-height: 28px;
+  transition: background 0.12s;
+}
+#tt-strip-summary:hover { background: rgba(212, 136, 10, 0.1); }
+
+#tt-strip-icon { font-size: 0.85rem; line-height: 1; }
+#tt-strip-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#tt-strip-total {
+  font-variant-numeric: tabular-nums;
+  font-weight: bold;
+  color: #f5b332;
+  text-shadow: 0 0 6px rgba(245, 179, 50, 0.3);
+  flex-shrink: 0;
+}
+#tt-strip-chevron {
+  font-size: 0.5rem;
+  color: rgba(212, 136, 10, 0.5);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+#tt-strip.tt-expanded #tt-strip-chevron { transform: rotate(180deg); }
+
+#tt-strip-rows {
+  display: none;
+  border-top: 1px solid rgba(212, 136, 10, 0.1);
+  padding: 4px 0 6px;
+}
+#tt-strip.tt-expanded #tt-strip-rows { display: block; }
+
+.tt-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px 5px 20px;
+  font-size: 0.6rem;
+}
+.tt-row:hover { background: rgba(212, 136, 10, 0.06); }
+
+.tt-row-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: tt-pulse 1.8s ease-in-out infinite;
+}
+@keyframes tt-pulse {
+  0%, 100% { opacity: 0.65; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.15); }
+}
+
+.tt-row-area {
+  font-size: 0.52rem;
+  color: rgba(212, 136, 10, 0.6);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.tt-row-desc {
+  flex: 1;
+  color: rgba(212, 136, 10, 0.92);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tt-row-elapsed {
+  font-variant-numeric: tabular-nums;
+  color: rgba(212, 136, 10, 0.85);
+  flex-shrink: 0;
+  min-width: 50px;
+  text-align: right;
+}
+.tt-row-stop {
+  background: none;
+  border: 1px solid rgba(212, 136, 10, 0.25);
+  color: rgba(212, 136, 10, 0.6);
+  padding: 2px 7px;
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: 0.5rem;
+  letter-spacing: 0.18em;
+  cursor: pointer;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.tt-row-stop:hover {
+  border-color: rgba(212, 136, 10, 0.6);
+  color: #f5b332;
+}
+
+#tt-stop-all-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 14px 0;
+  margin-top: 2px;
+}
+#tt-stop-all-btn {
+  background: none;
+  border: 1px solid rgba(204, 51, 34, 0.4);
+  color: rgba(204, 51, 34, 0.7);
+  padding: 3px 10px;
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: 0.52rem;
+  letter-spacing: 0.18em;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.15s;
+}
+#tt-stop-all-btn:hover {
+  border-color: #cc3322;
+  color: #cc3322;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-row-dot { animation: none; opacity: 0.85; }
+  #tt-strip-chevron { transition: none; }
+}
+
+@media (prefers-color-scheme: light) {
+  #tt-strip {
+    background: rgba(122, 62, 0, 0.05);
+    border-bottom-color: rgba(122, 62, 0, 0.18);
+    color: rgba(58, 30, 10, 0.8);
+  }
+  #tt-strip-summary:hover { background: rgba(122, 62, 0, 0.07); }
+  #tt-strip-total { color: #5a2e00; text-shadow: none; }
+  .tt-row:hover { background: rgba(122, 62, 0, 0.05); }
+  .tt-row-area { color: rgba(122, 62, 0, 0.55); }
+  .tt-row-desc { color: rgba(58, 30, 10, 0.92); }
+  .tt-row-elapsed { color: rgba(58, 30, 10, 0.8); }
+  .tt-row-stop { border-color: rgba(122, 62, 0, 0.25); color: rgba(122, 62, 0, 0.6); }
+  .tt-row-stop:hover { border-color: rgba(122, 62, 0, 0.55); color: #5a2e00; }
+  #tt-stop-all-btn { border-color: rgba(160, 50, 30, 0.4); color: rgba(160, 50, 30, 0.7); }
+  #tt-stop-all-btn:hover { border-color: #a0322a; color: #a0322a; }
+}
+</style>
+
+<div id="tt-strip" role="status" aria-label="Active timers" aria-live="polite">
+  <div id="tt-strip-summary" role="button" tabindex="0">
+    <span id="tt-strip-icon">⏱</span>
+    <span id="tt-strip-text"></span>
+    <span id="tt-strip-total"></span>
+    <span id="tt-strip-chevron">▾</span>
+  </div>
+  <div id="tt-strip-rows"></div>
+</div>
+
+<script src="{{ url_for('static', filename='time_tracker_core.js') }}"></script>
+<script>
+(function () {
+  'use strict';
+
+  var strip   = document.getElementById('tt-strip');
+  var summary = document.getElementById('tt-strip-summary');
+  var text    = document.getElementById('tt-strip-text');
+  var total   = document.getElementById('tt-strip-total');
+  var rows    = document.getElementById('tt-strip-rows');
+
+  var expanded = false;
+
+  function escHtml(s) {
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(s == null ? '' : String(s)));
+    return d.innerHTML;
+  }
+
+  function uniq(arr) {
+    var seen = {};
+    return arr.filter(function (x) { if (seen[x]) return false; seen[x] = true; return true; });
+  }
+
+  function render(entries) {
+    var TTC = window.TimeTrackerCore;
+    if (!entries || entries.length === 0) {
+      strip.classList.remove('tt-active', 'tt-expanded');
+      expanded = false;
+      rows.innerHTML = '';
+      return;
+    }
+    strip.classList.add('tt-active');
+
+    var totalSecs = entries.reduce(function (acc, e) { return acc + TTC.elapsedSeconds(e); }, 0);
+
+    if (entries.length === 1) {
+      var e = entries[0];
+      var label = e.description || e.project_title || 'Timer';
+      var areaHtml = e.area_title
+        ? '<span class="tt-row-area">' + escHtml(e.area_title) + '</span>&nbsp;&nbsp;'
+        : '';
+      text.innerHTML = areaHtml + escHtml(label);
+    } else {
+      var areas = uniq(entries.map(function (e) { return e.area_title || 'Personal'; }));
+      text.textContent = entries.length + ' timers · ' + areas.join(', ');
+    }
+    total.textContent = TTC.formatElapsed(totalSecs);
+
+    var html = entries.map(function (e) {
+      var color = e.area_color || '#d4880a';
+      var areaName = e.area_title || 'Personal';
+      var desc = e.description || e.project_title || '';
+      return '<div class="tt-row" data-id="' + e.id + '">' +
+        '<span class="tt-row-dot" style="background:' + color + ';"></span>' +
+        '<span class="tt-row-area">' + escHtml(areaName) + '</span>' +
+        '<span class="tt-row-desc">' + escHtml(desc) + '</span>' +
+        '<span class="tt-row-elapsed">' + TTC.formatElapsed(TTC.elapsedSeconds(e)) + '</span>' +
+        '<button class="tt-row-stop" data-id="' + e.id + '" type="button">STOP</button>' +
+        '</div>';
+    }).join('') +
+      (entries.length > 1
+        ? '<div id="tt-stop-all-row"><button id="tt-stop-all-btn" type="button">STOP ALL</button></div>'
+        : '');
+    rows.innerHTML = html;
+
+    rows.querySelectorAll('.tt-row-stop').forEach(function (btn) {
+      btn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var id = btn.getAttribute('data-id');
+        btn.disabled = true;
+        TTC.stopTimer(id);
+      });
+    });
+    var stopAll = document.getElementById('tt-stop-all-btn');
+    if (stopAll) {
+      stopAll.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        if (!confirm('Stop all running timers?')) return;
+        stopAll.disabled = true;
+        TTC.stopAllTimers();
+      });
+    }
+  }
+
+  function toggleExpand() {
+    expanded = !expanded;
+    strip.classList.toggle('tt-expanded', expanded);
+  }
+
+  summary.addEventListener('click', toggleExpand);
+  summary.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleExpand(); }
+  });
+
+  if (window.TimeTrackerCore) {
+    window.TimeTrackerCore.subscribe(render);
+  }
+})();
+</script>
