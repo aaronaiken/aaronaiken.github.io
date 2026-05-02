@@ -1239,6 +1239,11 @@
 		{ icon: '⏎', label: 'Refresh',        hint: '',               action: () => window.location.reload() },
 	];
 
+	function getAllCmdItems() {
+		const timerItems = (typeof window.getTimerCmdItems === 'function') ? window.getTimerCmdItems() : [];
+		return CMD_ITEMS.concat(timerItems);
+	}
+
 	let cmdFiltered = [...CMD_ITEMS];
 	let cmdSelected = 0;
 
@@ -1252,7 +1257,7 @@
 	function cmdOpen() {
 		const overlay = document.getElementById('cmd-palette-overlay');
 		overlay.classList.add('is-open');
-		cmdFiltered = [...CMD_ITEMS];
+		cmdFiltered = getAllCmdItems();
 		cmdSelected = 0;
 		cmdRender();
 		setTimeout(function() {
@@ -1273,7 +1278,7 @@
 
 	function cmdFilter() {
 		const q = document.getElementById('cmd-palette-input').value.toLowerCase();
-		cmdFiltered = CMD_ITEMS.filter(item => item.label.toLowerCase().includes(q));
+		cmdFiltered = getAllCmdItems().filter(item => item.label.toLowerCase().includes(q));
 		cmdSelected = 0;
 		cmdRender();
 	}

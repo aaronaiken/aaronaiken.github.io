@@ -1,0 +1,266 @@
+/* cockpit_time_tracker.css
+ * Floating timer panel — Cockpit only.
+ * Spec: .kt/spec-time-tracking-phase-1.md §5.
+ *
+ * Z-index sits above music player (10001) and below video player (10003).
+ */
+
+#ttp {
+	position: fixed;
+	right: 20px;
+	bottom: 24px;
+	width: 320px;
+	max-width: calc(100vw - 32px);
+	z-index: 10002;
+	background: #0a0a08;
+	border: 1px solid #2e1e08;
+	border-radius: 4px;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+	font-family: 'Share Tech Mono', 'Courier New', monospace;
+	font-size: 0.7rem;
+	color: #d4880a;
+	user-select: none;
+	-webkit-user-select: none;
+	display: none;
+}
+#ttp.ttp-open { display: block; }
+#ttp.ttp-collapsed #ttp-body { display: none; }
+#ttp.ttp-dragging { box-shadow: 0 12px 40px rgba(0,0,0,0.75); }
+
+#ttp-titlebar {
+	display: flex;
+	align-items: center;
+	padding: 7px 10px;
+	border-bottom: 1px solid rgba(212, 136, 10, 0.18);
+	cursor: grab;
+	gap: 6px;
+}
+#ttp-titlebar:active { cursor: grabbing; }
+#ttp-title {
+	font-size: 0.62rem;
+	letter-spacing: 0.2em;
+	color: rgba(212, 136, 10, 0.7);
+	text-transform: uppercase;
+	flex-shrink: 0;
+}
+#ttp-summary {
+	font-size: 0.6rem;
+	color: rgba(245, 179, 50, 0.85);
+	margin-left: 8px;
+	font-variant-numeric: tabular-nums;
+	display: none;
+	flex: 1;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+#ttp.ttp-collapsed #ttp-summary { display: inline-block; }
+#ttp-actions {
+	display: flex;
+	gap: 4px;
+	margin-left: auto;
+}
+.ttp-tb-btn {
+	background: none;
+	border: 1px solid transparent;
+	color: rgba(212, 136, 10, 0.5);
+	font-size: 0.7rem;
+	font-family: inherit;
+	width: 22px;
+	height: 22px;
+	cursor: pointer;
+	border-radius: 2px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	transition: all 0.15s;
+}
+.ttp-tb-btn:hover {
+	border-color: rgba(212, 136, 10, 0.4);
+	color: #f5b332;
+}
+
+#ttp-body {
+	padding: 4px 0 0;
+	max-height: 60vh;
+	overflow-y: auto;
+}
+
+.ttp-group { margin-bottom: 4px; }
+.ttp-group-header {
+	font-size: 0.55rem;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+	color: rgba(212, 136, 10, 0.5);
+	padding: 4px 10px 4px 12px;
+	border-left: 3px solid #d4880a;
+	margin: 4px 0 2px;
+}
+.ttp-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 10px 6px 14px;
+	border-bottom: 1px solid rgba(212, 136, 10, 0.06);
+	position: relative;
+}
+.ttp-row:last-child { border-bottom: none; }
+.ttp-row-dot {
+	width: 8px; height: 8px;
+	border-radius: 50%;
+	flex-shrink: 0;
+	animation: ttp-pulse 1.8s ease-in-out infinite;
+}
+@keyframes ttp-pulse {
+	0%, 100% { opacity: 0.65; transform: scale(1); }
+	50%      { opacity: 1;    transform: scale(1.2); }
+}
+.ttp-row-desc {
+	flex: 1;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	cursor: text;
+	color: rgba(212, 136, 10, 0.92);
+	font-size: 0.66rem;
+	min-width: 0;
+}
+.ttp-row-desc:empty::before {
+	content: '(no description)';
+	color: rgba(212, 136, 10, 0.3);
+	font-style: italic;
+}
+.ttp-row-desc-input {
+	flex: 1;
+	min-width: 0;
+	background: rgba(212, 136, 10, 0.08);
+	border: 1px solid rgba(212, 136, 10, 0.4);
+	color: #f5b332;
+	font-family: inherit;
+	font-size: 0.66rem;
+	padding: 2px 5px;
+	border-radius: 2px;
+}
+.ttp-row-desc-input:focus { outline: none; border-color: #f5b332; }
+.ttp-row-elapsed {
+	font-variant-numeric: tabular-nums;
+	font-size: 0.62rem;
+	color: rgba(212, 136, 10, 0.85);
+	flex-shrink: 0;
+	min-width: 54px;
+	text-align: right;
+}
+.ttp-row-actions {
+	display: none;
+	gap: 4px;
+}
+.ttp-row:hover .ttp-row-actions { display: flex; }
+
+.ttp-row-stop, .ttp-row-delete {
+	background: none;
+	border: 1px solid rgba(212, 136, 10, 0.3);
+	color: rgba(212, 136, 10, 0.6);
+	font-family: inherit;
+	font-size: 0.5rem;
+	letter-spacing: 0.15em;
+	padding: 2px 6px;
+	cursor: pointer;
+	border-radius: 2px;
+	text-transform: uppercase;
+	transition: all 0.15s;
+}
+.ttp-row-stop:hover { border-color: rgba(212, 136, 10, 0.65); color: #f5b332; }
+.ttp-row-delete {
+	border-color: rgba(204, 51, 34, 0.35);
+	color: rgba(204, 51, 34, 0.6);
+	font-size: 0.7rem;
+	padding: 1px 6px;
+	letter-spacing: 0;
+	line-height: 1;
+}
+.ttp-row-delete:hover { border-color: #cc3322; color: #cc3322; }
+
+.ttp-empty {
+	padding: 16px 14px;
+	font-size: 0.6rem;
+	color: rgba(212, 136, 10, 0.35);
+	letter-spacing: 0.1em;
+	text-align: center;
+}
+
+#ttp-form {
+	padding: 8px 10px 10px;
+	border-top: 1px solid rgba(212, 136, 10, 0.12);
+	background: rgba(212, 136, 10, 0.03);
+}
+#ttp-form label {
+	display: block;
+	font-size: 0.5rem;
+	letter-spacing: 0.18em;
+	color: rgba(212, 136, 10, 0.5);
+	text-transform: uppercase;
+	margin: 6px 0 2px;
+}
+#ttp-form select, #ttp-form input[type="text"] {
+	width: 100%;
+	background: #0a0c08;
+	border: 1px solid rgba(212, 136, 10, 0.25);
+	color: #d4880a;
+	font-family: inherit;
+	font-size: 0.65rem;
+	padding: 5px 7px;
+	border-radius: 2px;
+	-webkit-appearance: none;
+	appearance: none;
+}
+#ttp-form select:focus, #ttp-form input[type="text"]:focus {
+	outline: none;
+	border-color: #f5b332;
+}
+#ttp-form-actions {
+	display: flex;
+	gap: 6px;
+	justify-content: flex-end;
+	margin-top: 8px;
+}
+#ttp-form-start, #ttp-form-cancel {
+	background: none;
+	border: 1px solid rgba(212, 136, 10, 0.4);
+	color: rgba(212, 136, 10, 0.8);
+	font-family: inherit;
+	font-size: 0.55rem;
+	letter-spacing: 0.18em;
+	padding: 4px 10px;
+	border-radius: 2px;
+	cursor: pointer;
+	text-transform: uppercase;
+	transition: all 0.15s;
+}
+#ttp-form-start:hover:not(:disabled) { border-color: #f5b332; color: #f5b332; }
+#ttp-form-cancel:hover { border-color: rgba(212, 136, 10, 0.6); }
+#ttp-form-start:disabled { opacity: 0.4; cursor: not-allowed; }
+
+#ttp-footer {
+	padding: 8px 10px;
+	border-top: 1px solid rgba(212, 136, 10, 0.1);
+}
+#ttp-new-btn {
+	width: 100%;
+	background: none;
+	border: 1px dashed rgba(212, 136, 10, 0.35);
+	color: rgba(212, 136, 10, 0.6);
+	font-family: inherit;
+	font-size: 0.58rem;
+	letter-spacing: 0.2em;
+	padding: 8px;
+	border-radius: 2px;
+	cursor: pointer;
+	text-transform: uppercase;
+	transition: all 0.15s;
+}
+#ttp-new-btn:hover { border-color: rgba(245, 179, 50, 0.7); color: #f5b332; }
+
+@media (prefers-reduced-motion: reduce) {
+	.ttp-row-dot { animation: none; opacity: 0.85; }
+}

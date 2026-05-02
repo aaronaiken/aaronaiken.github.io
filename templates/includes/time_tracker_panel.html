@@ -1,0 +1,45 @@
+<!-- ============================================================ -->
+<!-- FLOATING TIME TRACKER PANEL — COCKPIT ONLY                    -->
+<!-- Renders only when ≥1 timer is active OR user invokes via      -->
+<!-- Ctrl+K. Drag, off-screen guard, localStorage position,        -->
+<!-- inline sub-project create. Source of truth: TimeTrackerCore.  -->
+<!-- Spec: .kt/spec-time-tracking-phase-1.md §5                     -->
+<!-- ============================================================ -->
+
+<link rel="stylesheet" href="{{ url_for('static', filename='cockpit_time_tracker.css') }}">
+
+<div id="ttp" role="region" aria-label="Time tracker panel">
+	<div id="ttp-titlebar">
+		<span id="ttp-title">⏱ TIME TRACKER</span>
+		<span id="ttp-summary"></span>
+		<div id="ttp-actions">
+			<button class="ttp-tb-btn" id="ttp-collapse-btn" type="button" title="Collapse" aria-label="Collapse">□</button>
+			<button class="ttp-tb-btn" id="ttp-close-btn" type="button" title="Close" aria-label="Close">✕</button>
+		</div>
+	</div>
+	<div id="ttp-body">
+		<div id="ttp-groups"></div>
+		<div id="ttp-form" hidden>
+			<label for="ttp-form-area">AREA</label>
+			<select id="ttp-form-area"></select>
+			<label for="ttp-form-project">PROJECT</label>
+			<select id="ttp-form-project"></select>
+			<div id="ttp-form-new-title-wrap" hidden>
+				<label for="ttp-form-new-title">NEW SUB-PROJECT TITLE</label>
+				<input id="ttp-form-new-title" type="text" placeholder="e.g. Bridge 47 Inspection" autocomplete="off">
+			</div>
+			<label for="ttp-form-desc">DESCRIPTION (OPTIONAL)</label>
+			<input id="ttp-form-desc" type="text" placeholder="What are you working on?" autocomplete="off">
+			<div id="ttp-form-actions">
+				<button id="ttp-form-cancel" type="button">CANCEL</button>
+				<button id="ttp-form-start" type="button">START</button>
+			</div>
+		</div>
+		<div id="ttp-footer">
+			<button id="ttp-new-btn" type="button">+ START NEW TIMER</button>
+		</div>
+	</div>
+</div>
+
+<script src="{{ url_for('static', filename='time_tracker_core.js') }}"></script>
+<script src="{{ url_for('static', filename='time_tracker_panel.js') }}"></script>
