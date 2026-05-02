@@ -166,7 +166,7 @@
         <div class="cd-panel-header">
           <span class="cd-panel-title">// Tasks</span>
         </div>
-        <div class="cd-panel-body">
+        <div class="cd-panel-body" id="projectTaskPanelBody">
           <div class="cd-input-row cd-mb-sm">
             <input type="text" class="cd-input" id="projectNewTask" placeholder="add a task...">
             <button class="cd-btn primary sm" id="projectAddTaskBtn">ADD</button>
@@ -341,6 +341,7 @@
 <script>
 const PROJECT_ID   = {{ project.id }};
 const PROJECT_SLUG = "{{ project.slug }}";
+const PROJECT_TRACKING = {{ (project.tracking_enabled or 0) | tojson }};
 
 // ============================================================
 // BADGE
@@ -675,9 +676,16 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
       const li = document.createElement('li');
       li.className='cd-checklist-item';
       li.dataset.itemId=data.item.id;
+      li.dataset.itemText=data.item.text;
+      // Phase 1.5: emit the same ⏱ markup Jinja would render, so newly-added
+      // items are tracker-aware without a page reload.
+      const ttMarkup = (typeof PROJECT_TRACKING !== 'undefined' && PROJECT_TRACKING)
+        ? `<button class="cd-tt-row-btn cd-tt-item-btn" data-tt-item-id="${data.item.id}" data-tt-text="${escapeHtml(data.item.text)}" title="Start timer on this item" type="button">⏱</button>`
+        : '';
       li.innerHTML=`
         <input type="checkbox" data-item-id="${data.item.id}" data-slug="${PROJECT_SLUG}">
         <label>${escapeHtml(data.item.text)}</label>
+        ${ttMarkup}
         <button class="cd-btn ghost sm checklist-item-delete" data-id="${data.item.id}" data-slug="${PROJECT_SLUG}">✕</button>`;
       ul.appendChild(li);
     });
@@ -720,10 +728,19 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
       const li=document.createElement('li');
       li.className='cd-task-item';
       li.dataset.id=data.task.id;
+      li.dataset.taskTitle=data.task.title;
+      // Phase 1.5: dynamically-added rows must include the same ⏱ button +
+      // today-tag markup that Jinja emits, otherwise tasks added without a
+      // page reload won't be tracker-aware.
+      const ttMarkup = (typeof PROJECT_TRACKING !== 'undefined' && PROJECT_TRACKING)
+        ? `<span class="cd-tt-today-tag" data-task-today-tag="${data.task.id}" hidden></span>
+           <button class="cd-tt-row-btn cd-tt-task-btn" data-tt-task-id="${data.task.id}" data-tt-text="${escapeHtml(data.task.title)}" title="Start timer on this task" type="button">⏱</button>`
+        : '';
       li.innerHTML=`
         <input type="checkbox" class="cd-task-check project-task-check"
           data-id="${data.task.id}" data-slug="${PROJECT_SLUG}">
         <span class="cd-task-title">${escapeHtml(data.task.title)}</span>
+        ${ttMarkup}
         <button class="cd-task-edit" data-id="${data.task.id}" title="Edit">✎</button>
         <button class="cd-btn ghost sm project-task-delete"
           data-id="${data.task.id}" data-slug="${PROJECT_SLUG}">✕</button>`;
@@ -735,7 +752,12 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
     const ul=document.createElement('ul');
     ul.className='cd-task-list';
     ul.id='projectTaskList';
-    document.querySelector('.cd-panel .cd-panel-body').appendChild(ul);
+    // Attach inside the Tasks panel-body specifically — querying for the first
+    // .cd-panel .cd-panel-body would land in the Time panel since Phase 1
+    // added that one above the Tasks panel.
+    const target = document.getElementById('projectTaskPanelBody')
+                  || document.querySelector('.cd-panel .cd-panel-body');
+    target.appendChild(ul);
     return ul;
   }
 
@@ -1629,18 +1651,24 @@ function cdEditTask(id) {
   });
 
   // ---- Wire to TimeTrackerCore ----
-  if (window.TimeTrackerCore) {
+  // The strip include loads time_tracker_core.js AFTER this IIFE in the body,
+  // so window.TimeTrackerCore may not exist yet when we run. Poll briefly
+  // until it shows up, then subscribe.
+  function whenTTC(cb) {
+    if (window.TimeTrackerCore) return cb();
+    setTimeout(function () { whenTTC(cb); }, 50);
+  }
+  whenTTC(function () {
     window.TimeTrackerCore.subscribe(function (entries) {
       syncRowStates(entries);
     });
-    // Refresh today-tags on load + when active count for this project changes
-    let lastSig = '';
+    let lastSig = -1;
     syncTodayTags();
     window.TimeTrackerCore.subscribe(function (entries) {
       const sig = entries.filter(function (e) { return String(e.project_id) === String(PROJECT_ID); }).length;
       if (sig !== lastSig) { lastSig = sig; syncTodayTags(); }
     });
-  }
+  });
 })();
 </script>
 
