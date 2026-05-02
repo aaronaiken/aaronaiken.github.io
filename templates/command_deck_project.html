@@ -130,7 +130,7 @@
 
               {% elif block.type == 'checklist' %}
                 <ul class="cd-checklist" data-block-id="{{ block.id }}">
-                  {% for item in block.items %}
+                  {% for item in block['items'] %}
                     <li class="cd-checklist-item {% if item.checked %}checked{% endif %}" data-item-id="{{ item.id }}">
                       <input type="checkbox"
                         {% if item.checked %}checked{% endif %}
