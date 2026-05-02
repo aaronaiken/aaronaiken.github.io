@@ -287,6 +287,53 @@ def time_delete(entry_id):
 	return jsonify({'success': True, 'deleted_id': entry_id})
 
 
+@time_tracking_bp.route('/time/projects', methods=['GET'])
+def time_projects():
+	"""
+	Project list for the timer panel's picker. Returns work areas with their
+	sub-projects, plus tracking-enabled personal projects. Excludes private.
+	Not in spec §3.1, added to support the floating-panel picker (§5.5).
+	"""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 403
+	conn = get_db()
+	areas = conn.execute('''
+		SELECT id, title, slug, area_color
+		FROM projects
+		WHERE project_type = 'work_area'
+		  AND is_private = 0
+		ORDER BY title ASC
+	''').fetchall()
+	out = {'areas': [], 'personal': []}
+	for a in areas:
+		subs = conn.execute('''
+			SELECT id, title, slug, tracking_enabled
+			FROM projects
+			WHERE project_type = 'work_subproject'
+			  AND parent_project_id = ?
+			  AND is_private = 0
+			ORDER BY updated DESC, title ASC
+		''', (a['id'],)).fetchall()
+		out['areas'].append({
+			'id': a['id'],
+			'title': a['title'],
+			'slug': a['slug'],
+			'area_color': a['area_color'],
+			'subprojects': [dict(s) for s in subs],
+		})
+	personals = conn.execute('''
+		SELECT id, title, slug, tracking_enabled
+		FROM projects
+		WHERE project_type = 'personal'
+		  AND is_private = 0
+		  AND tracking_enabled = 1
+		ORDER BY updated DESC, title ASC
+	''').fetchall()
+	out['personal'] = [dict(p) for p in personals]
+	conn.close()
+	return jsonify(out)
+
+
 @time_tracking_bp.route('/time/today/<int:project_id>', methods=['GET'])
 def time_today(project_id):
 	if not is_authenticated():
