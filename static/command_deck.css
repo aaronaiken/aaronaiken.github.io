@@ -2282,6 +2282,20 @@ body.cd-strip-visible .cd-shell { padding-top: 32px; }
 	font-variant-numeric: tabular-nums;
 }
 .cd-tt-entry-desc { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-tt-entry-context {
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.55rem;
+	letter-spacing: 0.06em;
+	color: var(--card-area-color, var(--cd-amber-lo, rgba(212, 136, 10, 0.55)));
+	background: rgba(212, 136, 10, 0.05);
+	padding: 1px 5px;
+	border-radius: 2px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 200px;
+	flex-shrink: 0;
+}
 .cd-tt-entry-elapsed {
 	font-variant-numeric: tabular-nums;
 	min-width: 60px;

@@ -148,11 +148,15 @@
 						var elapsed = TTC.elapsedSeconds(e);
 						var desc = e.description || e.project_title || '';
 						var isEditing = state.editingId === e.id;
+						var ctxLine = '';
+						if (e.task_title) ctxLine = '<span class="ttp-row-ctx">task · ' + escHtml(e.task_title) + '</span>';
+						else if (e.checklist_item_text) ctxLine = '<span class="ttp-row-ctx">item · ' + escHtml(e.checklist_item_text) + '</span>';
+						var descNode = isEditing
+							? '<input class="ttp-row-desc-input" data-id="' + e.id + '" value="' + escHtml(desc) + '">'
+							: '<span class="ttp-row-desc" data-id="' + e.id + '">' + escHtml(desc) + '</span>';
 						return '<div class="ttp-row" data-id="' + e.id + '">' +
 							'<span class="ttp-row-dot" style="background:' + g.color + '"></span>' +
-							(isEditing
-								? '<input class="ttp-row-desc-input" data-id="' + e.id + '" value="' + escHtml(desc) + '">'
-								: '<span class="ttp-row-desc" data-id="' + e.id + '">' + escHtml(desc) + '</span>') +
+							'<div class="ttp-row-text">' + descNode + ctxLine + '</div>' +
 							'<span class="ttp-row-elapsed">' + fmt(elapsed) + '</span>' +
 							'<div class="ttp-row-actions">' +
 								'<button class="ttp-row-stop" data-id="' + e.id + '" type="button">STOP</button>' +
