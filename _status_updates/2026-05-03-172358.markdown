@@ -1,0 +1,11 @@
+---
+title: Status
+date: 2026-05-03 17:23:58 -0400
+layout: status_update
+author: aaron
+source: web
+tags: [flagfootball]
+---
+🏈 Mozzie's Steelers — Loss 8–16 vs. Eagles (Away) #flagfootball
+
+![Game photo](https://mozzie-photos.b-cdn.net/mozzie/game-1777671952210/1777843366.jpg)
