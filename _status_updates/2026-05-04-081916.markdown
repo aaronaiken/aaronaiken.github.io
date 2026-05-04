@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-05-04 08:19:16 -0400
+layout: status_update
+author: aaron
+source: web
+---
+😪 weekends lately have been anything but restful. feel like we've been on a turn-and-burn shift for a couple months now. 
