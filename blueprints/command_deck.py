@@ -93,6 +93,165 @@ def _fetch_subprojects(conn, area_id=None, favorites_only=False):
 
 # ---- COMMAND DECK ROUTES ----
 
+# ---- Templates (Phase 2.3) ----
+
+@command_deck_bp.route('/command-deck/templates/list', methods=['GET'])
+@cd_auth_required
+def cd_templates_list():
+	"""Picker-friendly template list (no body_json). Filter by kind."""
+	kind = request.args.get('kind')
+	if kind not in ('project', 'checklist'):
+		return jsonify({'error': 'kind_required'}), 400
+	conn = get_db()
+	rows = conn.execute(
+		'SELECT id, name, description, updated FROM templates '
+		'WHERE kind = ? ORDER BY updated DESC',
+		(kind,)
+	).fetchall()
+	conn.close()
+	return jsonify({'templates': [dict(r) for r in rows]})
+
+
+@command_deck_bp.route('/command-deck/projects/<slug>/save-as-template', methods=['POST'])
+@cd_auth_required
+def cd_project_save_as_template(slug):
+	"""Snapshot a project's structure (blocks, items, tasks) into a project
+	template. Auto-strips per-instance state — checked, completed, today,
+	and similar flags are dropped per spec §1."""
+	data = request.get_json(silent=True) or request.form
+	name = (data.get('name') or '').strip()
+	if not name:
+		return jsonify({'error': 'name_required'}), 400
+
+	conn = get_db()
+	project = conn.execute('SELECT * FROM projects WHERE slug = ?', (slug,)).fetchone()
+	if not project:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+
+	blocks = conn.execute(
+		'SELECT * FROM blocks WHERE project_id = ? ORDER BY "order" ASC, id ASC',
+		(project['id'],)
+	).fetchall()
+	body_blocks = []
+	for b in blocks:
+		entry = {'type': b['type']}
+		if b['title']:
+			entry['title'] = b['title']
+		if b['type'] == 'note':
+			entry['content'] = b['content'] or ''
+		else:
+			items = conn.execute(
+				'SELECT text FROM checklist_items WHERE block_id = ? ORDER BY id ASC',
+				(b['id'],)
+			).fetchall()
+			entry['items'] = [{'text': i['text']} for i in items]
+		body_blocks.append(entry)
+
+	tasks = conn.execute(
+		'SELECT title FROM tasks WHERE project_id = ? AND status = \'open\' '
+		'ORDER BY "order" ASC, id ASC',
+		(project['id'],)
+	).fetchall()
+	body = {
+		'blocks': body_blocks,
+		'tasks': [{'title': t['title']} for t in tasks],
+	}
+
+	now = et_now()
+	cur = conn.execute('''
+		INSERT INTO templates (kind, name, description, body_json, created, updated)
+		VALUES ('project', ?, ?, ?, ?, ?)
+	''', (name, project['description'], json.dumps(body), now, now))
+	template_id = cur.lastrowid
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True, 'template_id': template_id})
+
+
+@command_deck_bp.route('/command-deck/projects/<slug>/blocks/<int:block_id>/save-as-template', methods=['POST'])
+@cd_auth_required
+def cd_block_save_as_template(slug, block_id):
+	"""Snapshot a checklist block (title + item texts only) into a checklist
+	template. 400 if block isn't a checklist."""
+	data = request.get_json(silent=True) or request.form
+	name = (data.get('name') or '').strip()
+	if not name:
+		return jsonify({'error': 'name_required'}), 400
+
+	conn = get_db()
+	block = conn.execute('SELECT * FROM blocks WHERE id = ?', (block_id,)).fetchone()
+	if not block:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+	if block['type'] != 'checklist':
+		conn.close()
+		return jsonify({'error': 'block_not_checklist'}), 400
+
+	items = conn.execute(
+		'SELECT text FROM checklist_items WHERE block_id = ? ORDER BY id ASC',
+		(block_id,)
+	).fetchall()
+	body = {
+		'title': block['title'] or '',
+		'items': [{'text': i['text']} for i in items],
+	}
+	now = et_now()
+	cur = conn.execute('''
+		INSERT INTO templates (kind, name, description, body_json, created, updated)
+		VALUES ('checklist', ?, NULL, ?, ?, ?)
+	''', (name, json.dumps(body), now, now))
+	template_id = cur.lastrowid
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True, 'template_id': template_id})
+
+
+@command_deck_bp.route('/command-deck/templates/<int:template_id>/update', methods=['POST'])
+@cd_auth_required
+def cd_template_update(template_id):
+	"""Rename / re-describe. Body editing deferred to a later phase."""
+	data = request.get_json(silent=True) or request.form
+	conn = get_db()
+	row = conn.execute('SELECT * FROM templates WHERE id = ?', (template_id,)).fetchone()
+	if not row:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+
+	name = row['name']
+	description = row['description']
+	if 'name' in data:
+		new_name = (data.get('name') or '').strip()
+		if not new_name:
+			conn.close()
+			return jsonify({'error': 'name_required'}), 400
+		name = new_name
+	if 'description' in data:
+		description = (data.get('description') or '').strip() or None
+
+	conn.execute(
+		'UPDATE templates SET name = ?, description = ?, updated = ? WHERE id = ?',
+		(name, description, et_now(), template_id)
+	)
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True})
+
+
+@command_deck_bp.route('/command-deck/templates/<int:template_id>/delete', methods=['POST'])
+@cd_auth_required
+def cd_template_delete(template_id):
+	conn = get_db()
+	row = conn.execute('SELECT id FROM templates WHERE id = ?', (template_id,)).fetchone()
+	if not row:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+	conn.execute('DELETE FROM templates WHERE id = ?', (template_id,))
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True})
+
+
 @command_deck_bp.route('/command-deck/verify-pin', methods=['POST'])
 @cd_auth_required
 def cd_verify_pin():
@@ -196,6 +355,8 @@ def cd_project_new():
 	description = request.form.get('description', '').strip() or None
 	is_private = 1 if request.form.get('is_private') == '1' else 0
 	tracking_enabled = 1 if request.form.get('tracking_enabled') in ('1', 'true', 'on') else 0
+	# Phase 2.3 — optional template_id spawns blocks/items/tasks from a saved template.
+	template_id = request.form.get('template_id') or None
 
 	if not title:
 		return redirect(url_for('command_deck.cd_projects'))
@@ -203,14 +364,103 @@ def cd_project_new():
 	conn = get_db()
 	slug = unique_slug(title, conn)
 	now = et_now()
-	conn.execute('''
+	cur = conn.execute('''
 		INSERT INTO projects (title, slug, description, is_private,
 		                      project_type, tracking_enabled, created, updated)
 		VALUES (?, ?, ?, ?, 'personal', ?, ?, ?)
 	''', (title, slug, description, is_private, tracking_enabled, now, now))
+	new_project_id = cur.lastrowid
+
+	if template_id:
+		_apply_project_template(conn, new_project_id, template_id, now)
+
 	conn.commit()
 	conn.close()
 	return redirect(url_for('command_deck.cd_project', slug=slug))
+
+
+def _apply_project_template(conn, project_id, template_id, now):
+	"""Parse a project-kind template body and INSERT blocks/items/tasks.
+	Best-effort: malformed JSON or missing template logs + skips silently
+	rather than failing the whole project create."""
+	row = conn.execute(
+		"SELECT kind, body_json FROM templates WHERE id = ?", (template_id,)
+	).fetchone()
+	if not row or row['kind'] != 'project':
+		return
+	try:
+		body = json.loads(row['body_json'] or '{}')
+	except (ValueError, TypeError):
+		return
+
+	# Blocks (with checklist items)
+	for order_idx, b in enumerate(body.get('blocks', []) or []):
+		btype = b.get('type', 'note')
+		if btype not in ('note', 'checklist'):
+			continue
+		block_cur = conn.execute('''
+			INSERT INTO blocks (project_id, type, content, "order", created, title)
+			VALUES (?, ?, ?, ?, ?, ?)
+		''', (
+			project_id,
+			btype,
+			b.get('content', '') if btype == 'note' else '',
+			order_idx,
+			now,
+			b.get('title') or None,
+		))
+		block_id = block_cur.lastrowid
+		if btype == 'checklist':
+			for item in (b.get('items', []) or []):
+				text = (item.get('text') or '').strip()
+				if not text:
+					continue
+				conn.execute(
+					"INSERT INTO checklist_items (block_id, text, checked) VALUES (?, ?, 0)",
+					(block_id, text),
+				)
+
+	# Tasks
+	for task_order, t in enumerate(body.get('tasks', []) or []):
+		title = (t.get('title') or '').strip()
+		if not title:
+			continue
+		conn.execute('''
+			INSERT INTO tasks (title, status, created, project_id, "order")
+			VALUES (?, 'open', ?, ?, ?)
+		''', (title, now, project_id, task_order))
+
+
+def _apply_checklist_template(conn, block_id, template_id):
+	"""Parse a checklist-kind template body and INSERT items into the block.
+	Returns the count of items inserted, 0 on missing/malformed."""
+	row = conn.execute(
+		"SELECT kind, body_json FROM templates WHERE id = ?", (template_id,)
+	).fetchone()
+	if not row or row['kind'] != 'checklist':
+		return 0
+	try:
+		body = json.loads(row['body_json'] or '{}')
+	except (ValueError, TypeError):
+		return 0
+	count = 0
+	for item in (body.get('items', []) or []):
+		text = (item.get('text') or '').strip()
+		if not text:
+			continue
+		conn.execute(
+			"INSERT INTO checklist_items (block_id, text, checked) VALUES (?, ?, 0)",
+			(block_id, text),
+		)
+		count += 1
+	# If the template has a title and the block doesn't yet, adopt it.
+	tpl_title = (body.get('title') or '').strip()
+	if tpl_title:
+		conn.execute(
+			"UPDATE blocks SET title = ? WHERE id = ? AND (title IS NULL OR title = '')",
+			(tpl_title, block_id),
+		)
+	return count
 
 
 # --- Individual project ---
@@ -525,6 +775,11 @@ def cd_block_add(slug):
 	block_type = request.form.get('type', 'note')
 	if block_type not in ('note', 'checklist'):
 		return jsonify({'error': 'invalid type'}), 400
+	# Phase 2.3 — optional template_id spawns items into the new block.
+	# Only meaningful for checklist blocks.
+	template_id = request.form.get('template_id') or None
+	if template_id and block_type != 'checklist':
+		return jsonify({'error': 'template_only_on_checklist'}), 400
 
 	conn = get_db()
 	project = conn.execute('SELECT * FROM projects WHERE slug = ?', (slug,)).fetchone()
@@ -543,8 +798,19 @@ def cd_block_add(slug):
 	''', (project['id'], block_type, max_order + 1, et_now()))
 
 	block_id = cursor.lastrowid
+
+	if template_id:
+		_apply_checklist_template(conn, block_id, template_id)
+
 	block = dict(conn.execute('SELECT * FROM blocks WHERE id = ?', (block_id,)).fetchone())
-	block['items'] = []
+	if block_type == 'checklist':
+		items = conn.execute(
+			'SELECT * FROM checklist_items WHERE block_id = ? ORDER BY id ASC',
+			(block_id,)
+		).fetchall()
+		block['items'] = [dict(i) for i in items]
+	else:
+		block['items'] = []
 
 	conn.execute('UPDATE projects SET updated = ? WHERE id = ?', (et_now(), project['id']))
 	conn.commit()
