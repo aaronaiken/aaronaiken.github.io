@@ -636,14 +636,19 @@ function updateBadge() {
 
     const typeVal = typeSelect.value;
     if (typeVal.indexOf('work:') === 0) {
-      // Work sub-project — POST JSON to area's subprojects endpoint
+      // Work sub-project — POST JSON to area's subprojects endpoint.
+      // Phase 2.3 fix: include template_id so picking a template + a
+      // work sub-project type both apply (was silently dropped before).
       const areaSlug = typeVal.split(':')[1];
       const tracking = document.getElementById('newProjectTracking').checked;
+      const templateId = (document.getElementById('newProjectTemplate') || {}).value || '';
+      const payload = {title, description: desc, tracking_enabled: tracking};
+      if (templateId) payload.template_id = templateId;
       const r = await fetch(`/command-deck/areas/${areaSlug}/subprojects/new`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         credentials: 'same-origin',
-        body: JSON.stringify({title, description: desc, tracking_enabled: tracking})
+        body: JSON.stringify(payload)
       });
       const data = await r.json();
       if (data && data.success) {
