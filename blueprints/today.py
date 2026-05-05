@@ -194,6 +194,9 @@ def today_data():
 			today_blocks_open.append(d)
 
 	# Master browse — Below Deck (project_id NULL) + per-project task lists
+	# Phase 2.2 fix: each project group now also surfaces its checklist
+	# blocks + open items so they can be starred from /today/ alongside
+	# tasks. Items already-checked are excluded (no action to take).
 	below_deck_tasks = conn.execute('''
 		SELECT id, title, status, today, project_id
 		FROM tasks
@@ -211,11 +214,37 @@ def today_data():
 			WHERE project_id = ? AND status = 'open'
 			ORDER BY "order" ASC, id ASC
 		''', (proj['id'],)).fetchall()
-		if tasks:
+		# Phase 2.2 — per-project checklist blocks (open items only)
+		blocks_raw = conn.execute('''
+			SELECT b.id, b.title, b.today,
+			       (SELECT COUNT(*) FROM checklist_items ci WHERE ci.block_id = b.id) AS total_count,
+			       (SELECT COUNT(*) FROM checklist_items ci WHERE ci.block_id = b.id AND ci.checked = 1) AS checked_count
+			FROM blocks b
+			WHERE b.project_id = ? AND b.type = 'checklist'
+			ORDER BY b.id ASC
+		''', (proj['id'],)).fetchall()
+		blocks_with_items = []
+		for b in blocks_raw:
+			b_dict = dict(b)
+			b_dict['open_count'] = b_dict['total_count'] - b_dict['checked_count']
+			open_items = conn.execute('''
+				SELECT id, text, checked, today, block_id
+				FROM checklist_items
+				WHERE block_id = ? AND checked = 0
+				ORDER BY id ASC
+			''', (b_dict['id'],)).fetchall()
+			b_dict['open_items'] = [dict(i) for i in open_items]
+			# Surface only blocks with at least one open item OR an empty
+			# starred block (the latter for symmetry with the autoclear
+			# rule — empty starred blocks persist).
+			if b_dict['open_items'] or b_dict['today']:
+				blocks_with_items.append(b_dict)
+		if tasks or blocks_with_items:
 			project_groups.append({
 				'title': proj['title'],
 				'slug': proj['slug'],
 				'tasks': [dict(t) for t in tasks],
+				'blocks': blocks_with_items,
 			})
 
 	conn.close()

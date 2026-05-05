@@ -137,6 +137,13 @@
   color: var(--cd-text-dim);
   letter-spacing: 0.08em;
 }
+/* Phase 2.2 — checklist items render indented under their parent block */
+.today-master-row.is-item-indent {
+  padding-left: 32px;
+}
+.today-master-row.is-item-indent .today-master-title {
+  font-size: 0.72rem;
+}
 </style>
 
 <script>
@@ -174,15 +181,23 @@
   }
 
   function renderMasterList(belowDeck, projects, todayOpen) {
-    // Phase 2.1 — todayOpen now mixes tasks AND items (kind discriminator).
-    // The master browse is task-only, so build the lookup from task entries
-    // only to avoid task-id vs item-id collisions.
-    var todayIds = {};
-    todayOpen.forEach(function(t) {
-      if ((t.kind || 'task') === 'task') todayIds[t.id] = true;
+    // Phase 2.1+2.2 — todayOpen mixes tasks/items/blocks. Build per-kind
+    // lookups so the starred-state on master rows is unambiguous.
+    var todayTaskIds = {};
+    var todayItemIds = {};
+    var todayBlockIds = {};
+    todayOpen.forEach(function(e) {
+      var kind = e.kind || 'task';
+      if (kind === 'task') todayTaskIds[e.id] = true;
+      else if (kind === 'item') todayItemIds[e.id] = true;
+      else if (kind === 'block') todayBlockIds[e.id] = true;
     });
 
-    var totalTasks = belowDeck.length + projects.reduce(function(s, p) { return s + p.tasks.length; }, 0);
+    var totalTasks = belowDeck.length + projects.reduce(function(s, p) {
+      var n = (p.tasks || []).length;
+      (p.blocks || []).forEach(function(b) { n += 1 + (b.open_items || []).length; });
+      return s + n;
+    }, 0);
 
     if (totalTasks === 0) {
       document.getElementById('masterList').innerHTML =
@@ -198,55 +213,72 @@
       html += '<div class="cd-panel-header"><span class="cd-panel-title">// Below Deck</span></div>';
       html += '<div class="cd-panel-body" style="padding:4px 0;">';
       belowDeck.forEach(function(t) {
-        var starred = todayIds[t.id] || t.today == 1;
-        html += taskRow(t, starred);
+        var starred = todayTaskIds[t.id] || t.today == 1;
+        html += masterRow('task', t.id, t.title, starred, false);
       });
       html += '</div></div>';
     }
 
-    // Project groups
+    // Project groups — tasks + checklist blocks (with open items underneath)
     projects.forEach(function(proj) {
-      if (!proj.tasks || proj.tasks.length === 0) return;
+      var hasTasks = (proj.tasks || []).length > 0;
+      var hasBlocks = (proj.blocks || []).length > 0;
+      if (!hasTasks && !hasBlocks) return;
       html += '<div class="cd-panel cd-mb today-group">';
       html += '<div class="cd-panel-header"><span class="cd-panel-title">// ' + escHtml(proj.title) + '</span></div>';
       html += '<div class="cd-panel-body" style="padding:4px 0;">';
-      proj.tasks.forEach(function(t) {
-        var starred = todayIds[t.id] || t.today == 1;
-        html += taskRow(t, starred);
+      (proj.tasks || []).forEach(function(t) {
+        var starred = todayTaskIds[t.id] || t.today == 1;
+        html += masterRow('task', t.id, t.title, starred, false);
+      });
+      (proj.blocks || []).forEach(function(b) {
+        var bStarred = todayBlockIds[b.id] || b.today == 1;
+        var blockTitle = b.title || 'Untitled Checklist';
+        var progress = b.total_count > 0
+          ? ' (' + b.checked_count + '/' + b.total_count + ' done)'
+          : '';
+        html += masterRow('block', b.id, '▣ ' + blockTitle + progress, bStarred, false);
+        (b.open_items || []).forEach(function(item) {
+          var iStarred = todayItemIds[item.id] || item.today == 1;
+          html += masterRow('item', item.id, item.text, iStarred, true);
+        });
       });
       html += '</div></div>';
     });
 
     document.getElementById('masterList').innerHTML = html;
 
-    // Bind star buttons
+    // Bind star buttons (delegated handler picks up data-kind + data-id)
     document.querySelectorAll('.today-star-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {
-        starTask(btn.getAttribute('data-id'), btn);
+        starEntity(btn.getAttribute('data-kind'), btn.getAttribute('data-id'), btn);
       });
     });
   }
 
-  function taskRow(t, starred) {
-    return '<div class="today-master-row" data-id="' + t.id + '">' +
+  function masterRow(kind, id, label, starred, indent) {
+    var rowCls = 'today-master-row' + (indent ? ' is-item-indent' : '');
+    var titleCls = 'today-master-title' + (starred ? ' is-starred' : '');
+    return '<div class="' + rowCls + '" data-id="' + id + '" data-kind="' + kind + '">' +
       '<button class="today-star-btn' + (starred ? ' starred' : '') + '" ' +
-              'data-id="' + t.id + '" ' +
+              'data-id="' + id + '" data-kind="' + kind + '" ' +
               'title="' + (starred ? 'Remove from Today' : 'Add to Today') + '">' +
         (starred ? '★' : '☆') +
       '</button>' +
-      '<span class="today-master-title' + (starred ? ' is-starred' : '') + '">' +
-        escHtml(t.title) +
-      '</span>' +
+      '<span class="' + titleCls + '">' + escHtml(label) + '</span>' +
       '</div>';
   }
 
-  function starTask(id, btn) {
+  function starEntity(kind, id, btn) {
     var wasStarred = btn.classList.contains('starred');
     // Optimistic UI
     toggleStar(btn, !wasStarred);
 
     var fd = new FormData();
-    fd.append('id', id);
+    var fieldName = 'task_id';
+    if (kind === 'item') fieldName = 'item_id';
+    else if (kind === 'block') fieldName = 'block_id';
+    fd.append(fieldName, id);
     fetch('/today/star', { method: 'POST', body: fd })
       .then(function(r) { return r.json(); })
       .then(function(data) {
