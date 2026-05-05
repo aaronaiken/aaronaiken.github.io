@@ -114,6 +114,12 @@
                 data-type="{{ block.type }}"
                 data-custom-title="{{ block.title | default('', true) }}">{% if block.title %}{{ block.title }}{% elif block.type == 'note' %}Untitled Note{% else %}Untitled Checklist{% endif %}</span>
               <div class="cd-panel-actions">
+                {% if block.type == 'checklist' %}
+                <button class="cd-today-star{% if block.today %} starred{% endif %}"
+                        data-kind="block" data-id="{{ block.id }}"
+                        title="{% if block.today %}Remove from Today{% else %}Add to Today{% endif %}"
+                        type="button">{{ '★' if block.today else '☆' }}</button>
+                {% endif %}
                 <button class="cd-block-collapse-btn" data-block-id="{{ block.id }}" title="Collapse">▾</button>
                 <button class="cd-btn ghost sm block-delete-btn" data-id="{{ block.id }}">REMOVE</button>
               </div>
@@ -596,6 +602,7 @@ fetch('/below-deck/count').then(r=>r.json()).then(data=>{
             <span class="cd-block-drag-handle" title="Drag to reorder">⠿</span>
             <span class="cd-block-title-display" data-block-id="${block.id}" data-type="checklist" data-custom-title="">${placeholder}</span>
             <div class="cd-panel-actions">
+              <button class="cd-today-star" data-kind="block" data-id="${block.id}" title="Add to Today" type="button">☆</button>
               <button class="cd-block-collapse-btn" data-block-id="${block.id}" title="Collapse">▾</button>
               <button class="cd-btn ghost sm block-delete-btn" data-id="${block.id}">REMOVE</button>
             </div>
@@ -1849,7 +1856,11 @@ function cdEditTask(id) {
     btn.textContent = !wasStarred ? '★' : '☆';
     btn.title = !wasStarred ? 'Remove from Today' : 'Add to Today';
     const fd = new FormData();
-    fd.append(kind === 'item' ? 'item_id' : 'task_id', id);
+    // Phase 2.2 — dispatch by kind: task_id / item_id / block_id
+    var fieldName = 'task_id';
+    if (kind === 'item') fieldName = 'item_id';
+    else if (kind === 'block') fieldName = 'block_id';
+    fd.append(fieldName, id);
     fetch('/today/star', { method: 'POST', body: fd, credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (data) {
