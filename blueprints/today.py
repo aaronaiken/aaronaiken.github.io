@@ -100,7 +100,9 @@ def today_page():
 
 @today_bp.route('/today/count')
 def today_count():
-	"""Open today count — tasks + items combined for the global pill."""
+	"""Open today count — tasks + items + blocks combined for the global pill.
+	Phase 2.2: blocks count too. A starred block contributes 1 regardless of
+	how many items it has."""
 	if not is_authenticated():
 		return jsonify({'count': 0})
 	conn = get_db()
@@ -110,8 +112,11 @@ def today_count():
 	item_count = conn.execute(
 		"SELECT COUNT(*) as cnt FROM checklist_items WHERE today = 1 AND checked = 0"
 	).fetchone()['cnt']
+	block_count = conn.execute(
+		"SELECT COUNT(*) as cnt FROM blocks WHERE today = 1"
+	).fetchone()['cnt']
 	conn.close()
-	return jsonify({'count': task_count + item_count})
+	return jsonify({'count': task_count + item_count + block_count})
 
 
 @today_bp.route('/today/data')
@@ -161,6 +166,33 @@ def today_data():
 		ORDER BY ci.id DESC
 	''').fetchall()
 
+	# Phase 2.2 — block rows. A block row carries title + project context +
+	# a progress triple (total / checked / open). "Open" placement: blocks
+	# with any unchecked items OR no items go in today_open; blocks with
+	# every item checked go in today_done (post-completion limbo until
+	# the autoclear pass on the next 4am rollover).
+	today_blocks = conn.execute('''
+		SELECT b.id, b.title, b.today, b.project_id,
+		       p.title AS project_title, p.slug AS project_slug,
+		       (SELECT COUNT(*) FROM checklist_items ci WHERE ci.block_id = b.id) AS total_count,
+		       (SELECT COUNT(*) FROM checklist_items ci WHERE ci.block_id = b.id AND ci.checked = 1) AS checked_count
+		FROM blocks b
+		JOIN projects p ON b.project_id = p.id
+		WHERE b.today = 1 AND b.type = 'checklist'
+		ORDER BY b.id ASC
+	''').fetchall()
+	today_blocks_open = []
+	today_blocks_done = []
+	for row in today_blocks:
+		d = dict(row)
+		d['open_count'] = d['total_count'] - d['checked_count']
+		# Empty starred blocks count as "open" (something to do — even if just
+		# adding items). Done = at least one item exists AND all are checked.
+		if d['total_count'] > 0 and d['open_count'] == 0:
+			today_blocks_done.append(d)
+		else:
+			today_blocks_open.append(d)
+
 	# Master browse — Below Deck (project_id NULL) + per-project task lists
 	below_deck_tasks = conn.execute('''
 		SELECT id, title, status, today, project_id
@@ -198,16 +230,24 @@ def today_data():
 		d['kind'] = 'item'
 		return d
 
+	def _serialize_block(d):
+		# Already a dict (built above with computed fields)
+		d = dict(d)
+		d['kind'] = 'block'
+		return d
+
 	return jsonify({
-		# Mixed lists — kind='task' or kind='item' on each entry. Renderers
-		# branch on kind to draw the right row shape.
+		# Mixed lists — kind='task' / 'item' / 'block' on each entry.
+		# Renderers branch on kind to draw the right row shape.
 		'today_open': (
 			[_serialize_task(r) for r in today_tasks_open] +
-			[_serialize_item(r) for r in today_items_open]
+			[_serialize_item(r) for r in today_items_open] +
+			[_serialize_block(r) for r in today_blocks_open]
 		),
 		'today_done': (
 			[_serialize_task(r) for r in today_tasks_done] +
-			[_serialize_item(r) for r in today_items_done]
+			[_serialize_item(r) for r in today_items_done] +
+			[_serialize_block(r) for r in today_blocks_done]
 		),
 		'below_deck': [dict(t) for t in below_deck_tasks],
 		'projects': project_groups,
@@ -216,21 +256,24 @@ def today_data():
 
 @today_bp.route('/today/star', methods=['POST'])
 def today_star():
-	"""Toggle the today flag on a task OR a checklist item.
+	"""Toggle the today flag on a task OR a checklist item OR a checklist block.
 
-	Phase 2.1: accepts either task_id or item_id (mutually exclusive).
-	Form-encoded for parity with the existing star UI; either field is
-	picked up via request.form. 400 if neither field present, OR if both."""
+	Phase 2.1: accepts task_id or item_id.
+	Phase 2.2: also accepts block_id. All three mutually exclusive.
+	Form-encoded for parity with existing star UIs; fields picked up via
+	request.form. 400 if zero or 2+ fields, 404 if not found."""
 	if not is_authenticated():
 		return jsonify({'error': 'unauthorized'}), 403
 
-	task_id = request.form.get('task_id') or request.form.get('id')  # legacy fallback
+	task_id = request.form.get('task_id') or request.form.get('id')  # legacy fallback = task
 	item_id = request.form.get('item_id')
+	block_id = request.form.get('block_id')
 
-	if task_id and item_id:
-		return jsonify({'error': 'task_or_item_not_both'}), 400
-	if not task_id and not item_id:
-		return jsonify({'error': 'task_id_or_item_id_required'}), 400
+	provided = [x for x in (task_id, item_id, block_id) if x]
+	if len(provided) > 1:
+		return jsonify({'error': 'one_of_task_item_or_block_only'}), 400
+	if not provided:
+		return jsonify({'error': 'task_id_or_item_id_or_block_id_required'}), 400
 
 	conn = get_db()
 	if task_id:
@@ -240,19 +283,33 @@ def today_star():
 			return jsonify({'error': 'not_found'}), 404
 		new_today = 0 if row['today'] else 1
 		conn.execute('UPDATE tasks SET today = ? WHERE id = ?', (new_today, task_id))
-	else:
+	elif item_id:
 		row = conn.execute('SELECT id, today FROM checklist_items WHERE id = ?', (item_id,)).fetchone()
 		if not row:
 			conn.close()
 			return jsonify({'error': 'not_found'}), 404
 		new_today = 0 if row['today'] else 1
 		conn.execute('UPDATE checklist_items SET today = ? WHERE id = ?', (new_today, item_id))
+	else:
+		# block_id
+		row = conn.execute(
+			"SELECT id, today, type FROM blocks WHERE id = ?", (block_id,)
+		).fetchone()
+		if not row:
+			conn.close()
+			return jsonify({'error': 'not_found'}), 404
+		if row['type'] != 'checklist':
+			conn.close()
+			return jsonify({'error': 'block_not_checklist'}), 400
+		new_today = 0 if row['today'] else 1
+		conn.execute('UPDATE blocks SET today = ? WHERE id = ?', (new_today, block_id))
 
 	conn.commit()
-	# Combined open count for the badge
+	# Combined open count for the badge — tasks + items + blocks
 	count = conn.execute(
 		"SELECT (SELECT COUNT(*) FROM tasks WHERE today = 1 AND status = 'open') + "
-		"       (SELECT COUNT(*) FROM checklist_items WHERE today = 1 AND checked = 0) "
+		"       (SELECT COUNT(*) FROM checklist_items WHERE today = 1 AND checked = 0) + "
+		"       (SELECT COUNT(*) FROM blocks WHERE today = 1) "
 		"AS cnt"
 	).fetchone()['cnt']
 	conn.close()
