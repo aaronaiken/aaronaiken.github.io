@@ -55,10 +55,33 @@
 	text-overflow: ellipsis;
 }
 #ttp.ttp-collapsed #ttp-summary { display: inline-block; }
+
+/* Phase 2 §4.4 — today total link in the titlebar. Sits between the
+   active-summary text and the collapse/close buttons. Hidden when the
+   panel is collapsed to a pill (the summary takes the row instead). */
+#ttp-today-total {
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 0.58rem;
+	letter-spacing: 0.1em;
+	color: rgba(212, 136, 10, 0.55);
+	text-decoration: none;
+	margin-left: auto;
+	padding: 1px 4px;
+	border-radius: 2px;
+	transition: color 0.15s, background 0.15s;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+#ttp-today-total:hover {
+	color: rgba(245, 179, 50, 1);
+	background: rgba(212, 136, 10, 0.10);
+}
+#ttp.ttp-collapsed #ttp-today-total { display: none; }
+
 #ttp-actions {
 	display: flex;
 	gap: 4px;
-	margin-left: auto;
+	margin-left: 8px;
 }
 .ttp-tb-btn {
 	background: none;

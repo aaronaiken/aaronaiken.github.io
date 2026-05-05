@@ -29,6 +29,17 @@
   var tickTimer = null;
   var inFlight = null;
 
+  // Phase 2 §3.4 — today total. Subscribers are notified on every
+  // poll AND every tick with the live current value (server-fetched
+  // stopped_today_seconds + locally-computed elapsed of currently-
+  // running entries). This way the cockpit panel titlebar ticks up
+  // every second without polling /time/today/total at 1Hz.
+  var todaySubscribers = [];
+  var todayStoppedSeconds = 0;     // server-cached, refreshed on poll
+  var todayDate = null;
+  var todayLoaded = false;
+  var todayInFlight = null;
+
   function notify() {
     subscribers.forEach(function (cb) {
       try { cb(current); } catch (e) { console.error('TimeTrackerCore subscriber error:', e); }
@@ -54,10 +65,76 @@
   function tick() {
     // Re-emit so subscribers can recompute elapsed locally
     if (loaded) notify();
+    if (todayLoaded) notifyToday();
+  }
+
+  function fetchTodayTotal() {
+    if (todayInFlight) return todayInFlight;
+    todayInFlight = fetch('/time/today/total', { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data) return;
+        // ET day rolled over since last fetch — reset cached stopped total
+        if (todayDate && data.today_date !== todayDate) {
+          todayStoppedSeconds = 0;
+        }
+        todayStoppedSeconds = Math.max(0, data.stopped_today_seconds | 0);
+        todayDate = data.today_date;
+        todayLoaded = true;
+        notifyToday();
+      })
+      .catch(function () { /* network blip */ })
+      .then(function () { todayInFlight = null; });
+    return todayInFlight;
+  }
+
+  function liveTodayTotal() {
+    // stopped (server) + elapsed-so-far for any active timer started today
+    if (!todayLoaded) return 0;
+    var totalRunning = 0;
+    if (todayDate) {
+      current.forEach(function (e) {
+        if (!e || !e.started_at) return;
+        // Approximate ET-day membership by comparing the started_at's
+        // local-date to todayDate. Aaron's local TZ matches ET; this is
+        // close enough for the panel display.
+        var startedLocal = new Date(e.started_at);
+        var iso = startedLocal.getFullYear() + '-' +
+          pad(startedLocal.getMonth() + 1) + '-' +
+          pad(startedLocal.getDate());
+        if (iso === todayDate) {
+          totalRunning += elapsedSeconds(e);
+        }
+      });
+    }
+    return todayStoppedSeconds + totalRunning;
+  }
+
+  function notifyToday() {
+    var total = liveTodayTotal();
+    todaySubscribers.forEach(function (cb) {
+      try { cb(total, todayDate); }
+      catch (e) { console.error('TimeTrackerCore today subscriber error:', e); }
+    });
+  }
+
+  function subscribeToday(cb) {
+    todaySubscribers.push(cb);
+    if (todayLoaded) {
+      try { cb(liveTodayTotal(), todayDate); } catch (e) { console.error(e); }
+    }
+    fetchTodayTotal();
+    ensureRunning();
+    return function unsubscribe() {
+      todaySubscribers = todaySubscribers.filter(function (s) { return s !== cb; });
+    };
   }
 
   function ensureRunning() {
-    if (!pollTimer) pollTimer = setInterval(fetchActive, POLL_INTERVAL_MS);
+    if (!pollTimer) pollTimer = setInterval(function () {
+      fetchActive();
+      if (todaySubscribers.length) fetchTodayTotal();
+    }, POLL_INTERVAL_MS);
     if (!tickTimer) tickTimer = setInterval(tick, TICK_INTERVAL_MS);
   }
 
@@ -117,34 +194,36 @@
 
   function startTimer(projectId, description) {
     return postJson('/time/start', { project_id: projectId, description: description || '' })
-      .then(function (result) { if (result.ok) refresh(); return result; });
+      .then(function (result) { if (result.ok) { refresh(); fetchTodayTotal(); } return result; });
   }
 
   function stopTimer(entryId) {
     return postEmpty('/time/' + entryId + '/stop')
-      .then(function (result) { if (result.ok) refresh(); return result; });
+      .then(function (result) { if (result.ok) { refresh(); fetchTodayTotal(); } return result; });
   }
 
   function stopAllTimers() {
     var ids = current.map(function (e) { return e.id; });
     return Promise.all(ids.map(function (id) {
       return postEmpty('/time/' + id + '/stop').catch(function () { /* swallow */ });
-    })).then(refresh);
+    })).then(function () { refresh(); fetchTodayTotal(); });
   }
 
   function deleteTimer(entryId) {
     return postEmpty('/time/' + entryId + '/delete')
-      .then(function (result) { if (result.ok) refresh(); return result; });
+      .then(function (result) { if (result.ok) { refresh(); fetchTodayTotal(); } return result; });
   }
 
   function updateTimer(entryId, fields) {
     return postJson('/time/' + entryId + '/update', fields || {})
-      .then(function (result) { if (result.ok) refresh(); return result; });
+      .then(function (result) { if (result.ok) { refresh(); fetchTodayTotal(); } return result; });
   }
 
   window.TimeTrackerCore = {
     subscribe: subscribe,
+    subscribeToday: subscribeToday,
     refresh: refresh,
+    refreshToday: fetchTodayTotal,
     elapsedSeconds: elapsedSeconds,
     formatElapsed: formatElapsed,
     startTimer: startTimer,
@@ -154,5 +233,6 @@
     updateTimer: updateTimer,
     isLoaded: function () { return loaded; },
     current: function () { return current.slice(); },
+    todayTotalSeconds: liveTodayTotal,
   };
 })(window);

@@ -403,6 +403,13 @@
 
 	if (window.TimeTrackerCore) {
 		window.TimeTrackerCore.subscribe(renderActive);
+		// Phase 2 §4.4 — today total in the titlebar
+		var todayEl = document.querySelector('[data-today-total]');
+		if (todayEl) {
+			window.TimeTrackerCore.subscribeToday(function (totalSecs) {
+				todayEl.textContent = window.TimeTrackerCore.formatElapsed(totalSecs);
+			});
+		}
 	}
 
 	// ---- Ctrl+K palette entries (consumed by cockpit_modes.js) ----
