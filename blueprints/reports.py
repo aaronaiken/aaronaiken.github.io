@@ -26,10 +26,15 @@ Privacy:
 from datetime import datetime, timedelta, date
 
 import pytz
-from flask import Blueprint, jsonify, request
+import os
 
-from helpers.auth import is_authenticated
+from flask import Blueprint, jsonify, render_template, request
+
+from helpers.auth import cd_auth_required, is_authenticated
 from helpers.db import get_db
+
+
+PRIVATE_PROJECTS_PIN = os.environ.get('PRIVATE_PROJECTS_PIN', '')
 
 
 reports_bp = Blueprint('reports', __name__)
@@ -163,7 +168,19 @@ def _build_totals(entries, start_date, end_date):
 	}
 
 
-# ---- Route ----
+# ---- Routes ----
+
+
+@reports_bp.route('/command-deck/reports/', methods=['GET'])
+@reports_bp.route('/command-deck/reports', methods=['GET'])
+@cd_auth_required
+def reports_page():
+	"""Renders the reports page shell. The data comes from /reports/data
+	via JS so the toggle + period nav can swap views without full reloads."""
+	return render_template(
+		'command_deck_reports.html',
+		private_projects_enabled=bool(PRIVATE_PROJECTS_PIN),
+	)
 
 
 @reports_bp.route('/command-deck/reports/data', methods=['GET'])

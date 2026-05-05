@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Reports · Command Deck</title>
+  <link rel="stylesheet" href="/static/command_deck.css">
+</head>
+<body class="command-deck">
+<div class="cd-shell">
+
+  <!-- HEADER -->
+  <header class="cd-header">
+    <div class="cd-header-left">
+      <a href="/command-deck/" class="cd-wordmark">COMMAND DECK</a>
+      <span class="cd-ident">REPORTS · TIME LOG</span>
+    </div>
+    <nav class="cd-header-nav">
+      <a href="/command-deck/" class="cd-nav-link">BRIDGE</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/projects/" class="cd-nav-link">PROJECTS</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/below-deck" class="cd-nav-link">
+        BELOW DECK
+        <span class="cd-bd-badge" id="bdBadge"></span>
+      </a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/today/" class="cd-nav-link">TODAY</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/reports/" class="cd-nav-link active">REPORTS</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/publish" class="cd-nav-link">COCKPIT</a>
+    </nav>
+  </header>
+
+  {% include 'includes/today_panel.html' %}
+  {% include 'includes/active_timer_strip.html' %}
+
+  <!-- MAIN -->
+  <div class="cd-main full-width">
+
+    <!-- REPORTS CONTROL BAR -->
+    <section class="cd-reports-controls">
+
+      <div class="cd-reports-period">
+        <button class="cd-reports-nav-btn" id="reportsPrev" title="Previous period">←</button>
+        <div class="cd-reports-period-label">
+          <span id="reportsPeriodLabel">…</span>
+          <input type="date" class="cd-reports-jump" id="reportsJump" title="Jump to week containing date">
+        </div>
+        <button class="cd-reports-nav-btn" id="reportsNext" title="Next period">→</button>
+      </div>
+
+      <div class="cd-reports-presets" role="tablist">
+        <button class="cd-reports-preset" data-period="today">Today</button>
+        <button class="cd-reports-preset active" data-period="this-week">Week</button>
+        <button class="cd-reports-preset" data-period="this-month">Month</button>
+        <button class="cd-reports-preset" data-period="custom">Custom</button>
+      </div>
+
+      <div class="cd-reports-custom" id="reportsCustom" hidden>
+        <input type="date" class="cd-reports-custom-input" id="reportsCustomStart" aria-label="Custom range start">
+        <span class="cd-reports-custom-sep">→</span>
+        <input type="date" class="cd-reports-custom-input" id="reportsCustomEnd" aria-label="Custom range end">
+        <button class="cd-reports-custom-apply" id="reportsCustomApply">Apply</button>
+      </div>
+
+      <div class="cd-reports-groups" role="tablist">
+        <span class="cd-reports-groups-label">Group:</span>
+        <button class="cd-reports-group active" data-group="area">Area</button>
+        <button class="cd-reports-group" data-group="project">Project</button>
+        <button class="cd-reports-group" data-group="day">Day</button>
+      </div>
+
+    </section>
+
+    <!-- PRIVACY NOTE (shown when private projects hidden) -->
+    <div class="cd-reports-privacy-note" id="reportsPrivacyNote" hidden>
+      // <span id="reportsPrivacyCount">0</span> private project(s) hidden — unlock via 🔒 to include
+    </div>
+
+    <!-- EMPTY STATE -->
+    <div class="cd-reports-empty" id="reportsEmpty" hidden>
+      No tracked time in this period.
+    </div>
+
+    <!-- ROLLUP (by area / project / day) -->
+    <section class="cd-reports-rollup" id="reportsRollup">
+      <div class="cd-reports-loading">loading…</div>
+    </section>
+
+    <!-- CHRONOLOGICAL ENTRIES -->
+    <section class="cd-reports-entries" id="reportsEntries">
+      <h2 class="cd-reports-entries-title">// Entries</h2>
+      <table class="cd-reports-entries-table">
+        <thead>
+          <tr>
+            <th>Day</th>
+            <th>Area</th>
+            <th>Project</th>
+            <th>Task / Item</th>
+            <th>Description</th>
+            <th>Start → End</th>
+            <th class="cd-num">Duration</th>
+          </tr>
+        </thead>
+        <tbody id="reportsEntriesBody">
+          <tr><td colspan="7" class="cd-reports-loading">loading…</td></tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="6" class="cd-reports-total-label">Total</td>
+            <td class="cd-num" id="reportsTotalDuration">—</td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+
+  </div><!-- .cd-main -->
+
+  <!-- FOOTER -->
+  <footer class="cd-footer">
+    <div class="cd-footer-links">
+      <a href="/command-deck/" class="cd-footer-link">Bridge</a>
+      <a href="/command-deck/projects/" class="cd-footer-link">Projects</a>
+      <a href="/publish" class="cd-footer-link">Cockpit</a>
+      {% if private_projects_enabled %}
+      <span class="cd-nav-sep">·</span>
+      <button class="cd-nav-link" id="unlockPrivateBtn" style="background:none;border:none;cursor:pointer;" title="Private projects">🔒</button>
+      {% endif %}
+    </div>
+    {% include 'includes/cd_footer_status.html' %}
+    <span class="cd-footer-ident">YT-1300F · COMMAND DECK · SECURE</span>
+  </footer>
+
+</div><!-- .cd-shell -->
+
+<script src="/static/command_deck_reports.js"></script>
+</body>
+</html>
