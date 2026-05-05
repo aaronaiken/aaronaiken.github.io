@@ -284,8 +284,14 @@ def time_stop(entry_id):
 @time_tracking_bp.route('/time/<int:entry_id>/update', methods=['POST'])
 def time_update(entry_id):
 	"""
-	Update description, started_at, and/or ended_at on an entry (running or stopped).
+	Update description, started_at, ended_at, task_id, and/or
+	checklist_item_id on an entry (running or stopped).
+
 	Per §0a.2 #2 — recomputes duration_seconds when ended_at is set.
+	Per Phase 2 spec §3.2 — re-assigning task_id or checklist_item_id
+	is allowed but validated against the entry's existing project_id.
+	Cross-project re-assignment is forbidden (delete + recreate
+	instead). The entry's project_id is never changed by this route.
 	"""
 	if not is_authenticated():
 		return jsonify({'error': 'unauthorized'}), 403
@@ -299,6 +305,8 @@ def time_update(entry_id):
 	new_description = row['description']
 	new_started = row['started_at']
 	new_ended = row['ended_at']
+	new_task_id = row['task_id']
+	new_item_id = row['checklist_item_id']
 
 	if 'description' in data:
 		new_description = (data.get('description') or '').strip()
@@ -325,6 +333,65 @@ def time_update(entry_id):
 				conn.close()
 				return jsonify({'error': 'invalid_ended_at'}), 400
 
+	if 'task_id' in data:
+		val = data.get('task_id')
+		if val in (None, '', 'null'):
+			new_task_id = None
+		else:
+			try:
+				new_task_id = int(val)
+			except (ValueError, TypeError):
+				conn.close()
+				return jsonify({'error': 'invalid_task_id'}), 400
+
+	if 'checklist_item_id' in data:
+		val = data.get('checklist_item_id')
+		if val in (None, '', 'null'):
+			new_item_id = None
+		else:
+			try:
+				new_item_id = int(val)
+			except (ValueError, TypeError):
+				conn.close()
+				return jsonify({'error': 'invalid_checklist_item_id'}), 400
+
+	if new_task_id is not None and new_item_id is not None:
+		conn.close()
+		return jsonify({'error': 'task_or_item_not_both'}), 400
+
+	entry_project_id = row['project_id']
+
+	if 'task_id' in data and new_task_id is not None:
+		task = conn.execute(
+			'SELECT id, project_id FROM tasks WHERE id = ?', (new_task_id,)
+		).fetchone()
+		if not task:
+			conn.close()
+			return jsonify({'error': 'task_not_found'}), 404
+		if task['project_id'] != entry_project_id:
+			conn.close()
+			return jsonify({
+				'error': 'task_project_mismatch',
+				'task_project_id': task['project_id'],
+			}), 400
+
+	if 'checklist_item_id' in data and new_item_id is not None:
+		item = conn.execute('''
+			SELECT ci.id, b.project_id
+			FROM checklist_items ci
+			JOIN blocks b ON ci.block_id = b.id
+			WHERE ci.id = ?
+		''', (new_item_id,)).fetchone()
+		if not item:
+			conn.close()
+			return jsonify({'error': 'checklist_item_not_found'}), 404
+		if item['project_id'] != entry_project_id:
+			conn.close()
+			return jsonify({
+				'error': 'item_project_mismatch',
+				'item_project_id': item['project_id'],
+			}), 400
+
 	if new_ended:
 		try:
 			s = _parse_iso_utc(new_started)
@@ -340,9 +407,13 @@ def time_update(entry_id):
 	conn.execute('''
 		UPDATE time_entries
 		SET description = ?, started_at = ?, ended_at = ?,
-		    duration_seconds = ?, updated = ?
+		    duration_seconds = ?, task_id = ?, checklist_item_id = ?,
+		    updated = ?
 		WHERE id = ?
-	''', (new_description, new_started, new_ended, new_duration, now_iso, entry_id))
+	''', (
+		new_description, new_started, new_ended, new_duration,
+		new_task_id, new_item_id, now_iso, entry_id,
+	))
 	conn.commit()
 	row = _fetch_entry_with_context(conn, entry_id)
 	conn.close()
