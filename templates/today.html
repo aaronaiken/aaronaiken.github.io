@@ -144,6 +144,24 @@
 .today-master-row.is-item-indent .today-master-title {
   font-size: 0.72rem;
 }
+/* Phase 2.2 — area-grouped sections in /today/ master browse */
+.today-area-header {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+.today-project-subsection {
+  margin: 4px 0 10px;
+}
+.today-project-header {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cd-text-dim);
+  padding: 6px 12px 2px;
+  border-bottom: 1px dotted rgba(212, 136, 10, 0.08);
+  margin-bottom: 2px;
+}
 </style>
 
 <script>
@@ -171,7 +189,12 @@
     fetch('/today/data')
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        renderMasterList(data.below_deck || [], data.projects || [], data.today_open || []);
+        renderMasterList(
+          data.below_deck || [],
+          data.area_groups || [],
+          data.personal_projects || [],
+          data.today_open || []
+        );
         updateCountLabel((data.today_open || []).length);
       })
       .catch(function() {
@@ -180,7 +203,7 @@
       });
   }
 
-  function renderMasterList(belowDeck, projects, todayOpen) {
+  function renderMasterList(belowDeck, areaGroups, personalProjects, todayOpen) {
     // Phase 2.1+2.2 — todayOpen mixes tasks/items/blocks. Build per-kind
     // lookups so the starred-state on master rows is unambiguous.
     var todayTaskIds = {};
@@ -193,13 +216,27 @@
       else if (kind === 'block') todayBlockIds[e.id] = true;
     });
 
-    var totalTasks = belowDeck.length + projects.reduce(function(s, p) {
-      var n = (p.tasks || []).length;
-      (p.blocks || []).forEach(function(b) { n += 1 + (b.open_items || []).length; });
-      return s + n;
-    }, 0);
+    function projectHasContent(p) {
+      return (p.tasks || []).length > 0 || (p.blocks || []).length > 0;
+    }
 
-    if (totalTasks === 0) {
+    var totalThings = belowDeck.length;
+    areaGroups.forEach(function(ag) {
+      ag.projects.forEach(function(p) {
+        totalThings += (p.tasks || []).length;
+        (p.blocks || []).forEach(function(b) {
+          totalThings += 1 + (b.open_items || []).length;
+        });
+      });
+    });
+    personalProjects.forEach(function(p) {
+      totalThings += (p.tasks || []).length;
+      (p.blocks || []).forEach(function(b) {
+        totalThings += 1 + (b.open_items || []).length;
+      });
+    });
+
+    if (totalThings === 0) {
       document.getElementById('masterList').innerHTML =
         '<div class="cd-panel"><div class="cd-panel-body"><div class="cd-empty">No open tasks anywhere. You\'re all clear.</div></div></div>';
       return;
@@ -207,7 +244,7 @@
 
     var html = '';
 
-    // Below Deck group
+    // Below Deck — top-level group
     if (belowDeck.length > 0) {
       html += '<div class="cd-panel cd-mb today-group">';
       html += '<div class="cd-panel-header"><span class="cd-panel-title">// Below Deck</span></div>';
@@ -219,32 +256,37 @@
       html += '</div></div>';
     }
 
-    // Project groups — tasks + checklist blocks (with open items underneath)
-    projects.forEach(function(proj) {
-      var hasTasks = (proj.tasks || []).length > 0;
-      var hasBlocks = (proj.blocks || []).length > 0;
-      if (!hasTasks && !hasBlocks) return;
-      html += '<div class="cd-panel cd-mb today-group">';
-      html += '<div class="cd-panel-header"><span class="cd-panel-title">// ' + escHtml(proj.title) + '</span></div>';
+    // Area groups — each contains its sub-projects
+    areaGroups.forEach(function(ag) {
+      var hasContent = ag.projects.some(projectHasContent);
+      if (!hasContent) return;
+      var stripeStyle = ag.area_color
+        ? ' style="border-left:3px solid ' + ag.area_color + '; padding-left:8px;"'
+        : '';
+      html += '<div class="cd-panel cd-mb today-area-group">';
+      html += '<div class="cd-panel-header"' + stripeStyle + '>' +
+              '<span class="cd-panel-title today-area-header">' + escHtml(ag.area_title) + '</span>' +
+              '</div>';
       html += '<div class="cd-panel-body" style="padding:4px 0;">';
-      (proj.tasks || []).forEach(function(t) {
-        var starred = todayTaskIds[t.id] || t.today == 1;
-        html += masterRow('task', t.id, t.title, starred, false);
-      });
-      (proj.blocks || []).forEach(function(b) {
-        var bStarred = todayBlockIds[b.id] || b.today == 1;
-        var blockTitle = b.title || 'Untitled Checklist';
-        var progress = b.total_count > 0
-          ? ' (' + b.checked_count + '/' + b.total_count + ' done)'
-          : '';
-        html += masterRow('block', b.id, '▣ ' + blockTitle + progress, bStarred, false);
-        (b.open_items || []).forEach(function(item) {
-          var iStarred = todayItemIds[item.id] || item.today == 1;
-          html += masterRow('item', item.id, item.text, iStarred, true);
-        });
+      ag.projects.forEach(function(proj) {
+        if (!projectHasContent(proj)) return;
+        html += renderProjectSubsection(proj, todayTaskIds, todayItemIds, todayBlockIds);
       });
       html += '</div></div>';
     });
+
+    // Personal projects — own group, flat
+    var personalHasContent = personalProjects.some(projectHasContent);
+    if (personalHasContent) {
+      html += '<div class="cd-panel cd-mb today-area-group">';
+      html += '<div class="cd-panel-header"><span class="cd-panel-title today-area-header">Personal</span></div>';
+      html += '<div class="cd-panel-body" style="padding:4px 0;">';
+      personalProjects.forEach(function(proj) {
+        if (!projectHasContent(proj)) return;
+        html += renderProjectSubsection(proj, todayTaskIds, todayItemIds, todayBlockIds);
+      });
+      html += '</div></div>';
+    }
 
     document.getElementById('masterList').innerHTML = html;
 
@@ -254,6 +296,29 @@
         starEntity(btn.getAttribute('data-kind'), btn.getAttribute('data-id'), btn);
       });
     });
+  }
+
+  function renderProjectSubsection(proj, todayTaskIds, todayItemIds, todayBlockIds) {
+    var html = '<div class="today-project-subsection">';
+    html += '<div class="today-project-header">' + escHtml(proj.title) + '</div>';
+    (proj.tasks || []).forEach(function(t) {
+      var starred = todayTaskIds[t.id] || t.today == 1;
+      html += masterRow('task', t.id, t.title, starred, false);
+    });
+    (proj.blocks || []).forEach(function(b) {
+      var bStarred = todayBlockIds[b.id] || b.today == 1;
+      var blockTitle = b.title || 'Untitled Checklist';
+      var progress = b.total_count > 0
+        ? ' (' + b.checked_count + '/' + b.total_count + ' done)'
+        : '';
+      html += masterRow('block', b.id, '▣ ' + blockTitle + progress, bStarred, false);
+      (b.open_items || []).forEach(function(item) {
+        var iStarred = todayItemIds[item.id] || item.today == 1;
+        html += masterRow('item', item.id, item.text, iStarred, true);
+      });
+    });
+    html += '</div>';
+    return html;
   }
 
   function masterRow(kind, id, label, starred, indent) {
