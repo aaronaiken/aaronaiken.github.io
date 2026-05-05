@@ -73,6 +73,7 @@
         </div>
         <div style="display:flex;gap:0.5rem;flex-shrink:0;align-self:flex-start;">
           <button class="cd-btn sm" id="editProjectBtn">EDIT</button>
+          <button class="cd-btn sm" id="saveAsTemplateBtn" title="Save this project's structure as a reusable template">SAVE AS TEMPLATE</button>
           <button class="cd-btn sm danger" id="deleteProjectBtn">DELETE</button>
         </div>
       </div>
@@ -1047,6 +1048,31 @@ document.getElementById('deleteProjectBtn').addEventListener('click',function(){
   const form=document.createElement('form');
   form.method='POST';form.action=`/command-deck/projects/${PROJECT_SLUG}/delete`;
   document.body.appendChild(form);form.submit();
+});
+
+// Phase 2.3 — SAVE AS TEMPLATE (project)
+document.getElementById('saveAsTemplateBtn').addEventListener('click',function(){
+  const projectTitle = document.querySelector('.cd-project-title, .cd-page-title');
+  const seed = projectTitle ? projectTitle.textContent.trim() : '';
+  const name = prompt('Save this project as a template — name:', seed);
+  if (name == null) return;
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  fetch(`/command-deck/projects/${PROJECT_SLUG}/save-as-template`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name: trimmed}),
+    credentials: 'same-origin',
+  }).then(function (r) { return r.json().then(function (d) { return {ok: r.ok, data: d}; }); })
+    .then(function (res) {
+      if (res.ok && res.data.success) {
+        alert('Template saved. Manage at /command-deck/templates/');
+      } else {
+        alert('Could not save template: ' + (res.data.error || 'unknown error'));
+      }
+    }).catch(function () {
+      alert('Network error.');
+    });
 });
 
 // ============================================================
