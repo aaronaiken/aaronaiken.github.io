@@ -242,6 +242,42 @@ def cd_project(slug):
 		SELECT * FROM blocks WHERE project_id = ? ORDER BY "order" ASC, id ASC
 	''', (project['id'],)).fetchall()
 
+	# Phase 2 §4.2 — lifetime totals per task and per checklist item.
+	# Computed server-side; rendered inline alongside the JS-driven today tag.
+	# Today refreshes dynamically on every timer event; lifetime refreshes on
+	# next page load (it accumulates slowly, so this is fine).
+	task_lifetime = {
+		row['task_id']: row['secs']
+		for row in conn.execute('''
+			SELECT te.task_id, COALESCE(SUM(te.duration_seconds), 0) AS secs
+			FROM time_entries te
+			JOIN tasks t ON te.task_id = t.id
+			WHERE t.project_id = ? AND te.duration_seconds IS NOT NULL
+			GROUP BY te.task_id
+		''', (project['id'],)).fetchall()
+	}
+	item_lifetime = {
+		row['checklist_item_id']: row['secs']
+		for row in conn.execute('''
+			SELECT te.checklist_item_id, COALESCE(SUM(te.duration_seconds), 0) AS secs
+			FROM time_entries te
+			JOIN checklist_items ci ON te.checklist_item_id = ci.id
+			JOIN blocks b ON ci.block_id = b.id
+			WHERE b.project_id = ? AND te.duration_seconds IS NOT NULL
+			GROUP BY te.checklist_item_id
+		''', (project['id'],)).fetchall()
+	}
+
+	def _fmt_hmm(s):
+		s = max(0, int(s or 0))
+		if s == 0:
+			return ''
+		h = s // 3600
+		m = (s % 3600) // 60
+		if h == 0 and m == 0:
+			return '<1m'
+		return f'{h}:{m:02d}'
+
 	blocks = []
 	for b in blocks_raw:
 		block = dict(b)
@@ -250,14 +286,26 @@ def cd_project(slug):
 				'SELECT * FROM checklist_items WHERE block_id = ? ORDER BY id ASC',
 				(block['id'],)
 			).fetchall()
-			block['items'] = [dict(i) for i in items]
+			items_with_lifetime = []
+			for i in items:
+				item = dict(i)
+				item['lifetime_seconds'] = item_lifetime.get(item['id'], 0)
+				item['lifetime_text'] = _fmt_hmm(item['lifetime_seconds'])
+				items_with_lifetime.append(item)
+			block['items'] = items_with_lifetime
 		blocks.append(block)
 
-	project_tasks = conn.execute('''
+	project_tasks_raw = conn.execute('''
 		SELECT * FROM tasks
 		WHERE project_id = ? AND status = 'open'
 		ORDER BY "order" ASC, id ASC
 	''', (project['id'],)).fetchall()
+	project_tasks = []
+	for t in project_tasks_raw:
+		task = dict(t)
+		task['lifetime_seconds'] = task_lifetime.get(task['id'], 0)
+		task['lifetime_text'] = _fmt_hmm(task['lifetime_seconds'])
+		project_tasks.append(task)
 
 	files = conn.execute(
 		'SELECT * FROM files WHERE project_id = ? ORDER BY uploaded DESC',
@@ -279,7 +327,7 @@ def cd_project(slug):
 		project=project,
 		parent_area=parent_area,
 		blocks=blocks,
-		project_tasks=[dict(t) for t in project_tasks],
+		project_tasks=project_tasks,
 		files=[dict(f) for f in files],
 		chat_history=[dict(m) for m in chat_history]
 	)

@@ -138,6 +138,9 @@
                         data-slug="{{ project.slug }}">
                       <label>{{ item.text }}</label>
                       {% if project.tracking_enabled %}
+                        <span class="cd-tt-today-tag cd-tt-tag-item" data-item-today-tag="{{ item.id }}" hidden></span>
+                        <span class="cd-tt-lifetime-tag cd-tt-tag-item" data-item-lifetime-tag="{{ item.id }}"
+                          {% if not item.lifetime_seconds %}hidden{% endif %}>{% if item.lifetime_seconds %}lifetime: {{ item.lifetime_text }}{% endif %}</span>
                         <button class="cd-tt-row-btn cd-tt-item-btn" data-tt-item-id="{{ item.id }}" data-tt-text="{{ item.text }}" title="Start timer on this item" type="button">⏱</button>
                       {% endif %}
                       <button class="cd-btn ghost sm checklist-item-delete" data-id="{{ item.id }}" data-slug="{{ project.slug }}">✕</button>
@@ -179,6 +182,8 @@
                   <span class="cd-task-title">{{ task.title }}</span>
                   {% if project.tracking_enabled %}
                     <span class="cd-tt-today-tag" data-task-today-tag="{{ task.id }}" hidden></span>
+                    <span class="cd-tt-lifetime-tag" data-task-lifetime-tag="{{ task.id }}"
+                      {% if not task.lifetime_seconds %}hidden{% endif %}>{% if task.lifetime_seconds %}lifetime: {{ task.lifetime_text }}{% endif %}</span>
                     <button class="cd-tt-row-btn cd-tt-task-btn" data-tt-task-id="{{ task.id }}" data-tt-text="{{ task.title }}" title="Start timer on this task" type="button">⏱</button>
                   {% endif %}
                   <button class="cd-task-edit" data-id="{{ task.id }}" title="Edit">✎</button>
@@ -681,7 +686,9 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
       // Phase 1.5: emit the same ⏱ markup Jinja would render, so newly-added
       // items are tracker-aware without a page reload.
       const ttMarkup = (typeof PROJECT_TRACKING !== 'undefined' && PROJECT_TRACKING)
-        ? `<button class="cd-tt-row-btn cd-tt-item-btn" data-tt-item-id="${data.item.id}" data-tt-text="${escapeHtml(data.item.text)}" title="Start timer on this item" type="button">⏱</button>`
+        ? `<span class="cd-tt-today-tag cd-tt-tag-item" data-item-today-tag="${data.item.id}" hidden></span>
+           <span class="cd-tt-lifetime-tag cd-tt-tag-item" data-item-lifetime-tag="${data.item.id}" hidden></span>
+           <button class="cd-tt-row-btn cd-tt-item-btn" data-tt-item-id="${data.item.id}" data-tt-text="${escapeHtml(data.item.text)}" title="Start timer on this item" type="button">⏱</button>`
         : '';
       li.innerHTML=`
         <input type="checkbox" data-item-id="${data.item.id}" data-slug="${PROJECT_SLUG}">
@@ -735,6 +742,7 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
       // page reload won't be tracker-aware.
       const ttMarkup = (typeof PROJECT_TRACKING !== 'undefined' && PROJECT_TRACKING)
         ? `<span class="cd-tt-today-tag" data-task-today-tag="${data.task.id}" hidden></span>
+           <span class="cd-tt-lifetime-tag" data-task-lifetime-tag="${data.task.id}" hidden></span>
            <button class="cd-tt-row-btn cd-tt-task-btn" data-tt-task-id="${data.task.id}" data-tt-text="${escapeHtml(data.task.title)}" title="Start timer on this task" type="button">⏱</button>`
         : '';
       li.innerHTML=`
@@ -1577,29 +1585,37 @@ function cdEditTask(id) {
     });
   }
 
-  // ---- Today-tag totals on task rows ----
+  // ---- Today-tag totals on task + checklist-item rows ----
   function syncTodayTags() {
     fetch('/time/today/' + PROJECT_ID, {credentials: 'same-origin'})
       .then(function (r) { return r.ok ? r.json() : {entries: []}; })
       .then(function (data) {
-        const totals = {};
+        const taskTotals = {};
+        const itemTotals = {};
         (data.entries || []).forEach(function (e) {
-          if (!e.task_id) return;
           const dur = e.duration_seconds != null
             ? e.duration_seconds
             : Math.floor((Date.now() - new Date(e.started_at).getTime()) / 1000);
-          totals[e.task_id] = (totals[e.task_id] || 0) + Math.max(0, dur);
-        });
-        document.querySelectorAll('[data-task-today-tag]').forEach(function (tag) {
-          const tid = tag.getAttribute('data-task-today-tag');
-          const total = totals[tid];
-          if (total && total > 0) {
-            tag.textContent = 'today: ' + fmt(total);
-            tag.hidden = false;
-          } else {
-            tag.hidden = true;
+          if (e.task_id) {
+            taskTotals[e.task_id] = (taskTotals[e.task_id] || 0) + Math.max(0, dur);
+          } else if (e.checklist_item_id) {
+            itemTotals[e.checklist_item_id] = (itemTotals[e.checklist_item_id] || 0) + Math.max(0, dur);
           }
         });
+        function applyTotals(attr, totals) {
+          document.querySelectorAll('[' + attr + ']').forEach(function (tag) {
+            const id = tag.getAttribute(attr);
+            const total = totals[id];
+            if (total && total > 0) {
+              tag.textContent = 'today: ' + fmt(total);
+              tag.hidden = false;
+            } else {
+              tag.hidden = true;
+            }
+          });
+        }
+        applyTotals('data-task-today-tag', taskTotals);
+        applyTotals('data-item-today-tag', itemTotals);
       })
       .catch(function () {});
   }

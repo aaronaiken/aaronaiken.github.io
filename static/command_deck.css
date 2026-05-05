@@ -2448,6 +2448,38 @@ body.cd-strip-visible .cd-shell { padding-top: 32px; }
 	font-variant-numeric: tabular-nums;
 }
 
+/* "lifetime: H:MM" tag — Phase 2. Server-rendered, dimmer than the today
+   tag so the eye reads them in order. Always present alongside today on
+   tasks; hover-only on checklist items (mirrors the cd-tt-item-btn rule
+   so dense checklists stay scannable). */
+.cd-tt-lifetime-tag {
+	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
+	font-size: 0.55rem;
+	letter-spacing: 0.1em;
+	color: var(--cd-text-dim, #7a6a52);
+	background: rgba(122, 106, 82, 0.08);
+	padding: 1px 6px;
+	border-radius: 2px;
+	flex-shrink: 0;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Checklist-item time tags — hidden until row hover (desktop), low-opacity
+   always (mobile). Same pattern as cd-tt-item-btn. */
+.cd-checklist-item .cd-tt-tag-item {
+	opacity: 0;
+	transition: opacity 0.15s;
+}
+.cd-checklist-item:hover .cd-tt-tag-item,
+.cd-checklist-item.cd-tt-running .cd-tt-tag-item,
+.cd-checklist-item .cd-tt-tag-item:focus {
+	opacity: 1;
+}
+@media (hover: none) {
+	.cd-checklist-item .cd-tt-tag-item { opacity: 0.55; }
+	.cd-checklist-item.cd-tt-running .cd-tt-tag-item { opacity: 1; }
+}
+
 /* Toast — bottom-center, brief */
 .cd-tt-toast {
 	position: fixed;
