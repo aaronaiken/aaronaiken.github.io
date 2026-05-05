@@ -141,6 +141,7 @@ from blueprints.command_deck import command_deck_bp
 from blueprints.mozzie import mozzie_bp
 from blueprints.time_tracking import time_tracking_bp
 from blueprints.healthz import healthz_bp
+from blueprints.reports import reports_bp
 app.register_blueprint(tasks_bp)
 app.register_blueprint(today_bp)
 app.register_blueprint(below_deck_bp)
@@ -150,6 +151,7 @@ app.register_blueprint(command_deck_bp)
 app.register_blueprint(mozzie_bp)
 app.register_blueprint(time_tracking_bp)
 app.register_blueprint(healthz_bp)
+app.register_blueprint(reports_bp)
 
 
 if __name__ == "__main__": app.run(debug=True)
