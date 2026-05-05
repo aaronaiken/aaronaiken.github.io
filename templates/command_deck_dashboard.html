@@ -306,6 +306,10 @@
 <div class="cd-modal-overlay" id="newProjectModal">
   <div class="cd-modal">
     <div class="cd-modal-title">// New Project</div>
+    <label style="display:block;font-family:var(--cd-font-ui);font-size:0.55rem;letter-spacing:0.18em;color:var(--cd-text-dim);text-transform:uppercase;margin-bottom:3px;">SPAWN FROM TEMPLATE (OPTIONAL)</label>
+    <select class="cd-input cd-mb-sm" id="newProjectTemplate" style="margin-bottom:0.5rem;">
+      <option value="">— blank —</option>
+    </select>
     <label style="display:block;font-family:var(--cd-font-ui);font-size:0.55rem;letter-spacing:0.18em;color:var(--cd-text-dim);text-transform:uppercase;margin-bottom:3px;">TYPE</label>
     <select class="cd-input cd-mb-sm" id="newProjectType" style="margin-bottom:0.5rem;">
       <option value="personal">Personal project</option>
@@ -554,9 +558,47 @@ function updateBadge() {
 // NEW PROJECT MODAL
 // ============================================================
 (function() {
+  // Phase 2.3 — fetch project templates once, cache, populate the dropdown
+  // each time the modal opens. Keeps the manager and the picker in sync
+  // across modal opens without needing a full page reload.
+  let cachedProjectTemplates = null;
+  async function populateTemplateDropdown() {
+    const sel = document.getElementById('newProjectTemplate');
+    if (!sel) return;
+    if (cachedProjectTemplates === null) {
+      try {
+        const r = await fetch('/command-deck/templates/list?kind=project', {credentials: 'same-origin'});
+        const d = await r.json();
+        cachedProjectTemplates = d.templates || [];
+      } catch (e) {
+        cachedProjectTemplates = [];
+      }
+    }
+    // Re-render option list
+    const blank = '<option value="">— blank —</option>';
+    const opts = cachedProjectTemplates.map(t =>
+      `<option value="${t.id}">${escapeHtml(t.name)}</option>`
+    ).join('');
+    sel.innerHTML = blank + opts;
+  }
+
   function openNewProject() {
     document.getElementById('newProjectModal').classList.add('open');
+    populateTemplateDropdown();
     document.getElementById('newProjectTitle').focus();
+  }
+
+  // Auto-fill title when a template is picked (still editable)
+  const templateSelect = document.getElementById('newProjectTemplate');
+  if (templateSelect) {
+    templateSelect.addEventListener('change', function () {
+      if (!templateSelect.value) return;
+      const opt = templateSelect.options[templateSelect.selectedIndex];
+      const titleEl = document.getElementById('newProjectTitle');
+      if (titleEl && !titleEl.value.trim()) {
+        titleEl.value = opt.textContent;
+      }
+    });
   }
 
   document.querySelectorAll('#newProjectBtn').forEach(btn => {
@@ -608,17 +650,19 @@ function updateBadge() {
       return;
     }
 
-    // Personal project — existing form-submit flow
+    // Personal project — existing form-submit flow (extended with template_id)
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '/command-deck/projects/new';
     const isPrivate = document.getElementById('newProjectPrivate').checked ? '1' : '0';
     const trackPers = document.getElementById('newProjectTrackingPersonal').checked ? '1' : '0';
+    const templateId = (document.getElementById('newProjectTemplate') || {}).value || '';
     form.innerHTML = `
       <input name="title" value="${escapeHtml(title)}">
       <input name="description" value="${escapeHtml(desc)}">
       <input name="is_private" value="${isPrivate}">
       <input name="tracking_enabled" value="${trackPers}">
+      <input name="template_id" value="${escapeHtml(templateId)}">
     `;
     document.body.appendChild(form);
     form.submit();
