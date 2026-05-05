@@ -153,7 +153,8 @@
     currentCount = n;
     var el = document.getElementById('todayCountLabel');
     if (el) {
-      el.textContent = n === 1 ? '1 task selected' : n + ' tasks selected';
+      // Phase 2.1 — today_open mixes tasks and items; label now reflects both.
+      el.textContent = n === 1 ? '1 item selected' : n + ' items selected';
     }
   }
 
@@ -171,8 +172,13 @@
   }
 
   function renderMasterList(belowDeck, projects, todayOpen) {
+    // Phase 2.1 — todayOpen now mixes tasks AND items (kind discriminator).
+    // The master browse is task-only, so build the lookup from task entries
+    // only to avoid task-id vs item-id collisions.
     var todayIds = {};
-    todayOpen.forEach(function(t) { todayIds[t.id] = true; });
+    todayOpen.forEach(function(t) {
+      if ((t.kind || 'task') === 'task') todayIds[t.id] = true;
+    });
 
     var totalTasks = belowDeck.length + projects.reduce(function(s, p) { return s + p.tasks.length; }, 0);
 
