@@ -2317,6 +2317,89 @@ body.cd-strip-visible .cd-shell { padding-top: 32px; }
 	font-variant-numeric: tabular-nums;
 }
 .cd-tt-entry-desc { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* ============================================================
+   TEMPLATES MANAGER PAGE — Phase 2.3
+   ============================================================ */
+
+.cd-templates-intro {
+  font-family: var(--cd-font-body);
+  font-size: 0.85rem;
+  color: var(--cd-text-dim);
+  line-height: 1.5;
+  margin: 0 0 1.25rem;
+  max-width: 60ch;
+}
+
+.cd-templates-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cd-gap);
+}
+@media (max-width: 720px) {
+  .cd-templates-grid { grid-template-columns: 1fr; }
+}
+
+.cd-templates-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cd-template-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--cd-border);
+}
+.cd-template-row:last-child { border-bottom: none; }
+.cd-template-row:hover { background: rgba(212, 136, 10, 0.04); }
+
+.cd-template-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.cd-template-name {
+  font-family: var(--cd-font-heading);
+  font-size: 0.95rem;
+  color: var(--cd-text);
+  word-break: break-word;
+}
+
+.cd-template-desc {
+  font-family: var(--cd-font-body);
+  font-size: 0.78rem;
+  color: var(--cd-text-dim);
+  margin-top: 0.15rem;
+  word-break: break-word;
+}
+
+.cd-template-meta {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  color: var(--cd-text-dim);
+  text-transform: uppercase;
+  margin-top: 0.3rem;
+}
+
+.cd-template-row-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.cd-panel-count {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  color: var(--cd-text-dim);
+  margin-left: 0.5rem;
+}
+
 /* Inline start/end time-edit on stopped entries — project page today-list */
 button.cd-tt-time-edit-trigger {
 	background: none;

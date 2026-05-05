@@ -95,6 +95,47 @@ def _fetch_subprojects(conn, area_id=None, favorites_only=False):
 
 # ---- Templates (Phase 2.3) ----
 
+@command_deck_bp.route('/command-deck/templates/')
+@command_deck_bp.route('/command-deck/templates')
+@cd_auth_required
+def cd_templates_page():
+	"""Manager page — lists project + checklist templates with rename + delete."""
+	conn = get_db()
+	rows = conn.execute('''
+		SELECT id, kind, name, description, body_json, created, updated
+		FROM templates
+		ORDER BY kind ASC, updated DESC
+	''').fetchall()
+	project_templates = []
+	checklist_templates = []
+	for r in rows:
+		entry = dict(r)
+		# Compute lightweight summary fields for the manager UI; never expose
+		# raw body_json into the rendered HTML beyond what we use for counts.
+		try:
+			body = json.loads(entry['body_json'] or '{}')
+		except (ValueError, TypeError):
+			body = {}
+		if entry['kind'] == 'project':
+			entry['block_count'] = len(body.get('blocks') or [])
+			entry['task_count'] = len(body.get('tasks') or [])
+			project_templates.append(entry)
+		else:
+			entry['item_count'] = len(body.get('items') or [])
+			entry['title_in_body'] = (body.get('title') or '').strip()
+			checklist_templates.append(entry)
+		# Drop the raw JSON before passing to the template — manager UI
+		# doesn't render it.
+		entry.pop('body_json', None)
+	conn.close()
+	return render_template(
+		'command_deck_templates.html',
+		project_templates=project_templates,
+		checklist_templates=checklist_templates,
+		private_projects_enabled=bool(PRIVATE_PROJECTS_PIN),
+	)
+
+
 @command_deck_bp.route('/command-deck/templates/list', methods=['GET'])
 @cd_auth_required
 def cd_templates_list():
