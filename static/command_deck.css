@@ -2330,6 +2330,47 @@ body.cd-strip-visible .cd-shell { padding-top: 32px; }
   max-width: 60ch;
 }
 
+/* Phase 2.3 polish — MORE ▾ overflow menu in the CD header nav */
+.cd-nav-more {
+  position: relative;
+  display: inline-block;
+}
+.cd-nav-more > summary.cd-nav-more-trigger {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  display: inline-block;
+}
+.cd-nav-more > summary.cd-nav-more-trigger::-webkit-details-marker {
+  display: none;
+}
+.cd-nav-more-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  min-width: 9em;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.4rem 0;
+  background: var(--cd-bg-raised);
+  border: 1px solid var(--cd-border-amber);
+  border-radius: var(--cd-radius);
+  box-shadow: 0 8px 24px var(--cd-shadow);
+  z-index: 200;
+}
+.cd-nav-more-menu .cd-nav-link {
+  display: block;
+  padding: 0.35rem 0.85rem;
+  white-space: nowrap;
+}
+.cd-nav-more-menu .cd-nav-link:hover,
+.cd-nav-more-menu .cd-nav-link:focus-visible {
+  background: rgba(245, 179, 50, 0.10);
+  outline: none;
+}
+
 .cd-templates-welcome {
   background: var(--cd-bg-surface);
   border: 1px dashed var(--cd-border-amber);

@@ -27,9 +27,13 @@
       <span class="cd-nav-sep">·</span>
       <a href="/today/" class="cd-nav-link">TODAY</a>
       <span class="cd-nav-sep">·</span>
-      <a href="/command-deck/reports/" class="cd-nav-link">REPORTS</a>
-      <span class="cd-nav-sep">·</span>
-      <a href="/command-deck/templates/" class="cd-nav-link">TEMPLATES</a>
+      <details class="cd-nav-more">
+        <summary class="cd-nav-link cd-nav-more-trigger">MORE ▾</summary>
+        <div class="cd-nav-more-menu">
+          <a href="/command-deck/reports/" class="cd-nav-link">REPORTS</a>
+          <a href="/command-deck/templates/" class="cd-nav-link">TEMPLATES</a>
+        </div>
+      </details>
       <span class="cd-nav-sep">·</span>
       <a href="/publish" class="cd-nav-link">COCKPIT</a>
     </nav>
@@ -606,5 +610,6 @@ function escapeHtml(str){const d=document.createElement('div');d.appendChild(doc
 
 {% include 'includes/today_panel.html' %}
 {% include 'includes/active_timer_strip.html' %}
+<script src="/static/command_deck_nav.js"></script>
 </body>
 </html>
