@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Templates · Command Deck</title>
+  <link rel="stylesheet" href="/static/command_deck.css">
+</head>
+<body class="command-deck">
+<div class="cd-shell">
+
+  <!-- HEADER -->
+  <header class="cd-header">
+    <div class="cd-header-left">
+      <a href="/command-deck/" class="cd-wordmark">COMMAND DECK</a>
+      <span class="cd-ident">TEMPLATES · SCAFFOLDING</span>
+    </div>
+    <nav class="cd-header-nav">
+      <a href="/command-deck/" class="cd-nav-link">BRIDGE</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/projects/" class="cd-nav-link">PROJECTS</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/below-deck" class="cd-nav-link">
+        BELOW DECK
+        <span class="cd-bd-badge" id="bdBadge"></span>
+      </a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/today/" class="cd-nav-link">TODAY</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/reports/" class="cd-nav-link">REPORTS</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/templates/" class="cd-nav-link active">TEMPLATES</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/publish" class="cd-nav-link">COCKPIT</a>
+    </nav>
+  </header>
+
+  {% include 'includes/today_panel.html' %}
+  {% include 'includes/active_timer_strip.html' %}
+
+  <!-- MAIN -->
+  <div class="cd-main full-width">
+
+    <div class="cd-templates-intro">
+      Templates capture the structure of a recurring project or checklist —
+      save a known-good shape from any project page or block header, then
+      spawn fresh copies whenever you need them. Items always start
+      unchecked; tasks always start open.
+    </div>
+
+    <div class="cd-templates-grid">
+
+      <!-- PROJECT TEMPLATES -->
+      <div class="cd-panel">
+        <div class="cd-panel-header">
+          <span class="cd-panel-title">// Project Templates</span>
+          <span class="cd-panel-count">{{ project_templates | length }}</span>
+        </div>
+        <div class="cd-panel-body">
+          {% if project_templates %}
+            <ul class="cd-templates-list">
+              {% for t in project_templates %}
+                <li class="cd-template-row" data-template-id="{{ t.id }}" data-kind="project">
+                  <div class="cd-template-row-main">
+                    <div class="cd-template-name">{{ t.name }}</div>
+                    {% if t.description %}
+                      <div class="cd-template-desc">{{ t.description }}</div>
+                    {% endif %}
+                    <div class="cd-template-meta">
+                      {{ t.block_count }} block{{ '' if t.block_count == 1 else 's' }} ·
+                      {{ t.task_count }} task{{ '' if t.task_count == 1 else 's' }} ·
+                      updated {{ t.updated[:10] }}
+                    </div>
+                  </div>
+                  <div class="cd-template-row-actions">
+                    <button class="cd-btn ghost sm cd-template-rename" type="button" data-id="{{ t.id }}" data-current="{{ t.name }}">RENAME</button>
+                    <button class="cd-btn ghost sm cd-template-delete" type="button" data-id="{{ t.id }}" data-name="{{ t.name }}">DELETE</button>
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="cd-empty">
+              No project templates yet. Save a project as a template from any project page.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- CHECKLIST TEMPLATES -->
+      <div class="cd-panel">
+        <div class="cd-panel-header">
+          <span class="cd-panel-title">// Checklist Templates</span>
+          <span class="cd-panel-count">{{ checklist_templates | length }}</span>
+        </div>
+        <div class="cd-panel-body">
+          {% if checklist_templates %}
+            <ul class="cd-templates-list">
+              {% for t in checklist_templates %}
+                <li class="cd-template-row" data-template-id="{{ t.id }}" data-kind="checklist">
+                  <div class="cd-template-row-main">
+                    <div class="cd-template-name">{{ t.name }}</div>
+                    {% if t.title_in_body and t.title_in_body != t.name %}
+                      <div class="cd-template-desc">spawns block titled "{{ t.title_in_body }}"</div>
+                    {% endif %}
+                    <div class="cd-template-meta">
+                      {{ t.item_count }} item{{ '' if t.item_count == 1 else 's' }} ·
+                      updated {{ t.updated[:10] }}
+                    </div>
+                  </div>
+                  <div class="cd-template-row-actions">
+                    <button class="cd-btn ghost sm cd-template-rename" type="button" data-id="{{ t.id }}" data-current="{{ t.name }}">RENAME</button>
+                    <button class="cd-btn ghost sm cd-template-delete" type="button" data-id="{{ t.id }}" data-name="{{ t.name }}">DELETE</button>
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="cd-empty">
+              No checklist templates yet. Save a checklist block as a template from any project page.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div><!-- /.cd-templates-grid -->
+
+  </div><!-- /.cd-main -->
+
+  <!-- FOOTER -->
+  <footer class="cd-footer">
+    <div class="cd-footer-links">
+      <a href="/command-deck/" class="cd-footer-link">Bridge</a>
+      <a href="/command-deck/projects/" class="cd-footer-link">Projects</a>
+      <a href="/publish" class="cd-footer-link">Cockpit</a>
+    </div>
+    {% include 'includes/cd_footer_status.html' %}
+    <span class="cd-footer-ident">YT-1300F · COMMAND DECK · SECURE</span>
+  </footer>
+
+</div><!-- /.cd-shell -->
+
+<script>
+(function () {
+  'use strict';
+
+  // Below Deck badge
+  fetch('/below-deck/count').then(function (r) { return r.json(); }).then(function (d) {
+    var el = document.getElementById('bdBadge');
+    if (!el || !d.count) return;
+    el.classList.add(d.count <= 3 ? 'green' : (d.count <= 6 ? 'amber' : 'red'));
+  }).catch(function () {});
+
+  // Rename
+  document.querySelectorAll('.cd-template-rename').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.getAttribute('data-id');
+      var current = btn.getAttribute('data-current');
+      var next = prompt('Rename template:', current);
+      if (next == null) return;
+      next = next.trim();
+      if (!next || next === current) return;
+      fetch('/command-deck/templates/' + id + '/update', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: next}),
+        credentials: 'same-origin',
+      }).then(function (r) {
+        if (r.ok) location.reload();
+        else alert('Could not rename.');
+      });
+    });
+  });
+
+  // Delete (with confirm)
+  document.querySelectorAll('.cd-template-delete').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.getAttribute('data-id');
+      var name = btn.getAttribute('data-name');
+      if (!confirm('Delete template "' + name + '"? This cannot be undone.')) return;
+      fetch('/command-deck/templates/' + id + '/delete', {
+        method: 'POST',
+        credentials: 'same-origin',
+      }).then(function (r) {
+        if (r.ok) {
+          var row = btn.closest('.cd-template-row');
+          if (row) row.remove();
+        } else {
+          alert('Could not delete.');
+        }
+      });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
