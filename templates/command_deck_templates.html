@@ -48,6 +48,20 @@
       unchecked; tasks always start open.
     </div>
 
+    {% if not project_templates and not checklist_templates %}
+    <div class="cd-templates-welcome">
+      <div class="cd-templates-welcome-title">// No templates yet</div>
+      <div class="cd-templates-welcome-body">
+        Open any project page and click <strong>SAVE AS TEMPLATE</strong> to
+        snapshot its blocks, items, and tasks. Or click <strong>TEMPLATE</strong>
+        on a checklist block header to capture just that checklist for reuse.
+      </div>
+      <div class="cd-templates-welcome-actions">
+        <a href="/command-deck/projects/" class="cd-btn primary">BROWSE PROJECTS</a>
+      </div>
+    </div>
+    {% else %}
+
     <div class="cd-templates-grid">
 
       <!-- PROJECT TEMPLATES -->
@@ -124,6 +138,7 @@
       </div>
 
     </div><!-- /.cd-templates-grid -->
+    {% endif %}
 
   </div><!-- /.cd-main -->
 
