@@ -1,9 +1,9 @@
-"""Today blueprint — daily focus master view + per-task/item star/complete + 4am ET auto-clear.
+"""Today blueprint — daily focus master view + per-task/item/block star/complete + 4am ET auto-clear.
 
-Phase 2.1 (.kt/spec-time-tracking-phase-2-1.md): checklist items are first-
-class Today citizens alongside tasks. /today/star, /today/complete, and
-/today/data all accept task_id OR item_id (mutually exclusive); the
-auto-clear pass clears today=0 on checked items past 4am ET.
+Phase 2.1 (.kt/spec-time-tracking-phase-2-1.md): checklist items as Today
+citizens. Phase 2.2 (.kt/spec-time-tracking-phase-2-2.md): blocks join the
+party as their own peer rows; checklist_items.checked_at stamped on every
+toggle drives a precise (vs sloppy) 4am autoclear cutoff.
 """
 from datetime import datetime, timedelta
 import pytz
@@ -11,6 +11,13 @@ from flask import Blueprint, request, redirect, url_for, jsonify, render_templat
 
 from helpers.auth import is_authenticated
 from helpers.db import get_db, et_now
+
+
+_UTC_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+
+
+def _utc_now_iso():
+	return datetime.now(pytz.UTC).strftime(_UTC_FORMAT)
 
 
 today_bp = Blueprint('today', __name__)
@@ -21,11 +28,14 @@ def _today_autoclear(conn):
 
 	Tasks: cleared when status='completed' AND completed_date < today's
 	       4am ET cutoff.
-	Items: cleared when checked=1, simply rolled off at every autoclear
-	       pass past 4am. checklist_items has no checked_at column yet
-	       (Phase 2.2 adds it for stricter timing) — for v1, accept the
-	       sloppiness: an item checked at 11pm + starred at 11:55pm
-	       would lose the star at 4am. Documented in spec §5.5.
+	Items (Phase 2.2): cleared when checked=1 AND checked_at IS NOT NULL
+	       AND checked_at < UTC(4am ET cutoff). Items with NULL
+	       checked_at survive — we don't know when they were checked,
+	       so we don't presume.
+	Blocks (Phase 2.2): cleared when (a) the block has at least one
+	       item, (b) every item is checked, AND (c) every item's
+	       checked_at is non-null AND before the 4am cutoff. Empty
+	       starred blocks persist (no surprise removal).
 	"""
 	eastern = pytz.timezone('US/Eastern')
 	now_et = datetime.now(eastern)
@@ -33,7 +43,14 @@ def _today_autoclear(conn):
 		cutoff_date = (now_et - timedelta(days=1)).strftime('%Y-%m-%d')
 	else:
 		cutoff_date = now_et.strftime('%Y-%m-%d')
-	cutoff = f"{cutoff_date}T04:00:00"
+	# Tasks compare against an ET-local string (their completed_date is also
+	# stored as an ET-local ISO from et_now()). Items compare against UTC
+	# (their checked_at is stored in UTC by the toggle handler).
+	cutoff_et = f"{cutoff_date}T04:00:00"
+	cutoff_utc_dt = eastern.localize(
+		datetime.strptime(cutoff_et, '%Y-%m-%dT%H:%M:%S')
+	).astimezone(pytz.UTC)
+	cutoff_utc = cutoff_utc_dt.strftime(_UTC_FORMAT)
 
 	conn.execute('''
 		UPDATE tasks SET today = 0
@@ -41,11 +58,35 @@ def _today_autoclear(conn):
 		  AND status = 'completed'
 		  AND completed_date IS NOT NULL
 		  AND completed_date < ?
-	''', (cutoff,))
+	''', (cutoff_et,))
 	conn.execute('''
 		UPDATE checklist_items SET today = 0
-		WHERE today = 1 AND checked = 1
-	''')
+		WHERE today = 1
+		  AND checked = 1
+		  AND checked_at IS NOT NULL
+		  AND checked_at < ?
+	''', (cutoff_utc,))
+	conn.execute('''
+		UPDATE blocks SET today = 0
+		WHERE today = 1
+		  AND id IN (
+		    SELECT b.id FROM blocks b
+		    WHERE b.today = 1
+		      AND EXISTS (
+		        SELECT 1 FROM checklist_items ci WHERE ci.block_id = b.id
+		      )
+		      AND NOT EXISTS (
+		        SELECT 1 FROM checklist_items ci
+		        WHERE ci.block_id = b.id AND ci.checked = 0
+		      )
+		      AND NOT EXISTS (
+		        SELECT 1 FROM checklist_items ci
+		        WHERE ci.block_id = b.id
+		          AND ci.checked = 1
+		          AND (ci.checked_at IS NULL OR ci.checked_at >= ?)
+		      )
+		  )
+	''', (cutoff_utc,))
 	conn.commit()
 
 
@@ -264,7 +305,13 @@ def today_complete():
 		if not item:
 			conn.close()
 			return jsonify({'error': 'not_found'}), 404
-		conn.execute('UPDATE checklist_items SET checked = 1 WHERE id = ?', (item_id,))
+		# Phase 2.2 — stamp checked_at parallel to the project-page toggle
+		# handler so the autoclear precision works regardless of which
+		# surface the item gets checked from.
+		conn.execute(
+			'UPDATE checklist_items SET checked = 1, checked_at = ? WHERE id = ?',
+			(_utc_now_iso(), item_id)
+		)
 		conn.execute(
 			'UPDATE projects SET updated = ? WHERE id = ?',
 			(now, item['project_id'])
