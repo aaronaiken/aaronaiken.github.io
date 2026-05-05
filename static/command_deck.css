@@ -3038,6 +3038,104 @@ body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
   .cd-reports-row-bar-fill { transition: none; }
 }
 
+/* Timesheet view — project × day matrix.
+   Allows horizontal scroll for long ranges; sticky first column +
+   sticky header so labels stay anchored as the user scans across
+   the week. */
+.cd-timesheet-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--cd-border);
+  border-radius: var(--cd-radius);
+}
+
+.cd-timesheet-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--cd-font-body);
+  font-size: 0.8rem;
+  min-width: 32em;
+}
+
+.cd-timesheet-table th,
+.cd-timesheet-table td {
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--cd-border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.cd-timesheet-table thead th {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cd-text-dim);
+  background: var(--cd-bg-surface);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 1px solid var(--cd-border-amber);
+}
+
+.cd-timesheet-row-head {
+  font-family: var(--cd-font-body);
+  color: var(--cd-text);
+  text-align: left;
+  font-weight: normal;
+  position: sticky;
+  left: 0;
+  background: var(--cd-bg-surface);
+  z-index: 1;
+  border-right: 1px solid var(--cd-border);
+}
+
+.cd-timesheet-row-head .cd-reports-row-sub {
+  display: block;
+  margin-top: 0.15rem;
+}
+
+.cd-timesheet-table tbody td {
+  color: var(--cd-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.cd-timesheet-row-total {
+  color: var(--cd-amber-hi);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.cd-timesheet-table thead th.cd-timesheet-total-head {
+  color: var(--cd-amber-hi);
+}
+
+.cd-timesheet-table tfoot th,
+.cd-timesheet-table tfoot td {
+  border-top: 1px solid var(--cd-border-amber);
+  border-bottom: none;
+  font-family: var(--cd-font-ui);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cd-amber-hi);
+  background: var(--cd-bg-surface);
+}
+
+.cd-timesheet-table tfoot .cd-timesheet-row-head {
+  color: var(--cd-text-dim);
+}
+
+.cd-reports-inline-link {
+  background: none;
+  border: none;
+  color: var(--cd-amber-hi);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
 @media (max-width: 720px) {
   .cd-reports-row {
     grid-template-columns: 4px 1fr 2.5em 4em;
