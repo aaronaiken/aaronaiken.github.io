@@ -109,6 +109,11 @@ from blueprints.ani import ani_notify_publish  # used by publish_status
 
 from helpers.db import get_db, slugify, unique_slug, et_now
 
+# Jinja global for the CD footer pill — lazy: only invoked when the
+# includes/cd_footer_status.html partial actually renders.
+from helpers.backup_status import get_last_backup_status
+app.jinja_env.globals['last_backup_status'] = get_last_backup_status
+
 # ---- EXISTING ROUTES ----
 
 # ---- COCKPIT ROUTES ---- (moved to blueprints/cockpit.py)
