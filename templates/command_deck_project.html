@@ -1423,11 +1423,23 @@ function cdEditTask(id) {
         const isRunning = !e.ended_at;
         const elapsed = e.duration_seconds != null ? e.duration_seconds : Math.floor((Date.now() - new Date(e.started_at).getTime()) / 1000);
         total += Math.max(0, elapsed|0);
-        let contextBadge = '';
+        // Phase 2: badge becomes a click-to-reassign trigger. Stopped entries
+        // get the dropdown; running entries stay static (re-assigning a live
+        // timer is fiddly UX, defer to v2.5+ if it surfaces).
+        let contextBadge;
+        const triggerCls = isRunning ? 'cd-tt-entry-context' : 'cd-tt-entry-context cd-tt-assign-trigger';
+        const triggerTag = isRunning ? 'span' : 'button';
+        const triggerAttrs = isRunning
+          ? ''
+          : ' type="button" data-entry-id="' + e.id + '"';
         if (e.task_title) {
-          contextBadge = '<span class="cd-tt-entry-context task">[task: ' + escHtml(e.task_title) + ']</span>';
+          contextBadge = '<' + triggerTag + ' class="' + triggerCls + ' task"' + triggerAttrs + '>[task: ' + escHtml(e.task_title) + ']' + (isRunning ? '' : ' ▾') + '</' + triggerTag + '>';
         } else if (e.checklist_item_text) {
-          contextBadge = '<span class="cd-tt-entry-context item">[item: ' + escHtml(e.checklist_item_text) + ']</span>';
+          contextBadge = '<' + triggerTag + ' class="' + triggerCls + ' item"' + triggerAttrs + '>[item: ' + escHtml(e.checklist_item_text) + ']' + (isRunning ? '' : ' ▾') + '</' + triggerTag + '>';
+        } else if (!isRunning) {
+          contextBadge = '<button type="button" class="cd-tt-entry-context cd-tt-assign-trigger unassigned" data-entry-id="' + e.id + '">[+ assign ▾]</button>';
+        } else {
+          contextBadge = '';
         }
         return '<div class="cd-tt-entry' + (isRunning ? ' is-running' : '') + '" data-id="' + e.id + '">' +
           '<span class="cd-tt-entry-time">' + fmtTimeOfDay(e.started_at) + '–' + (e.ended_at ? fmtTimeOfDay(e.ended_at) : 'now') + '</span>' +
@@ -1453,9 +1465,121 @@ function cdEditTask(id) {
         await window.TimeTrackerCore.deleteTimer(b.getAttribute('data-id'));
         loadTodayTime();
       }));
+      todayList.querySelectorAll('.cd-tt-assign-trigger').forEach(b => b.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        openAssignDropdown(b.getAttribute('data-entry-id'), b);
+      }));
     } catch (e) {
       todayList.innerHTML = '<div class="cd-text-dim" style="font-size:0.7rem;">Could not load.</div>';
     }
+  }
+
+  // ---- Phase 2: inline re-assign dropdown ----
+  // Click a [task: X] / [item: Y] / [+ assign ▾] badge on a stopped entry →
+  // dropdown of project tasks + checklist items. Selection POSTs to
+  // /time/<id>/update with mutually-exclusive task_id + checklist_item_id
+  // payload (always sends both — sets one, clears the other — so the server
+  // never sees a both-non-null payload from this UI).
+  let openDropdown = null;
+  function closeAssignDropdown() {
+    if (openDropdown) {
+      openDropdown.remove();
+      openDropdown = null;
+    }
+    document.removeEventListener('click', closeOnOutside, true);
+    document.removeEventListener('keydown', closeOnEsc, true);
+  }
+  function closeOnOutside(ev) {
+    if (!openDropdown) return;
+    if (openDropdown.contains(ev.target)) return;
+    closeAssignDropdown();
+  }
+  function closeOnEsc(ev) {
+    if (ev.key === 'Escape') {
+      ev.stopPropagation();
+      closeAssignDropdown();
+    }
+  }
+  function openAssignDropdown(entryId, anchorEl) {
+    closeAssignDropdown();
+
+    // Walk DOM for the project's tasks + items so newly-added rows are
+    // picked up without a re-render of the dropdown source data.
+    const tasks = Array.from(document.querySelectorAll('#projectTaskList .cd-task-item[data-id]'))
+      .map(li => ({
+        id: li.dataset.id,
+        title: (li.dataset.taskTitle || (li.querySelector('.cd-task-title') || {}).textContent || '').trim(),
+      }))
+      .filter(t => t.title);
+    const items = Array.from(document.querySelectorAll('.cd-checklist-item[data-item-id]'))
+      .map(li => ({
+        id: li.dataset.itemId,
+        text: (li.dataset.itemText || (li.querySelector('label') || {}).textContent || '').trim(),
+      }))
+      .filter(i => i.text);
+
+    const dd = document.createElement('div');
+    dd.className = 'cd-tt-assign-dropdown';
+    let html = '<div class="cd-tt-assign-header">// Change assignment</div>';
+    if (tasks.length) {
+      html += '<div class="cd-tt-assign-label">Tasks</div>';
+      tasks.forEach(t => {
+        html += '<button type="button" class="cd-tt-assign-option" data-task-id="' + t.id + '">' + escHtml(t.title) + '</button>';
+      });
+    }
+    if (items.length) {
+      html += '<div class="cd-tt-assign-label">Checklist items</div>';
+      items.forEach(i => {
+        html += '<button type="button" class="cd-tt-assign-option" data-item-id="' + i.id + '">' + escHtml(i.text) + '</button>';
+      });
+    }
+    if (!tasks.length && !items.length) {
+      html += '<div class="cd-tt-assign-empty">No tasks or checklist items on this project yet.</div>';
+    }
+    html += '<div class="cd-tt-assign-divider"></div>';
+    html += '<button type="button" class="cd-tt-assign-option clear" data-clear="1">Clear assignment</button>';
+    dd.innerHTML = html;
+
+    document.body.appendChild(dd);
+    const rect = anchorEl.getBoundingClientRect();
+    dd.style.position = 'absolute';
+    dd.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+    dd.style.left = (rect.left + window.scrollX) + 'px';
+    // Clamp horizontally so the dropdown doesn't fall off the right edge
+    const ddRect = dd.getBoundingClientRect();
+    if (ddRect.right > window.innerWidth - 8) {
+      dd.style.left = (window.innerWidth - ddRect.width - 8 + window.scrollX) + 'px';
+    }
+    openDropdown = dd;
+
+    dd.addEventListener('click', async (ev) => {
+      const btn = ev.target.closest('.cd-tt-assign-option');
+      if (!btn) return;
+      btn.disabled = true;
+      const payload = { task_id: '', checklist_item_id: '' };
+      if (btn.dataset.taskId) payload.task_id = btn.dataset.taskId;
+      else if (btn.dataset.itemId) payload.checklist_item_id = btn.dataset.itemId;
+      // (data-clear sends both empty — already the default payload)
+      try {
+        const r = await fetch('/time/' + entryId + '/update', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload),
+          credentials: 'same-origin',
+        });
+        closeAssignDropdown();
+        if (r.ok) loadTodayTime();
+      } catch (e) {
+        btn.disabled = false;
+      }
+    });
+
+    // Defer the listener attachment so the click that opened us doesn't
+    // immediately close us.
+    setTimeout(() => {
+      document.addEventListener('click', closeOnOutside, true);
+      document.addEventListener('keydown', closeOnEsc, true);
+    }, 0);
   }
 
   // Re-render on every tick + every TimeTrackerCore poll
