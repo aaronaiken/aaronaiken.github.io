@@ -420,6 +420,51 @@ def time_update(entry_id):
 	return jsonify({'success': True, 'entry': _serialize_entry(row)})
 
 
+@time_tracking_bp.route('/time/today/total', methods=['GET'])
+def time_today_total():
+	"""Phase 2 §3.4 — today's tracked time across all projects (ET day).
+
+	Returns both:
+	  stopped_today_seconds — sum of duration_seconds for entries with
+	    ended_at set today. The client adds local elapsed-so-far for
+	    any running entries (from /time/active) to get a live total
+	    that ticks up every second without polling this route every
+	    second.
+	  today_total_seconds — convenience snapshot at fetch time. Equal
+	    to stopped + sum of running elapsed AT fetch time. Useful for
+	    consumers that don't subscribe to /time/active.
+
+	Drives the today total in the Cockpit floating-panel titlebar."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 403
+	start_utc, end_utc = _et_today_bounds_utc()
+	conn = get_db()
+	rows = conn.execute('''
+		SELECT started_at, ended_at, duration_seconds
+		FROM time_entries
+		WHERE started_at >= ? AND started_at < ?
+	''', (start_utc, end_utc)).fetchall()
+	conn.close()
+
+	stopped = 0
+	running_elapsed = 0
+	now = datetime.now(pytz.UTC)
+	for r in rows:
+		if r['ended_at'] and r['duration_seconds'] is not None:
+			stopped += max(0, int(r['duration_seconds']))
+		elif not r['ended_at']:
+			started = _parse_iso_utc(r['started_at'])
+			if started:
+				running_elapsed += max(0, int((now - started).total_seconds()))
+
+	today_et = datetime.now(pytz.timezone('US/Eastern')).date().isoformat()
+	return jsonify({
+		'stopped_today_seconds': stopped,
+		'today_total_seconds': stopped + running_elapsed,
+		'today_date': today_et,
+	})
+
+
 @time_tracking_bp.route('/time/<int:entry_id>/delete', methods=['POST'])
 def time_delete(entry_id):
 	if not is_authenticated():
