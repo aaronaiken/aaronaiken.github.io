@@ -2331,6 +2331,94 @@ body.cd-strip-visible .cd-shell { padding-top: 32px; }
 	max-width: 200px;
 	flex-shrink: 0;
 }
+button.cd-tt-entry-context.cd-tt-assign-trigger {
+	border: 1px solid transparent;
+	cursor: pointer;
+	font: inherit;
+	transition: background 0.15s, border-color 0.15s;
+}
+button.cd-tt-entry-context.cd-tt-assign-trigger:hover,
+button.cd-tt-entry-context.cd-tt-assign-trigger:focus-visible {
+	background: rgba(212, 136, 10, 0.13);
+	border-color: var(--cd-amber-lo);
+	outline: none;
+}
+button.cd-tt-entry-context.unassigned {
+	color: var(--cd-text-dim);
+	background: rgba(122, 106, 82, 0.08);
+}
+
+/* Phase 2 inline re-assign dropdown */
+.cd-tt-assign-dropdown {
+	position: absolute;
+	z-index: 11000;
+	min-width: 14em;
+	max-width: 22em;
+	max-height: 60vh;
+	overflow-y: auto;
+	background: var(--cd-bg-raised);
+	border: 1px solid var(--cd-border-amber);
+	border-radius: var(--cd-radius);
+	box-shadow: 0 8px 24px var(--cd-shadow);
+	padding: 0.4rem 0;
+	font-family: var(--cd-font-body);
+}
+.cd-tt-assign-header {
+	font-family: var(--cd-font-ui);
+	font-size: 0.55rem;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--cd-amber-hi);
+	padding: 0.3rem 0.75rem 0.5rem;
+	border-bottom: 1px solid var(--cd-border);
+	margin-bottom: 0.25rem;
+}
+.cd-tt-assign-label {
+	font-family: var(--cd-font-ui);
+	font-size: 0.5rem;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--cd-text-dim);
+	padding: 0.45rem 0.75rem 0.2rem;
+}
+.cd-tt-assign-option {
+	display: block;
+	width: 100%;
+	background: none;
+	border: none;
+	text-align: left;
+	font-family: var(--cd-font-body);
+	font-size: 0.78rem;
+	color: var(--cd-text);
+	padding: 0.35rem 0.85rem;
+	cursor: pointer;
+	transition: background 0.1s;
+}
+.cd-tt-assign-option:hover,
+.cd-tt-assign-option:focus-visible {
+	background: rgba(245, 179, 50, 0.10);
+	color: var(--cd-amber-hi);
+	outline: none;
+}
+.cd-tt-assign-option.clear {
+	color: var(--cd-text-dim);
+	font-family: var(--cd-font-ui);
+	font-size: 0.62rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+.cd-tt-assign-divider {
+	height: 1px;
+	background: var(--cd-border);
+	margin: 0.35rem 0;
+}
+.cd-tt-assign-empty {
+	padding: 0.6rem 0.85rem;
+	font-family: var(--cd-font-ui);
+	font-size: 0.62rem;
+	color: var(--cd-text-dim);
+	letter-spacing: 0.06em;
+}
 .cd-tt-entry-elapsed {
 	font-variant-numeric: tabular-nums;
 	min-width: 60px;
