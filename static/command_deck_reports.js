@@ -8,8 +8,8 @@
 	'use strict';
 
 	const PRESETS = ['today', 'this-week', 'this-month', 'custom'];
-	const GROUPS_PHASE_4 = ['area', 'project', 'day', 'timesheet']; // timesheet lands in commit 5
-	const VALID_GROUPS = ['area', 'project', 'day'];
+	const VALID_GROUPS = ['area', 'project', 'day', 'timesheet'];
+	const TIMESHEET_DAY_CAP = 31;
 
 	const state = {
 		preset: localStorage.getItem('reportsPeriod') || 'this-week',
@@ -174,7 +174,95 @@
 			renderBucketRows(root, bucket, total, { label: 'project' });
 		} else if (state.group === 'day') {
 			renderDayRows(root, data.totals.by_day, total);
+		} else if (state.group === 'timesheet') {
+			renderTimesheet(root, data);
 		}
+	}
+
+	function renderTimesheet(root, data) {
+		const dayKeys = Object.keys(data.totals.by_day).sort();
+
+		if (dayKeys.length > TIMESHEET_DAY_CAP) {
+			root.innerHTML = `
+				<div class="cd-reports-error">
+					// Timesheet view is capped at ${TIMESHEET_DAY_CAP} days
+					(this period spans ${dayKeys.length}). Switch to
+					<button class="cd-reports-inline-link" data-switch-group="day">Day group</button>
+					to see this range.
+				</div>
+			`;
+			root.querySelector('.cd-reports-inline-link')
+				.addEventListener('click', () => setGroup('day'));
+			return;
+		}
+
+		const projects = Object.entries(data.totals.by_timesheet)
+			.map(([id, info]) => ({ id, ...info }))
+			.filter((p) => p.total > 0)
+			.sort((a, b) => b.total - a.total);
+
+		if (!projects.length) {
+			root.innerHTML = '';
+			return;
+		}
+
+		const header = `
+			<thead>
+				<tr>
+					<th class="cd-timesheet-row-head">Project</th>
+					${dayKeys.map((d) => `<th class="cd-num">${escapeHtml(timesheetDayHead(d))}</th>`).join('')}
+					<th class="cd-num cd-timesheet-total-head">Total</th>
+				</tr>
+			</thead>
+		`;
+
+		const rows = projects.map((p) => {
+			const stripe = p.area_color || 'var(--cd-amber-lo)';
+			const cells = dayKeys.map((d) => {
+				const secs = p.days[d] || 0;
+				return `<td class="cd-num">${secs > 0 ? fmtSeconds(secs) : ''}</td>`;
+			}).join('');
+			return `
+				<tr>
+					<th scope="row" class="cd-timesheet-row-head">
+						<span class="cd-reports-area-stripe" style="background:${stripe}"></span>
+						${escapeHtml(p.title)}
+						<span class="cd-reports-row-sub">${escapeHtml(p.area_title || '')}</span>
+					</th>
+					${cells}
+					<td class="cd-num cd-timesheet-row-total">${fmtSeconds(p.total)}</td>
+				</tr>
+			`;
+		}).join('');
+
+		const footerCells = dayKeys.map((d) => {
+			const secs = data.totals.by_day[d] || 0;
+			return `<td class="cd-num">${secs > 0 ? fmtSeconds(secs) : ''}</td>`;
+		}).join('');
+
+		const totalSeconds = data.meta.totals_seconds || 0;
+
+		root.innerHTML = `
+			<div class="cd-timesheet-scroll">
+				<table class="cd-timesheet-table">
+					${header}
+					<tbody>${rows}</tbody>
+					<tfoot>
+						<tr>
+							<th scope="row" class="cd-timesheet-row-head">Daily total</th>
+							${footerCells}
+							<td class="cd-num cd-timesheet-row-total">${fmtSeconds(totalSeconds)}</td>
+						</tr>
+					</tfoot>
+				</table>
+			</div>
+		`;
+	}
+
+	function timesheetDayHead(iso) {
+		const d = parseISODate(iso);
+		const wk = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+		return `${wk} ${d.getMonth() + 1}/${d.getDate()}`;
 	}
 
 	function renderBucketRows(root, bucket, total, opts) {
