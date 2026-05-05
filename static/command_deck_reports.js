@@ -345,14 +345,18 @@
 			}
 			const runningCls = e.running ? ' is-running' : '';
 			const runningGlyph = e.running ? ' <span class="cd-reports-running-dot" title="still running"></span>' : '';
+			// Click-to-edit on stopped entries; running entries stay static.
+			const timeCell = e.running
+				? `${startLocal} → ${endLocal}${runningGlyph}`
+				: `<button type="button" class="cd-reports-time-edit" data-entry-id="${e.id}" data-started="${e.started_at}" data-ended="${e.ended_at}" title="Edit start/end time">${startLocal} → ${endLocal}</button>`;
 			return `
-				<tr class="cd-reports-entry${runningCls}">
+				<tr class="cd-reports-entry${runningCls}" data-entry-id="${e.id}">
 					<td>${day}</td>
 					<td><span class="cd-reports-area-stripe" style="background:${stripe}"></span>${escapeHtml(e.area_title || '—')}</td>
 					<td>${escapeHtml(e.project_title || '—')}</td>
 					<td>${context}</td>
 					<td>${escapeHtml(e.description || '')}</td>
-					<td>${startLocal} → ${endLocal}${runningGlyph}</td>
+					<td>${timeCell}</td>
 					<td class="cd-num">${fmtSeconds(e.duration_seconds)}</td>
 				</tr>
 			`;
@@ -360,6 +364,84 @@
 		tbody.innerHTML = html;
 
 		document.getElementById('reportsTotalDuration').textContent = fmtSeconds(data.meta.totals_seconds);
+
+		tbody.querySelectorAll('.cd-reports-time-edit').forEach((btn) => {
+			btn.addEventListener('click', (ev) => {
+				ev.stopPropagation();
+				openTimeEditor(btn);
+			});
+		});
+	}
+
+	// Inline start/end time edit on stopped entries. Same UX as the
+	// project-page today-list editor; here we re-fetch on save instead of
+	// calling loadTodayTime().
+	function _localTimeOf(iso) {
+		if (!iso) return '';
+		const d = new Date(iso);
+		const pad = (n) => String(n).padStart(2, '0');
+		return pad(d.getHours()) + ':' + pad(d.getMinutes());
+	}
+	function _combineLocalTime(originalIso, hhmm) {
+		if (!hhmm) return null;
+		const d = new Date(originalIso);
+		const [h, m] = hhmm.split(':').map(Number);
+		d.setHours(h, m, 0, 0);
+		return d.toISOString();
+	}
+	function openTimeEditor(triggerBtn) {
+		const entryId = triggerBtn.getAttribute('data-entry-id');
+		const startedIso = triggerBtn.getAttribute('data-started');
+		const endedIso = triggerBtn.getAttribute('data-ended');
+		if (!startedIso || !endedIso) return;
+		const wrap = document.createElement('span');
+		wrap.className = 'cd-reports-time-editor';
+		wrap.innerHTML =
+			`<input type="time" class="cd-reports-time-input" data-which="start" value="${_localTimeOf(startedIso)}">` +
+			`<span> – </span>` +
+			`<input type="time" class="cd-reports-time-input" data-which="end" value="${_localTimeOf(endedIso)}">` +
+			`<button type="button" class="cd-reports-time-save">SAVE</button>` +
+			`<button type="button" class="cd-reports-time-cancel">CANCEL</button>`;
+		triggerBtn.replaceWith(wrap);
+
+		const cancel = () => load();
+		const save = async () => {
+			const sIn = wrap.querySelector('[data-which="start"]').value;
+			const eIn = wrap.querySelector('[data-which="end"]').value;
+			if (!sIn || !eIn) return;
+			const newStarted = _combineLocalTime(startedIso, sIn);
+			const newEnded = _combineLocalTime(endedIso, eIn);
+			if (new Date(newEnded) < new Date(newStarted)) {
+				alert('End must be after start.');
+				return;
+			}
+			wrap.querySelector('.cd-reports-time-save').disabled = true;
+			try {
+				const r = await fetch(`/time/${entryId}/update`, {
+					method: 'POST',
+					headers: {'Content-Type': 'application/json'},
+					body: JSON.stringify({started_at: newStarted, ended_at: newEnded}),
+					credentials: 'same-origin',
+				});
+				if (r.ok) {
+					load();
+				} else {
+					wrap.querySelector('.cd-reports-time-save').disabled = false;
+					alert('Could not save.');
+				}
+			} catch (e) {
+				wrap.querySelector('.cd-reports-time-save').disabled = false;
+				alert('Could not save.');
+			}
+		};
+		wrap.querySelector('.cd-reports-time-save').addEventListener('click', save);
+		wrap.querySelector('.cd-reports-time-cancel').addEventListener('click', cancel);
+		wrap.addEventListener('keydown', (ev) => {
+			if (ev.key === 'Enter') { ev.preventDefault(); save(); }
+			else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+		});
+		const firstInput = wrap.querySelector('[data-which="start"]');
+		if (firstInput) firstInput.focus();
 	}
 
 	function renderHeader() {

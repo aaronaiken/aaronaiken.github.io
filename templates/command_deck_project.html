@@ -1467,8 +1467,14 @@ function cdEditTask(id) {
         } else {
           contextBadge = '';
         }
+        // Time range becomes an edit trigger on stopped entries; static
+        // span on running entries (running = fresh — edit after stop).
+        var timeText = fmtTimeOfDay(e.started_at) + '–' + (e.ended_at ? fmtTimeOfDay(e.ended_at) : 'now');
+        var timeMarkup = isRunning
+          ? '<span class="cd-tt-entry-time">' + timeText + '</span>'
+          : '<button type="button" class="cd-tt-entry-time cd-tt-time-edit-trigger" data-entry-id="' + e.id + '" data-started="' + e.started_at + '" data-ended="' + (e.ended_at || '') + '" title="Edit start/end time">' + timeText + '</button>';
         return '<div class="cd-tt-entry' + (isRunning ? ' is-running' : '') + '" data-id="' + e.id + '">' +
-          '<span class="cd-tt-entry-time">' + fmtTimeOfDay(e.started_at) + '–' + (e.ended_at ? fmtTimeOfDay(e.ended_at) : 'now') + '</span>' +
+          timeMarkup +
           contextBadge +
           '<span class="cd-tt-entry-desc">' + (escHtml(e.description) || '<em class="cd-text-dim">no description</em>') + '</span>' +
           '<span class="cd-tt-entry-elapsed">' + fmt(elapsed) + '</span>' +
@@ -1494,6 +1500,10 @@ function cdEditTask(id) {
       todayList.querySelectorAll('.cd-tt-assign-trigger').forEach(b => b.addEventListener('click', (ev) => {
         ev.stopPropagation();
         openAssignDropdown(b.getAttribute('data-entry-id'), b);
+      }));
+      todayList.querySelectorAll('.cd-tt-time-edit-trigger').forEach(b => b.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        openTimeEditor(b);
       }));
     } catch (e) {
       todayList.innerHTML = '<div class="cd-text-dim" style="font-size:0.7rem;">Could not load.</div>';
@@ -1606,6 +1616,83 @@ function cdEditTask(id) {
       document.addEventListener('click', closeOnOutside, true);
       document.addEventListener('keydown', closeOnEsc, true);
     }, 0);
+  }
+
+  // ---- Phase 2.x — inline start/end time edit on stopped entries ----
+  // Click `09:15→11:30` → swap to two <input type="time"> fields + save/cancel.
+  // Combines local HH:MM with the original entry's calendar day (preserves
+  // cross-midnight semantics — server validates and recomputes duration).
+  function _localTimeOf(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const pad = (n) => String(n).padStart(2, '0');
+    return pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  function _combineLocalTime(originalIso, hhmm) {
+    if (!hhmm) return null;
+    const d = new Date(originalIso);
+    const [h, m] = hhmm.split(':').map(Number);
+    d.setHours(h, m, 0, 0);
+    return d.toISOString();
+  }
+  function openTimeEditor(triggerBtn) {
+    const entryId = triggerBtn.getAttribute('data-entry-id');
+    const startedIso = triggerBtn.getAttribute('data-started');
+    const endedIso = triggerBtn.getAttribute('data-ended');
+    if (!startedIso || !endedIso) return;  // running entries skip
+    const startLocal = _localTimeOf(startedIso);
+    const endLocal = _localTimeOf(endedIso);
+    const wrap = document.createElement('span');
+    wrap.className = 'cd-tt-time-editor';
+    wrap.innerHTML =
+      '<input type="time" class="cd-tt-time-input" data-which="start" value="' + startLocal + '">' +
+      '<span class="cd-tt-time-sep">–</span>' +
+      '<input type="time" class="cd-tt-time-input" data-which="end" value="' + endLocal + '">' +
+      '<button type="button" class="cd-btn ghost sm cd-tt-time-save">SAVE</button>' +
+      '<button type="button" class="cd-btn ghost sm cd-tt-time-cancel">CANCEL</button>';
+    triggerBtn.replaceWith(wrap);
+
+    function cancel() {
+      loadTodayTime();
+    }
+    async function save() {
+      const sIn = wrap.querySelector('[data-which="start"]').value;
+      const eIn = wrap.querySelector('[data-which="end"]').value;
+      if (!sIn || !eIn) return;
+      const newStarted = _combineLocalTime(startedIso, sIn);
+      const newEnded = _combineLocalTime(endedIso, eIn);
+      if (new Date(newEnded) < new Date(newStarted)) {
+        showToast('End must be after start.');
+        return;
+      }
+      wrap.querySelector('.cd-tt-time-save').disabled = true;
+      try {
+        const r = await fetch('/time/' + entryId + '/update', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({started_at: newStarted, ended_at: newEnded}),
+          credentials: 'same-origin',
+        });
+        if (r.ok) {
+          loadTodayTime();
+          if (window.TimeTrackerCore) window.TimeTrackerCore.refresh();
+        } else {
+          wrap.querySelector('.cd-tt-time-save').disabled = false;
+          showToast('Could not save.');
+        }
+      } catch (e) {
+        wrap.querySelector('.cd-tt-time-save').disabled = false;
+        showToast('Could not save.');
+      }
+    }
+    wrap.querySelector('.cd-tt-time-save').addEventListener('click', save);
+    wrap.querySelector('.cd-tt-time-cancel').addEventListener('click', cancel);
+    wrap.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') { ev.preventDefault(); save(); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+    });
+    const firstInput = wrap.querySelector('[data-which="start"]');
+    if (firstInput) firstInput.focus();
   }
 
   // Re-render on every tick + every TimeTrackerCore poll
