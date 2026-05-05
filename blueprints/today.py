@@ -126,22 +126,31 @@ def today_data():
 	conn = get_db()
 	_today_autoclear(conn)
 
-	# Today section — open: tasks (status='open') + items (checked=0)
+	# Today section — open: tasks (status='open') + items (checked=0).
+	# All today queries JOIN through to the parent area (when the project
+	# is a work_subproject) so the rendering surfaces can show area context
+	# alongside project context.
 	today_tasks_open = conn.execute('''
 		SELECT t.id, t.title, t.status, t.today, t.project_id,
-		       p.title AS project_title, p.slug AS project_slug
+		       p.title AS project_title, p.slug AS project_slug,
+		       parent.id AS area_id, parent.title AS area_title,
+		       parent.area_color AS area_color
 		FROM tasks t
-		LEFT JOIN projects p ON t.project_id = p.id
+		LEFT JOIN projects p      ON t.project_id = p.id
+		LEFT JOIN projects parent ON p.parent_project_id = parent.id
 		WHERE t.today = 1 AND t.status = 'open'
 		ORDER BY t.id ASC
 	''').fetchall()
 	today_items_open = conn.execute('''
 		SELECT ci.id, ci.text, ci.checked, ci.today, ci.block_id,
 		       b.title AS block_title, b.project_id,
-		       p.title AS project_title, p.slug AS project_slug
+		       p.title AS project_title, p.slug AS project_slug,
+		       parent.id AS area_id, parent.title AS area_title,
+		       parent.area_color AS area_color
 		FROM checklist_items ci
-		JOIN blocks b ON ci.block_id = b.id
-		JOIN projects p ON b.project_id = p.id
+		JOIN blocks b             ON ci.block_id = b.id
+		JOIN projects p           ON b.project_id = p.id
+		LEFT JOIN projects parent ON p.parent_project_id = parent.id
 		WHERE ci.today = 1 AND ci.checked = 0
 		ORDER BY ci.id ASC
 	''').fetchall()
@@ -149,19 +158,25 @@ def today_data():
 	# Today section — done: completed tasks + checked items still flagged
 	today_tasks_done = conn.execute('''
 		SELECT t.id, t.title, t.status, t.today, t.project_id,
-		       p.title AS project_title, p.slug AS project_slug
+		       p.title AS project_title, p.slug AS project_slug,
+		       parent.id AS area_id, parent.title AS area_title,
+		       parent.area_color AS area_color
 		FROM tasks t
-		LEFT JOIN projects p ON t.project_id = p.id
+		LEFT JOIN projects p      ON t.project_id = p.id
+		LEFT JOIN projects parent ON p.parent_project_id = parent.id
 		WHERE t.today = 1 AND t.status = 'completed'
 		ORDER BY t.completed_date DESC
 	''').fetchall()
 	today_items_done = conn.execute('''
 		SELECT ci.id, ci.text, ci.checked, ci.today, ci.block_id,
 		       b.title AS block_title, b.project_id,
-		       p.title AS project_title, p.slug AS project_slug
+		       p.title AS project_title, p.slug AS project_slug,
+		       parent.id AS area_id, parent.title AS area_title,
+		       parent.area_color AS area_color
 		FROM checklist_items ci
-		JOIN blocks b ON ci.block_id = b.id
-		JOIN projects p ON b.project_id = p.id
+		JOIN blocks b             ON ci.block_id = b.id
+		JOIN projects p           ON b.project_id = p.id
+		LEFT JOIN projects parent ON p.parent_project_id = parent.id
 		WHERE ci.today = 1 AND ci.checked = 1
 		ORDER BY ci.id DESC
 	''').fetchall()
@@ -174,10 +189,13 @@ def today_data():
 	today_blocks = conn.execute('''
 		SELECT b.id, b.title, b.today, b.project_id,
 		       p.title AS project_title, p.slug AS project_slug,
+		       parent.id AS area_id, parent.title AS area_title,
+		       parent.area_color AS area_color,
 		       (SELECT COUNT(*) FROM checklist_items ci WHERE ci.block_id = b.id) AS total_count,
 		       (SELECT COUNT(*) FROM checklist_items ci WHERE ci.block_id = b.id AND ci.checked = 1) AS checked_count
 		FROM blocks b
-		JOIN projects p ON b.project_id = p.id
+		JOIN projects p           ON b.project_id = p.id
+		LEFT JOIN projects parent ON p.parent_project_id = parent.id
 		WHERE b.today = 1 AND b.type = 'checklist'
 		ORDER BY b.id ASC
 	''').fetchall()
@@ -193,28 +211,32 @@ def today_data():
 		else:
 			today_blocks_open.append(d)
 
-	# Master browse — Below Deck (project_id NULL) + per-project task lists
-	# Phase 2.2 fix: each project group now also surfaces its checklist
-	# blocks + open items so they can be starred from /today/ alongside
-	# tasks. Items already-checked are excluded (no action to take).
+	# Master browse — Below Deck (project_id NULL) +
+	# per-area groups for work sub-projects + Personal group.
+	# Each project carries tasks + checklist blocks (with open items).
 	below_deck_tasks = conn.execute('''
 		SELECT id, title, status, today, project_id
 		FROM tasks
 		WHERE project_id IS NULL AND status = 'open'
 		ORDER BY "order" ASC, id ASC
 	''').fetchall()
-	projects = conn.execute(
-		'SELECT id, title, slug FROM projects ORDER BY title ASC'
-	).fetchall()
-	project_groups = []
-	for proj in projects:
+	all_projects = conn.execute('''
+		SELECT p.id, p.title, p.slug, p.project_type, p.parent_project_id,
+		       parent.title AS area_title, parent.slug AS area_slug,
+		       parent.area_color AS area_color
+		FROM projects p
+		LEFT JOIN projects parent ON p.parent_project_id = parent.id
+		WHERE p.project_type IN ('personal', 'work_subproject')
+		ORDER BY parent.title ASC, p.title ASC
+	''').fetchall()
+
+	def _project_payload(proj):
 		tasks = conn.execute('''
 			SELECT id, title, status, today, project_id
 			FROM tasks
 			WHERE project_id = ? AND status = 'open'
 			ORDER BY "order" ASC, id ASC
 		''', (proj['id'],)).fetchall()
-		# Phase 2.2 — per-project checklist blocks (open items only)
 		blocks_raw = conn.execute('''
 			SELECT b.id, b.title, b.today,
 			       (SELECT COUNT(*) FROM checklist_items ci WHERE ci.block_id = b.id) AS total_count,
@@ -234,18 +256,44 @@ def today_data():
 				ORDER BY id ASC
 			''', (b_dict['id'],)).fetchall()
 			b_dict['open_items'] = [dict(i) for i in open_items]
-			# Surface only blocks with at least one open item OR an empty
-			# starred block (the latter for symmetry with the autoclear
-			# rule — empty starred blocks persist).
+			# Empty unstarred blocks excluded; starred blocks always shown
+			# (consistent with autoclear rule that empty starred blocks
+			# persist).
 			if b_dict['open_items'] or b_dict['today']:
 				blocks_with_items.append(b_dict)
-		if tasks or blocks_with_items:
-			project_groups.append({
-				'title': proj['title'],
-				'slug': proj['slug'],
-				'tasks': [dict(t) for t in tasks],
-				'blocks': blocks_with_items,
-			})
+		return tasks, blocks_with_items
+
+	# Group sub-projects by their parent area; personal projects in their own bucket.
+	area_groups_by_id = {}      # area_id → {area_title, area_color, area_slug, projects: []}
+	personal_projects = []
+	for proj in all_projects:
+		tasks, blocks = _project_payload(proj)
+		if not tasks and not blocks:
+			continue
+		entry = {
+			'title': proj['title'],
+			'slug': proj['slug'],
+			'tasks': [dict(t) for t in tasks],
+			'blocks': blocks,
+		}
+		if proj['project_type'] == 'work_subproject':
+			aid = proj['parent_project_id']
+			if aid not in area_groups_by_id:
+				area_groups_by_id[aid] = {
+					'area_id': aid,
+					'area_title': proj['area_title'] or 'Work',
+					'area_slug': proj['area_slug'],
+					'area_color': proj['area_color'] or '',
+					'projects': [],
+				}
+			area_groups_by_id[aid]['projects'].append(entry)
+		else:
+			personal_projects.append(entry)
+
+	# Stable area order — alpha by title (mirrors the dashboard's area list).
+	area_groups = sorted(
+		area_groups_by_id.values(), key=lambda g: g['area_title']
+	)
 
 	conn.close()
 
@@ -267,7 +315,7 @@ def today_data():
 
 	return jsonify({
 		# Mixed lists — kind='task' / 'item' / 'block' on each entry.
-		# Renderers branch on kind to draw the right row shape.
+		# Each carries area_title + area_color when under a sub-project.
 		'today_open': (
 			[_serialize_task(r) for r in today_tasks_open] +
 			[_serialize_item(r) for r in today_items_open] +
@@ -279,7 +327,17 @@ def today_data():
 			[_serialize_block(r) for r in today_blocks_done]
 		),
 		'below_deck': [dict(t) for t in below_deck_tasks],
-		'projects': project_groups,
+		# Phase 2.2 — master browse grouped by parent area for sub-projects;
+		# personal projects in their own bucket. Below Deck stays its own
+		# top-level group above all of this.
+		'area_groups': area_groups,
+		'personal_projects': personal_projects,
+		# Backward-compat: legacy 'projects' field kept for any consumer
+		# still expecting flat per-project shape. Equals area_groups
+		# flattened + personal_projects appended.
+		'projects': [
+			p for ag in area_groups for p in ag['projects']
+		] + personal_projects,
 	})
 
 

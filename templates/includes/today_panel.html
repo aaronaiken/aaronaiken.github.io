@@ -457,8 +457,14 @@
     // Phase 2.1: entry.kind is 'task' or 'item'.
     // Phase 2.2: also 'block' — rendered with progress (`3/8 done`)
     // and no checkbox (block completes implicitly via item checks).
+    // Source line prefixes the area name when the entry sits under a
+    // work sub-project, so the user sees PennDOT · Bridge 47 calc rather
+    // than just Bridge 47 calc.
     var kind = entry.kind || 'task';
-    var source = entry.project_title || 'Below Deck';
+    var projectTitle = entry.project_title || 'Below Deck';
+    var source = entry.area_title
+      ? entry.area_title + ' · ' + projectTitle
+      : projectTitle;
     var titleHtml;
     var btnHtml;
     var btnInner = '<svg viewBox="0 0 12 10"><polyline points="1.5,5 4.5,8.5 10.5,1.5"/></svg>';
