@@ -103,6 +103,10 @@
         <span class="cd-text-mono cd-text-dim" style="font-size:0.6rem;letter-spacing:0.15em;">ADD BLOCK</span>
         <button class="cd-btn sm" data-type="note" id="addNoteBtn">+ NOTE</button>
         <button class="cd-btn sm" data-type="checklist" id="addChecklistBtn">+ CHECKLIST</button>
+        <div class="cd-add-from-template-wrap" style="position:relative;display:inline-block;">
+          <button class="cd-btn sm" id="addFromTemplateBtn" type="button">+ FROM CHECKLIST TEMPLATE ▾</button>
+          <div class="cd-template-dropdown" id="checklistTemplateDropdown" hidden></div>
+        </div>
       </div>
 
       <!-- CONTENT BLOCKS -->
@@ -122,6 +126,7 @@
                         data-kind="block" data-id="{{ block.id }}"
                         title="{% if block.today %}Remove from Today{% else %}Add to Today{% endif %}"
                         type="button">{{ '★' if block.today else '☆' }}</button>
+                <button class="cd-btn ghost sm cd-block-save-as-template" data-block-id="{{ block.id }}" data-default-name="{{ block.title or 'Untitled Checklist' }}" title="Save this checklist as a template" type="button">TEMPLATE</button>
                 {% endif %}
                 <button class="cd-block-collapse-btn" data-block-id="{{ block.id }}" title="Collapse">▾</button>
                 <button class="cd-btn ghost sm block-delete-btn" data-id="{{ block.id }}">REMOVE</button>
@@ -600,12 +605,14 @@ fetch('/below-deck/count').then(r=>r.json()).then(data=>{
             </div>
           </div>`;
       } else {
+        const titleAttr = block.title || 'Untitled Checklist';
         div.innerHTML=`
           <div class="cd-block-header" data-block-id="${block.id}">
             <span class="cd-block-drag-handle" title="Drag to reorder">⠿</span>
-            <span class="cd-block-title-display" data-block-id="${block.id}" data-type="checklist" data-custom-title="">${placeholder}</span>
+            <span class="cd-block-title-display" data-block-id="${block.id}" data-type="checklist" data-custom-title="${escapeHtml(block.title || '')}">${escapeHtml(block.title || placeholder)}</span>
             <div class="cd-panel-actions">
               <button class="cd-today-star" data-kind="block" data-id="${block.id}" title="Add to Today" type="button">☆</button>
+              <button class="cd-btn ghost sm cd-block-save-as-template" data-block-id="${block.id}" data-default-name="${escapeHtml(titleAttr)}" title="Save this checklist as a template" type="button">TEMPLATE</button>
               <button class="cd-block-collapse-btn" data-block-id="${block.id}" title="Collapse">▾</button>
               <button class="cd-btn ghost sm block-delete-btn" data-id="${block.id}">REMOVE</button>
             </div>
@@ -1049,6 +1056,125 @@ document.getElementById('deleteProjectBtn').addEventListener('click',function(){
   form.method='POST';form.action=`/command-deck/projects/${PROJECT_SLUG}/delete`;
   document.body.appendChild(form);form.submit();
 });
+
+// Phase 2.3 — SAVE AS TEMPLATE (checklist block) — delegated click handler
+document.addEventListener('click', function (ev) {
+  const btn = ev.target.closest('.cd-block-save-as-template');
+  if (!btn) return;
+  ev.preventDefault();
+  const blockId = btn.getAttribute('data-block-id');
+  const seed = btn.getAttribute('data-default-name') || '';
+  const name = prompt('Save this checklist as a template — name:', seed);
+  if (name == null) return;
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  fetch(`/command-deck/projects/${PROJECT_SLUG}/blocks/${blockId}/save-as-template`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name: trimmed}),
+    credentials: 'same-origin',
+  }).then(function (r) { return r.json().then(function (d) { return {ok: r.ok, data: d}; }); })
+    .then(function (res) {
+      if (res.ok && res.data.success) {
+        alert('Checklist template saved. Manage at /command-deck/templates/');
+      } else {
+        alert('Could not save template: ' + (res.data.error || 'unknown error'));
+      }
+    }).catch(function () {
+      alert('Network error.');
+    });
+});
+
+// Phase 2.3 — "+ FROM CHECKLIST TEMPLATE" dropdown
+(function () {
+  'use strict';
+  const trigger = document.getElementById('addFromTemplateBtn');
+  const dropdown = document.getElementById('checklistTemplateDropdown');
+  if (!trigger || !dropdown) return;
+
+  let cached = null;
+
+  async function loadTemplates() {
+    if (cached !== null) return cached;
+    try {
+      const r = await fetch('/command-deck/templates/list?kind=checklist', {credentials: 'same-origin'});
+      const d = await r.json();
+      cached = d.templates || [];
+    } catch (e) {
+      cached = [];
+    }
+    return cached;
+  }
+
+  async function open() {
+    const tpls = await loadTemplates();
+    if (!tpls.length) {
+      dropdown.innerHTML = '<div class="cd-template-dropdown-empty">No checklist templates yet. Save one from any checklist block.</div>';
+    } else {
+      dropdown.innerHTML = tpls.map(function (t) {
+        return `<button type="button" class="cd-template-dropdown-option" data-id="${t.id}">${escapeHtml(t.name)}</button>`;
+      }).join('');
+    }
+    dropdown.hidden = false;
+    setTimeout(function () {
+      document.addEventListener('click', closeOnOutside, true);
+      document.addEventListener('keydown', closeOnEsc, true);
+    }, 0);
+  }
+
+  function close() {
+    dropdown.hidden = true;
+    cached = null;  // invalidate so next open re-fetches
+    document.removeEventListener('click', closeOnOutside, true);
+    document.removeEventListener('keydown', closeOnEsc, true);
+  }
+
+  function closeOnOutside(ev) {
+    if (dropdown.hidden) return;
+    if (dropdown.contains(ev.target) || trigger.contains(ev.target)) return;
+    close();
+  }
+
+  function closeOnEsc(ev) {
+    if (ev.key === 'Escape') { ev.stopPropagation(); close(); }
+  }
+
+  async function spawn(templateId) {
+    const fd = new FormData();
+    fd.append('type', 'checklist');
+    fd.append('template_id', templateId);
+    try {
+      const r = await fetch(`/command-deck/projects/${PROJECT_SLUG}/blocks/add`, {
+        method: 'POST',
+        body: fd,
+        credentials: 'same-origin',
+      });
+      if (r.ok) {
+        // Simplest re-render: full reload to pick up the new block + its
+        // items. addNoteBtn / addChecklistBtn handlers do this too.
+        location.reload();
+      } else {
+        const d = await r.json().catch(function () { return {}; });
+        alert('Could not spawn from template: ' + (d.error || 'unknown error'));
+      }
+    } catch (e) {
+      alert('Network error.');
+    }
+  }
+
+  trigger.addEventListener('click', function (ev) {
+    ev.stopPropagation();
+    if (dropdown.hidden) open(); else close();
+  });
+
+  dropdown.addEventListener('click', function (ev) {
+    const opt = ev.target.closest('.cd-template-dropdown-option');
+    if (!opt) return;
+    const id = opt.getAttribute('data-id');
+    close();
+    spawn(id);
+  });
+})();
 
 // Phase 2.3 — SAVE AS TEMPLATE (project)
 document.getElementById('saveAsTemplateBtn').addEventListener('click',function(){

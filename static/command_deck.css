@@ -2400,6 +2400,50 @@ body.cd-strip-visible .cd-shell { padding-top: 32px; }
   margin-left: 0.5rem;
 }
 
+/* Add-block-from-template dropdown */
+.cd-template-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 14em;
+  max-width: 22em;
+  max-height: 50vh;
+  overflow-y: auto;
+  background: var(--cd-bg-raised);
+  border: 1px solid var(--cd-border-amber);
+  border-radius: var(--cd-radius);
+  box-shadow: 0 8px 24px var(--cd-shadow);
+  padding: 0.3rem 0;
+  z-index: 200;
+}
+.cd-template-dropdown-option {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  font-family: var(--cd-font-body);
+  font-size: 0.78rem;
+  color: var(--cd-text);
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.cd-template-dropdown-option:hover,
+.cd-template-dropdown-option:focus-visible {
+  background: rgba(245, 179, 50, 0.10);
+  color: var(--cd-amber-hi);
+  outline: none;
+}
+.cd-template-dropdown-empty {
+  padding: 0.6rem 0.85rem;
+  font-family: var(--cd-font-ui);
+  font-size: 0.62rem;
+  color: var(--cd-text-dim);
+  letter-spacing: 0.06em;
+}
+
 /* Inline start/end time-edit on stopped entries — project page today-list */
 button.cd-tt-time-edit-trigger {
 	background: none;
