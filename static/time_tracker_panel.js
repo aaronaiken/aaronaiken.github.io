@@ -150,7 +150,13 @@
 						var isEditing = state.editingId === e.id;
 						var ctxLine = '';
 						if (e.task_title) ctxLine = '<span class="ttp-row-ctx">task · ' + escHtml(e.task_title) + '</span>';
-						else if (e.checklist_item_text) ctxLine = '<span class="ttp-row-ctx">item · ' + escHtml(e.checklist_item_text) + '</span>';
+						else if (e.checklist_item_id) {
+							// Phase 2.1: block-title as deliverable identity
+							var blockLabel = e.block_title
+								? 'Checklist · ' + escHtml(e.block_title)
+								: 'Checklist';
+							ctxLine = '<span class="ttp-row-ctx">' + blockLabel + '</span>';
+						}
 						var descNode = isEditing
 							? '<input class="ttp-row-desc-input" data-id="' + e.id + '" value="' + escHtml(desc) + '">'
 							: '<span class="ttp-row-desc" data-id="' + e.id + '">' + escHtml(desc) + '</span>';

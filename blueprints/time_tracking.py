@@ -76,18 +76,27 @@ def _row_get(row, key, default=None):
 
 
 def _fetch_entry_with_context(conn, entry_id):
-	"""Re-fetch a time_entries row with task + checklist_item context joined."""
+	"""Re-fetch a time_entries row with task + checklist_item + parent-block
+	context joined. Phase 2.1 added the blocks JOIN so client renderers can
+	display [Checklist: <block.title>] for item-scoped entries instead of
+	the raw item text."""
 	return conn.execute('''
-		SELECT te.*, t.title AS task_title, ci.text AS checklist_item_text
+		SELECT te.*,
+		       t.title  AS task_title,
+		       ci.text  AS checklist_item_text,
+		       b.id     AS block_id,
+		       b.title  AS block_title
 		FROM time_entries te
-		LEFT JOIN tasks t ON te.task_id = t.id
+		LEFT JOIN tasks t            ON te.task_id = t.id
 		LEFT JOIN checklist_items ci ON te.checklist_item_id = ci.id
+		LEFT JOIN blocks b           ON ci.block_id = b.id
 		WHERE te.id = ?
 	''', (entry_id,)).fetchone()
 
 
 def _serialize_active_entry(row):
-	"""Active-entry shape — Phase 1 §3.1 + Phase 1.5 task/item context."""
+	"""Active-entry shape — Phase 1 §3.1 + Phase 1.5 task/item context +
+	Phase 2.1 block context for item-scoped entries."""
 	started = _parse_iso_utc(row['started_at'])
 	elapsed = int((datetime.now(pytz.UTC) - started).total_seconds()) if started else 0
 	return {
@@ -104,6 +113,8 @@ def _serialize_active_entry(row):
 		'task_title': _row_get(row, 'task_title'),
 		'checklist_item_id': _row_get(row, 'checklist_item_id'),
 		'checklist_item_text': _row_get(row, 'checklist_item_text'),
+		'block_id': _row_get(row, 'block_id'),
+		'block_title': _row_get(row, 'block_title'),
 	}
 
 
@@ -116,6 +127,8 @@ def _serialize_entry(row):
 		'checklist_item_id': _row_get(row, 'checklist_item_id'),
 		'task_title': _row_get(row, 'task_title'),
 		'checklist_item_text': _row_get(row, 'checklist_item_text'),
+		'block_id': _row_get(row, 'block_id'),
+		'block_title': _row_get(row, 'block_title'),
 		'description': row['description'],
 		'started_at': row['started_at'],
 		'ended_at': row['ended_at'],
@@ -142,12 +155,15 @@ def time_active():
 		       parent.title        AS area_title,
 		       parent.area_color   AS area_color,
 		       t.title             AS task_title,
-		       ci.text             AS checklist_item_text
+		       ci.text             AS checklist_item_text,
+		       b.id                AS block_id,
+		       b.title             AS block_title
 		FROM time_entries te
 		JOIN projects p ON te.project_id = p.id
-		LEFT JOIN projects parent ON p.parent_project_id = parent.id
-		LEFT JOIN tasks t ON te.task_id = t.id
+		LEFT JOIN projects parent    ON p.parent_project_id = parent.id
+		LEFT JOIN tasks t            ON te.task_id = t.id
 		LEFT JOIN checklist_items ci ON te.checklist_item_id = ci.id
+		LEFT JOIN blocks b           ON ci.block_id = b.id
 		WHERE te.ended_at IS NULL
 		ORDER BY te.started_at ASC
 	''').fetchall()
@@ -534,10 +550,15 @@ def time_today(project_id):
 	start_utc, end_utc = _et_today_bounds_utc()
 	conn = get_db()
 	rows = conn.execute('''
-		SELECT te.*, t.title AS task_title, ci.text AS checklist_item_text
+		SELECT te.*,
+		       t.title  AS task_title,
+		       ci.text  AS checklist_item_text,
+		       b.id     AS block_id,
+		       b.title  AS block_title
 		FROM time_entries te
-		LEFT JOIN tasks t ON te.task_id = t.id
+		LEFT JOIN tasks t            ON te.task_id = t.id
 		LEFT JOIN checklist_items ci ON te.checklist_item_id = ci.id
+		LEFT JOIN blocks b           ON ci.block_id = b.id
 		WHERE te.project_id = ?
 		  AND te.started_at >= ?
 		  AND te.started_at <  ?
