@@ -765,6 +765,8 @@ def cd_area_subproject_new(slug):
 	title = (data.get('title') or '').strip()
 	description = (data.get('description') or '').strip() or None
 	tracking_enabled = 1 if data.get('tracking_enabled') in (True, '1', 1, 'true', 'True') else 0
+	# Phase 2.3 (post-ship fix) — sub-projects can spawn from a template too.
+	template_id = data.get('template_id') or None
 	if not title:
 		return jsonify({'error': 'title required'}), 400
 
@@ -787,6 +789,10 @@ def cd_area_subproject_new(slug):
 		VALUES (?, ?, ?, 0, 'work_subproject', ?, ?, 0, NULL, ?, ?)
 	''', (title, new_slug, description, area['id'], tracking_enabled, now, now))
 	new_id = cur.lastrowid
+
+	if template_id:
+		_apply_project_template(conn, new_id, template_id, now)
+
 	conn.commit()
 	sp = conn.execute('SELECT * FROM projects WHERE id = ?', (new_id,)).fetchone()
 	conn.close()
