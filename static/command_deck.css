@@ -2317,6 +2317,92 @@ body.cd-strip-visible .cd-shell { padding-top: 32px; }
 	font-variant-numeric: tabular-nums;
 }
 .cd-tt-entry-desc { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Inline start/end time-edit on stopped entries — project page today-list */
+button.cd-tt-time-edit-trigger {
+	background: none;
+	border: 1px dashed transparent;
+	cursor: pointer;
+	font: inherit;
+	color: inherit;
+	padding: 0 4px;
+	border-radius: 2px;
+	transition: border-color 0.15s, background 0.15s;
+}
+button.cd-tt-time-edit-trigger:hover,
+button.cd-tt-time-edit-trigger:focus-visible {
+	border-color: var(--cd-amber-lo);
+	background: rgba(212, 136, 10, 0.08);
+	outline: none;
+}
+.cd-tt-time-editor {
+	display: inline-flex;
+	gap: 0.3rem;
+	align-items: center;
+	font-family: var(--cd-font-ui);
+	font-size: 0.65rem;
+}
+.cd-tt-time-input {
+	background: var(--cd-bg-surface);
+	border: 1px solid var(--cd-amber-lo);
+	color: var(--cd-text);
+	font: inherit;
+	padding: 1px 4px;
+	border-radius: 2px;
+	font-variant-numeric: tabular-nums;
+}
+.cd-tt-time-input:focus { outline: none; border-color: var(--cd-amber-hi); }
+.cd-tt-time-sep { color: var(--cd-text-dim); }
+
+/* Same editor in the reports entries table */
+button.cd-reports-time-edit {
+	background: none;
+	border: 1px dashed transparent;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+	padding: 0 4px;
+	border-radius: 2px;
+	transition: border-color 0.15s, background 0.15s;
+}
+button.cd-reports-time-edit:hover,
+button.cd-reports-time-edit:focus-visible {
+	border-color: var(--cd-amber-lo);
+	background: rgba(212, 136, 10, 0.08);
+	outline: none;
+}
+.cd-reports-time-editor {
+	display: inline-flex;
+	gap: 0.25rem;
+	align-items: center;
+	font-family: var(--cd-font-ui);
+	font-size: 0.7rem;
+}
+.cd-reports-time-input {
+	background: var(--cd-bg-surface);
+	border: 1px solid var(--cd-amber-lo);
+	color: var(--cd-text);
+	font: inherit;
+	padding: 1px 4px;
+	border-radius: 2px;
+	font-variant-numeric: tabular-nums;
+}
+.cd-reports-time-input:focus { outline: none; border-color: var(--cd-amber-hi); }
+.cd-reports-time-save,
+.cd-reports-time-cancel {
+	background: none;
+	border: 1px solid var(--cd-border);
+	color: var(--cd-amber-hi);
+	font-family: var(--cd-font-ui);
+	font-size: 0.55rem;
+	letter-spacing: 0.1em;
+	padding: 2px 6px;
+	border-radius: 2px;
+	cursor: pointer;
+}
+.cd-reports-time-save:hover,
+.cd-reports-time-cancel:hover { border-color: var(--cd-amber-lo); }
+.cd-reports-time-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .cd-tt-entry-context {
 	font-family: var(--cd-font-ui, 'Share Tech Mono', monospace);
 	font-size: 0.55rem;
