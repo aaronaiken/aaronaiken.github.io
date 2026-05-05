@@ -77,7 +77,7 @@
         </div>
         <div style="display:flex;gap:0.5rem;flex-shrink:0;align-self:flex-start;">
           <button class="cd-btn sm" id="editProjectBtn">EDIT</button>
-          <button class="cd-btn sm" id="saveAsTemplateBtn" title="Save this project's structure as a reusable template">SAVE AS TEMPLATE</button>
+          <button class="cd-btn sm" id="saveAsTemplateBtn" data-default-name="{{ project.title }}" title="Save this project's structure as a reusable template">SAVE AS TEMPLATE</button>
           <button class="cd-btn sm danger" id="deleteProjectBtn">DELETE</button>
         </div>
       </div>
@@ -1182,8 +1182,11 @@ document.addEventListener('click', function (ev) {
 
 // Phase 2.3 — SAVE AS TEMPLATE (project)
 document.getElementById('saveAsTemplateBtn').addEventListener('click',function(){
-  const projectTitle = document.querySelector('.cd-project-title, .cd-page-title');
-  const seed = projectTitle ? projectTitle.textContent.trim() : '';
+  // Read the title from the button's data-default-name (Jinja-rendered
+  // from project.title) instead of the h1.textContent — the h1 also
+  // contains the ⏱ tracking and ★ favorite glyphs as inline siblings,
+  // and textContent would flatten them into the prompt seed.
+  const seed = document.getElementById('saveAsTemplateBtn').getAttribute('data-default-name') || '';
   const name = prompt('Save this project as a template — name:', seed);
   if (name == null) return;
   const trimmed = name.trim();
