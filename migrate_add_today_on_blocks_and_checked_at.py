@@ -17,10 +17,26 @@ What it does (idempotent — safe to run multiple times):
 
   - Backfill on existing checked items:
       For checklist_items where checked = 1 AND checked_at IS NULL,
-      copy the parent block's `created` timestamp into checked_at.
-      Best-available proxy for "we don't know when this was checked,
-      but it was sometime after the block existed." Future checks
-      stamp accurately.
+      stamp checked_at with a canonical-format sentinel
+      ('1970-01-01T00:00:00.000000Z'). Why a sentinel rather than
+      block.created: blocks.created is ET-localized via et_now()
+      (offset format like '...T10:55:34.021411-04:00'); the autoclear
+      cutoff is canonical UTC ISO ('...T08:00:00.000000Z'). A
+      lexicographic compare between those two formats produces
+      wrong "before cutoff" verdicts. The sentinel sidesteps this
+      by being unambiguously old in any string compare against
+      canonical UTC. Net effect: backfilled items roll off on the
+      first autoclear pass, which is the right behavior for "we
+      don't know when this was checked."
+
+      Future checks stamp via _utc_now_iso() in the toggle handler,
+      always canonical format.
+
+  - Format-repair on already-migrated DBs:
+      If a previous run of this migration stamped checked_at in a
+      non-canonical format (e.g. ET-localized from an earlier
+      script version), re-stamp those rows with the sentinel too.
+      Detected via NOT LIKE '%Z'.
 
 Companion to migrate_add_today_on_items.py (Phase 2.1, which added
 checklist_items.today).
@@ -79,17 +95,24 @@ def run():
 		cur.execute("ALTER TABLE checklist_items ADD COLUMN checked_at TEXT")
 		added.append('checklist_items.checked_at')
 
-	# Backfill — only touches rows that need it. Idempotent: if the column
-	# was just added the predicate matches every checked row; if the column
-	# was already there from a prior run, the WHERE checked_at IS NULL
-	# clause skips already-stamped rows.
+	# Backfill with a canonical-format sentinel so the autoclear lex compare
+	# produces the right verdict. See the docstring for why we don't use
+	# block.created here (different timestamp format).
+	SENTINEL = '1970-01-01T00:00:00.000000Z'
 	backfilled = cur.execute('''
 		UPDATE checklist_items
-		SET checked_at = (
-			SELECT created FROM blocks WHERE blocks.id = checklist_items.block_id
-		)
+		SET checked_at = ?
 		WHERE checked = 1 AND checked_at IS NULL
-	''').rowcount
+	''', (SENTINEL,)).rowcount
+
+	# Format-repair: any row stamped by a previous run of this migration in
+	# a non-canonical format (e.g. ET-localized) gets re-stamped with the
+	# sentinel. Canonical UTC ISO ends with 'Z'; anything else is wrong.
+	repaired = cur.execute('''
+		UPDATE checklist_items
+		SET checked_at = ?
+		WHERE checked_at IS NOT NULL AND checked_at NOT LIKE '%Z'
+	''', (SENTINEL,)).rowcount
 
 	conn.commit()
 	conn.close()
@@ -107,8 +130,10 @@ def run():
 		for item in skipped:
 			print(f"    · {item}")
 	if backfilled:
-		print(f"✓ Backfilled checked_at on {backfilled} existing checked item(s)")
-	if not added and not backfilled:
+		print(f"✓ Backfilled checked_at on {backfilled} existing checked item(s) (sentinel)")
+	if repaired:
+		print(f"✓ Repaired {repaired} non-canonical checked_at value(s) → sentinel")
+	if not added and not backfilled and not repaired:
 		print("No changes — schema already up to date.")
 	print()
 
