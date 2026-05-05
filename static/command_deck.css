@@ -2708,3 +2708,355 @@ body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
 }
 .cd-huyang-search-icon { font-size: 0.7rem; line-height: 1; }
 
+/* ============================================================
+   REPORTS PAGE — Phase 2 of time tracking
+   ============================================================ */
+
+.cd-reports-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.25rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--cd-border);
+  margin-bottom: 1rem;
+  font-family: var(--cd-font-ui);
+}
+
+.cd-reports-period {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cd-reports-nav-btn {
+  background: none;
+  border: 1px solid var(--cd-border);
+  color: var(--cd-amber-hi);
+  font-family: var(--cd-font-ui);
+  font-size: 0.8rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--cd-radius);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.cd-reports-nav-btn:hover {
+  background: var(--cd-glow);
+  border-color: var(--cd-amber-lo);
+}
+
+.cd-reports-period-label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--cd-text-bright);
+  text-transform: uppercase;
+  min-width: 12em;
+  justify-content: center;
+}
+
+.cd-reports-jump {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.cd-reports-presets,
+.cd-reports-groups {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.cd-reports-groups-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cd-text-dim);
+  margin-right: 0.4rem;
+}
+
+.cd-reports-preset,
+.cd-reports-group {
+  background: none;
+  border: 1px solid var(--cd-border);
+  color: var(--cd-text-dim);
+  font-family: var(--cd-font-ui);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--cd-radius);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.cd-reports-preset:hover,
+.cd-reports-group:hover {
+  color: var(--cd-amber-hi);
+  border-color: var(--cd-amber-lo);
+}
+.cd-reports-preset.active,
+.cd-reports-group.active {
+  background: rgba(245, 179, 50, 0.10);
+  border-color: var(--cd-amber-lo);
+  color: var(--cd-amber-hi);
+}
+
+.cd-reports-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--cd-font-ui);
+  font-size: 0.65rem;
+  color: var(--cd-text-dim);
+}
+.cd-reports-custom-input {
+  background: var(--cd-bg-surface);
+  border: 1px solid var(--cd-border);
+  color: var(--cd-text);
+  font: inherit;
+  padding: 0.2rem 0.4rem;
+  border-radius: var(--cd-radius);
+}
+.cd-reports-custom-sep { letter-spacing: 0.1em; }
+.cd-reports-custom-apply {
+  background: none;
+  border: 1px solid var(--cd-amber-lo);
+  color: var(--cd-amber-hi);
+  font: inherit;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--cd-radius);
+  cursor: pointer;
+}
+.cd-reports-custom-apply:hover {
+  background: var(--cd-glow);
+}
+
+.cd-reports-privacy-note {
+  font-family: var(--cd-font-ui);
+  font-size: 0.65rem;
+  color: var(--cd-text-dim);
+  letter-spacing: 0.05em;
+  padding: 0.5rem 0;
+  margin-bottom: 0.5rem;
+}
+
+.cd-reports-empty,
+.cd-reports-empty-cell {
+  font-family: var(--cd-font-ui);
+  font-size: 0.7rem;
+  color: var(--cd-text-dim);
+  letter-spacing: 0.06em;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.cd-reports-loading {
+  font-family: var(--cd-font-ui);
+  font-size: 0.65rem;
+  color: var(--cd-text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 1.5rem 0;
+  text-align: center;
+}
+
+.cd-reports-error {
+  font-family: var(--cd-font-ui);
+  font-size: 0.7rem;
+  color: var(--cd-red, #cc4040);
+  padding: 1.5rem 0;
+  text-align: center;
+}
+
+/* Rollup rows */
+.cd-reports-rollup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+}
+
+.cd-reports-row {
+  display: grid;
+  grid-template-columns: 4px minmax(8em, 1.4fr) 3fr 3em 4em;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.45rem 0.6rem;
+  background: var(--cd-bg-surface);
+  border: 1px solid var(--cd-border);
+  border-radius: var(--cd-radius);
+}
+
+.cd-reports-row-stripe {
+  align-self: stretch;
+  border-radius: 1.5px;
+  min-height: 1.4em;
+}
+
+.cd-reports-row-title {
+  font-family: var(--cd-font-body);
+  font-size: 0.85rem;
+  color: var(--cd-text);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.cd-reports-row-sub {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cd-text-dim);
+}
+
+.cd-reports-row-bar {
+  background: var(--cd-bg-raised);
+  border-radius: 1.5px;
+  height: 0.7rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.cd-reports-row-bar-fill {
+  height: 100%;
+  background: var(--cd-amber);
+  transition: width 0.25s ease-out;
+}
+
+.cd-reports-row-pct,
+.cd-reports-row-duration {
+  font-family: var(--cd-font-ui);
+  font-size: 0.7rem;
+  color: var(--cd-text-dim);
+  text-align: right;
+}
+
+.cd-reports-row-duration {
+  color: var(--cd-text-bright);
+  font-variant-numeric: tabular-nums;
+}
+
+.cd-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--cd-font-ui);
+}
+
+/* Chronological entries table */
+.cd-reports-entries-title {
+  font-family: var(--cd-font-display);
+  font-size: 1.1rem;
+  color: var(--cd-amber-hi);
+  letter-spacing: 0.05em;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.cd-reports-entries-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--cd-font-body);
+  font-size: 0.8rem;
+}
+
+.cd-reports-entries-table th {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cd-text-dim);
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--cd-border);
+}
+
+.cd-reports-entries-table td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--cd-border);
+  vertical-align: top;
+  color: var(--cd-text);
+}
+
+.cd-reports-entries-table tr.cd-reports-entry.is-running td {
+  background: rgba(245, 179, 50, 0.06);
+}
+
+.cd-reports-entries-table tfoot td {
+  border-bottom: none;
+  border-top: 1px solid var(--cd-border-amber);
+  padding-top: 0.7rem;
+  font-family: var(--cd-font-ui);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--cd-amber-hi);
+}
+
+.cd-reports-total-label {
+  text-align: right;
+  color: var(--cd-text-dim);
+}
+
+.cd-reports-area-stripe {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  margin-right: 0.4rem;
+  vertical-align: 0.05em;
+}
+
+.cd-reports-running-dot {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-left: 0.3rem;
+  border-radius: 50%;
+  background: var(--cd-amber-hi);
+  animation: cd-reports-pulse 1.6s ease-in-out infinite;
+  vertical-align: 0.1em;
+}
+
+@keyframes cd-reports-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd-reports-running-dot { animation: none; opacity: 0.7; }
+  .cd-reports-row-bar-fill { transition: none; }
+}
+
+@media (max-width: 720px) {
+  .cd-reports-row {
+    grid-template-columns: 4px 1fr 2.5em 4em;
+    grid-template-areas:
+      "stripe title pct duration"
+      "stripe bar bar bar";
+    row-gap: 0.3rem;
+  }
+  .cd-reports-row-stripe { grid-area: stripe; }
+  .cd-reports-row-title { grid-area: title; }
+  .cd-reports-row-bar { grid-area: bar; }
+  .cd-reports-row-pct { grid-area: pct; }
+  .cd-reports-row-duration { grid-area: duration; }
+
+  .cd-reports-entries-table th:nth-child(2),
+  .cd-reports-entries-table td:nth-child(2),
+  .cd-reports-entries-table th:nth-child(5),
+  .cd-reports-entries-table td:nth-child(5) {
+    display: none;
+  }
+}
+
