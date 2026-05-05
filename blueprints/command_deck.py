@@ -644,7 +644,16 @@ def cd_checklist_toggle(slug, item_id):
 	item = conn.execute('SELECT * FROM checklist_items WHERE id = ?', (item_id,)).fetchone()
 	if item:
 		new_state = 0 if item['checked'] else 1
-		conn.execute('UPDATE checklist_items SET checked = ? WHERE id = ?', (new_state, item_id))
+		# Phase 2.2 — stamp checked_at on check, clear on uncheck. Drives the
+		# tightened 4am autoclear query (see blueprints/today.py).
+		checked_at = (
+			datetime.now(pytz.UTC).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+			if new_state else None
+		)
+		conn.execute(
+			'UPDATE checklist_items SET checked = ?, checked_at = ? WHERE id = ?',
+			(new_state, checked_at, item_id)
+		)
 
 		project = conn.execute('SELECT * FROM projects WHERE slug = ?', (slug,)).fetchone()
 		if project:
