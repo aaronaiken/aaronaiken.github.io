@@ -1434,8 +1434,13 @@ function cdEditTask(id) {
           : ' type="button" data-entry-id="' + e.id + '"';
         if (e.task_title) {
           contextBadge = '<' + triggerTag + ' class="' + triggerCls + ' task"' + triggerAttrs + '>[task: ' + escHtml(e.task_title) + ']' + (isRunning ? '' : ' ▾') + '</' + triggerTag + '>';
-        } else if (e.checklist_item_text) {
-          contextBadge = '<' + triggerTag + ' class="' + triggerCls + ' item"' + triggerAttrs + '>[item: ' + escHtml(e.checklist_item_text) + ']' + (isRunning ? '' : ' ▾') + '</' + triggerTag + '>';
+        } else if (e.checklist_item_id) {
+          // Phase 2.1: prefer block-title as the deliverable identity. Falls
+          // back to plain [Checklist] when the parent block has no title.
+          const blockLabel = e.block_title
+            ? 'Checklist: ' + escHtml(e.block_title)
+            : 'Checklist';
+          contextBadge = '<' + triggerTag + ' class="' + triggerCls + ' item"' + triggerAttrs + '>[' + blockLabel + ']' + (isRunning ? '' : ' ▾') + '</' + triggerTag + '>';
         } else if (!isRunning) {
           contextBadge = '<button type="button" class="cd-tt-entry-context cd-tt-assign-trigger unassigned" data-entry-id="' + e.id + '">[+ assign ▾]</button>';
         } else {

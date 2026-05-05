@@ -246,12 +246,15 @@ def reports_data():
 		       parent.title      AS area_title,
 		       parent.area_color AS area_color,
 		       t.title           AS task_title,
-		       ci.text           AS checklist_item_text
+		       ci.text           AS checklist_item_text,
+		       b.id              AS block_id,
+		       b.title           AS block_title
 		FROM time_entries te
-		JOIN projects p           ON te.project_id = p.id
-		LEFT JOIN projects parent ON p.parent_project_id = parent.id
-		LEFT JOIN tasks t         ON te.task_id = t.id
+		JOIN projects p              ON te.project_id = p.id
+		LEFT JOIN projects parent    ON p.parent_project_id = parent.id
+		LEFT JOIN tasks t            ON te.task_id = t.id
 		LEFT JOIN checklist_items ci ON te.checklist_item_id = ci.id
+		LEFT JOIN blocks b           ON ci.block_id = b.id
 		WHERE {where_sql}
 		ORDER BY te.started_at ASC
 	''', args).fetchall()
@@ -297,6 +300,8 @@ def reports_data():
 			'task_title': r['task_title'],
 			'checklist_item_id': r['checklist_item_id'],
 			'checklist_item_text': r['checklist_item_text'],
+			'block_id': r['block_id'],
+			'block_title': r['block_title'],
 			'description': r['description'],
 			'started_at': r['started_at'],
 			'ended_at': ended,
