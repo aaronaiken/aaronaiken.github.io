@@ -1,0 +1,16 @@
+{# Last-backup pill — server-rendered into the CD footer.
+   The Jinja global is registered lazily so non-CD pages don't pay
+   the file-read cost. Color/glyph is driven entirely by status. #}
+{%- set bs = last_backup_status() -%}
+<span class="cd-footer-status cd-footer-status--{{ bs.status }}"
+      title="Last successful backup: {{ bs.age_str }} ago"
+      aria-label="Last backup {{ bs.age_str }} ago, status {{ bs.status }}">
+  {%- if bs.age_str == 'UNKNOWN' -%}
+    LAST BACKUP · UNKNOWN ✗
+  {%- else -%}
+    LAST BACKUP · {{ bs.age_str }} AGO
+    {%- if bs.status == 'ok' %} ✓
+    {%- elif bs.status == 'fail' %} ✗
+    {%- endif -%}
+  {%- endif -%}
+</span>

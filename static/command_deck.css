@@ -24,6 +24,7 @@
   --cd-amber-lo: #6b4a10;
   --cd-green: #3a9a58;
   --cd-green-hi: #4dbb6a;
+  --cd-red: #cc4040;
   --cd-blue: #3a6a9a;
   --cd-border: #1e2830;
   --cd-border-amber: #2e1e08;
@@ -57,6 +58,7 @@
 	--cd-amber-lo: #c8bfad;
 	--cd-green: #2a6a3a;
 	--cd-green-hi: #3a8a4a;
+	--cd-red: #8a2020;
 	--cd-blue: #2a4a7a;
 	--cd-border: #d8cfc0;
 	--cd-border-amber: #c8bfad;
@@ -1376,6 +1378,39 @@ body.cd-strip-visible .cd-shell { padding-top: 32px; }
   letter-spacing: 0.1em;
   text-transform: uppercase;
   opacity: 0.5;
+}
+
+/* Last-backup pill — sits between the footer links and the ident
+   stamp. space-between in .cd-footer pushes it to the middle of the row. */
+.cd-footer-status {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--cd-text-dim);
+  opacity: 0.75;
+}
+
+.cd-footer-status::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cd-text-dim);
+  flex-shrink: 0;
+}
+
+.cd-footer-status--ok::before   { background: var(--cd-green-hi); }
+.cd-footer-status--warn::before { background: var(--cd-amber-hi); }
+.cd-footer-status--fail::before { background: var(--cd-red); }
+
+.cd-footer-status--fail {
+  color: var(--cd-red);
+  opacity: 1;
 }
 
 /* ============================================================
