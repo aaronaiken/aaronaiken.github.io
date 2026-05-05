@@ -249,6 +249,11 @@ body.cd-strip-visible .cd-shell { padding-top: 32px; }
 
 .cd-main.full-width {
   grid-template-columns: 1fr;
+  /* Anchor short-content pages (templates manager) to the top instead of
+     distributing extra vertical space across the auto rows. Doesn't affect
+     content-rich full-width pages like /today/ and /reports/ where rows
+     fill the height naturally. */
+  align-content: start;
 }
 
 .cd-content {
