@@ -137,6 +137,10 @@
                         data-item-id="{{ item.id }}"
                         data-slug="{{ project.slug }}">
                       <label>{{ item.text }}</label>
+                      <button class="cd-today-star cd-tt-tag-item{% if item.today %} starred{% endif %}"
+                              data-kind="item" data-id="{{ item.id }}"
+                              title="{% if item.today %}Remove from Today{% else %}Add to Today{% endif %}"
+                              type="button">{{ '★' if item.today else '☆' }}</button>
                       {% if project.tracking_enabled %}
                         <span class="cd-tt-today-tag cd-tt-tag-item" data-item-today-tag="{{ item.id }}" hidden></span>
                         <span class="cd-tt-lifetime-tag cd-tt-tag-item" data-item-lifetime-tag="{{ item.id }}"
@@ -180,6 +184,10 @@
                 <li class="cd-task-item" data-id="{{ task.id }}" data-task-title="{{ task.title }}">
                   <input type="checkbox" class="cd-task-check project-task-check" data-id="{{ task.id }}" data-slug="{{ project.slug }}">
                   <span class="cd-task-title">{{ task.title }}</span>
+                  <button class="cd-today-star{% if task.today %} starred{% endif %}"
+                          data-kind="task" data-id="{{ task.id }}"
+                          title="{% if task.today %}Remove from Today{% else %}Add to Today{% endif %}"
+                          type="button">{{ '★' if task.today else '☆' }}</button>
                   {% if project.tracking_enabled %}
                     <span class="cd-tt-today-tag" data-task-today-tag="{{ task.id }}" hidden></span>
                     <span class="cd-tt-lifetime-tag" data-task-lifetime-tag="{{ task.id }}"
@@ -685,6 +693,7 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
       li.dataset.itemText=data.item.text;
       // Phase 1.5: emit the same ⏱ markup Jinja would render, so newly-added
       // items are tracker-aware without a page reload.
+      const starMarkup = `<button class="cd-today-star cd-tt-tag-item" data-kind="item" data-id="${data.item.id}" title="Add to Today" type="button">☆</button>`;
       const ttMarkup = (typeof PROJECT_TRACKING !== 'undefined' && PROJECT_TRACKING)
         ? `<span class="cd-tt-today-tag cd-tt-tag-item" data-item-today-tag="${data.item.id}" hidden></span>
            <span class="cd-tt-lifetime-tag cd-tt-tag-item" data-item-lifetime-tag="${data.item.id}" hidden></span>
@@ -693,6 +702,7 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
       li.innerHTML=`
         <input type="checkbox" data-item-id="${data.item.id}" data-slug="${PROJECT_SLUG}">
         <label>${escapeHtml(data.item.text)}</label>
+        ${starMarkup}
         ${ttMarkup}
         <button class="cd-btn ghost sm checklist-item-delete" data-id="${data.item.id}" data-slug="${PROJECT_SLUG}">✕</button>`;
       ul.appendChild(li);
@@ -740,6 +750,7 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
       // Phase 1.5: dynamically-added rows must include the same ⏱ button +
       // today-tag markup that Jinja emits, otherwise tasks added without a
       // page reload won't be tracker-aware.
+      const starMarkup = `<button class="cd-today-star" data-kind="task" data-id="${data.task.id}" title="Add to Today" type="button">☆</button>`;
       const ttMarkup = (typeof PROJECT_TRACKING !== 'undefined' && PROJECT_TRACKING)
         ? `<span class="cd-tt-today-tag" data-task-today-tag="${data.task.id}" hidden></span>
            <span class="cd-tt-lifetime-tag" data-task-lifetime-tag="${data.task.id}" hidden></span>
@@ -749,6 +760,7 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
         <input type="checkbox" class="cd-task-check project-task-check"
           data-id="${data.task.id}" data-slug="${PROJECT_SLUG}">
         <span class="cd-task-title">${escapeHtml(data.task.title)}</span>
+        ${starMarkup}
         ${ttMarkup}
         <button class="cd-task-edit" data-id="${data.task.id}" title="Edit">✎</button>
         <button class="cd-btn ghost sm project-task-delete"
@@ -1814,6 +1826,42 @@ function cdEditTask(id) {
       const sig = entries.filter(function (e) { return String(e.project_id) === String(PROJECT_ID); }).length;
       if (sig !== lastSig) { lastSig = sig; syncTodayTags(); }
     });
+  });
+})();
+
+// ============================================================
+// PHASE 2.1 — ★ Today toggle on task + checklist-item rows
+// ============================================================
+(function () {
+  'use strict';
+  document.addEventListener('click', function (ev) {
+    const btn = ev.target.closest('.cd-today-star');
+    if (!btn) return;
+    ev.preventDefault();
+    const kind = btn.getAttribute('data-kind');  // 'task' or 'item'
+    const id = btn.getAttribute('data-id');
+    if (!kind || !id) return;
+    const wasStarred = btn.classList.contains('starred');
+    // Optimistic UI flip
+    btn.classList.toggle('starred', !wasStarred);
+    btn.textContent = !wasStarred ? '★' : '☆';
+    btn.title = !wasStarred ? 'Remove from Today' : 'Add to Today';
+    const fd = new FormData();
+    fd.append(kind === 'item' ? 'item_id' : 'task_id', id);
+    fetch('/today/star', { method: 'POST', body: fd, credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data || !data.success) {
+          btn.classList.toggle('starred', wasStarred);
+          btn.textContent = wasStarred ? '★' : '☆';
+          btn.title = wasStarred ? 'Remove from Today' : 'Add to Today';
+        }
+      })
+      .catch(function () {
+        btn.classList.toggle('starred', wasStarred);
+        btn.textContent = wasStarred ? '★' : '☆';
+        btn.title = wasStarred ? 'Remove from Today' : 'Add to Today';
+      });
   });
 })();
 </script>
