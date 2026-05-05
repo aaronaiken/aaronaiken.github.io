@@ -336,7 +336,13 @@
 			const stripe = e.area_color || 'var(--cd-amber-lo)';
 			let context = '—';
 			if (e.task_title) context = `task: ${escapeHtml(e.task_title)}`;
-			else if (e.checklist_item_text) context = `item: ${escapeHtml(e.checklist_item_text)}`;
+			else if (e.checklist_item_id) {
+				// Phase 2.1: block-title as deliverable identity. Fall back
+				// to plain "Checklist" when the block has no title.
+				context = e.block_title
+					? `Checklist: ${escapeHtml(e.block_title)}`
+					: 'Checklist';
+			}
 			const runningCls = e.running ? ' is-running' : '';
 			const runningGlyph = e.running ? ' <span class="cd-reports-running-dot" title="still running"></span>' : '';
 			return `
