@@ -188,6 +188,19 @@
   color: rgba(212, 136, 10, 0.55);
   text-transform: uppercase;
 }
+/* Phase 2.2 — block row spacer (no checkbox; block completes
+   implicitly via item checks). Same width as the checkbox so the
+   row stays aligned with task + item rows. */
+.today-block-spacer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: rgba(212, 136, 10, 0.45);
+}
 .today-check-btn {
   width: 16px;
   height: 16px;
@@ -441,12 +454,36 @@
   }
 
   function todayRowMarkup(entry, isDone) {
-    // Phase 2.1 — entry.kind is 'task' or 'item'. Tasks use entry.title;
-    // items use entry.text prefixed by the parent block title (or plain
-    // "Checklist" when blocks.title is null).
+    // Phase 2.1: entry.kind is 'task' or 'item'.
+    // Phase 2.2: also 'block' — rendered with progress (`3/8 done`)
+    // and no checkbox (block completes implicitly via item checks).
     var kind = entry.kind || 'task';
     var source = entry.project_title || 'Below Deck';
     var titleHtml;
+    var btnHtml;
+    var btnInner = '<svg viewBox="0 0 12 10"><polyline points="1.5,5 4.5,8.5 10.5,1.5"/></svg>';
+
+    if (kind === 'block') {
+      // Block row: title + progress, no checkbox. Progress is the source-
+      // line content; project title shifts to a small dim suffix line.
+      var blockTitle = entry.title || 'Untitled Checklist';
+      var progressText;
+      if (entry.total_count === 0) {
+        progressText = 'no items';
+      } else {
+        progressText = entry.checked_count + '/' + entry.total_count + ' done';
+      }
+      titleHtml = '<span class="today-task-block-context">CHECKLIST · </span>' + escHtml(blockTitle);
+      // Use a non-clickable spacer in the checkbox slot so the row layout
+      // stays aligned with task and item rows.
+      btnHtml = '<span class="today-block-spacer" aria-hidden="true">▣</span>';
+      return '<div class="today-task-row today-block-row' + (isDone ? ' is-done' : '') + '" data-id="' + entry.id + '" data-kind="block">' +
+        btnHtml +
+        '<span class="today-task-title">' + titleHtml + '</span>' +
+        '<span class="today-task-source">' + escHtml(progressText) + ' · ' + escHtml(source) + '</span>' +
+        '</div>';
+    }
+
     if (kind === 'item') {
       var blockLabel = entry.block_title
         ? escHtml(entry.block_title)
@@ -456,8 +493,7 @@
       titleHtml = escHtml(entry.title);
     }
     var btnAttrs = 'data-id="' + entry.id + '" data-kind="' + kind + '"';
-    var btnInner = '<svg viewBox="0 0 12 10"><polyline points="1.5,5 4.5,8.5 10.5,1.5"/></svg>';
-    var btnHtml = isDone
+    btnHtml = isDone
       ? '<button class="today-check-btn checked" disabled title="Completed">' + btnInner + '</button>'
       : '<button class="today-check-btn" ' + btnAttrs + ' title="Mark complete">' + btnInner + '</button>';
     return '<div class="today-task-row' + (isDone ? ' is-done' : '') + '" data-id="' + entry.id + '" data-kind="' + kind + '">' +
