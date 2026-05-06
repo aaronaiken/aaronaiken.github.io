@@ -2398,6 +2398,79 @@ body.cd-strip-visible .cd-shell { padding-top: 32px; }
   margin-left: 4px;
 }
 
+/* Phase 2.4 — show-history toggle + panel on recurring blocks.
+   Sits between the items list and the add-item input. Read-only
+   browse — no interactive checkbox/edit/delete on archived items. */
+.cd-block-history-toggle-row {
+  margin: 0.4rem 0 0.5rem 1.5rem;
+}
+.cd-block-history-toggle {
+  background: none;
+  border: none;
+  color: var(--cd-text-dim);
+  font-family: var(--cd-font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  padding: 2px 4px;
+  text-transform: uppercase;
+  transition: color 0.15s;
+}
+.cd-block-history-toggle:hover,
+.cd-block-history-toggle:focus-visible {
+  color: var(--cd-amber-hi);
+  outline: none;
+}
+.cd-block-history-panel {
+  margin: 0.2rem 0 0.7rem 1.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(212, 136, 10, 0.03);
+  border: 1px dashed var(--cd-border);
+  border-radius: var(--cd-radius);
+  font-family: var(--cd-font-body);
+  font-size: 0.78rem;
+  color: var(--cd-text-dim);
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.cd-block-history-group {
+  margin-bottom: 0.6rem;
+}
+.cd-block-history-group:last-child {
+  margin-bottom: 0;
+}
+.cd-block-history-date {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  color: var(--cd-text-dim);
+  text-transform: uppercase;
+  margin-bottom: 0.3rem;
+}
+.cd-block-history-item {
+  padding: 1px 0 1px 0.4rem;
+  font-family: var(--cd-font-body);
+}
+.cd-block-history-item.checked {
+  color: var(--cd-text);
+}
+.cd-block-history-empty {
+  padding: 0.6rem;
+  font-family: var(--cd-font-ui);
+  font-size: 0.62rem;
+  color: var(--cd-text-dim);
+  text-align: center;
+}
+.cd-block-history-footer {
+  margin-top: 0.5rem;
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  color: var(--cd-text-dim);
+  text-align: right;
+  font-style: italic;
+  opacity: 0.7;
+}
+
 /* Phase 2.4 — recurrence pill in checklist block header.
    Sits between the title and the action buttons; reads as
    "this is a recurring routine, here's its cadence." Same dim
