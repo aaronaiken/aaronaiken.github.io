@@ -176,7 +176,7 @@
                             data-due-date="{{ item.due_date or '' }}">
                         <button class="cd-due-badge{% if not item.due_date %} unset{% endif %}" type="button"
                                 title="Set / change due date">{% if item.due_date %}due {{ item.due_date }}{% else %}+ due{% endif %}</button>
-                        <input type="date" class="cd-due-input" value="{{ item.due_date or '' }}" hidden>
+                        <input type="date" class="cd-due-input" value="{{ item.due_date or '' }}" tabindex="-1" aria-hidden="true">
                       </span>
                       <button class="cd-today-star cd-tt-tag-item{% if item.today %} starred{% endif %}"
                               data-kind="item" data-id="{{ item.id }}"
@@ -239,7 +239,7 @@
                         data-due-date="{{ task.due_date or '' }}">
                     <button class="cd-due-badge{% if not task.due_date %} unset{% endif %}" type="button"
                             title="Set / change due date">{% if task.due_date %}due {{ task.due_date }}{% else %}+ due{% endif %}</button>
-                    <input type="date" class="cd-due-input" value="{{ task.due_date or '' }}" hidden>
+                    <input type="date" class="cd-due-input" value="{{ task.due_date or '' }}" tabindex="-1" aria-hidden="true">
                   </span>
                   <button class="cd-today-star{% if task.today %} starred{% endif %}"
                           data-kind="task" data-id="{{ task.id }}"
@@ -812,7 +812,7 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
       li.dataset.itemText=data.item.text;
       // Phase 1.5: emit the same ⏱ markup Jinja would render, so newly-added
       // items are tracker-aware without a page reload.
-      const dueMarkup = `<span class="cd-due-wrapper cd-tt-tag-item" data-due-url="/command-deck/projects/${PROJECT_SLUG}/checklist/${data.item.id}/due-date" data-due-date=""><button class="cd-due-badge unset" type="button" title="Set / change due date">+ due</button><input type="date" class="cd-due-input" hidden></span>`;
+      const dueMarkup = `<span class="cd-due-wrapper cd-tt-tag-item" data-due-url="/command-deck/projects/${PROJECT_SLUG}/checklist/${data.item.id}/due-date" data-due-date=""><button class="cd-due-badge unset" type="button" title="Set / change due date">+ due</button><input type="date" class="cd-due-input" tabindex="-1" aria-hidden="true"></span>`;
       const starMarkup = `<button class="cd-today-star cd-tt-tag-item" data-kind="item" data-id="${data.item.id}" title="Add to Today" type="button">☆</button>`;
       const ttMarkup = (typeof PROJECT_TRACKING !== 'undefined' && PROJECT_TRACKING)
         ? `<span class="cd-tt-today-tag cd-tt-tag-item" data-item-today-tag="${data.item.id}" hidden></span>
@@ -871,7 +871,7 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
       // Phase 1.5: dynamically-added rows must include the same ⏱ button +
       // today-tag markup that Jinja emits, otherwise tasks added without a
       // page reload won't be tracker-aware.
-      const dueMarkup = `<span class="cd-due-wrapper" data-due-url="/tasks/${data.task.id}/due-date" data-due-date=""><button class="cd-due-badge unset" type="button" title="Set / change due date">+ due</button><input type="date" class="cd-due-input" hidden></span>`;
+      const dueMarkup = `<span class="cd-due-wrapper" data-due-url="/tasks/${data.task.id}/due-date" data-due-date=""><button class="cd-due-badge unset" type="button" title="Set / change due date">+ due</button><input type="date" class="cd-due-input" tabindex="-1" aria-hidden="true"></span>`;
       const starMarkup = `<button class="cd-today-star" data-kind="task" data-id="${data.task.id}" title="Add to Today" type="button">☆</button>`;
       const ttMarkup = (typeof PROJECT_TRACKING !== 'undefined' && PROJECT_TRACKING)
         ? `<span class="cd-tt-today-tag" data-task-today-tag="${data.task.id}" hidden></span>
@@ -1420,7 +1420,10 @@ document.addEventListener('click', function (ev) {
     document.querySelectorAll('.cd-due-badge').forEach(formatBadge);
   }
 
-  // Click badge → reveal date input + open native picker
+  // Click badge → open native date picker. The input is always in
+  // the DOM at the badge's position (CSS opacity:0, position:absolute)
+  // so showPicker() has a stable anchor on first click — no more
+  // top-left-then-correct-on-second-click bug.
   document.addEventListener('click', function (ev) {
     const badge = ev.target.closest('.cd-due-badge');
     if (!badge) return;
@@ -1429,9 +1432,8 @@ document.addEventListener('click', function (ev) {
     if (!wrapper) return;
     const input = wrapper.querySelector('.cd-due-input');
     if (!input) return;
-    input.hidden = false;
     if (typeof input.showPicker === 'function') {
-      try { input.showPicker(); } catch (e) { /* unsupported */ input.focus(); }
+      try { input.showPicker(); } catch (e) { input.focus(); }
     } else {
       input.focus();
     }
@@ -1459,7 +1461,6 @@ document.addEventListener('click', function (ev) {
         if (badge) formatBadge(badge);
       }
     } catch (e) { /* silent */ }
-    input.hidden = true;
   });
 
   // Right-click badge → quick clear
