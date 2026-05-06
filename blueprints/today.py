@@ -193,15 +193,15 @@ def _today_autoclear(conn):
 		    SELECT b.id FROM blocks b
 		    WHERE b.today = 1
 		      AND EXISTS (
-		        SELECT 1 FROM checklist_items ci WHERE ci.block_id = b.id
+		        SELECT 1 FROM checklist_items ci WHERE ci.block_id = b.id AND ci.archived_at IS NULL
 		      )
 		      AND NOT EXISTS (
 		        SELECT 1 FROM checklist_items ci
-		        WHERE ci.block_id = b.id AND ci.checked = 0
+		        WHERE ci.block_id = b.id AND ci.archived_at IS NULL AND ci.checked = 0
 		      )
 		      AND NOT EXISTS (
 		        SELECT 1 FROM checklist_items ci
-		        WHERE ci.block_id = b.id
+		        WHERE ci.block_id = b.id AND ci.archived_at IS NULL
 		          AND ci.checked = 1
 		          AND (ci.checked_at IS NULL OR ci.checked_at >= ?)
 		      )
@@ -286,7 +286,7 @@ def today_count():
 		"SELECT COUNT(*) as cnt FROM tasks WHERE today = 1 AND status = 'open'"
 	).fetchone()['cnt']
 	item_count = conn.execute(
-		"SELECT COUNT(*) as cnt FROM checklist_items WHERE today = 1 AND checked = 0"
+		"SELECT COUNT(*) as cnt FROM checklist_items WHERE today = 1 AND checked = 0 AND archived_at IS NULL"
 	).fetchone()['cnt']
 	block_count = conn.execute(
 		"SELECT COUNT(*) as cnt FROM blocks WHERE today = 1"
@@ -327,7 +327,7 @@ def today_data():
 		JOIN blocks b             ON ci.block_id = b.id
 		JOIN projects p           ON b.project_id = p.id
 		LEFT JOIN projects parent ON p.parent_project_id = parent.id
-		WHERE ci.today = 1 AND ci.checked = 0
+		WHERE ci.today = 1 AND ci.checked = 0 AND ci.archived_at IS NULL
 		ORDER BY ci.id ASC
 	''').fetchall()
 
@@ -353,7 +353,7 @@ def today_data():
 		JOIN blocks b             ON ci.block_id = b.id
 		JOIN projects p           ON b.project_id = p.id
 		LEFT JOIN projects parent ON p.parent_project_id = parent.id
-		WHERE ci.today = 1 AND ci.checked = 1
+		WHERE ci.today = 1 AND ci.checked = 1 AND ci.archived_at IS NULL
 		ORDER BY ci.id DESC
 	''').fetchall()
 
@@ -367,8 +367,8 @@ def today_data():
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
 		       parent.area_color AS area_color,
-		       (SELECT COUNT(*) FROM checklist_items ci WHERE ci.block_id = b.id) AS total_count,
-		       (SELECT COUNT(*) FROM checklist_items ci WHERE ci.block_id = b.id AND ci.checked = 1) AS checked_count
+		       (SELECT COUNT(*) FROM checklist_items ci WHERE ci.block_id = b.id AND ci.archived_at IS NULL) AS total_count,
+		       (SELECT COUNT(*) FROM checklist_items ci WHERE ci.block_id = b.id AND ci.archived_at IS NULL AND ci.checked = 1) AS checked_count
 		FROM blocks b
 		JOIN projects p           ON b.project_id = p.id
 		LEFT JOIN projects parent ON p.parent_project_id = parent.id
@@ -415,8 +415,8 @@ def today_data():
 		''', (proj['id'],)).fetchall()
 		blocks_raw = conn.execute('''
 			SELECT b.id, b.title, b.today,
-			       (SELECT COUNT(*) FROM checklist_items ci WHERE ci.block_id = b.id) AS total_count,
-			       (SELECT COUNT(*) FROM checklist_items ci WHERE ci.block_id = b.id AND ci.checked = 1) AS checked_count
+			       (SELECT COUNT(*) FROM checklist_items ci WHERE ci.block_id = b.id AND ci.archived_at IS NULL) AS total_count,
+			       (SELECT COUNT(*) FROM checklist_items ci WHERE ci.block_id = b.id AND ci.archived_at IS NULL AND ci.checked = 1) AS checked_count
 			FROM blocks b
 			WHERE b.project_id = ? AND b.type = 'checklist'
 			ORDER BY b.id ASC
@@ -426,9 +426,9 @@ def today_data():
 			b_dict = dict(b)
 			b_dict['open_count'] = b_dict['total_count'] - b_dict['checked_count']
 			open_items = conn.execute('''
-				SELECT id, text, checked, today, block_id
+				SELECT id, text, checked, today, block_id, due_date
 				FROM checklist_items
-				WHERE block_id = ? AND checked = 0
+				WHERE block_id = ? AND checked = 0 AND archived_at IS NULL
 				ORDER BY id ASC
 			''', (b_dict['id'],)).fetchall()
 			b_dict['open_items'] = [dict(i) for i in open_items]
@@ -571,7 +571,7 @@ def today_star():
 	# Combined open count for the badge — tasks + items + blocks
 	count = conn.execute(
 		"SELECT (SELECT COUNT(*) FROM tasks WHERE today = 1 AND status = 'open') + "
-		"       (SELECT COUNT(*) FROM checklist_items WHERE today = 1 AND checked = 0) + "
+		"       (SELECT COUNT(*) FROM checklist_items WHERE today = 1 AND checked = 0 AND archived_at IS NULL) + "
 		"       (SELECT COUNT(*) FROM blocks WHERE today = 1) "
 		"AS cnt"
 	).fetchone()['cnt']

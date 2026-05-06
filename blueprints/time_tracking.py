@@ -223,7 +223,7 @@ def time_start():
 			SELECT ci.id, b.project_id
 			FROM checklist_items ci
 			JOIN blocks b ON ci.block_id = b.id
-			WHERE ci.id = ?
+			WHERE ci.id = ? AND ci.archived_at IS NULL
 		''', (checklist_item_id,)).fetchone()
 		if not item:
 			conn.close()
@@ -396,7 +396,7 @@ def time_update(entry_id):
 			SELECT ci.id, b.project_id
 			FROM checklist_items ci
 			JOIN blocks b ON ci.block_id = b.id
-			WHERE ci.id = ?
+			WHERE ci.id = ? AND ci.archived_at IS NULL
 		''', (new_item_id,)).fetchone()
 		if not item:
 			conn.close()
