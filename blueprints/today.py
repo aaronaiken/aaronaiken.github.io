@@ -4,6 +4,9 @@ Phase 2.1 (.kt/spec-time-tracking-phase-2-1.md): checklist items as Today
 citizens. Phase 2.2 (.kt/spec-time-tracking-phase-2-2.md): blocks join the
 party as their own peer rows; checklist_items.checked_at stamped on every
 toggle drives a precise (vs sloppy) 4am autoclear cutoff.
+Phase 2.4 (.kt/spec-time-tracking-phase-2-4.md): block recurrence + per-cycle
+item instances + due dates. Autoclear gains a cycle-fire pass that archives
+old items and spawns fresh instances on cycle boundary.
 """
 from datetime import datetime, timedelta
 import pytz
@@ -14,10 +17,127 @@ from helpers.db import get_db, et_now
 
 
 _UTC_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+_ET_FORMAT = '%Y-%m-%dT%H:%M:%S.%f%z'
+
+_WEEKDAY_SHORT = {0: 'Mon', 1: 'Tue', 2: 'Wed', 3: 'Thu', 4: 'Fri', 5: 'Sat', 6: 'Sun'}
+_WEEKDAY_FROM_SHORT = {v: k for k, v in _WEEKDAY_SHORT.items()}
 
 
 def _utc_now_iso():
 	return datetime.now(pytz.UTC).strftime(_UTC_FORMAT)
+
+
+def _et_now_iso():
+	"""ET-local ISO with offset — same shape as helpers.db.et_now() but full microseconds."""
+	eastern = pytz.timezone('US/Eastern')
+	return datetime.now(eastern).strftime(_ET_FORMAT)
+
+
+# ---- Phase 2.4 — recurrence helpers ----
+
+def _et_today_4am_iso(now_et):
+	"""Return today's 4am ET (or yesterday's 4am if it's before 4am right now) as an
+	ET-local ISO string suitable for lex compare against last_reset_at."""
+	if now_et.hour < 4:
+		base_date = (now_et - timedelta(days=1)).date()
+	else:
+		base_date = now_et.date()
+	eastern = pytz.timezone('US/Eastern')
+	cutoff = eastern.localize(datetime.combine(base_date, datetime.min.time()).replace(hour=4))
+	return cutoff.strftime(_ET_FORMAT)
+
+
+def _et_this_monday_4am_iso(now_et):
+	"""Most recent Monday 4am ET (inclusive of today if today is Mon and time>=4am)."""
+	# Walk back to the most recent Monday.
+	days_back = now_et.weekday()  # Mon=0
+	target_date = (now_et - timedelta(days=days_back)).date()
+	eastern = pytz.timezone('US/Eastern')
+	cutoff = eastern.localize(datetime.combine(target_date, datetime.min.time()).replace(hour=4))
+	# If we're on Monday but before 4am, the boundary just passed is the PRIOR Monday.
+	if cutoff > now_et:
+		cutoff = cutoff - timedelta(days=7)
+	return cutoff.strftime(_ET_FORMAT)
+
+
+def _et_first_of_month_4am_iso(now_et):
+	"""Most recent 1st-of-month 4am ET (inclusive of today if today=1st and time>=4am)."""
+	first_this_month = now_et.replace(day=1, hour=4, minute=0, second=0, microsecond=0)
+	if first_this_month > now_et:
+		# We're on the 1st before 4am — the boundary just passed is the prior month's 1st.
+		prior = (first_this_month - timedelta(days=1)).replace(day=1)
+		return prior.strftime(_ET_FORMAT)
+	return first_this_month.strftime(_ET_FORMAT)
+
+
+def _next_weekday_iso(now_et, target_day_short):
+	"""Next occurrence of target_day_short ('Mon'..'Sun') from now (inclusive of today),
+	within 7 days. Returns ISO YYYY-MM-DD."""
+	target = _WEEKDAY_FROM_SHORT.get(target_day_short, 4)  # default Friday
+	days_ahead = (target - now_et.weekday()) % 7
+	return (now_et + timedelta(days=days_ahead)).strftime('%Y-%m-%d')
+
+
+def _this_month_target_iso(now_et, target):
+	"""Target day-of-month in the current month. Accepts '1'..'31' or 'last'.
+	Clamps over-large values to last day of month (e.g. 31 in Feb → 28/29)."""
+	# Last day of current month
+	next_month_first = (now_et.replace(day=28) + timedelta(days=4)).replace(day=1)
+	last_day = (next_month_first - timedelta(days=1)).day
+	if target == 'last':
+		actual = last_day
+	else:
+		try:
+			actual = min(max(1, int(target)), last_day)
+		except (ValueError, TypeError):
+			actual = now_et.day
+	return now_et.replace(day=actual).strftime('%Y-%m-%d')
+
+
+def _all_items_checked(conn, block_id):
+	"""True iff the block has at least one active item AND every active item is checked."""
+	row = conn.execute('''
+		SELECT
+		  COUNT(*) AS total,
+		  SUM(CASE WHEN checked = 1 THEN 1 ELSE 0 END) AS checked
+		FROM checklist_items
+		WHERE block_id = ? AND archived_at IS NULL
+	''', (block_id,)).fetchone()
+	if not row or not row['total']:
+		return False
+	return row['checked'] == row['total']
+
+
+def _spawn_cycle(conn, block_id, cycle_due_date, et_now):
+	"""Archive current active items + spawn fresh instances with the new due_date.
+
+	Idempotent at the cycle boundary because last_reset_at is bumped after spawn —
+	subsequent autoclear passes the same day skip.
+	Returns the count of spawned items (0 if the block had no structure)."""
+	now_iso = et_now.strftime(_ET_FORMAT)
+	structure = conn.execute('''
+		SELECT text FROM checklist_items
+		WHERE block_id = ? AND archived_at IS NULL
+		ORDER BY id ASC
+	''', (block_id,)).fetchall()
+	if not structure:
+		# Empty block — bump last_reset_at so we don't loop, return 0
+		conn.execute('UPDATE blocks SET last_reset_at = ? WHERE id = ?', (now_iso, block_id))
+		return 0
+	conn.execute('''
+		UPDATE checklist_items SET archived_at = ?
+		WHERE block_id = ? AND archived_at IS NULL
+	''', (now_iso, block_id))
+	for row in structure:
+		conn.execute('''
+			INSERT INTO checklist_items (block_id, text, due_date, checked, today)
+			VALUES (?, ?, ?, 0, 0)
+		''', (block_id, row['text'], cycle_due_date))
+	conn.execute(
+		'UPDATE blocks SET today = 0, last_reset_at = ? WHERE id = ?',
+		(now_iso, block_id)
+	)
+	return len(structure)
 
 
 today_bp = Blueprint('today', __name__)
@@ -87,6 +207,62 @@ def _today_autoclear(conn):
 		      )
 		  )
 	''', (cutoff_utc,))
+
+	# Phase 2.4 — recurrence-spawn pass. For each recurring block whose cycle
+	# boundary has passed since last_reset_at, archive the current cycle and
+	# spawn fresh instances. last_reset_at is in ET-local format; cycle
+	# boundaries are computed as ET-local strings that lex-compare cleanly.
+	today_short = _WEEKDAY_SHORT[now_et.weekday()]
+
+	# DAILY — fires every day in recurrence_days (or every day if NULL).
+	daily_boundary = _et_today_4am_iso(now_et)
+	daily_blocks = conn.execute(
+		"SELECT id, recurrence_days, last_reset_at FROM blocks "
+		"WHERE recurrence = 'daily'"
+	).fetchall()
+	for b in daily_blocks:
+		days = b['recurrence_days']
+		if days:
+			allowed = {d.strip() for d in days.split(',') if d.strip()}
+			if today_short not in allowed:
+				continue
+		if b['last_reset_at'] and b['last_reset_at'] >= daily_boundary:
+			continue
+		_spawn_cycle(conn, b['id'], cycle_due_date=now_et.strftime('%Y-%m-%d'), et_now=now_et)
+
+	# WEEKLY — fires Monday 4am ET, ONLY IF all current items are checked.
+	if today_short == 'Mon' or now_et.hour >= 4:
+		# Eligible to evaluate weekly fires (we're past this Monday's 4am OR
+		# any later day in the week — the boundary check below filters).
+		weekly_boundary = _et_this_monday_4am_iso(now_et)
+		weekly_blocks = conn.execute(
+			"SELECT id, recurrence_days, last_reset_at FROM blocks "
+			"WHERE recurrence = 'weekly'"
+		).fetchall()
+		for b in weekly_blocks:
+			if b['last_reset_at'] and b['last_reset_at'] >= weekly_boundary:
+				continue
+			if not _all_items_checked(conn, b['id']):
+				continue
+			target_day = (b['recurrence_days'] or 'Fri').split(',')[0].strip() or 'Fri'
+			due = _next_weekday_iso(now_et, target_day)
+			_spawn_cycle(conn, b['id'], cycle_due_date=due, et_now=now_et)
+
+	# MONTHLY — fires 1st of month 4am ET, ONLY IF all current items are checked.
+	monthly_boundary = _et_first_of_month_4am_iso(now_et)
+	monthly_blocks = conn.execute(
+		"SELECT id, recurrence_days, last_reset_at FROM blocks "
+		"WHERE recurrence = 'monthly'"
+	).fetchall()
+	for b in monthly_blocks:
+		if b['last_reset_at'] and b['last_reset_at'] >= monthly_boundary:
+			continue
+		if not _all_items_checked(conn, b['id']):
+			continue
+		target = (b['recurrence_days'] or '1').strip() or '1'
+		due = _this_month_target_iso(now_et, target)
+		_spawn_cycle(conn, b['id'], cycle_due_date=due, et_now=now_et)
+
 	conn.commit()
 
 
