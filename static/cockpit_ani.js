@@ -50,6 +50,35 @@
 	}
 	if (aniIsOpen) {
 	  setTimeout(function() { aniInput.focus(); }, 300);
+	} else {
+	  // Closing: drop fullscreen state so reopen returns to docked view
+	  document.body.classList.remove('ani-fullscreen');
+	  document.body.classList.remove('ani-fs-loops-open');
+	  var fsBtn = document.getElementById('ani-fs-btn');
+	  if (fsBtn) fsBtn.textContent = 'FULL';
+	}
+  }
+
+  function aniFullscreenToggle() {
+	var entering = !document.body.classList.contains('ani-fullscreen');
+	document.body.classList.toggle('ani-fullscreen', entering);
+	var fsBtn = document.getElementById('ani-fs-btn');
+	if (fsBtn) fsBtn.textContent = entering ? 'MIN' : 'FULL';
+	if (!entering) {
+	  // Leaving fullscreen also collapses the loops panel
+	  document.body.classList.remove('ani-fs-loops-open');
+	}
+	// Pre-warm loops so the LOOPS button has content the first time
+	if (entering && typeof window.adLoadAniLoops === 'function') {
+	  try { window.adLoadAniLoops(); } catch (_) {}
+	}
+  }
+
+  function aniFsLoopsToggle() {
+	if (!document.body.classList.contains('ani-fullscreen')) return;
+	document.body.classList.toggle('ani-fs-loops-open');
+	if (typeof window.adLoadAniLoops === 'function') {
+	  try { window.adLoadAniLoops(); } catch (_) {}
 	}
   }
 
@@ -57,6 +86,18 @@
 	if (e.ctrlKey && e.shiftKey && e.key === 'A') {
 	  e.preventDefault();
 	  aniToggle();
+	  return;
+	}
+	// ESC closes the chat when fullscreen is open. Scoped check avoids
+	// stomping on brain-dump / quick-TX overlays which own their own ESC.
+	if (e.key === 'Escape' && document.body.classList.contains('ani-fullscreen')) {
+	  var bdOverlay = document.getElementById('brain-dump-overlay');
+	  var qtOverlay = document.getElementById('quick-tx-overlay');
+	  var bdOpen = bdOverlay && bdOverlay.classList.contains('is-open');
+	  var qtOpen = qtOverlay && qtOverlay.classList.contains('is-open');
+	  if (bdOpen || qtOpen) return;
+	  e.preventDefault();
+	  if (aniIsOpen) aniToggle();
 	}
   });
 

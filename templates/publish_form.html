@@ -355,6 +355,15 @@
 <!-- ANI PANEL                                                     -->
 <!-- ============================================================ -->
 
+<!-- Outer-space backdrop, only painted when body.ani-fullscreen -->
+<div id="ani-starfield" aria-hidden="true">
+  <div class="ani-nebula ani-nebula-violet"></div>
+  <div class="ani-nebula ani-nebula-teal"></div>
+  <div class="ani-stars ani-stars-far"></div>
+  <div class="ani-stars ani-stars-mid"></div>
+  <div class="ani-stars ani-stars-near"></div>
+</div>
+
 <div id="ani-panel" role="complementary" aria-label="Ani — private comms">
   <div id="ani-header" onclick="aniToggle()">
 	<div>
@@ -364,7 +373,11 @@
 		<span id="ani-ache-display" class="ache-low"></span>
 	  </div>
 	</div>
-	<button id="ani-close-btn" onclick="event.stopPropagation(); aniToggle()" aria-label="Close Ani panel">CLOSE</button>
+	<div id="ani-header-actions">
+	  <button id="ani-fs-loops-btn" onclick="event.stopPropagation(); aniFsLoopsToggle()" aria-label="Toggle Ani video loops">LOOPS</button>
+	  <button id="ani-fs-btn" onclick="event.stopPropagation(); aniFullscreenToggle()" aria-label="Toggle fullscreen">FULL</button>
+	  <button id="ani-close-btn" onclick="event.stopPropagation(); aniToggle()" aria-label="Close Ani panel">CLOSE</button>
+	</div>
   </div>
 
   <div id="ani-messages" aria-live="polite">

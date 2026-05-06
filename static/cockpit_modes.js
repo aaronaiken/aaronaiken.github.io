@@ -505,6 +505,13 @@
 	let adAniOpen = false;
 
 	function adAniToggle() {
+        // When Ani fullscreen is active, the LOOPS panel slide is driven by
+        // body.ani-fs-loops-open, not ad-panel-open. Delegate so the panel's
+        // own CLOSE button still works in that mode.
+        if (document.body.classList.contains('ani-fullscreen') && typeof window.aniFsLoopsToggle === 'function') {
+            window.aniFsLoopsToggle();
+            return;
+        }
         adAniOpen = !adAniOpen;
         const panel = document.getElementById('ad-panel');
         panel.classList.toggle('ad-panel-open', adAniOpen);

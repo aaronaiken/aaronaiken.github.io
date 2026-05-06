@@ -90,6 +90,19 @@
 	.mode-after-dark #ad-panel { display: flex; }
 	#ad-panel.ad-panel-open { transform: translateX(0); }
 
+	/* Ani fullscreen mode: lounge panel is reachable via the LOOPS button
+	   regardless of after-dark mode, on desktop only. */
+	body.ani-fullscreen #ad-panel {
+		display: flex;
+		transform: translateX(-100%);
+		z-index: 10010;
+	}
+	body.ani-fullscreen.ani-fs-loops-open #ad-panel { transform: translateX(0); }
+	body.ani-fullscreen #ad-ani-pill { display: none !important; }
+	@media (max-width: 700px) {
+		body.ani-fullscreen #ad-panel { display: none !important; }
+	}
+
 	#ad-panel-header {
 		padding: 14px 16px 10px;
 		border-bottom: 1px solid #4a1818;
