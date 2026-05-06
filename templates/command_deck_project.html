@@ -171,6 +171,13 @@
                         data-item-id="{{ item.id }}"
                         data-slug="{{ project.slug }}">
                       <label>{{ item.text }}</label>
+                      <span class="cd-due-wrapper cd-tt-tag-item"
+                            data-due-url="/command-deck/projects/{{ project.slug }}/checklist/{{ item.id }}/due-date"
+                            data-due-date="{{ item.due_date or '' }}">
+                        <button class="cd-due-badge{% if not item.due_date %} unset{% endif %}" type="button"
+                                title="Set / change due date">{% if item.due_date %}due {{ item.due_date }}{% else %}+ due{% endif %}</button>
+                        <input type="date" class="cd-due-input" value="{{ item.due_date or '' }}" hidden>
+                      </span>
                       <button class="cd-today-star cd-tt-tag-item{% if item.today %} starred{% endif %}"
                               data-kind="item" data-id="{{ item.id }}"
                               title="{% if item.today %}Remove from Today{% else %}Add to Today{% endif %}"
@@ -218,6 +225,13 @@
                 <li class="cd-task-item" data-id="{{ task.id }}" data-task-title="{{ task.title }}">
                   <input type="checkbox" class="cd-task-check project-task-check" data-id="{{ task.id }}" data-slug="{{ project.slug }}">
                   <span class="cd-task-title">{{ task.title }}</span>
+                  <span class="cd-due-wrapper"
+                        data-due-url="/tasks/{{ task.id }}/due-date"
+                        data-due-date="{{ task.due_date or '' }}">
+                    <button class="cd-due-badge{% if not task.due_date %} unset{% endif %}" type="button"
+                            title="Set / change due date">{% if task.due_date %}due {{ task.due_date }}{% else %}+ due{% endif %}</button>
+                    <input type="date" class="cd-due-input" value="{{ task.due_date or '' }}" hidden>
+                  </span>
                   <button class="cd-today-star{% if task.today %} starred{% endif %}"
                           data-kind="task" data-id="{{ task.id }}"
                           title="{% if task.today %}Remove from Today{% else %}Add to Today{% endif %}"
@@ -789,6 +803,7 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
       li.dataset.itemText=data.item.text;
       // Phase 1.5: emit the same ⏱ markup Jinja would render, so newly-added
       // items are tracker-aware without a page reload.
+      const dueMarkup = `<span class="cd-due-wrapper cd-tt-tag-item" data-due-url="/command-deck/projects/${PROJECT_SLUG}/checklist/${data.item.id}/due-date" data-due-date=""><button class="cd-due-badge unset" type="button" title="Set / change due date">+ due</button><input type="date" class="cd-due-input" hidden></span>`;
       const starMarkup = `<button class="cd-today-star cd-tt-tag-item" data-kind="item" data-id="${data.item.id}" title="Add to Today" type="button">☆</button>`;
       const ttMarkup = (typeof PROJECT_TRACKING !== 'undefined' && PROJECT_TRACKING)
         ? `<span class="cd-tt-today-tag cd-tt-tag-item" data-item-today-tag="${data.item.id}" hidden></span>
@@ -798,6 +813,7 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
       li.innerHTML=`
         <input type="checkbox" data-item-id="${data.item.id}" data-slug="${PROJECT_SLUG}">
         <label>${escapeHtml(data.item.text)}</label>
+        ${dueMarkup}
         ${starMarkup}
         ${ttMarkup}
         <button class="cd-btn ghost sm checklist-item-delete" data-id="${data.item.id}" data-slug="${PROJECT_SLUG}">✕</button>`;
@@ -846,6 +862,7 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
       // Phase 1.5: dynamically-added rows must include the same ⏱ button +
       // today-tag markup that Jinja emits, otherwise tasks added without a
       // page reload won't be tracker-aware.
+      const dueMarkup = `<span class="cd-due-wrapper" data-due-url="/tasks/${data.task.id}/due-date" data-due-date=""><button class="cd-due-badge unset" type="button" title="Set / change due date">+ due</button><input type="date" class="cd-due-input" hidden></span>`;
       const starMarkup = `<button class="cd-today-star" data-kind="task" data-id="${data.task.id}" title="Add to Today" type="button">☆</button>`;
       const ttMarkup = (typeof PROJECT_TRACKING !== 'undefined' && PROJECT_TRACKING)
         ? `<span class="cd-tt-today-tag" data-task-today-tag="${data.task.id}" hidden></span>
@@ -856,6 +873,7 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
         <input type="checkbox" class="cd-task-check project-task-check"
           data-id="${data.task.id}" data-slug="${PROJECT_SLUG}">
         <span class="cd-task-title">${escapeHtml(data.task.title)}</span>
+        ${dueMarkup}
         ${starMarkup}
         ${ttMarkup}
         <button class="cd-task-edit" data-id="${data.task.id}" title="Edit">✎</button>
@@ -1251,6 +1269,123 @@ document.addEventListener('click', function (ev) {
     close();
     spawn(id);
   });
+})();
+
+// Phase 2.4 — DUE DATE badges + setter on tasks/items
+(function () {
+  'use strict';
+
+  function fmtDueLabel(iso) {
+    if (!iso) return '+ due';
+    // Compute days delta in local TZ
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const [y, m, d] = iso.split('-').map(Number);
+    const due = new Date(y, m - 1, d);
+    due.setHours(0, 0, 0, 0);
+    const days = Math.round((due - today) / 86400000);
+    if (days < 0) {
+      // OVERDUE — show abbreviated weekday + month/day
+      const wk = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][due.getDay()];
+      return 'OVERDUE ' + wk + ' ' + (due.getMonth() + 1) + '/' + due.getDate();
+    }
+    if (days === 0) return 'due today';
+    if (days === 1) return 'due tomorrow';
+    if (days < 7) {
+      const wk = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][due.getDay()];
+      return 'due ' + wk + ' ' + (due.getMonth() + 1) + '/' + due.getDate();
+    }
+    // Distant future — full ISO
+    return 'due ' + iso;
+  }
+
+  function formatBadge(badgeEl) {
+    const wrapper = badgeEl.closest('.cd-due-wrapper');
+    const iso = wrapper ? wrapper.getAttribute('data-due-date') : '';
+    badgeEl.textContent = fmtDueLabel(iso);
+    badgeEl.classList.toggle('unset', !iso);
+    badgeEl.classList.toggle('overdue', iso && fmtDueLabel(iso).startsWith('OVERDUE'));
+    badgeEl.classList.toggle('today', iso && fmtDueLabel(iso) === 'due today');
+    badgeEl.classList.toggle('soon', iso && (fmtDueLabel(iso) === 'due tomorrow' || /^due (Mon|Tue|Wed|Thu|Fri|Sat|Sun) /.test(fmtDueLabel(iso))));
+  }
+
+  function refreshAllBadges() {
+    document.querySelectorAll('.cd-due-badge').forEach(formatBadge);
+  }
+
+  // Click badge → reveal date input + open native picker
+  document.addEventListener('click', function (ev) {
+    const badge = ev.target.closest('.cd-due-badge');
+    if (!badge) return;
+    ev.preventDefault();
+    const wrapper = badge.closest('.cd-due-wrapper');
+    if (!wrapper) return;
+    const input = wrapper.querySelector('.cd-due-input');
+    if (!input) return;
+    input.hidden = false;
+    if (typeof input.showPicker === 'function') {
+      try { input.showPicker(); } catch (e) { /* unsupported */ input.focus(); }
+    } else {
+      input.focus();
+    }
+  });
+
+  // Change date input → POST + update badge
+  document.addEventListener('change', async function (ev) {
+    const input = ev.target.closest('.cd-due-input');
+    if (!input) return;
+    const wrapper = input.closest('.cd-due-wrapper');
+    if (!wrapper) return;
+    const url = wrapper.getAttribute('data-due-url');
+    const newVal = input.value || '';
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ due_date: newVal || null }),
+        credentials: 'same-origin',
+      });
+      if (r.ok) {
+        const d = await r.json();
+        wrapper.setAttribute('data-due-date', d.due_date || '');
+        const badge = wrapper.querySelector('.cd-due-badge');
+        if (badge) formatBadge(badge);
+      }
+    } catch (e) { /* silent */ }
+    input.hidden = true;
+  });
+
+  // Right-click badge → quick clear
+  document.addEventListener('contextmenu', async function (ev) {
+    const badge = ev.target.closest('.cd-due-badge');
+    if (!badge) return;
+    const wrapper = badge.closest('.cd-due-wrapper');
+    if (!wrapper) return;
+    const iso = wrapper.getAttribute('data-due-date');
+    if (!iso) return;  // already cleared
+    ev.preventDefault();
+    if (!confirm('Clear due date?')) return;
+    const url = wrapper.getAttribute('data-due-url');
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ due_date: null }),
+        credentials: 'same-origin',
+      });
+      if (r.ok) {
+        wrapper.setAttribute('data-due-date', '');
+        const inp = wrapper.querySelector('.cd-due-input');
+        if (inp) inp.value = '';
+        formatBadge(badge);
+      }
+    } catch (e) { /* silent */ }
+  });
+
+  // On page load, format all badges based on relative dates
+  document.addEventListener('DOMContentLoaded', refreshAllBadges);
+  // Also re-run after a small delay to catch any deferred renders
+  setTimeout(refreshAllBadges, 100);
 })();
 
 // Phase 2.4 — RECURRENCE setter modal + RESET button

@@ -120,6 +120,36 @@ def task_edit(task_id):
 	return jsonify({'success': True, 'task': dict(task)})
 
 
+@tasks_bp.route('/tasks/<int:task_id>/due-date', methods=['POST'])
+def task_due_date(task_id):
+	"""Phase 2.4 — set or clear due_date on a task. Accepts ISO YYYY-MM-DD
+	or null/empty to clear."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 403
+	data = request.get_json(silent=True) or request.form
+	val = data.get('due_date')
+	if val in (None, '', 'null'):
+		due = None
+	else:
+		val = val.strip()
+		# Light validation — accepts YYYY-MM-DD via fromisoformat
+		import datetime
+		try:
+			datetime.date.fromisoformat(val)
+		except (ValueError, TypeError):
+			return jsonify({'error': 'invalid_due_date'}), 400
+		due = val
+	conn = get_db()
+	row = conn.execute('SELECT id FROM tasks WHERE id = ?', (task_id,)).fetchone()
+	if not row:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+	conn.execute('UPDATE tasks SET due_date = ? WHERE id = ?', (due, task_id))
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True, 'due_date': due})
+
+
 @tasks_bp.route('/tasks/<int:task_id>/assign', methods=['POST'])
 def task_assign(task_id):
 	"""Assign a Below Deck task to a project."""
