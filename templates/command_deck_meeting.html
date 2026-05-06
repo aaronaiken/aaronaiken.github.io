@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{{ meeting.title }} · Meeting · Command Deck</title>
+  <link rel="stylesheet" href="/static/command_deck.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+</head>
+<body class="command-deck">
+<div class="cd-shell">
+
+  <!-- HEADER -->
+  <header class="cd-header">
+    <div class="cd-header-left">
+      <a href="/command-deck/" class="cd-wordmark">COMMAND DECK</a>
+      <span class="cd-ident">MEETING · LOG</span>
+    </div>
+    <nav class="cd-header-nav">
+      <a href="/command-deck/" class="cd-nav-link">BRIDGE</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/projects/" class="cd-nav-link">PROJECTS</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/below-deck" class="cd-nav-link">
+        BELOW DECK
+        <span class="cd-bd-badge" id="bdBadge"></span>
+      </a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/today/" class="cd-nav-link">TODAY</a>
+      <span class="cd-nav-sep">·</span>
+      <details class="cd-nav-more">
+        <summary class="cd-nav-link cd-nav-more-trigger">MORE ▾</summary>
+        <div class="cd-nav-more-menu">
+          <a href="/command-deck/reports/" class="cd-nav-link">REPORTS</a>
+          <a href="/command-deck/templates/" class="cd-nav-link">TEMPLATES</a>
+          <a href="/command-deck/meetings/" class="cd-nav-link">MEETINGS</a>
+        </div>
+      </details>
+      <span class="cd-nav-sep">·</span>
+      <a href="/publish" class="cd-nav-link">COCKPIT</a>
+    </nav>
+  </header>
+
+  {% include 'includes/today_panel.html' %}
+  {% include 'includes/active_timer_strip.html' %}
+
+  <!-- MAIN -->
+  <div class="cd-main full-width">
+
+    <!-- BREADCRUMB -->
+    <div class="cd-breadcrumb">
+      <a href="/command-deck/meetings/">Meetings</a>
+      <span class="cd-breadcrumb-sep">›</span>
+      <span class="cd-breadcrumb-tail">{{ meeting.title }}</span>
+      <span class="cd-breadcrumb-actions">
+        <button class="cd-btn ghost sm" id="meetingDeleteBtn" type="button">DELETE</button>
+      </span>
+    </div>
+
+    <!-- HEADER PANEL -->
+    <section class="cd-meeting-header">
+      <h1 class="cd-page-title cd-meeting-title-edit"
+          contenteditable="true"
+          data-original="{{ meeting.title }}">{{ meeting.title }}</h1>
+
+      <div class="cd-meeting-meta">
+        <div class="cd-meeting-meta-row">
+          <span class="cd-meeting-meta-label">When</span>
+          <input type="datetime-local"
+                 class="cd-meeting-date-input"
+                 id="meetingDateInput"
+                 data-iso="{{ meeting.meeting_date }}">
+          <span class="cd-meeting-date-display" id="meetingDateDisplay" data-iso="{{ meeting.meeting_date }}"></span>
+        </div>
+        <div class="cd-meeting-meta-row">
+          <span class="cd-meeting-meta-label">Project</span>
+          <select class="cd-meeting-project-select" id="meetingProjectSelect">
+            <option value="">— standalone —</option>
+            {% for p in projects %}
+              <option value="{{ p.id }}" {% if meeting.project_id == p.id %}selected{% endif %}>{{ p.title }}</option>
+            {% endfor %}
+          </select>
+          {% if meeting.project_slug %}
+            <a class="cd-meeting-project-link" href="/command-deck/projects/{{ meeting.project_slug }}/">open project →</a>
+          {% endif %}
+        </div>
+
+        {% if meeting.project_id and meeting.project_tracking_enabled %}
+          <div class="cd-meeting-meta-row cd-meeting-tt-row">
+            <span class="cd-meeting-meta-label">Time</span>
+            <button class="cd-tt-row-btn cd-tt-meeting-btn"
+                    id="meetingTimerBtn"
+                    data-tt-meeting-id="{{ meeting.id }}"
+                    data-tt-text="{{ meeting.title }}"
+                    data-tt-project-id="{{ meeting.project_id }}"
+                    title="Start timer on this meeting"
+                    type="button">⏱</button>
+            <span class="cd-tt-today-tag" id="meetingTodayTag" hidden></span>
+            <span class="cd-tt-lifetime-tag" id="meetingLifetimeTag"
+                  {% if not lifetime_seconds %}hidden{% endif %}
+                  data-seconds="{{ lifetime_seconds }}">
+              {% if lifetime_seconds %}lifetime: <span id="meetingLifetimeText"></span>{% endif %}
+            </span>
+          </div>
+        {% elif not meeting.project_id %}
+          <div class="cd-meeting-meta-row cd-meeting-meta-hint">
+            <span class="cd-meeting-meta-label"></span>
+            <span class="cd-meeting-meta-note">Standalone meetings can't be timed — assign a project to enable ⏱.</span>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- NOTES -->
+    <section class="cd-panel cd-mb">
+      <div class="cd-panel-header">
+        <span class="cd-panel-title">// Notes</span>
+        <span class="cd-panel-hint">click to edit · markdown</span>
+      </div>
+      <div class="cd-panel-body cd-meeting-notes-wrapper">
+        <div class="cd-note-rendered cd-meeting-notes-rendered" id="meetingNotesRendered"></div>
+        <div class="cd-note-editor cd-meeting-notes-editor" id="meetingNotesEditor" style="display:none;">
+          <textarea class="cd-note-textarea" id="meetingNotesTextarea" rows="8" placeholder="Notes (markdown)…">{{ meeting.notes or '' }}</textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACTION ITEMS -->
+    <section class="cd-panel cd-mb">
+      <div class="cd-panel-header">
+        <span class="cd-panel-title">// Action items</span>
+        <span class="cd-panel-count" id="actionItemCount">{{ action_items | length }}</span>
+      </div>
+      <div class="cd-panel-body">
+        <div class="cd-input-row cd-mb-sm">
+          <input type="text" class="cd-input" id="actionItemInput" placeholder="add an action item…">
+          <button class="cd-btn primary sm" id="actionItemAddBtn" type="button">ADD</button>
+        </div>
+        {% if action_items %}
+          <ul class="cd-task-list" id="actionItemList">
+            {% for task in action_items %}
+              <li class="cd-task-item" data-id="{{ task.id }}" data-task-title="{{ task.title }}">
+                <input type="checkbox" class="cd-task-check action-item-check" data-id="{{ task.id }}">
+                <span class="cd-task-title">{{ task.title }}</span>
+                <button class="cd-today-star{% if task.today %} starred{% endif %}"
+                        data-kind="task" data-id="{{ task.id }}"
+                        title="{% if task.today %}Remove from Today{% else %}Add to Today{% endif %}"
+                        type="button">{{ '★' if task.today else '☆' }}</button>
+                <button class="cd-task-edit" data-id="{{ task.id }}" title="Edit">✎</button>
+                <button class="cd-btn ghost sm action-item-delete" data-id="{{ task.id }}" type="button">✕</button>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="cd-empty" id="actionItemEmpty">No action items yet.</div>
+        {% endif %}
+      </div>
+    </section>
+
+  </div><!-- .cd-main -->
+
+  <!-- FOOTER -->
+  <footer class="cd-footer">
+    <div class="cd-footer-links">
+      <a href="/command-deck/" class="cd-footer-link">Bridge</a>
+      <a href="/command-deck/projects/" class="cd-footer-link">Projects</a>
+      <a href="/command-deck/meetings/" class="cd-footer-link">Meetings</a>
+    </div>
+    {% include 'includes/cd_footer_status.html' %}
+    <span class="cd-footer-ident">YT-1300F · COMMAND DECK · SECURE</span>
+  </footer>
+
+</div><!-- .cd-shell -->
+
+<script>
+const MEETING_ID = {{ meeting.id }};
+const MEETING_PROJECT_ID = {{ (meeting.project_id or 0) | tojson }};
+const MEETING_TRACKING = {{ ((meeting.project_tracking_enabled or 0)) | tojson }};
+const MEETING_LIFETIME_SECONDS = {{ lifetime_seconds | tojson }};
+
+(function () {
+  // Below-Deck badge
+  fetch('/below-deck/count').then(r=>r.json()).then(d=>{
+    var b=document.getElementById('bdBadge');
+    if(!b||d.count===0)return;
+    b.classList.add(d.count<=3?'green':d.count<=6?'amber':'red');
+  });
+
+  function escHtml(s) {
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(s == null ? '' : String(s)));
+    return d.innerHTML;
+  }
+
+  function fmtElapsed(secs) {
+    if (window.TimeTrackerCore) return window.TimeTrackerCore.formatElapsed(secs);
+    secs = Math.max(0, Math.floor(secs || 0));
+    var h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
+    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    if (h > 0) return h + ':' + pad(m) + ':' + pad(s);
+    return m + ':' + pad(s);
+  }
+  function fmtHmm(secs) {
+    secs = Math.max(0, Math.floor(secs || 0));
+    if (!secs) return '';
+    var h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60);
+    if (h === 0 && m === 0) return '<1m';
+    return h + ':' + (m < 10 ? '0' + m : m);
+  }
+
+  // ---- TITLE inline edit ----
+  var titleEl = document.querySelector('.cd-meeting-title-edit');
+  function saveTitle() {
+    var v = (titleEl.textContent || '').trim();
+    if (!v) {
+      titleEl.textContent = titleEl.dataset.original;
+      return;
+    }
+    if (v === titleEl.dataset.original) return;
+    fetch('/command-deck/meetings/' + MEETING_ID + '/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ title: v })
+    }).then(r => r.json()).then(d => {
+      if (d.success) titleEl.dataset.original = v;
+    });
+  }
+  titleEl.addEventListener('blur', saveTitle);
+  titleEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); titleEl.blur(); }
+    if (e.key === 'Escape') {
+      titleEl.textContent = titleEl.dataset.original;
+      titleEl.blur();
+    }
+  });
+
+  // ---- DATE inline edit ----
+  var dateInput = document.getElementById('meetingDateInput');
+  var dateDisplay = document.getElementById('meetingDateDisplay');
+
+  function renderDateDisplay() {
+    var iso = dateDisplay.getAttribute('data-iso') || '';
+    if (!iso) { dateDisplay.textContent = '—'; return; }
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) { dateDisplay.textContent = iso; return; }
+    var opts = { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
+    dateDisplay.textContent = d.toLocaleString(undefined, opts);
+  }
+  function isoToDatetimeLocal(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+      + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  function datetimeLocalToIso(v) {
+    if (!v) return '';
+    var d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    var off = -d.getTimezoneOffset();
+    var sign = off >= 0 ? '+' : '-';
+    var abs = Math.abs(off);
+    var hh = String(Math.floor(abs / 60)).padStart(2, '0');
+    var mm = String(abs % 60).padStart(2, '0');
+    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+      + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':00'
+      + sign + hh + ':' + mm;
+  }
+  dateInput.value = isoToDatetimeLocal(dateInput.getAttribute('data-iso'));
+  renderDateDisplay();
+
+  dateDisplay.addEventListener('click', function () {
+    dateDisplay.style.display = 'none';
+    dateInput.style.display = 'inline-block';
+    dateInput.focus();
+    if (dateInput.showPicker) try { dateInput.showPicker(); } catch (_) {}
+  });
+  dateInput.addEventListener('change', function () {
+    var iso = datetimeLocalToIso(dateInput.value);
+    if (!iso) return;
+    fetch('/command-deck/meetings/' + MEETING_ID + '/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ meeting_date: iso })
+    }).then(r => r.json()).then(d => {
+      if (d.success) {
+        dateDisplay.setAttribute('data-iso', iso);
+        renderDateDisplay();
+        dateInput.style.display = 'none';
+        dateDisplay.style.display = 'inline-block';
+      }
+    });
+  });
+  dateInput.addEventListener('blur', function () {
+    dateInput.style.display = 'none';
+    dateDisplay.style.display = 'inline-block';
+  });
+
+  // ---- PROJECT reassign ----
+  var projectSelect = document.getElementById('meetingProjectSelect');
+  projectSelect.addEventListener('change', function () {
+    var v = projectSelect.value || '';
+    fetch('/command-deck/meetings/' + MEETING_ID + '/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ project_id: v || null })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.success) {
+        // Reload so the ⏱ row + breadcrumb chrome reflect the new project state.
+        window.location.reload();
+      }
+    });
+  });
+
+  // ---- NOTES click-to-edit (markdown) ----
+  var rendered = document.getElementById('meetingNotesRendered');
+  var editor = document.getElementById('meetingNotesEditor');
+  var textarea = document.getElementById('meetingNotesTextarea');
+
+  function renderNotes() {
+    var raw = textarea.value || '';
+    if (raw.trim()) rendered.innerHTML = marked.parse(raw);
+    else rendered.innerHTML = '<span class="cd-note-placeholder">Click to add notes (markdown supported)…</span>';
+    rendered.dataset.rawContent = raw;
+  }
+  renderNotes();
+
+  rendered.addEventListener('click', function () {
+    rendered.style.display = 'none';
+    editor.style.display = 'block';
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = textarea.value.length;
+  });
+  var notesSaveTimer;
+  function saveNotes() {
+    fetch('/command-deck/meetings/' + MEETING_ID + '/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ notes: textarea.value })
+    });
+  }
+  textarea.addEventListener('input', function () {
+    clearTimeout(notesSaveTimer);
+    notesSaveTimer = setTimeout(saveNotes, 1500);
+  });
+  textarea.addEventListener('blur', function () {
+    clearTimeout(notesSaveTimer);
+    saveNotes();
+    renderNotes();
+    rendered.style.display = 'block';
+    editor.style.display = 'none';
+  });
+
+  // ---- DELETE ----
+  document.getElementById('meetingDeleteBtn').addEventListener('click', function () {
+    if (!confirm('Delete this meeting? Action items and time entries survive (orphaned).')) return;
+    fetch('/command-deck/meetings/' + MEETING_ID + '/delete', {
+      method: 'POST',
+      credentials: 'same-origin',
+    }).then(r => r.json()).then(d => {
+      if (d.success) window.location.href = '/command-deck/meetings/';
+    });
+  });
+
+  // ---- ACTION ITEMS ----
+  var input = document.getElementById('actionItemInput');
+  var addBtn = document.getElementById('actionItemAddBtn');
+  var list = document.getElementById('actionItemList');
+  var empty = document.getElementById('actionItemEmpty');
+  var countEl = document.getElementById('actionItemCount');
+
+  function setCount(n) { if (countEl) countEl.textContent = n; }
+  function actionRowHtml(task) {
+    return ''
+      + '<input type="checkbox" class="cd-task-check action-item-check" data-id="' + task.id + '">'
+      + '<span class="cd-task-title">' + escHtml(task.title) + '</span>'
+      + '<button class="cd-today-star" data-kind="task" data-id="' + task.id + '" type="button" title="Add to Today">☆</button>'
+      + '<button class="cd-task-edit" data-id="' + task.id + '" title="Edit">✎</button>'
+      + '<button class="cd-btn ghost sm action-item-delete" data-id="' + task.id + '" type="button">✕</button>';
+  }
+
+  function appendRow(task) {
+    if (!list) {
+      // First row — promote the empty placeholder into a list
+      var section = empty ? empty.parentElement : null;
+      if (empty) empty.remove();
+      list = document.createElement('ul');
+      list.className = 'cd-task-list';
+      list.id = 'actionItemList';
+      (section || document.querySelector('.cd-panel-body')).appendChild(list);
+    }
+    var li = document.createElement('li');
+    li.className = 'cd-task-item';
+    li.dataset.id = task.id;
+    li.dataset.taskTitle = task.title;
+    li.innerHTML = actionRowHtml(task);
+    list.appendChild(li);
+  }
+
+  function addItem() {
+    var v = (input.value || '').trim();
+    if (!v) return;
+    addBtn.disabled = true;
+    var fd = new FormData();
+    fd.append('title', v);
+    fetch('/command-deck/meetings/' + MEETING_ID + '/action-items/add', {
+      method: 'POST',
+      credentials: 'same-origin',
+      body: fd,
+    }).then(r => r.json()).then(d => {
+      if (d.success) {
+        appendRow(d.task);
+        input.value = '';
+        setCount((list ? list.children.length : 0));
+      }
+    }).finally(function () { addBtn.disabled = false; input.focus(); });
+  }
+
+  if (addBtn) addBtn.addEventListener('click', addItem);
+  if (input) input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); addItem(); }
+  });
+
+  // Inline complete + delete + ★ Today + ✎ edit
+  document.addEventListener('click', function (ev) {
+    var t = ev.target;
+    if (t.classList.contains('action-item-delete')) {
+      var id = t.getAttribute('data-id');
+      if (!confirm('Delete this action item?')) return;
+      fetch('/tasks/delete', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'id=' + encodeURIComponent(id),
+      }).then(r => r.json()).then(d => {
+        if (d.ok) {
+          var li = t.closest('.cd-task-item');
+          if (li) li.remove();
+          if (list && !list.children.length) {
+            list.remove(); list = null;
+            empty = document.createElement('div');
+            empty.id = 'actionItemEmpty';
+            empty.className = 'cd-empty';
+            empty.textContent = 'No action items yet.';
+            document.querySelector('.cd-panel-body').appendChild(empty);
+          }
+          setCount(list ? list.children.length : 0);
+        }
+      });
+      return;
+    }
+    if (t.classList.contains('cd-today-star') && t.dataset.kind === 'task') {
+      var id = t.getAttribute('data-id');
+      var starred = t.classList.contains('starred');
+      fetch('/today/toggle', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'kind=task&id=' + encodeURIComponent(id) + '&value=' + (starred ? '0' : '1'),
+      }).then(r => r.json()).then(d => {
+        if (d.success) {
+          t.classList.toggle('starred');
+          t.textContent = t.classList.contains('starred') ? '★' : '☆';
+        }
+      });
+      return;
+    }
+    if (t.classList.contains('cd-task-edit')) {
+      var id = t.getAttribute('data-id');
+      var li = t.closest('.cd-task-item');
+      var span = li ? li.querySelector('.cd-task-title') : null;
+      if (!span) return;
+      var current = span.textContent;
+      var next = prompt('Edit action item:', current);
+      if (next === null) return;
+      next = next.trim();
+      if (!next || next === current) return;
+      var fd = new FormData();
+      fd.append('title', next);
+      fetch('/tasks/' + id + '/edit', {
+        method: 'POST', credentials: 'same-origin', body: fd,
+      }).then(r => r.json()).then(d => {
+        if (d.success) span.textContent = next;
+      });
+      return;
+    }
+  });
+
+  document.addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (t.classList.contains('action-item-check')) {
+      var id = t.getAttribute('data-id');
+      if (!t.checked) return;
+      fetch('/tasks/complete', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'id=' + encodeURIComponent(id),
+      }).then(r => r.json()).then(d => {
+        if (d.ok) {
+          var li = t.closest('.cd-task-item');
+          if (li) li.remove();
+          if (list && !list.children.length) {
+            list.remove(); list = null;
+            empty = document.createElement('div');
+            empty.id = 'actionItemEmpty';
+            empty.className = 'cd-empty';
+            empty.textContent = 'No action items yet.';
+            document.querySelector('.cd-panel-body').appendChild(empty);
+          }
+          setCount(list ? list.children.length : 0);
+        }
+      });
+    }
+  });
+
+  // ---- ⏱ TIMER button + lifetime ----
+  function fmtLifetime() {
+    var el = document.getElementById('meetingLifetimeText');
+    if (el) el.textContent = fmtHmm(MEETING_LIFETIME_SECONDS);
+  }
+  fmtLifetime();
+
+  var timerBtn = document.getElementById('meetingTimerBtn');
+  if (timerBtn) {
+    function startMeetingTimer() {
+      var body = {
+        project_id: parseInt(timerBtn.getAttribute('data-tt-project-id'), 10),
+        meeting_id: MEETING_ID,
+        description: timerBtn.getAttribute('data-tt-text') || '',
+      };
+      return fetch('/time/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
+      }).then(function (r) {
+        return r.json().then(function (d) {
+          if (r.ok && window.TimeTrackerCore) window.TimeTrackerCore.refresh();
+          else if (r.status === 409) alert('Already tracking this project.');
+          else if (!r.ok) alert(d.error || 'Could not start timer.');
+        });
+      });
+    }
+    timerBtn.addEventListener('click', function () {
+      if (timerBtn.dataset.running === '1' && timerBtn.dataset.entryId) {
+        if (window.TimeTrackerCore) window.TimeTrackerCore.stopTimer(timerBtn.dataset.entryId);
+        return;
+      }
+      startMeetingTimer();
+    });
+
+    // Keep the button label in sync with the active timer state.
+    function syncMeetingButton(entries) {
+      timerBtn.dataset.running = '0';
+      timerBtn.dataset.entryId = '';
+      timerBtn.textContent = '⏱';
+      timerBtn.title = 'Start timer on this meeting';
+      (entries || []).forEach(function (e) {
+        if (String(e.meeting_id || '') === String(MEETING_ID)) {
+          timerBtn.dataset.running = '1';
+          timerBtn.dataset.entryId = e.id;
+          timerBtn.textContent = '■ ' + fmtElapsed(window.TimeTrackerCore ? window.TimeTrackerCore.elapsedSeconds(e) : 0);
+          timerBtn.title = 'Stop timer';
+        }
+      });
+    }
+    if (window.TimeTrackerCore) {
+      window.TimeTrackerCore.subscribe(syncMeetingButton);
+      // Re-render button text every second while running so the elapsed counter ticks.
+      setInterval(function () {
+        if (window.TimeTrackerCore) syncMeetingButton(window.TimeTrackerCore.current());
+      }, 1000);
+    }
+
+    // Today-tag totals on the meeting row — sum entries on this project today
+    // that target this meeting_id.
+    function syncTodayTag() {
+      if (!MEETING_PROJECT_ID) return;
+      fetch('/time/today/' + MEETING_PROJECT_ID, { credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.json() : { entries: [] }; })
+        .then(function (data) {
+          var sum = 0;
+          (data.entries || []).forEach(function (e) {
+            if (String(e.meeting_id || '') !== String(MEETING_ID)) return;
+            var dur = e.duration_seconds != null
+              ? e.duration_seconds
+              : Math.floor((Date.now() - new Date(e.started_at).getTime()) / 1000);
+            sum += Math.max(0, dur);
+          });
+          var tag = document.getElementById('meetingTodayTag');
+          if (!tag) return;
+          if (sum > 0) {
+            tag.hidden = false;
+            tag.textContent = 'today: ' + fmtHmm(sum);
+          } else {
+            tag.hidden = true;
+            tag.textContent = '';
+          }
+        });
+    }
+    syncTodayTag();
+    setInterval(syncTodayTag, 30000);
+  }
+})();
+</script>
+<script src="/static/command_deck_nav.js"></script>
+</body>
+</html>

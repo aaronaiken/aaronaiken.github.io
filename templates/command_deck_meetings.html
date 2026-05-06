@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Meetings · Command Deck</title>
+  <link rel="stylesheet" href="/static/command_deck.css">
+</head>
+<body class="command-deck">
+<div class="cd-shell">
+
+  <!-- HEADER -->
+  <header class="cd-header">
+    <div class="cd-header-left">
+      <a href="/command-deck/" class="cd-wordmark">COMMAND DECK</a>
+      <span class="cd-ident">MEETINGS · ARCHIVE</span>
+    </div>
+    <nav class="cd-header-nav">
+      <a href="/command-deck/" class="cd-nav-link">BRIDGE</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/projects/" class="cd-nav-link">PROJECTS</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/below-deck" class="cd-nav-link">
+        BELOW DECK
+        <span class="cd-bd-badge" id="bdBadge"></span>
+      </a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/today/" class="cd-nav-link">TODAY</a>
+      <span class="cd-nav-sep">·</span>
+      <details class="cd-nav-more">
+        <summary class="cd-nav-link cd-nav-more-trigger">MORE ▾</summary>
+        <div class="cd-nav-more-menu">
+          <a href="/command-deck/reports/" class="cd-nav-link">REPORTS</a>
+          <a href="/command-deck/templates/" class="cd-nav-link">TEMPLATES</a>
+          <a href="/command-deck/meetings/" class="cd-nav-link">MEETINGS</a>
+        </div>
+      </details>
+      <span class="cd-nav-sep">·</span>
+      <a href="/publish" class="cd-nav-link">COCKPIT</a>
+    </nav>
+  </header>
+
+  {% include 'includes/today_panel.html' %}
+  {% include 'includes/active_timer_strip.html' %}
+
+  <!-- MAIN -->
+  <div class="cd-main full-width">
+
+    <section class="cd-meetings-controls">
+      <div class="cd-meetings-title-row">
+        <h1 class="cd-page-title">// Meetings</h1>
+        {% if project_filter %}
+          <span class="cd-meetings-filter-pill">
+            scoped to <a href="/command-deck/projects/{{ project_filter.slug }}/">{{ project_filter.title }}</a>
+            <a class="cd-meetings-filter-clear" href="/command-deck/meetings/" title="Clear filter">×</a>
+          </span>
+        {% endif %}
+      </div>
+      <div class="cd-meetings-actions">
+        <button class="cd-btn primary" id="newMeetingBtn">+ NEW MEETING</button>
+      </div>
+    </section>
+
+    {% if meetings %}
+      {% set ns = namespace(current_month='') %}
+      <section class="cd-meetings-list">
+        {% for m in meetings %}
+          {% set month_label = m.meeting_date[:7] %}
+          {% if month_label != ns.current_month %}
+            {% if not loop.first %}</ul>{% endif %}
+            <h2 class="cd-meetings-month">// {{ month_label }}</h2>
+            <ul class="cd-meetings-rows">
+            {% set ns.current_month = month_label %}
+          {% endif %}
+          <li class="cd-meeting-row">
+            <a class="cd-meeting-row-link" href="/command-deck/meetings/{{ m.id }}/">
+              <span class="cd-meeting-row-date" data-iso="{{ m.meeting_date }}">{{ m.meeting_date[:16] }}</span>
+              <span class="cd-meeting-row-title">{{ m.title }}</span>
+              <span class="cd-meeting-row-project">
+                {% if m.project_title %}{{ m.project_title }}{% else %}<em>standalone</em>{% endif %}
+              </span>
+              <span class="cd-meeting-row-actions">
+                {{ m.action_count }} action{{ '' if m.action_count == 1 else 's' }}
+              </span>
+            </a>
+          </li>
+          {% if loop.last %}</ul>{% endif %}
+        {% endfor %}
+      </section>
+    {% else %}
+      <div class="cd-meetings-empty">
+        {% if project_filter %}
+          No meetings yet for {{ project_filter.title }}. Start one with + NEW MEETING.
+        {% else %}
+          No meetings yet. Start one with + NEW MEETING.
+        {% endif %}
+      </div>
+    {% endif %}
+
+  </div><!-- .cd-main -->
+
+  <!-- NEW MEETING MODAL -->
+  <div class="cd-modal-overlay" id="newMeetingModal">
+    <div class="cd-modal">
+      <div class="cd-modal-title">// New Meeting</div>
+      <form method="POST" action="/command-deck/meetings/new" id="newMeetingForm">
+        <label class="cd-label">
+          <span>Title</span>
+          <input type="text" class="cd-input" name="title" required>
+        </label>
+        <label class="cd-label">
+          <span>When</span>
+          <input type="datetime-local" class="cd-input" name="meeting_date" id="newMeetingDate">
+        </label>
+        <label class="cd-label">
+          <span>Project (optional)</span>
+          <select class="cd-input" name="project_id" id="newMeetingProject">
+            <option value="">— standalone —</option>
+            {# Project options injected by JS once /time/projects loads #}
+          </select>
+        </label>
+        <label class="cd-label">
+          <span>Notes (optional, markdown)</span>
+          <textarea class="cd-input" name="notes" rows="4"></textarea>
+        </label>
+        <div class="cd-modal-actions">
+          <button type="button" class="cd-btn ghost" id="newMeetingCancelBtn">CANCEL</button>
+          <button type="submit" class="cd-btn primary">CREATE</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="cd-footer">
+    <div class="cd-footer-links">
+      <a href="/command-deck/" class="cd-footer-link">Bridge</a>
+      <a href="/command-deck/projects/" class="cd-footer-link">Projects</a>
+      <a href="/publish" class="cd-footer-link">Cockpit</a>
+    </div>
+    {% include 'includes/cd_footer_status.html' %}
+    <span class="cd-footer-ident">YT-1300F · COMMAND DECK · SECURE</span>
+  </footer>
+
+</div><!-- .cd-shell -->
+
+<script>
+(function () {
+  // Below-Deck badge
+  fetch('/below-deck/count').then(r=>r.json()).then(d=>{
+    var b=document.getElementById('bdBadge');
+    if(!b||d.count===0)return;
+    b.classList.add(d.count<=3?'green':d.count<=6?'amber':'red');
+  });
+
+  // Pretty-print row dates from raw ET-local ISO into "Tue May 5, 2:00 PM"
+  document.querySelectorAll('.cd-meeting-row-date').forEach(function (el) {
+    var iso = el.getAttribute('data-iso');
+    if (!iso) return;
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return;
+    var opts = { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
+    el.textContent = d.toLocaleString(undefined, opts);
+  });
+
+  // ---- NEW MEETING MODAL ----
+  var modal = document.getElementById('newMeetingModal');
+  var openBtn = document.getElementById('newMeetingBtn');
+  var cancelBtn = document.getElementById('newMeetingCancelBtn');
+  var dateInput = document.getElementById('newMeetingDate');
+  var projectSelect = document.getElementById('newMeetingProject');
+
+  function openModal() {
+    modal.classList.add('open');
+    if (!dateInput.value) {
+      var now = new Date();
+      var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+      dateInput.value = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate())
+        + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+    }
+    var input = modal.querySelector('input[name="title"]');
+    if (input) input.focus();
+  }
+  function closeModal() { modal.classList.remove('open'); }
+
+  openBtn.addEventListener('click', openModal);
+  cancelBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) closeModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
+
+  // Pre-select project_id from query string (?project=<slug> doesn't carry id;
+  // but the index also accepts ?project=<id> as a hint for the modal default.)
+  var qs = new URLSearchParams(window.location.search);
+  var defaultProjectId = qs.get('default_project_id');
+
+  // Lazy-fill the project dropdown from /time/projects (same source as the
+  // floating timer picker — keeps the UX consistent and avoids server-side
+  // scope/privacy gymnastics here).
+  fetch('/time/projects', { credentials: 'same-origin' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (data) {
+      if (!data) return;
+      var frag = document.createDocumentFragment();
+      (data.areas || []).forEach(function (a) {
+        var grp = document.createElement('optgroup');
+        grp.label = a.title;
+        (a.subprojects || []).forEach(function (s) {
+          var opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = s.title;
+          if (defaultProjectId && String(s.id) === defaultProjectId) opt.selected = true;
+          grp.appendChild(opt);
+        });
+        if (grp.children.length) frag.appendChild(grp);
+      });
+      if ((data.personal || []).length) {
+        var grp = document.createElement('optgroup');
+        grp.label = 'Personal';
+        data.personal.forEach(function (p) {
+          var opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.title;
+          if (defaultProjectId && String(p.id) === defaultProjectId) opt.selected = true;
+          grp.appendChild(opt);
+        });
+        frag.appendChild(grp);
+      }
+      projectSelect.appendChild(frag);
+    });
+
+  // Convert datetime-local (no offset) → ISO with the user's UTC offset
+  // so the server sees a real ET-local-with-offset string. Browsers send
+  // datetime-local as 'YYYY-MM-DDTHH:MM' with no tz; pad it to ISO.
+  document.getElementById('newMeetingForm').addEventListener('submit', function (ev) {
+    var v = dateInput.value;
+    if (v && v.length >= 16 && !v.includes('+') && !v.endsWith('Z')) {
+      var d = new Date(v);
+      if (!isNaN(d.getTime())) {
+        var off = -d.getTimezoneOffset();
+        var sign = off >= 0 ? '+' : '-';
+        var abs = Math.abs(off);
+        var hh = String(Math.floor(abs / 60)).padStart(2, '0');
+        var mm = String(abs % 60).padStart(2, '0');
+        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+        var iso = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+          + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':00'
+          + sign + hh + ':' + mm;
+        dateInput.value = iso;
+      }
+    }
+  });
+})();
+</script>
+<script src="/static/command_deck_nav.js"></script>
+</body>
+</html>

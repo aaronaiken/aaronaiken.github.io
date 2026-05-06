@@ -12,7 +12,11 @@
 	'use strict';
 
 	var path = window.location.pathname;
-	var menuRoutes = ['/command-deck/reports', '/command-deck/templates'];
+	var menuRoutes = [
+		'/command-deck/reports',
+		'/command-deck/templates',
+		'/command-deck/meetings',
+	];
 	var underMenu = menuRoutes.some(function (r) { return path.indexOf(r) === 0; });
 
 	if (underMenu) {
