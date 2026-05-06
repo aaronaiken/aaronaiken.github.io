@@ -908,6 +908,122 @@ def cd_block_update_title(slug, block_id):
 
     return jsonify({'success': True, 'title': title})
 
+# ---- Phase 2.4 — block recurrence + manual reset ----
+
+@command_deck_bp.route('/command-deck/projects/<slug>/blocks/<int:block_id>/recurrence', methods=['POST'])
+@cd_auth_required
+def cd_block_recurrence(slug, block_id):
+	"""Set or clear a checklist block's recurrence.
+
+	Body (JSON or form):
+	  recurrence:      'daily' | 'weekly' | 'monthly' | null
+	  recurrence_days: per-kind:
+	                    daily   → CSV active weekdays ('Mon,Tue,Wed,Thu,Fri'); NULL=all 7
+	                    weekly  → single weekday ('Fri') the cycle is due
+	                    monthly → day-of-month string ('1','15','last')
+
+	On enable: stamps due_date=today on existing active items + last_reset_at=now
+	so the autoclear-spawn pass waits for the next cycle boundary. The current
+	items become the cycle's "structure" for future spawns.
+
+	On disable (recurrence=null): clears the recurrence columns. Existing
+	due_date values on items are preserved (user can clear manually if wanted).
+	"""
+	from blueprints.today import _et_now_iso
+	data = request.get_json(silent=True) or request.form
+	recurrence = data.get('recurrence')
+	if recurrence in ('', 'null', 'none'):
+		recurrence = None
+	if recurrence not in (None, 'daily', 'weekly', 'monthly'):
+		return jsonify({'error': 'invalid_recurrence'}), 400
+	recurrence_days = data.get('recurrence_days')
+	if recurrence_days in ('', None):
+		recurrence_days = None
+
+	conn = get_db()
+	block = conn.execute(
+		'SELECT b.* FROM blocks b JOIN projects p ON b.project_id = p.id '
+		'WHERE b.id = ? AND p.slug = ?',
+		(block_id, slug)
+	).fetchone()
+	if not block:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+	if recurrence is not None and block['type'] != 'checklist':
+		conn.close()
+		return jsonify({'error': 'recurrence_only_on_checklist'}), 400
+
+	if recurrence is None:
+		conn.execute(
+			'UPDATE blocks SET recurrence = NULL, recurrence_days = NULL, last_reset_at = NULL '
+			'WHERE id = ?', (block_id,)
+		)
+	else:
+		now_iso = _et_now_iso()
+		today_iso = datetime.now(pytz.timezone('US/Eastern')).strftime('%Y-%m-%d')
+		conn.execute(
+			'UPDATE blocks SET recurrence = ?, recurrence_days = ?, last_reset_at = ? '
+			'WHERE id = ?',
+			(recurrence, recurrence_days, now_iso, block_id)
+		)
+		# Stamp current active items with today's due_date so they read as
+		# "this cycle's instance." Items with an existing due_date are left.
+		conn.execute('''
+			UPDATE checklist_items
+			SET due_date = ?
+			WHERE block_id = ? AND archived_at IS NULL AND due_date IS NULL
+		''', (today_iso, block_id))
+
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True, 'recurrence': recurrence, 'recurrence_days': recurrence_days})
+
+
+@command_deck_bp.route('/command-deck/projects/<slug>/blocks/<int:block_id>/reset', methods=['POST'])
+@cd_auth_required
+def cd_block_reset(slug, block_id):
+	"""Manually trigger a cycle fire on a recurring checklist block.
+
+	Archives current active items + spawns fresh instances with a new
+	due_date. The new due_date is computed the same way as the autoclear
+	would compute it for this kind of recurrence: today for daily, next
+	target weekday for weekly, target day-of-month for monthly.
+
+	400 if block is not recurring.
+	"""
+	from blueprints.today import (
+		_spawn_cycle, _next_weekday_iso, _this_month_target_iso,
+	)
+	conn = get_db()
+	block = conn.execute(
+		'SELECT b.* FROM blocks b JOIN projects p ON b.project_id = p.id '
+		'WHERE b.id = ? AND p.slug = ?',
+		(block_id, slug)
+	).fetchone()
+	if not block:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+	if not block['recurrence']:
+		conn.close()
+		return jsonify({'error': 'block_not_recurring'}), 400
+
+	eastern = pytz.timezone('US/Eastern')
+	now_et = datetime.now(eastern)
+	if block['recurrence'] == 'daily':
+		due = now_et.strftime('%Y-%m-%d')
+	elif block['recurrence'] == 'weekly':
+		target = (block['recurrence_days'] or 'Fri').split(',')[0].strip() or 'Fri'
+		due = _next_weekday_iso(now_et, target)
+	else:  # monthly
+		target = (block['recurrence_days'] or '1').strip() or '1'
+		due = _this_month_target_iso(now_et, target)
+
+	count = _spawn_cycle(conn, block_id, cycle_due_date=due, et_now=now_et)
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True, 'spawned_count': count, 'due_date': due})
+
+
 @command_deck_bp.route('/command-deck/projects/<slug>/blocks/<int:block_id>/delete', methods=['POST'])
 @cd_auth_required
 def cd_block_delete(slug, block_id):
