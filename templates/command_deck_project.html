@@ -1280,6 +1280,31 @@ document.addEventListener('click', function (ev) {
   });
 })();
 
+// Phase 2.4 — small polish: compact "MON,TUE,WED,THU,FRI" → "MON–FRI"
+// on recurrence pill labels. Server renders the raw CSV; we prettify
+// well-known ranges client-side after load.
+(function () {
+  'use strict';
+  const COMPACT = {
+    'MON,TUE,WED,THU,FRI': 'MON–FRI',
+    'SAT,SUN': 'WEEKEND',
+    'MON,WED,FRI': 'MWF',
+    'TUE,THU': 'TTh',
+  };
+  function prettify() {
+    document.querySelectorAll('.cd-block-recurrence-label').forEach(function (el) {
+      const text = el.textContent || '';
+      Object.keys(COMPACT).forEach(function (raw) {
+        if (text.indexOf(raw) !== -1) {
+          el.textContent = text.replace(raw, COMPACT[raw]);
+        }
+      });
+    });
+  }
+  document.addEventListener('DOMContentLoaded', prettify);
+  setTimeout(prettify, 50);
+})();
+
 // Phase 2.4 — show-history toggle on recurring blocks
 (function () {
   'use strict';
