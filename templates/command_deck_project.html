@@ -192,6 +192,15 @@
                     </li>
                   {% endfor %}
                 </ul>
+                {% if block.recurrence %}
+                <div class="cd-block-history-toggle-row">
+                  <button class="cd-block-history-toggle" type="button"
+                          data-block-id="{{ block.id }}"
+                          data-slug="{{ project.slug }}"
+                          aria-expanded="false">↳ show history ▾</button>
+                </div>
+                <div class="cd-block-history-panel" data-block-id="{{ block.id }}" hidden></div>
+                {% endif %}
                 <div class="cd-checklist-add">
                   <input type="text" class="cd-input checklist-new-item"
                     data-block-id="{{ block.id }}"
@@ -1268,6 +1277,79 @@ document.addEventListener('click', function (ev) {
     const id = opt.getAttribute('data-id');
     close();
     spawn(id);
+  });
+})();
+
+// Phase 2.4 — show-history toggle on recurring blocks
+(function () {
+  'use strict';
+
+  function escHtml(s) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(s == null ? '' : String(s)));
+    return d.innerHTML;
+  }
+
+  function fmtDateForHeader(iso) {
+    if (!iso || iso === '(no due date)') return '(no due date)';
+    const [y, m, d] = iso.split('-').map(Number);
+    if (!y || !m || !d) return iso;
+    const dt = new Date(y, m - 1, d);
+    const wk = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()];
+    const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1];
+    return wk + ' ' + mo + ' ' + d + ', ' + y;
+  }
+
+  document.addEventListener('click', async function (ev) {
+    const btn = ev.target.closest('.cd-block-history-toggle');
+    if (!btn) return;
+    ev.preventDefault();
+    const blockId = btn.getAttribute('data-block-id');
+    const slug = btn.getAttribute('data-slug');
+    const panel = document.querySelector(
+      `.cd-block-history-panel[data-block-id="${blockId}"]`
+    );
+    if (!panel) return;
+
+    // Toggle off if already open
+    if (!panel.hidden) {
+      panel.hidden = true;
+      btn.textContent = '↳ show history ▾';
+      btn.setAttribute('aria-expanded', 'false');
+      return;
+    }
+
+    // Fetch + render
+    btn.textContent = '↳ loading…';
+    try {
+      const r = await fetch(`/command-deck/projects/${slug}/blocks/${blockId}/history`);
+      if (!r.ok) {
+        btn.textContent = '↳ history unavailable';
+        return;
+      }
+      const data = await r.json();
+      const groups = data.history || [];
+      if (groups.length === 0) {
+        panel.innerHTML = '<div class="cd-block-history-empty">No past cycles yet.</div>';
+      } else {
+        panel.innerHTML = groups.map(function (g) {
+          const items = g.items.map(function (i) {
+            const cls = i.checked ? 'cd-block-history-item checked' : 'cd-block-history-item';
+            const mark = i.checked ? '☑' : '☐';
+            return '<div class="' + cls + '">' + mark + ' ' + escHtml(i.text) + '</div>';
+          }).join('');
+          return '<div class="cd-block-history-group">' +
+                 '<div class="cd-block-history-date">─── ' + escHtml(fmtDateForHeader(g.due_date)) + ' ───</div>' +
+                 items +
+                 '</div>';
+        }).join('') + '<div class="cd-block-history-footer">(showing last 90 days)</div>';
+      }
+      panel.hidden = false;
+      btn.textContent = '↳ hide history ▴';
+      btn.setAttribute('aria-expanded', 'true');
+    } catch (e) {
+      btn.textContent = '↳ history unavailable';
+    }
   });
 })();
 
