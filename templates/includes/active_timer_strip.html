@@ -260,6 +260,13 @@
           : 'Checklist';
         ctx = '<span class="tt-row-ctx">[' + blockLabel + ']</span>';
       }
+      else if (e.meeting_id) {
+        // Phase 5: meeting-scoped entry.
+        var mLabel = e.meeting_title
+          ? 'meeting: ' + escHtml(e.meeting_title)
+          : 'meeting';
+        ctx = '<span class="tt-row-ctx">[' + mLabel + ']</span>';
+      }
       return '<div class="tt-row" data-id="' + e.id + '">' +
         '<span class="tt-row-dot" style="background:' + color + ';"></span>' +
         '<span class="tt-row-area">' + escHtml(areaName) + '</span>' +
