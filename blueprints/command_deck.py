@@ -603,6 +603,21 @@ def cd_project(slug):
 		(project['id'],)
 	).fetchall()
 
+	# Phase 5 — recent meetings on this project (most recent 10). The full
+	# list lives at /command-deck/meetings/?project=<slug>; the project page
+	# just summarizes.
+	meetings_recent = conn.execute('''
+		SELECT m.id, m.title, m.meeting_date,
+		       (SELECT COUNT(*) FROM tasks WHERE meeting_id = m.id) AS action_count
+		FROM meetings m
+		WHERE m.project_id = ?
+		ORDER BY m.meeting_date DESC, m.id DESC
+		LIMIT 10
+	''', (project['id'],)).fetchall()
+	meetings_total = conn.execute(
+		'SELECT COUNT(*) AS n FROM meetings WHERE project_id = ?', (project['id'],)
+	).fetchone()['n']
+
 	# Huyang chat — last 50 messages for this project
 	chat_history = conn.execute('''
 		SELECT * FROM chat_messages
@@ -620,6 +635,8 @@ def cd_project(slug):
 		blocks=blocks,
 		project_tasks=project_tasks,
 		files=[dict(f) for f in files],
+		meetings_recent=[dict(m) for m in meetings_recent],
+		meetings_total=meetings_total,
 		chat_history=[dict(m) for m in chat_history]
 	)
 

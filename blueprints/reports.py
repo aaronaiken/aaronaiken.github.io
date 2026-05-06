@@ -238,6 +238,7 @@ def reports_data():
 	conn = get_db()
 	rows = conn.execute(f'''
 		SELECT te.id, te.project_id, te.task_id, te.checklist_item_id,
+		       te.meeting_id,
 		       te.description, te.started_at, te.ended_at,
 		       te.duration_seconds,
 		       p.title           AS project_title,
@@ -248,13 +249,15 @@ def reports_data():
 		       t.title           AS task_title,
 		       ci.text           AS checklist_item_text,
 		       b.id              AS block_id,
-		       b.title           AS block_title
+		       b.title           AS block_title,
+		       m.title           AS meeting_title
 		FROM time_entries te
 		JOIN projects p              ON te.project_id = p.id
 		LEFT JOIN projects parent    ON p.parent_project_id = parent.id
 		LEFT JOIN tasks t            ON te.task_id = t.id
 		LEFT JOIN checklist_items ci ON te.checklist_item_id = ci.id
 		LEFT JOIN blocks b           ON ci.block_id = b.id
+		LEFT JOIN meetings m         ON te.meeting_id = m.id
 		WHERE {where_sql}
 		ORDER BY te.started_at ASC
 	''', args).fetchall()
@@ -302,6 +305,8 @@ def reports_data():
 			'checklist_item_text': r['checklist_item_text'],
 			'block_id': r['block_id'],
 			'block_title': r['block_title'],
+			'meeting_id': r['meeting_id'],
+			'meeting_title': r['meeting_title'],
 			'description': r['description'],
 			'started_at': r['started_at'],
 			'ended_at': ended,

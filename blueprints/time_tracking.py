@@ -77,26 +77,30 @@ def _row_get(row, key, default=None):
 
 def _fetch_entry_with_context(conn, entry_id):
 	"""Re-fetch a time_entries row with task + checklist_item + parent-block
-	context joined. Phase 2.1 added the blocks JOIN so client renderers can
-	display [Checklist: <block.title>] for item-scoped entries instead of
-	the raw item text."""
+	+ meeting context joined. Phase 2.1 added the blocks JOIN so client
+	renderers can display [Checklist: <block.title>] for item-scoped entries;
+	Phase 5 added the meetings JOIN so the active strip / panel / reports
+	can show [meeting: <title>] for meeting-scoped entries."""
 	return conn.execute('''
 		SELECT te.*,
 		       t.title  AS task_title,
 		       ci.text  AS checklist_item_text,
 		       b.id     AS block_id,
-		       b.title  AS block_title
+		       b.title  AS block_title,
+		       m.title  AS meeting_title
 		FROM time_entries te
 		LEFT JOIN tasks t            ON te.task_id = t.id
 		LEFT JOIN checklist_items ci ON te.checklist_item_id = ci.id
 		LEFT JOIN blocks b           ON ci.block_id = b.id
+		LEFT JOIN meetings m         ON te.meeting_id = m.id
 		WHERE te.id = ?
 	''', (entry_id,)).fetchone()
 
 
 def _serialize_active_entry(row):
 	"""Active-entry shape — Phase 1 §3.1 + Phase 1.5 task/item context +
-	Phase 2.1 block context for item-scoped entries."""
+	Phase 2.1 block context for item-scoped entries + Phase 5 meeting
+	context for meeting-scoped entries."""
 	started = _parse_iso_utc(row['started_at'])
 	elapsed = int((datetime.now(pytz.UTC) - started).total_seconds()) if started else 0
 	return {
@@ -115,6 +119,8 @@ def _serialize_active_entry(row):
 		'checklist_item_text': _row_get(row, 'checklist_item_text'),
 		'block_id': _row_get(row, 'block_id'),
 		'block_title': _row_get(row, 'block_title'),
+		'meeting_id': _row_get(row, 'meeting_id'),
+		'meeting_title': _row_get(row, 'meeting_title'),
 	}
 
 
@@ -129,6 +135,8 @@ def _serialize_entry(row):
 		'checklist_item_text': _row_get(row, 'checklist_item_text'),
 		'block_id': _row_get(row, 'block_id'),
 		'block_title': _row_get(row, 'block_title'),
+		'meeting_id': _row_get(row, 'meeting_id'),
+		'meeting_title': _row_get(row, 'meeting_title'),
 		'description': row['description'],
 		'started_at': row['started_at'],
 		'ended_at': row['ended_at'],
@@ -148,7 +156,7 @@ def time_active():
 	conn = get_db()
 	rows = conn.execute('''
 		SELECT te.id, te.project_id, te.description, te.started_at,
-		       te.task_id, te.checklist_item_id,
+		       te.task_id, te.checklist_item_id, te.meeting_id,
 		       p.title             AS project_title,
 		       p.parent_project_id,
 		       parent.id           AS area_id,
@@ -157,13 +165,15 @@ def time_active():
 		       t.title             AS task_title,
 		       ci.text             AS checklist_item_text,
 		       b.id                AS block_id,
-		       b.title             AS block_title
+		       b.title             AS block_title,
+		       m.title             AS meeting_title
 		FROM time_entries te
 		JOIN projects p ON te.project_id = p.id
 		LEFT JOIN projects parent    ON p.parent_project_id = parent.id
 		LEFT JOIN tasks t            ON te.task_id = t.id
 		LEFT JOIN checklist_items ci ON te.checklist_item_id = ci.id
 		LEFT JOIN blocks b           ON ci.block_id = b.id
+		LEFT JOIN meetings m         ON te.meeting_id = m.id
 		WHERE te.ended_at IS NULL
 		ORDER BY te.started_at ASC
 	''').fetchall()
@@ -180,13 +190,15 @@ def time_start():
 	description = (data.get('description') or '').strip()
 	task_id = data.get('task_id')
 	checklist_item_id = data.get('checklist_item_id')
+	meeting_id = data.get('meeting_id')
 
 	if not project_id:
 		return jsonify({'error': 'project_id required'}), 400
 
-	# Phase 1.5 — mutual exclusion of task vs checklist item
-	if task_id and checklist_item_id:
-		return jsonify({'error': 'task_or_item_not_both'}), 400
+	# Phase 1.5 + Phase 5 — at most one of task / item / meeting may scope an entry
+	scopes_set = sum(1 for x in (task_id, checklist_item_id, meeting_id) if x)
+	if scopes_set > 1:
+		return jsonify({'error': 'task_item_or_meeting_not_multiple'}), 400
 
 	conn = get_db()
 	project = conn.execute(
@@ -235,6 +247,21 @@ def time_start():
 				'item_project_id': item['project_id'],
 			}), 400
 
+	# Phase 5 — meeting_id must point to a meeting on this project
+	if meeting_id:
+		meeting = conn.execute(
+			'SELECT id, project_id FROM meetings WHERE id = ?', (meeting_id,)
+		).fetchone()
+		if not meeting:
+			conn.close()
+			return jsonify({'error': 'meeting_not_found'}), 404
+		if meeting['project_id'] != int(project_id):
+			conn.close()
+			return jsonify({
+				'error': 'meeting_project_mismatch',
+				'meeting_project_id': meeting['project_id'],
+			}), 400
+
 	# §0a.2 #3 — 409 on concurrent same-project timer
 	existing = conn.execute(
 		'SELECT id FROM time_entries WHERE project_id = ? AND ended_at IS NULL',
@@ -250,13 +277,14 @@ def time_start():
 	now = _utc_now_iso()
 	cur = conn.execute('''
 		INSERT INTO time_entries
-			(project_id, task_id, checklist_item_id, description,
-			 started_at, created, updated)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+			(project_id, task_id, checklist_item_id, meeting_id,
+			 description, started_at, created, updated)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	''', (
 		project_id,
 		int(task_id) if task_id else None,
 		int(checklist_item_id) if checklist_item_id else None,
+		int(meeting_id) if meeting_id else None,
 		description, now, now, now,
 	))
 	new_id = cur.lastrowid
@@ -323,6 +351,7 @@ def time_update(entry_id):
 	new_ended = row['ended_at']
 	new_task_id = row['task_id']
 	new_item_id = row['checklist_item_id']
+	new_meeting_id = _row_get(row, 'meeting_id')
 
 	if 'description' in data:
 		new_description = (data.get('description') or '').strip()
@@ -371,9 +400,21 @@ def time_update(entry_id):
 				conn.close()
 				return jsonify({'error': 'invalid_checklist_item_id'}), 400
 
-	if new_task_id is not None and new_item_id is not None:
+	if 'meeting_id' in data:
+		val = data.get('meeting_id')
+		if val in (None, '', 'null'):
+			new_meeting_id = None
+		else:
+			try:
+				new_meeting_id = int(val)
+			except (ValueError, TypeError):
+				conn.close()
+				return jsonify({'error': 'invalid_meeting_id'}), 400
+
+	scopes_set = sum(1 for x in (new_task_id, new_item_id, new_meeting_id) if x is not None)
+	if scopes_set > 1:
 		conn.close()
-		return jsonify({'error': 'task_or_item_not_both'}), 400
+		return jsonify({'error': 'task_item_or_meeting_not_multiple'}), 400
 
 	entry_project_id = row['project_id']
 
@@ -408,6 +449,20 @@ def time_update(entry_id):
 				'item_project_id': item['project_id'],
 			}), 400
 
+	if 'meeting_id' in data and new_meeting_id is not None:
+		meeting = conn.execute(
+			'SELECT id, project_id FROM meetings WHERE id = ?', (new_meeting_id,)
+		).fetchone()
+		if not meeting:
+			conn.close()
+			return jsonify({'error': 'meeting_not_found'}), 404
+		if meeting['project_id'] != entry_project_id:
+			conn.close()
+			return jsonify({
+				'error': 'meeting_project_mismatch',
+				'meeting_project_id': meeting['project_id'],
+			}), 400
+
 	if new_ended:
 		try:
 			s = _parse_iso_utc(new_started)
@@ -424,11 +479,11 @@ def time_update(entry_id):
 		UPDATE time_entries
 		SET description = ?, started_at = ?, ended_at = ?,
 		    duration_seconds = ?, task_id = ?, checklist_item_id = ?,
-		    updated = ?
+		    meeting_id = ?, updated = ?
 		WHERE id = ?
 	''', (
 		new_description, new_started, new_ended, new_duration,
-		new_task_id, new_item_id, now_iso, entry_id,
+		new_task_id, new_item_id, new_meeting_id, now_iso, entry_id,
 	))
 	conn.commit()
 	row = _fetch_entry_with_context(conn, entry_id)
@@ -554,11 +609,13 @@ def time_today(project_id):
 		       t.title  AS task_title,
 		       ci.text  AS checklist_item_text,
 		       b.id     AS block_id,
-		       b.title  AS block_title
+		       b.title  AS block_title,
+		       m.title  AS meeting_title
 		FROM time_entries te
 		LEFT JOIN tasks t            ON te.task_id = t.id
 		LEFT JOIN checklist_items ci ON te.checklist_item_id = ci.id
 		LEFT JOIN blocks b           ON ci.block_id = b.id
+		LEFT JOIN meetings m         ON te.meeting_id = m.id
 		WHERE te.project_id = ?
 		  AND te.started_at >= ?
 		  AND te.started_at <  ?
