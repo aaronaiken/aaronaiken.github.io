@@ -2335,6 +2335,38 @@ body.cd-strip-visible .cd-shell { padding-top: 32px; }
   max-width: 60ch;
 }
 
+/* Phase 2.4 — recurrence pill in checklist block header.
+   Sits between the title and the action buttons; reads as
+   "this is a recurring routine, here's its cadence." Same dim
+   amber as the body, brighter glyph for the ↻. */
+.cd-block-recurrence-pill {
+  background: rgba(212, 136, 10, 0.06);
+  border: 1px solid var(--cd-amber-lo);
+  color: var(--cd-text-dim);
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  padding: 2px 7px;
+  border-radius: 2px;
+  cursor: pointer;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  margin-left: 0.5rem;
+  flex-shrink: 0;
+}
+.cd-block-recurrence-pill:hover,
+.cd-block-recurrence-pill:focus-visible {
+  background: rgba(245, 179, 50, 0.10);
+  border-color: var(--cd-amber-hi);
+  color: var(--cd-amber-hi);
+  outline: none;
+}
+.cd-block-recurrence-pill .cd-block-recurrence-label {
+  color: var(--cd-text);
+  font-weight: 500;
+}
+
 /* Phase 2.3 polish — MORE ▾ overflow menu in the CD header nav */
 .cd-nav-more {
   position: relative;
