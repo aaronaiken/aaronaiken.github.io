@@ -2388,14 +2388,26 @@ body.cd-strip-visible .cd-shell { padding-top: 32px; }
   background: rgba(204, 64, 64, 0.08);
   text-transform: uppercase;
 }
+/* The date input is always in the DOM at the badge's position so
+   showPicker() has a stable anchor. Visually hidden via opacity +
+   zero size, but kept laid-out (NOT display:none) — first-click
+   picker placement was wrong before this because hidden attr meant
+   no layout, so the browser anchored to (0,0). */
 .cd-due-input {
-  background: var(--cd-bg-surface);
-  border: 1px solid var(--cd-amber-hi);
-  color: var(--cd-text);
-  font: inherit;
-  padding: 1px 4px;
-  border-radius: 2px;
-  margin-left: 4px;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  border: 0;
+  padding: 0;
+  pointer-events: none;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+}
+.cd-due-wrapper {
+  position: relative;
 }
 
 /* Phase 2.4 — show-history toggle + panel on recurring blocks.
