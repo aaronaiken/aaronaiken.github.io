@@ -2335,6 +2335,69 @@ body.cd-strip-visible .cd-shell { padding-top: 32px; }
   max-width: 60ch;
 }
 
+/* Phase 2.4 — due-date badges on tasks + checklist items.
+   Always-visible on tasks; hover-only on checklist items via the
+   .cd-tt-tag-item density rule (already defined elsewhere). */
+.cd-due-wrapper {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.cd-due-badge {
+  background: rgba(212, 136, 10, 0.06);
+  border: 1px solid var(--cd-amber-lo);
+  color: var(--cd-text-dim);
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  padding: 1px 6px;
+  border-radius: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-transform: lowercase;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.cd-due-badge:hover,
+.cd-due-badge:focus-visible {
+  background: rgba(245, 179, 50, 0.12);
+  border-color: var(--cd-amber-hi);
+  color: var(--cd-amber-hi);
+  outline: none;
+}
+.cd-due-badge.unset {
+  border-style: dashed;
+  border-color: var(--cd-border);
+  color: var(--cd-text-dim);
+  opacity: 0.7;
+}
+.cd-due-badge.unset:hover {
+  opacity: 1;
+}
+.cd-due-badge.today {
+  border-color: var(--cd-amber-hi);
+  color: var(--cd-amber-hi);
+  background: rgba(245, 179, 50, 0.10);
+}
+.cd-due-badge.soon {
+  color: var(--cd-amber);
+}
+.cd-due-badge.overdue {
+  border-color: var(--cd-red, #cc4040);
+  color: var(--cd-red, #cc4040);
+  background: rgba(204, 64, 64, 0.08);
+  text-transform: uppercase;
+}
+.cd-due-input {
+  background: var(--cd-bg-surface);
+  border: 1px solid var(--cd-amber-hi);
+  color: var(--cd-text);
+  font: inherit;
+  padding: 1px 4px;
+  border-radius: 2px;
+  margin-left: 4px;
+}
+
 /* Phase 2.4 — recurrence pill in checklist block header.
    Sits between the title and the action buttons; reads as
    "this is a recurring routine, here's its cadence." Same dim
