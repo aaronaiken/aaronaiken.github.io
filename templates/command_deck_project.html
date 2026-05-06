@@ -263,6 +263,36 @@
         </div>
       </div>
 
+      <!-- MEETINGS -->
+      <div class="cd-panel cd-mb">
+        <div class="cd-panel-header">
+          <span class="cd-panel-title">// Meetings</span>
+          <div class="cd-panel-actions">
+            {% if meetings_total and meetings_total > (meetings_recent | length) %}
+              <a href="/command-deck/meetings/?project={{ project.slug }}" class="cd-btn ghost sm">VIEW ALL ({{ meetings_total }})</a>
+            {% endif %}
+            <button class="cd-btn primary sm" id="newMeetingBtn" type="button">+ NEW</button>
+          </div>
+        </div>
+        <div class="cd-panel-body">
+          {% if meetings_recent %}
+            <ul class="cd-project-meetings-list" id="projectMeetingsList">
+              {% for m in meetings_recent %}
+                <li class="cd-project-meeting-row" data-meeting-id="{{ m.id }}">
+                  <a class="cd-project-meeting-link" href="/command-deck/meetings/{{ m.id }}/">
+                    <span class="cd-project-meeting-date" data-iso="{{ m.meeting_date }}">{{ m.meeting_date[:16] }}</span>
+                    <span class="cd-project-meeting-title">{{ m.title }}</span>
+                    <span class="cd-project-meeting-actions">{{ m.action_count }} action{{ '' if m.action_count == 1 else 's' }}</span>
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="cd-empty" id="projectMeetingsEmpty">No meetings yet for this project.</div>
+          {% endif %}
+        </div>
+      </div>
+
       <!-- FILES -->
       <div class="cd-panel cd-mb">
         <div class="cd-panel-header">
@@ -461,6 +491,32 @@
       <button class="cd-btn ghost" id="editCancelBtn">CANCEL</button>
       <button class="cd-btn primary" id="editConfirmBtn">SAVE</button>
     </div>
+  </div>
+</div>
+
+<!-- NEW MEETING MODAL (Phase 5) -->
+<div class="cd-modal-overlay" id="projectNewMeetingModal">
+  <div class="cd-modal">
+    <div class="cd-modal-title">// New Meeting</div>
+    <form method="POST" action="/command-deck/meetings/new" id="projectNewMeetingForm">
+      <input type="hidden" name="project_id" value="{{ project.id }}">
+      <label class="cd-label">
+        <span>Title</span>
+        <input type="text" class="cd-input" name="title" required>
+      </label>
+      <label class="cd-label">
+        <span>When</span>
+        <input type="datetime-local" class="cd-input" name="meeting_date" id="projectNewMeetingDate">
+      </label>
+      <label class="cd-label">
+        <span>Notes (optional, markdown)</span>
+        <textarea class="cd-input" name="notes" rows="4"></textarea>
+      </label>
+      <div class="cd-modal-actions">
+        <button type="button" class="cd-btn ghost" id="projectNewMeetingCancelBtn">CANCEL</button>
+        <button type="submit" class="cd-btn primary">CREATE</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -2577,6 +2633,66 @@ function cdEditTask(id) {
         btn.textContent = wasStarred ? '★' : '☆';
         btn.title = wasStarred ? 'Remove from Today' : 'Add to Today';
       });
+  });
+})();
+
+// ============================================================
+// MEETINGS — pretty-print row dates + new-meeting modal (Phase 5)
+// ============================================================
+(function () {
+  document.querySelectorAll('.cd-project-meeting-date').forEach(function (el) {
+    var iso = el.getAttribute('data-iso');
+    if (!iso) return;
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return;
+    el.textContent = d.toLocaleString(undefined, {
+      weekday: 'short', month: 'short', day: 'numeric',
+      hour: 'numeric', minute: '2-digit',
+    });
+  });
+
+  var modal = document.getElementById('projectNewMeetingModal');
+  var openBtn = document.getElementById('newMeetingBtn');
+  var cancelBtn = document.getElementById('projectNewMeetingCancelBtn');
+  var dateInput = document.getElementById('projectNewMeetingDate');
+  var form = document.getElementById('projectNewMeetingForm');
+  if (!modal || !openBtn) return;
+
+  function openModal() {
+    modal.classList.add('open');
+    if (!dateInput.value) {
+      var now = new Date();
+      var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+      dateInput.value = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate())
+        + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+    }
+    var input = modal.querySelector('input[name="title"]');
+    if (input) input.focus();
+  }
+  function closeModal() { modal.classList.remove('open'); }
+  openBtn.addEventListener('click', openModal);
+  cancelBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
+
+  form.addEventListener('submit', function () {
+    var v = dateInput.value;
+    if (v && v.length >= 16 && !v.includes('+') && !v.endsWith('Z')) {
+      var d = new Date(v);
+      if (!isNaN(d.getTime())) {
+        var off = -d.getTimezoneOffset();
+        var sign = off >= 0 ? '+' : '-';
+        var abs = Math.abs(off);
+        var hh = String(Math.floor(abs / 60)).padStart(2, '0');
+        var mm = String(abs % 60).padStart(2, '0');
+        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+        dateInput.value = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+          + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':00'
+          + sign + hh + ':' + mm;
+      }
+    }
   });
 })();
 </script>
