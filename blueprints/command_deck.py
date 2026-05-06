@@ -1145,6 +1145,40 @@ def cd_checklist_toggle(slug, item_id):
 	return jsonify({'error': 'not found'}), 404
 
 
+@command_deck_bp.route('/command-deck/projects/<slug>/checklist/<int:item_id>/due-date', methods=['POST'])
+@cd_auth_required
+def cd_checklist_item_due_date(slug, item_id):
+	"""Phase 2.4 — set or clear due_date on a checklist item.
+	Mirrors the task due_date route. Accepts ISO YYYY-MM-DD or empty to clear."""
+	data = request.get_json(silent=True) or request.form
+	val = data.get('due_date')
+	if val in (None, '', 'null'):
+		due = None
+	else:
+		val = val.strip()
+		import datetime as _dt
+		try:
+			_dt.date.fromisoformat(val)
+		except (ValueError, TypeError):
+			return jsonify({'error': 'invalid_due_date'}), 400
+		due = val
+	conn = get_db()
+	# Validate item exists + belongs to a block in this project
+	row = conn.execute('''
+		SELECT ci.id FROM checklist_items ci
+		JOIN blocks b ON ci.block_id = b.id
+		JOIN projects p ON b.project_id = p.id
+		WHERE ci.id = ? AND p.slug = ?
+	''', (item_id, slug)).fetchone()
+	if not row:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+	conn.execute('UPDATE checklist_items SET due_date = ? WHERE id = ?', (due, item_id))
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True, 'due_date': due})
+
+
 @command_deck_bp.route('/command-deck/projects/<slug>/checklist/add', methods=['POST'])
 @cd_auth_required
 def cd_checklist_add(slug):
