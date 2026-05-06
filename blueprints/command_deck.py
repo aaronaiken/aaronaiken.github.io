@@ -11,7 +11,7 @@ import json
 import re
 import uuid
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import anthropic
 import requests as req_lib
@@ -183,7 +183,7 @@ def cd_project_save_as_template(slug):
 			entry['content'] = b['content'] or ''
 		else:
 			items = conn.execute(
-				'SELECT text FROM checklist_items WHERE block_id = ? ORDER BY id ASC',
+				'SELECT text FROM checklist_items WHERE block_id = ? AND archived_at IS NULL ORDER BY id ASC',
 				(b['id'],)
 			).fetchall()
 			entry['items'] = [{'text': i['text']} for i in items]
@@ -230,7 +230,7 @@ def cd_block_save_as_template(slug, block_id):
 		return jsonify({'error': 'block_not_checklist'}), 400
 
 	items = conn.execute(
-		'SELECT text FROM checklist_items WHERE block_id = ? ORDER BY id ASC',
+		'SELECT text FROM checklist_items WHERE block_id = ? AND archived_at IS NULL ORDER BY id ASC',
 		(block_id,)
 	).fetchall()
 	body = {
@@ -574,7 +574,7 @@ def cd_project(slug):
 		block = dict(b)
 		if block['type'] == 'checklist':
 			items = conn.execute(
-				'SELECT * FROM checklist_items WHERE block_id = ? ORDER BY id ASC',
+				'SELECT * FROM checklist_items WHERE block_id = ? AND archived_at IS NULL ORDER BY id ASC',
 				(block['id'],)
 			).fetchall()
 			items_with_lifetime = []
@@ -852,7 +852,7 @@ def cd_block_add(slug):
 	block = dict(conn.execute('SELECT * FROM blocks WHERE id = ?', (block_id,)).fetchone())
 	if block_type == 'checklist':
 		items = conn.execute(
-			'SELECT * FROM checklist_items WHERE block_id = ? ORDER BY id ASC',
+			'SELECT * FROM checklist_items WHERE block_id = ? AND archived_at IS NULL ORDER BY id ASC',
 			(block_id,)
 		).fetchall()
 		block['items'] = [dict(i) for i in items]
@@ -977,6 +977,55 @@ def cd_block_recurrence(slug, block_id):
 	conn.commit()
 	conn.close()
 	return jsonify({'success': True, 'recurrence': recurrence, 'recurrence_days': recurrence_days})
+
+
+@command_deck_bp.route('/command-deck/projects/<slug>/blocks/<int:block_id>/history', methods=['GET'])
+@cd_auth_required
+def cd_block_history(slug, block_id):
+	"""Return archived past-cycle items grouped by due_date desc.
+
+	Limited to last 90 days for v1 — older history is reachable via reports.
+	Read-only: no toggle / edit / delete on archived items in this view.
+	"""
+	conn = get_db()
+	# Validate block belongs to project
+	block = conn.execute(
+		'SELECT b.id FROM blocks b JOIN projects p ON b.project_id = p.id '
+		'WHERE b.id = ? AND p.slug = ?',
+		(block_id, slug)
+	).fetchone()
+	if not block:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+
+	cutoff = (datetime.now(pytz.timezone('US/Eastern')) - timedelta(days=90)).strftime('%Y-%m-%d')
+	rows = conn.execute('''
+		SELECT id, text, checked, due_date, archived_at
+		FROM checklist_items
+		WHERE block_id = ?
+		  AND archived_at IS NOT NULL
+		  AND (due_date IS NULL OR due_date >= ?)
+		ORDER BY due_date DESC, id ASC
+	''', (block_id, cutoff)).fetchall()
+	conn.close()
+
+	# Group by due_date
+	groups = []
+	current_date = object()  # sentinel
+	current_items = None
+	for r in rows:
+		d = r['due_date'] or '(no due date)'
+		if d != current_date:
+			current_date = d
+			current_items = []
+			groups.append({'due_date': d, 'items': current_items})
+		current_items.append({
+			'id': r['id'],
+			'text': r['text'],
+			'checked': bool(r['checked']),
+			'archived_at': r['archived_at'],
+		})
+	return jsonify({'history': groups})
 
 
 @command_deck_bp.route('/command-deck/projects/<slug>/blocks/<int:block_id>/reset', methods=['POST'])
@@ -1419,7 +1468,7 @@ def _huyang_load_project_content(conn, project_id):
 		block = dict(b)
 		if block['type'] == 'checklist':
 			items = conn.execute(
-				'SELECT * FROM checklist_items WHERE block_id = ? ORDER BY id ASC',
+				'SELECT * FROM checklist_items WHERE block_id = ? AND archived_at IS NULL ORDER BY id ASC',
 				(block['id'],)
 			).fetchall()
 			block['items'] = [dict(i) for i in items]
@@ -1456,7 +1505,7 @@ def _huyang_load_area_content(conn, area_id):
 		bd = dict(b)
 		if bd['type'] == 'checklist':
 			items = conn.execute(
-				'SELECT * FROM checklist_items WHERE block_id = ? ORDER BY id ASC',
+				'SELECT * FROM checklist_items WHERE block_id = ? AND archived_at IS NULL ORDER BY id ASC',
 				(bd['id'],)
 			).fetchall()
 			bd['items'] = [dict(i) for i in items]
