@@ -124,6 +124,15 @@
                 data-block-id="{{ block.id }}"
                 data-type="{{ block.type }}"
                 data-custom-title="{{ block.title | default('', true) }}">{% if block.title %}{{ block.title }}{% elif block.type == 'note' %}Untitled Note{% else %}Untitled Checklist{% endif %}</span>
+              {% if block.type == 'checklist' and block.recurrence %}
+                <button class="cd-block-recurrence-pill cd-block-recurrence-trigger"
+                        data-block-id="{{ block.id }}"
+                        data-recurrence="{{ block.recurrence }}"
+                        data-recurrence-days="{{ block.recurrence_days or '' }}"
+                        title="Change recurrence" type="button">
+                  ↻ <span class="cd-block-recurrence-label">{{ block.recurrence | upper }}{% if block.recurrence_days %} · {{ block.recurrence_days | upper }}{% endif %}</span>
+                </button>
+              {% endif %}
               <div class="cd-panel-actions">
                 {% if block.type == 'checklist' %}
                 <button class="cd-today-star{% if block.today %} starred{% endif %}"
@@ -131,6 +140,11 @@
                         title="{% if block.today %}Remove from Today{% else %}Add to Today{% endif %}"
                         type="button">{{ '★' if block.today else '☆' }}</button>
                 <button class="cd-btn ghost sm cd-block-save-as-template" data-block-id="{{ block.id }}" data-default-name="{{ block.title or 'Untitled Checklist' }}" title="Save this checklist as a template" type="button">TEMPLATE</button>
+                {% if block.recurrence %}
+                <button class="cd-btn ghost sm cd-block-reset" data-block-id="{{ block.id }}" data-block-title="{{ block.title or 'this checklist' }}" title="Reset cycle now — archive current items, spawn fresh" type="button">RESET</button>
+                {% else %}
+                <button class="cd-btn ghost sm cd-block-recurrence-trigger" data-block-id="{{ block.id }}" data-recurrence="" data-recurrence-days="" title="Set up recurrence" type="button">↻</button>
+                {% endif %}
                 {% endif %}
                 <button class="cd-block-collapse-btn" data-block-id="{{ block.id }}" title="Collapse">▾</button>
                 <button class="cd-btn ghost sm block-delete-btn" data-id="{{ block.id }}">REMOVE</button>
@@ -336,6 +350,64 @@
   </footer>
 
 </div><!-- .cd-shell -->
+
+<!-- RECURRENCE SETTER MODAL (Phase 2.4) -->
+<div class="cd-modal-overlay" id="recurrenceModal">
+  <div class="cd-modal">
+    <div class="cd-modal-title">// Recurrence</div>
+    <p style="font-family:var(--cd-font-body);font-size:0.78rem;color:var(--cd-text-dim);margin:0 0 0.75rem;line-height:1.45;">
+      A recurring checklist archives its items at the cycle boundary and spawns fresh copies — each cycle is its own set with its own due date and time-tracking lineage.
+    </p>
+
+    <div id="recurrenceKindGroup" style="display:flex;flex-direction:column;gap:0.4rem;font-family:var(--cd-font-ui);font-size:0.72rem;color:var(--cd-text);">
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+        <input type="radio" name="recurrenceKind" value="" style="accent-color:var(--cd-amber);"> none — one-shot
+      </label>
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+        <input type="radio" name="recurrenceKind" value="daily" style="accent-color:var(--cd-amber);"> daily
+      </label>
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+        <input type="radio" name="recurrenceKind" value="weekly" style="accent-color:var(--cd-amber);"> weekly (only fires Mon if all items checked)
+      </label>
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+        <input type="radio" name="recurrenceKind" value="monthly" style="accent-color:var(--cd-amber);"> monthly (only fires 1st if all items checked)
+      </label>
+    </div>
+
+    <div id="recurrenceDailyDays" style="margin-top:0.7rem;display:none;">
+      <div style="font-family:var(--cd-font-ui);font-size:0.55rem;letter-spacing:0.18em;color:var(--cd-text-dim);text-transform:uppercase;margin-bottom:5px;">ACTIVE DAYS</div>
+      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;font-family:var(--cd-font-ui);font-size:0.7rem;">
+        <label><input type="checkbox" name="recDaily" value="Mon" checked> Mon</label>
+        <label><input type="checkbox" name="recDaily" value="Tue" checked> Tue</label>
+        <label><input type="checkbox" name="recDaily" value="Wed" checked> Wed</label>
+        <label><input type="checkbox" name="recDaily" value="Thu" checked> Thu</label>
+        <label><input type="checkbox" name="recDaily" value="Fri" checked> Fri</label>
+        <label><input type="checkbox" name="recDaily" value="Sat"> Sat</label>
+        <label><input type="checkbox" name="recDaily" value="Sun"> Sun</label>
+      </div>
+    </div>
+
+    <div id="recurrenceWeeklyDay" style="margin-top:0.7rem;display:none;">
+      <div style="font-family:var(--cd-font-ui);font-size:0.55rem;letter-spacing:0.18em;color:var(--cd-text-dim);text-transform:uppercase;margin-bottom:5px;">DUE DAY OF WEEK</div>
+      <select class="cd-input" id="recurrenceWeeklySelect" style="width:auto;">
+        <option value="Mon">Mon</option><option value="Tue">Tue</option>
+        <option value="Wed">Wed</option><option value="Thu">Thu</option>
+        <option value="Fri" selected>Fri</option>
+        <option value="Sat">Sat</option><option value="Sun">Sun</option>
+      </select>
+    </div>
+
+    <div id="recurrenceMonthlyDay" style="margin-top:0.7rem;display:none;">
+      <div style="font-family:var(--cd-font-ui);font-size:0.55rem;letter-spacing:0.18em;color:var(--cd-text-dim);text-transform:uppercase;margin-bottom:5px;">DUE DAY OF MONTH</div>
+      <input type="text" class="cd-input" id="recurrenceMonthlyInput" placeholder="1–31 or 'last'" value="1" style="width:8em;">
+    </div>
+
+    <div class="cd-modal-actions">
+      <button class="cd-btn ghost" id="recurrenceCancelBtn">CANCEL</button>
+      <button class="cd-btn primary" id="recurrenceSaveBtn">SAVE</button>
+    </div>
+  </div>
+</div>
 
 <!-- EDIT PROJECT MODAL -->
 <div class="cd-modal-overlay" id="editModal">
@@ -617,6 +689,7 @@ fetch('/below-deck/count').then(r=>r.json()).then(data=>{
             <div class="cd-panel-actions">
               <button class="cd-today-star" data-kind="block" data-id="${block.id}" title="Add to Today" type="button">☆</button>
               <button class="cd-btn ghost sm cd-block-save-as-template" data-block-id="${block.id}" data-default-name="${escapeHtml(titleAttr)}" title="Save this checklist as a template" type="button">TEMPLATE</button>
+              <button class="cd-btn ghost sm cd-block-recurrence-trigger" data-block-id="${block.id}" data-recurrence="" data-recurrence-days="" title="Set up recurrence" type="button">↻</button>
               <button class="cd-block-collapse-btn" data-block-id="${block.id}" title="Collapse">▾</button>
               <button class="cd-btn ghost sm block-delete-btn" data-id="${block.id}">REMOVE</button>
             </div>
@@ -1177,6 +1250,143 @@ document.addEventListener('click', function (ev) {
     const id = opt.getAttribute('data-id');
     close();
     spawn(id);
+  });
+})();
+
+// Phase 2.4 — RECURRENCE setter modal + RESET button
+(function () {
+  'use strict';
+  const modal = document.getElementById('recurrenceModal');
+  if (!modal) return;
+  let activeBlockId = null;
+
+  function syncDailyDaysFromCsv(csv) {
+    const set = new Set((csv || '').split(',').map(s => s.trim()).filter(Boolean));
+    document.querySelectorAll('input[name="recDaily"]').forEach(cb => {
+      // Default = Mon-Fri checked when nothing supplied
+      cb.checked = csv ? set.has(cb.value) : ['Mon','Tue','Wed','Thu','Fri'].includes(cb.value);
+    });
+  }
+
+  function showSection(kind) {
+    document.getElementById('recurrenceDailyDays').style.display   = (kind === 'daily')   ? '' : 'none';
+    document.getElementById('recurrenceWeeklyDay').style.display   = (kind === 'weekly')  ? '' : 'none';
+    document.getElementById('recurrenceMonthlyDay').style.display  = (kind === 'monthly') ? '' : 'none';
+  }
+
+  function openModal(blockId, currentKind, currentDays) {
+    activeBlockId = blockId;
+    const kind = currentKind || '';
+    document.querySelectorAll('input[name="recurrenceKind"]').forEach(r => {
+      r.checked = (r.value === kind);
+    });
+    showSection(kind);
+    if (kind === 'daily') syncDailyDaysFromCsv(currentDays);
+    if (kind === 'weekly') {
+      document.getElementById('recurrenceWeeklySelect').value = (currentDays || 'Fri').split(',')[0].trim() || 'Fri';
+    }
+    if (kind === 'monthly') {
+      document.getElementById('recurrenceMonthlyInput').value = (currentDays || '1').trim() || '1';
+    }
+    modal.classList.add('open');
+  }
+
+  function closeModal() {
+    activeBlockId = null;
+    modal.classList.remove('open');
+  }
+
+  // Open from delegated click (recurrence pill OR ↻ button)
+  document.addEventListener('click', function (ev) {
+    const trigger = ev.target.closest('.cd-block-recurrence-trigger');
+    if (!trigger) return;
+    ev.preventDefault();
+    openModal(
+      trigger.getAttribute('data-block-id'),
+      trigger.getAttribute('data-recurrence') || '',
+      trigger.getAttribute('data-recurrence-days') || ''
+    );
+  });
+
+  // Kind radio toggles which sub-section is visible
+  document.querySelectorAll('input[name="recurrenceKind"]').forEach(r => {
+    r.addEventListener('change', function () { showSection(r.value); });
+  });
+
+  // Cancel + click-outside
+  document.getElementById('recurrenceCancelBtn').addEventListener('click', closeModal);
+  modal.addEventListener('click', function (ev) {
+    if (ev.target === modal) closeModal();
+  });
+
+  // Save
+  document.getElementById('recurrenceSaveBtn').addEventListener('click', async function () {
+    if (!activeBlockId) return;
+    const kindEl = document.querySelector('input[name="recurrenceKind"]:checked');
+    const kind = kindEl ? kindEl.value : '';
+    let days = null;
+    if (kind === 'daily') {
+      const checked = Array.from(document.querySelectorAll('input[name="recDaily"]:checked')).map(c => c.value);
+      // 7 of 7 → NULL (means "every day"); fewer → CSV
+      days = (checked.length === 7) ? null : checked.join(',');
+      if (checked.length === 0) {
+        alert('Pick at least one active day, or switch to none.');
+        return;
+      }
+    } else if (kind === 'weekly') {
+      days = document.getElementById('recurrenceWeeklySelect').value;
+    } else if (kind === 'monthly') {
+      days = (document.getElementById('recurrenceMonthlyInput').value || '1').trim();
+    }
+    const payload = { recurrence: kind || null, recurrence_days: days };
+    try {
+      const r = await fetch(`/command-deck/projects/${PROJECT_SLUG}/blocks/${activeBlockId}/recurrence`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload),
+        credentials: 'same-origin',
+      });
+      if (r.ok) {
+        location.reload();
+      } else {
+        const d = await r.json().catch(() => ({}));
+        alert('Could not save recurrence: ' + (d.error || 'unknown error'));
+      }
+    } catch (e) {
+      alert('Network error.');
+    }
+  });
+
+  // RESET button — delegated; confirm + fire
+  document.addEventListener('click', async function (ev) {
+    const btn = ev.target.closest('.cd-block-reset');
+    if (!btn) return;
+    ev.preventDefault();
+    const blockId = btn.getAttribute('data-block-id');
+    const title = btn.getAttribute('data-block-title') || 'this checklist';
+    if (!confirm(`Reset ${title}? Archives current items and spawns a fresh cycle.`)) return;
+    try {
+      const r = await fetch(`/command-deck/projects/${PROJECT_SLUG}/blocks/${blockId}/reset`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      });
+      if (r.ok) {
+        location.reload();
+      } else {
+        const d = await r.json().catch(() => ({}));
+        alert('Could not reset: ' + (d.error || 'unknown error'));
+      }
+    } catch (e) {
+      alert('Network error.');
+    }
+  });
+
+  // ESC closes modal
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && modal.classList.contains('open')) {
+      ev.stopPropagation();
+      closeModal();
+    }
   });
 })();
 
