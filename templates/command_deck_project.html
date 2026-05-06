@@ -2133,6 +2133,14 @@ function cdEditTask(id) {
             ? 'Checklist: ' + escHtml(e.block_title)
             : 'Checklist';
           contextBadge = '<' + triggerTag + ' class="' + triggerCls + ' item"' + triggerAttrs + '>[' + blockLabel + ']' + (isRunning ? '' : ' ▾') + '</' + triggerTag + '>';
+        } else if (e.meeting_id) {
+          // Phase 5: meeting-scoped entry. Static badge — re-assigning a meeting-
+          // scoped entry to a different meeting/task/item is out of v1 scope
+          // (delete + recreate as needed).
+          const mLabel = e.meeting_title
+            ? 'meeting: ' + escHtml(e.meeting_title)
+            : 'meeting';
+          contextBadge = '<span class="cd-tt-entry-context meeting">[' + mLabel + ']</span>';
         } else if (!isRunning) {
           contextBadge = '<button type="button" class="cd-tt-entry-context cd-tt-assign-trigger unassigned" data-entry-id="' + e.id + '">[+ assign ▾]</button>';
         } else {

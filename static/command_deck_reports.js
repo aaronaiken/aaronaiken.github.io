@@ -343,6 +343,12 @@
 					? `Checklist: ${escapeHtml(e.block_title)}`
 					: 'Checklist';
 			}
+			else if (e.meeting_id) {
+				// Phase 5: meeting-scoped entry.
+				context = e.meeting_title
+					? `meeting: ${escapeHtml(e.meeting_title)}`
+					: 'meeting';
+			}
 			const runningCls = e.running ? ' is-running' : '';
 			const runningGlyph = e.running ? ' <span class="cd-reports-running-dot" title="still running"></span>' : '';
 			// Click-to-edit on stopped entries; running entries stay static.

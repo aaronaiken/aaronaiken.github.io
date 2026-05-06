@@ -157,6 +157,13 @@
 								: 'Checklist';
 							ctxLine = '<span class="ttp-row-ctx">' + blockLabel + '</span>';
 						}
+						else if (e.meeting_id) {
+							// Phase 5: meeting-scoped entry.
+							var mLabel = e.meeting_title
+								? 'meeting · ' + escHtml(e.meeting_title)
+								: 'meeting';
+							ctxLine = '<span class="ttp-row-ctx">' + mLabel + '</span>';
+						}
 						var descNode = isEditing
 							? '<input class="ttp-row-desc-input" data-id="' + e.id + '" value="' + escHtml(desc) + '">'
 							: '<span class="ttp-row-desc" data-id="' + e.id + '">' + escHtml(desc) + '</span>';
