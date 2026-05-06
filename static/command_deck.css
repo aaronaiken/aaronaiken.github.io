@@ -3772,3 +3772,293 @@ body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
   }
 }
 
+
+/* ============================================================
+ * MEETINGS — Phase 5
+ * Index page chrome, detail page meta + notes, action items.
+ * ============================================================ */
+
+.cd-meetings-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.cd-meetings-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.cd-meetings-filter-pill {
+  font-family: var(--cd-font-ui);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: var(--cd-text-dim);
+  border: 1px solid var(--cd-border);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.cd-meetings-filter-pill a { color: var(--cd-amber); text-decoration: none; }
+.cd-meetings-filter-clear {
+  color: var(--cd-text-dim) !important;
+  text-decoration: none;
+  padding: 0 0.2rem;
+}
+.cd-meetings-filter-clear:hover { color: var(--cd-amber-hi) !important; }
+
+.cd-meetings-month {
+  font-family: var(--cd-font-ui);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  color: var(--cd-text-dim);
+  margin: 1.5rem 0 0.4rem;
+  text-transform: uppercase;
+}
+
+.cd-meetings-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--cd-border);
+}
+
+.cd-meeting-row {
+  border-bottom: 1px solid var(--cd-border);
+}
+.cd-meeting-row-link {
+  display: grid;
+  grid-template-columns: 14em 1fr 12em 7em;
+  gap: 1rem;
+  padding: 0.55rem 0.4rem;
+  align-items: baseline;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.12s;
+}
+.cd-meeting-row-link:hover { background: rgba(212, 136, 10, 0.05); }
+
+.cd-meeting-row-date {
+  font-family: var(--cd-font-ui);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: var(--cd-text-dim);
+  white-space: nowrap;
+}
+.cd-meeting-row-title {
+  font-size: 0.95rem;
+  color: var(--cd-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cd-meeting-row-project {
+  font-family: var(--cd-font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  color: var(--cd-amber);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cd-meeting-row-project em {
+  color: var(--cd-text-dim);
+  font-style: normal;
+}
+.cd-meeting-row-actions {
+  font-family: var(--cd-font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  color: var(--cd-text-dim);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cd-meetings-empty {
+  font-family: var(--cd-font-ui);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--cd-text-dim);
+  padding: 2rem 0;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .cd-meeting-row-link {
+    grid-template-columns: 1fr 6em;
+    grid-template-areas:
+      "date    actions"
+      "title   title"
+      "project project";
+    row-gap: 0.2rem;
+  }
+  .cd-meeting-row-date    { grid-area: date; }
+  .cd-meeting-row-title   { grid-area: title; }
+  .cd-meeting-row-project { grid-area: project; }
+  .cd-meeting-row-actions { grid-area: actions; }
+}
+
+/* --- Detail page --- */
+
+.cd-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--cd-font-ui);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  color: var(--cd-text-dim);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+}
+.cd-breadcrumb a {
+  color: var(--cd-amber);
+  text-decoration: none;
+}
+.cd-breadcrumb a:hover { color: var(--cd-amber-hi); }
+.cd-breadcrumb-sep { color: var(--cd-text-dim); }
+.cd-breadcrumb-tail {
+  color: var(--cd-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.cd-breadcrumb-actions { margin-left: auto; }
+
+.cd-meeting-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--cd-border);
+}
+
+.cd-meeting-title-edit {
+  outline: none;
+  border-radius: 2px;
+  padding: 0 0.2rem;
+  margin-left: -0.2rem;
+}
+.cd-meeting-title-edit:focus,
+.cd-meeting-title-edit:hover {
+  background: rgba(212, 136, 10, 0.06);
+}
+
+.cd-meeting-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.cd-meeting-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  font-family: var(--cd-font-ui);
+  font-size: 0.7rem;
+}
+
+.cd-meeting-meta-label {
+  display: inline-block;
+  min-width: 5em;
+  letter-spacing: 0.14em;
+  color: var(--cd-text-dim);
+  text-transform: uppercase;
+  font-size: 0.6rem;
+}
+
+.cd-meeting-date-input {
+  background: transparent;
+  border: 1px solid var(--cd-border);
+  color: var(--cd-text);
+  font: inherit;
+  font-size: 0.7rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 2px;
+  display: none;
+}
+
+.cd-meeting-date-display {
+  cursor: pointer;
+  color: var(--cd-text);
+  border-bottom: 1px dashed transparent;
+  padding: 0.1rem 0;
+}
+.cd-meeting-date-display:hover {
+  border-bottom-color: var(--cd-amber);
+}
+
+.cd-meeting-project-select {
+  background: transparent;
+  border: 1px solid var(--cd-border);
+  color: var(--cd-text);
+  font: inherit;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 2px;
+}
+
+.cd-meeting-project-link {
+  font-size: 0.6rem;
+  color: var(--cd-amber);
+  text-decoration: none;
+  letter-spacing: 0.1em;
+}
+.cd-meeting-project-link:hover { color: var(--cd-amber-hi); }
+
+.cd-meeting-tt-row .cd-tt-row-btn {
+  margin-right: 0.4rem;
+}
+
+.cd-meeting-meta-hint .cd-meeting-meta-note {
+  color: var(--cd-text-dim);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+}
+
+.cd-meeting-notes-rendered {
+  min-height: 4em;
+  cursor: text;
+  padding: 0.4rem;
+  border-radius: 2px;
+}
+.cd-meeting-notes-rendered:hover { background: rgba(212, 136, 10, 0.04); }
+.cd-meeting-notes-rendered .cd-note-placeholder {
+  color: var(--cd-text-dim);
+  font-style: italic;
+}
+.cd-meeting-notes-editor textarea {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--cd-border);
+  color: var(--cd-text);
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  border-radius: 2px;
+  resize: vertical;
+}
+
+/* --- New-meeting modal labels --- */
+.cd-modal .cd-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+}
+.cd-modal .cd-label > span {
+  font-family: var(--cd-font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  color: var(--cd-text-dim);
+  text-transform: uppercase;
+}
