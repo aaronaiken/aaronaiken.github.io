@@ -4062,3 +4062,57 @@ body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
   color: var(--cd-text-dim);
   text-transform: uppercase;
 }
+
+/* Project page // Meetings panel — Phase 5 */
+.cd-project-meetings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cd-project-meeting-row {
+  border-bottom: 1px solid var(--cd-border);
+}
+.cd-project-meeting-row:last-child { border-bottom: none; }
+.cd-project-meeting-link {
+  display: grid;
+  grid-template-columns: 13em 1fr 7em;
+  gap: 0.75rem;
+  padding: 0.4rem 0.2rem;
+  align-items: baseline;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.12s;
+}
+.cd-project-meeting-link:hover { background: rgba(212, 136, 10, 0.05); }
+.cd-project-meeting-date {
+  font-family: var(--cd-font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: var(--cd-text-dim);
+  white-space: nowrap;
+}
+.cd-project-meeting-title {
+  font-size: 0.85rem;
+  color: var(--cd-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cd-project-meeting-actions {
+  font-family: var(--cd-font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  color: var(--cd-text-dim);
+  text-align: right;
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .cd-project-meeting-link {
+    grid-template-columns: 1fr 5em;
+    grid-template-areas: "date actions" "title title";
+    row-gap: 0.15rem;
+  }
+  .cd-project-meeting-date    { grid-area: date; }
+  .cd-project-meeting-title   { grid-area: title; }
+  .cd-project-meeting-actions { grid-area: actions; }
+}
