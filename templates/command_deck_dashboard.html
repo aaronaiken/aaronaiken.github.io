@@ -103,6 +103,21 @@
         </div>
       </div>
 
+      <!-- TICKETS QUICK PANEL -->
+      <div class="cd-panel cd-mb cd-tickets-quickpanel">
+        <div class="cd-panel-body cd-tickets-quickpanel-body">
+          <div class="cd-tickets-quickpanel-header">
+            <span class="cd-panel-title">// Tickets</span>
+            <span class="cd-tickets-quickpanel-counts" id="ticketsQuickCounts">loading…</span>
+          </div>
+          <div class="cd-tickets-quickpanel-recent" id="ticketsQuickRecent"></div>
+          <div class="cd-tickets-quickpanel-actions">
+            <a href="/command-deck/tickets/" class="cd-btn ghost sm">OPEN QUEUE</a>
+            <a href="/command-deck/tickets/new" class="cd-btn primary sm">+ NEW TICKET</a>
+          </div>
+        </div>
+      </div>
+
       <!-- MILEAGE QUICK PANEL (Phase 3) -->
       <div class="cd-panel cd-mb cd-mileage-quickpanel">
         <div class="cd-panel-body cd-mileage-quickpanel-body">
@@ -408,6 +423,55 @@ function updateBadge() {
       else badge.classList.add('red');
     });
 }
+
+// ============================================================
+// TICKETS QUICK PANEL — open / urgent / in_progress + 3 recent
+// ============================================================
+function updateTicketsQuickPanel() {
+  var counts = document.getElementById('ticketsQuickCounts');
+  var recent = document.getElementById('ticketsQuickRecent');
+  if (!counts || !recent) return;
+  fetch('/command-deck/tickets/data?status=open', { credentials: 'same-origin' })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!data) return;
+      var s = data.summary;
+      var parts = [];
+      if (s.open) parts.push('<span class="cd-pill open">' + s.open + ' open</span>');
+      if (s.in_progress) parts.push('<span class="cd-pill in-progress">' + s.in_progress + ' in progress</span>');
+      if (s.pending) parts.push('<span class="cd-pill pending">' + s.pending + ' pending</span>');
+      if (s.urgent) parts.push('<span class="cd-pill urgent">' + s.urgent + ' urgent</span>');
+      counts.innerHTML = parts.length
+        ? parts.join(' ')
+        : '<span class="cd-tickets-quickpanel-clean">all clear</span>';
+
+      var top = (data.tickets || []).slice(0, 3);
+      if (!top.length) {
+        recent.innerHTML = '';
+        return;
+      }
+      function esc(s) {
+        var d = document.createElement('div');
+        d.appendChild(document.createTextNode(s == null ? '' : String(s)));
+        return d.innerHTML;
+      }
+      recent.innerHTML = top.map(function (t) {
+        var typeChip = t.type_name
+          ? '<span class="cd-pill type"' +
+            (t.type_color ? ' style="--type-color:' + t.type_color + '"' : '') +
+            '>' + esc(t.type_name) + '</span>'
+          : '';
+        var urgent = t.priority === 'urgent' && t.status !== 'closed'
+          ? '<span class="cd-pill urgent">urgent</span>' : '';
+        return '<a class="cd-tickets-quickpanel-row" href="/command-deck/tickets/' + t.id + '/">' +
+          '<span class="cd-tickets-quickpanel-num">' + esc(t.ticket_number) + '</span>' +
+          '<span class="cd-tickets-quickpanel-title">' + esc(t.title) + '</span>' +
+          typeChip + urgent +
+          '</a>';
+      }).join('');
+    });
+}
+updateTicketsQuickPanel();
 
 // ============================================================
 // MILEAGE QUICK PANEL (Phase 3) — show pending reimbursement count
