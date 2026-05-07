@@ -70,12 +70,15 @@ def _ticket_with_joins(conn, ticket_id):
 		       c.archived_at     AS customer_archived_at,
 		       tt.name           AS type_name,
 		       tt.color          AS type_color,
-		       tt.is_active      AS type_is_active
+		       tt.is_active      AS type_is_active,
+		       tc.name           AS time_category_name,
+		       tc.color          AS time_category_color
 		FROM tickets t
 		LEFT JOIN projects p             ON t.project_id = p.id
 		LEFT JOIN customer_groups cg     ON t.customer_group_id = cg.id
 		LEFT JOIN customers c            ON t.customer_id = c.id
 		LEFT JOIN ticket_types tt        ON t.type_id = tt.id
+		LEFT JOIN time_categories tc     ON t.time_category_id = tc.id
 		WHERE t.id = ?
 	''', (ticket_id,)).fetchone()
 
@@ -97,6 +100,10 @@ def tickets_index():
 		'SELECT id, name, color FROM ticket_types WHERE is_active = 1 '
 		'ORDER BY sort_order ASC, name ASC'
 	).fetchall()
+	time_categories = conn.execute(
+		'SELECT id, name, color FROM time_categories WHERE is_active = 1 '
+		'ORDER BY sort_order ASC, name ASC'
+	).fetchall()
 	customers = conn.execute(
 		'SELECT id, name, customer_group_id FROM customers '
 		'WHERE archived_at IS NULL ORDER BY name ASC'
@@ -113,6 +120,7 @@ def tickets_index():
 		'command_deck_tickets.html',
 		customer_groups=[dict(r) for r in customer_groups],
 		ticket_types=[dict(r) for r in ticket_types],
+		time_categories=[dict(r) for r in time_categories],
 		customers=[dict(r) for r in customers],
 		projects=[dict(r) for r in projects],
 	)
@@ -319,6 +327,7 @@ def ticket_new():
 	customer_group_id = _to_int(data.get('customer_group_id'))
 	customer_id = _to_int(data.get('customer_id'))
 	type_id = _to_int(data.get('type_id'))
+	time_category_id = _to_int(data.get('time_category_id'))
 	description = (data.get('description') or '').strip() or None
 
 	conn = get_db()
@@ -341,10 +350,10 @@ def ticket_new():
 	cur = conn.execute('''
 		INSERT INTO tickets
 			(ticket_number, project_id, customer_group_id, customer_id, type_id,
-			 title, description, priority, status, created, updated)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			 time_category_id, title, description, priority, status, created, updated)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	''', (placeholder, project_id, customer_group_id, customer_id, type_id,
-	      title, description, priority, status, now, now))
+	      time_category_id, title, description, priority, status, now, now))
 	new_id = cur.lastrowid
 	ticket_number = f'TKT-{new_id:04d}'
 	conn.execute(
@@ -419,6 +428,9 @@ def ticket_update(ticket_id):
 
 	if 'type_id' in data:
 		updates['type_id'] = _to_int(data.get('type_id'))
+
+	if 'time_category_id' in data:
+		updates['time_category_id'] = _to_int(data.get('time_category_id'))
 
 	if not updates:
 		conn.close()

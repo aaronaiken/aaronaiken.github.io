@@ -97,6 +97,17 @@
           </select>
         </div>
         <div class="cd-ticket-meta-row">
+          <span class="cd-ticket-meta-label">Category</span>
+          <select id="timeCategoryField" class="cd-ticket-meta-select">
+            <option value="">— none —</option>
+            {% for c in time_categories %}
+              <option value="{{ c.id }}"
+                {% if ticket.time_category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+          <span class="cd-text-dim" style="font-size:0.6rem;">— default for timers on this ticket</span>
+        </div>
+        <div class="cd-ticket-meta-row">
           <span class="cd-ticket-meta-label">Priority</span>
           <div class="cd-ticket-priority-toggle" id="priorityToggle">
             <button type="button" class="cd-pill normal {% if ticket.priority == 'normal' %}active{% endif %}" data-priority="normal">Normal</button>
@@ -316,6 +327,9 @@ const TICKET_LIFETIME_SECONDS = {{ lifetime_seconds | tojson }};
   document.getElementById('typeField').addEventListener('change', function (e) {
     patch('type_id', e.target.value || null);
   });
+  document.getElementById('timeCategoryField').addEventListener('change', function (e) {
+    patch('time_category_id', e.target.value || null);
+  });
   document.querySelectorAll('#priorityToggle .cd-pill').forEach(function (b) {
     b.addEventListener('click', function () {
       var v = b.dataset.priority;
@@ -454,13 +468,14 @@ const TICKET_LIFETIME_SECONDS = {{ lifetime_seconds | tojson }};
       alert('Set a project on this ticket first, or start the timer from the floating panel and pick a project there.');
       return;
     }
+    // Don't override with localStorage's last-used category — the server
+    // will inherit the ticket's own time_category_id when one isn't passed
+    // explicitly. That's the whole point of setting a category on the ticket.
     var body = {
       project_id: TICKET_PROJECT_ID,
       ticket_id: TICKET_ID,
       description: timerBtn.getAttribute('data-tt-text') || '',
     };
-    var lastCat = localStorage.getItem('cdLastTimeCategory');
-    if (lastCat) body.time_category_id = parseInt(lastCat, 10);
     fetch('/time/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
