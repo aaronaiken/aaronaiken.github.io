@@ -4212,3 +4212,289 @@ body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
     gap: 0.3rem;
   }
 }
+
+/* ============================================================
+ * MILEAGE — Phase 3
+ * Index page (filters + entries table + bulk bar) + form page.
+ * ============================================================ */
+
+/* --- Index --- */
+
+.cd-mileage-controls {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.cd-mileage-actions { display: flex; gap: 0.5rem; }
+
+.cd-mileage-filters {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--cd-border);
+}
+.cd-mileage-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.cd-mileage-filter > span {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  color: var(--cd-text-dim);
+  text-transform: uppercase;
+}
+.cd-mileage-filter input,
+.cd-mileage-filter select { min-width: 10em; }
+
+.cd-mileage-status-pills {
+  display: flex;
+  gap: 0.25rem;
+  border: 1px solid var(--cd-border);
+  border-radius: 999px;
+  padding: 0.15rem;
+}
+.cd-mileage-status-pill {
+  background: transparent;
+  border: none;
+  color: var(--cd-text-dim);
+  font-family: var(--cd-font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.cd-mileage-status-pill.active {
+  background: rgba(212, 136, 10, 0.15);
+  color: var(--cd-amber-hi);
+}
+
+.cd-mileage-summary {
+  font-family: var(--cd-font-ui);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--cd-text-dim);
+  margin-bottom: 1rem;
+}
+.cd-mileage-summary-pending {
+  color: var(--cd-amber-hi);
+}
+.cd-mileage-summary-empty,
+.cd-mileage-summary-loading {
+  font-style: italic;
+}
+
+.cd-mileage-bulkbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(212, 136, 10, 0.06);
+  border: 1px solid var(--cd-border-amber, var(--cd-border));
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  font-family: var(--cd-font-ui);
+  font-size: 0.7rem;
+}
+
+.cd-mileage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.cd-mileage-table th,
+.cd-mileage-table td {
+  padding: 0.5rem 0.4rem;
+  border-bottom: 1px solid var(--cd-border);
+  text-align: left;
+  vertical-align: middle;
+}
+.cd-mileage-table th {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  color: var(--cd-text-dim);
+  text-transform: uppercase;
+  font-weight: normal;
+  white-space: nowrap;
+}
+.cd-mileage-table .cd-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cd-mileage-table .cd-mileage-check-col { width: 2em; }
+.cd-mileage-table tr.is-submitted td {
+  color: var(--cd-text-dim);
+}
+
+.cd-mileage-trip { color: var(--cd-text); }
+.cd-mileage-roundtrip {
+  color: var(--cd-amber);
+  font-weight: bold;
+  margin-left: 0.3em;
+}
+
+.cd-mileage-status {
+  background: none;
+  border: 1px solid transparent;
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.cd-mileage-status.pending {
+  background: rgba(212, 136, 10, 0.1);
+  border-color: var(--cd-amber);
+  color: var(--cd-amber-hi);
+}
+.cd-mileage-status.submitted {
+  background: rgba(60, 160, 80, 0.12);
+  border-color: rgba(60, 160, 80, 0.5);
+  color: rgba(80, 180, 100, 0.95);
+}
+.cd-mileage-status:hover { filter: brightness(1.1); }
+
+.cd-mileage-empty,
+.cd-mileage-loading {
+  text-align: center;
+  font-style: italic;
+  color: var(--cd-text-dim);
+  padding: 2rem 0;
+}
+
+@media (max-width: 720px) {
+  .cd-mileage-table th:nth-child(3),
+  .cd-mileage-table td:nth-child(3) { display: none; }  /* hide project on phone */
+  .cd-mileage-table th:nth-child(8),
+  .cd-mileage-table td:nth-child(8) { display: none; }  /* hide edit btn col — tap row */
+  .cd-mileage-filter input,
+  .cd-mileage-filter select { min-width: 0; width: 100%; }
+}
+
+/* --- Form page (mobile-first, big tap targets) --- */
+
+.cd-mileage-form {
+  max-width: 32rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cd-mileage-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.cd-mileage-field-label {
+  font-family: var(--cd-font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  color: var(--cd-text-dim);
+  text-transform: uppercase;
+}
+
+.cd-mileage-input {
+  width: 100%;
+  padding: 0.7rem 0.75rem;
+  font-size: 1rem;
+  min-height: 44px;  /* iOS tap target floor */
+  background: transparent;
+  border: 1px solid var(--cd-border);
+  color: var(--cd-text);
+  border-radius: 3px;
+}
+.cd-mileage-input:focus {
+  outline: none;
+  border-color: var(--cd-amber);
+}
+
+.cd-mileage-input-miles {
+  font-size: 1.3rem;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+  color: var(--cd-amber-hi);
+}
+
+.cd-mileage-field-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.cd-mileage-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--cd-font-ui);
+  font-size: 0.75rem;
+  color: var(--cd-text);
+  letter-spacing: 0.05em;
+  padding: 0.4rem 0;
+}
+.cd-mileage-checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--cd-amber);
+}
+.cd-mileage-hint {
+  color: var(--cd-text-dim);
+  font-size: 0.6rem;
+  letter-spacing: 0;
+  margin-left: 0.4em;
+  text-transform: none;
+}
+
+.cd-mileage-form-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cd-border);
+}
+.cd-mileage-form-actions .cd-btn {
+  padding: 0.7rem 1.2rem;
+  font-size: 0.75rem;
+  min-height: 44px;
+}
+
+.cd-mileage-delete-btn {
+  color: rgba(204, 51, 34, 0.8);
+  border-color: rgba(204, 51, 34, 0.4);
+}
+.cd-mileage-delete-btn:hover {
+  color: rgb(204, 51, 34);
+  border-color: rgb(204, 51, 34);
+}
+
+.cd-mileage-submitted-note {
+  margin-top: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(60, 160, 80, 0.08);
+  border-left: 3px solid rgba(60, 160, 80, 0.5);
+  color: var(--cd-text-dim);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 540px) {
+  .cd-mileage-field-pair { grid-template-columns: 1fr; }
+}
