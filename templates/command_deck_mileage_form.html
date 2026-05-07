@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{% if mode == 'edit' %}Edit trip{% else %}Log miles{% endif %} · Command Deck</title>
+  <link rel="stylesheet" href="/static/command_deck.css">
+</head>
+<body class="command-deck">
+<div class="cd-shell">
+
+  <!-- HEADER -->
+  <header class="cd-header">
+    <div class="cd-header-left">
+      <a href="/command-deck/" class="cd-wordmark">COMMAND DECK</a>
+      <span class="cd-ident">MILEAGE · {% if mode == 'edit' %}EDIT{% else %}LOG{% endif %}</span>
+    </div>
+    <nav class="cd-header-nav">
+      <a href="/command-deck/" class="cd-nav-link">BRIDGE</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/mileage/" class="cd-nav-link">MILEAGE</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/settings/" class="cd-nav-link">SETTINGS</a>
+    </nav>
+  </header>
+
+  <div class="cd-main full-width">
+
+    <div class="cd-breadcrumb">
+      <a href="/command-deck/mileage/">Mileage</a>
+      <span class="cd-breadcrumb-sep">›</span>
+      <span class="cd-breadcrumb-tail">{% if mode == 'edit' %}Edit trip{% else %}New trip{% endif %}</span>
+    </div>
+
+    <h1 class="cd-page-title">// {% if mode == 'edit' %}Edit trip{% else %}Log miles{% endif %}</h1>
+
+    <form id="mileageForm" class="cd-mileage-form" method="POST"
+          action="{% if mode == 'edit' %}/command-deck/mileage/{{ entry.id }}/update{% else %}/command-deck/mileage/new{% endif %}">
+
+      <!-- PROJECT -->
+      <label class="cd-mileage-field">
+        <span class="cd-mileage-field-label">Project</span>
+        <select name="project_id" class="cd-input cd-mileage-input" id="projectField" required>
+          <option value="">— pick a project —</option>
+          {% for p in projects %}
+            {% if mode == 'edit' %}
+              <option value="{{ p.id }}" {% if entry.project_id == p.id %}selected{% endif %}>{{ p.title }}</option>
+            {% else %}
+              <option value="{{ p.id }}"
+                {% if query_project_id and query_project_id == p.id %}selected
+                {% elif (not query_project_id) and settings.default_mileage_project_id == p.id %}selected{% endif %}>{{ p.title }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </label>
+
+      <!-- DATE -->
+      <label class="cd-mileage-field">
+        <span class="cd-mileage-field-label">Date</span>
+        <input type="date" name="date" class="cd-input cd-mileage-input" id="dateField"
+               value="{% if mode == 'edit' %}{{ entry.date }}{% endif %}" required>
+      </label>
+
+      <!-- DESCRIPTION -->
+      <label class="cd-mileage-field">
+        <span class="cd-mileage-field-label">Description</span>
+        <input type="text" name="description" class="cd-input cd-mileage-input"
+               placeholder="Vendor sync at PennDOT HQ"
+               value="{% if mode == 'edit' %}{{ entry.description or '' }}{% endif %}">
+      </label>
+
+      <!-- FROM / TO -->
+      <div class="cd-mileage-field-pair">
+        <label class="cd-mileage-field">
+          <span class="cd-mileage-field-label">From</span>
+          <input type="text" name="from_location" class="cd-input cd-mileage-input"
+                 placeholder="Office"
+                 value="{% if mode == 'edit' %}{{ entry.from_location or '' }}{% endif %}">
+        </label>
+        <label class="cd-mileage-field">
+          <span class="cd-mileage-field-label">To</span>
+          <input type="text" name="to_location" class="cd-input cd-mileage-input"
+                 placeholder="Vendor HQ"
+                 value="{% if mode == 'edit' %}{{ entry.to_location or '' }}{% endif %}">
+        </label>
+      </div>
+
+      <!-- ROUND TRIP -->
+      <label class="cd-mileage-checkbox">
+        <input type="checkbox" name="round_trip" id="roundTripField" value="1"
+               {% if mode == 'edit' and entry.round_trip %}checked{% endif %}>
+        <span>Round trip</span>
+        <span class="cd-mileage-hint">— odometer values are one-way; check to double miles</span>
+      </label>
+
+      <!-- ODOMETER -->
+      <div class="cd-mileage-field-pair">
+        <label class="cd-mileage-field">
+          <span class="cd-mileage-field-label">Odometer start</span>
+          <input type="number" name="odometer_start" inputmode="decimal" step="0.1"
+                 class="cd-input cd-mileage-input" id="odoStartField"
+                 value="{% if mode == 'edit' and entry.odometer_start is not none %}{{ entry.odometer_start }}{% endif %}">
+        </label>
+        <label class="cd-mileage-field">
+          <span class="cd-mileage-field-label">Odometer end</span>
+          <input type="number" name="odometer_end" inputmode="decimal" step="0.1"
+                 class="cd-input cd-mileage-input" id="odoEndField"
+                 value="{% if mode == 'edit' and entry.odometer_end is not none %}{{ entry.odometer_end }}{% endif %}">
+        </label>
+      </div>
+
+      <!-- MILES (calculated, overrideable) -->
+      <label class="cd-mileage-field">
+        <span class="cd-mileage-field-label">Miles</span>
+        <input type="number" name="miles" inputmode="decimal" step="0.1" min="0"
+               class="cd-input cd-mileage-input cd-mileage-input-miles" id="milesField"
+               value="{% if mode == 'edit' %}{{ entry.miles }}{% endif %}" required>
+        <span class="cd-mileage-hint" id="milesHint">— autocalculates from odometer; tap to override</span>
+      </label>
+
+      <!-- RATE + VEHICLE -->
+      <div class="cd-mileage-field-pair">
+        <label class="cd-mileage-field">
+          <span class="cd-mileage-field-label">Rate ($/mi)</span>
+          <input type="number" name="rate_cents" inputmode="decimal" step="0.001" min="0"
+                 class="cd-input cd-mileage-input"
+                 id="rateField"
+                 data-cents="1"
+                 value="{% if mode == 'edit' %}{{ '%.4f' % (entry.rate_cents / 100.0) }}{% else %}{{ '%.4f' % (settings.reimbursement_rate_cents / 100.0) }}{% endif %}">
+        </label>
+        <label class="cd-mileage-field">
+          <span class="cd-mileage-field-label">Vehicle</span>
+          <select name="vehicle" class="cd-input cd-mileage-input" id="vehicleField">
+            <option value="a"
+              {% if mode == 'edit' and entry.vehicle == 'a' %}selected
+              {% elif (not entry) and settings.default_vehicle == 'a' %}selected{% endif %}>{{ settings.vehicle_a_label or 'Vehicle A' }}</option>
+            <option value="b"
+              {% if mode == 'edit' and entry.vehicle == 'b' %}selected
+              {% elif (not entry) and settings.default_vehicle == 'b' %}selected{% endif %}>{{ settings.vehicle_b_label or 'Vehicle B' }}</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- NOTES -->
+      <label class="cd-mileage-field">
+        <span class="cd-mileage-field-label">Notes</span>
+        <textarea name="notes" class="cd-input cd-mileage-input" rows="2"
+                  placeholder="(optional)">{% if mode == 'edit' %}{{ entry.notes or '' }}{% endif %}</textarea>
+      </label>
+
+      <!-- ACTIONS -->
+      <div class="cd-mileage-form-actions">
+        <a class="cd-btn ghost" href="/command-deck/mileage/">CANCEL</a>
+        {% if mode == 'edit' %}
+          <button type="button" class="cd-btn ghost cd-mileage-delete-btn" id="deleteBtn">DELETE</button>
+          <button type="submit" class="cd-btn primary">SAVE</button>
+        {% else %}
+          <button type="submit" class="cd-btn primary">LOG TRIP</button>
+        {% endif %}
+      </div>
+
+      <!-- Hidden flag so the new-entry POST redirects to the index -->
+      {% if mode == 'new' %}<input type="hidden" name="return" value="redirect">{% endif %}
+    </form>
+
+    {% if mode == 'edit' and entry.is_submitted %}
+      <p class="cd-mileage-submitted-note">
+        Submitted on {{ entry.submitted_at[:10] }}. Edits won't change the submitted state.
+      </p>
+    {% endif %}
+
+  </div><!-- .cd-main -->
+
+  <footer class="cd-footer">
+    <div class="cd-footer-links">
+      <a href="/command-deck/mileage/" class="cd-footer-link">Back to mileage</a>
+    </div>
+    {% include 'includes/cd_footer_status.html' %}
+    <span class="cd-footer-ident">YT-1300F · COMMAND DECK · SECURE</span>
+  </footer>
+
+</div><!-- .cd-shell -->
+
+<script>
+const FORM_MODE = {{ mode | tojson }};
+const ENTRY_ID = {{ (entry.id if entry else 0) | tojson }};
+{% if mode == 'edit' %}const ENTRY = {{ entry | tojson }};{% else %}const ENTRY = null;{% endif %}
+
+(function () {
+  // ---- Live miles calculation ----
+  var odoStart = document.getElementById('odoStartField');
+  var odoEnd = document.getElementById('odoEndField');
+  var miles = document.getElementById('milesField');
+  var roundTrip = document.getElementById('roundTripField');
+  var milesEdited = (FORM_MODE === 'edit');  // edit mode = trust the stored miles; new mode = autocalculate
+
+  function recalcMiles() {
+    if (milesEdited) return;
+    var s = parseFloat(odoStart.value);
+    var e = parseFloat(odoEnd.value);
+    if (isNaN(s) || isNaN(e)) return;
+    var diff = e - s;
+    if (diff < 0) return;
+    var calc = roundTrip.checked ? diff * 2 : diff;
+    miles.value = (Math.round(calc * 10) / 10).toString();
+  }
+  odoStart.addEventListener('input', recalcMiles);
+  odoEnd.addEventListener('input', recalcMiles);
+  roundTrip.addEventListener('change', recalcMiles);
+  miles.addEventListener('input', function () { milesEdited = true; });
+
+  // ---- Default date to today on new ----
+  var dateField = document.getElementById('dateField');
+  if (FORM_MODE === 'new' && !dateField.value) {
+    var d = new Date();
+    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    dateField.value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+
+  // ---- Convert rate from $/mi (form) to cents (server) on submit ----
+  var form = document.getElementById('mileageForm');
+  var rateField = document.getElementById('rateField');
+  form.addEventListener('submit', function (ev) {
+    var dollars = parseFloat(rateField.value);
+    if (isNaN(dollars) || dollars < 0) {
+      ev.preventDefault();
+      alert('Rate must be a positive number.');
+      return;
+    }
+    rateField.value = Math.round(dollars * 100);
+
+    // For edit mode, hijack to JSON PATCH so we can stay on the page if needed
+    // — but for now just POST normally; server returns JSON 200 we ignore.
+    if (FORM_MODE === 'edit') {
+      ev.preventDefault();
+      var fd = new FormData(form);
+      var payload = {};
+      fd.forEach(function (val, key) {
+        if (key === 'round_trip') payload[key] = '1';
+        else payload[key] = val;
+      });
+      // Checkbox not in FormData when unchecked
+      if (!fd.has('round_trip')) payload.round_trip = '0';
+
+      fetch('/command-deck/mileage/' + ENTRY_ID + '/update', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success) window.location.href = '/command-deck/mileage/';
+        else alert('Save failed: ' + (d.error || 'unknown'));
+      });
+    }
+  });
+
+  // ---- Delete (edit mode only) ----
+  var deleteBtn = document.getElementById('deleteBtn');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', function () {
+      if (!confirm('Delete this trip? This cannot be undone.')) return;
+      fetch('/command-deck/mileage/' + ENTRY_ID + '/delete', {
+        method: 'POST', credentials: 'same-origin',
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success) window.location.href = '/command-deck/mileage/';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

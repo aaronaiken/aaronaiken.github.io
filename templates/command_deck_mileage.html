@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mileage · Command Deck</title>
+  <link rel="stylesheet" href="/static/command_deck.css">
+</head>
+<body class="command-deck">
+<div class="cd-shell">
+
+  <!-- HEADER -->
+  <header class="cd-header">
+    <div class="cd-header-left">
+      <a href="/command-deck/" class="cd-wordmark">COMMAND DECK</a>
+      <span class="cd-ident">MILEAGE · LOG</span>
+    </div>
+    <nav class="cd-header-nav">
+      <a href="/command-deck/" class="cd-nav-link">BRIDGE</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/projects/" class="cd-nav-link">PROJECTS</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/below-deck" class="cd-nav-link">
+        BELOW DECK
+        <span class="cd-bd-badge" id="bdBadge"></span>
+      </a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/today/" class="cd-nav-link">TODAY</a>
+      <span class="cd-nav-sep">·</span>
+      <details class="cd-nav-more">
+        <summary class="cd-nav-link cd-nav-more-trigger">MORE ▾</summary>
+        <div class="cd-nav-more-menu">
+          <a href="/command-deck/reports/" class="cd-nav-link">REPORTS</a>
+          <a href="/command-deck/templates/" class="cd-nav-link">TEMPLATES</a>
+          <a href="/command-deck/meetings/" class="cd-nav-link">MEETINGS</a>
+          <a href="/command-deck/mileage/" class="cd-nav-link">MILEAGE</a>
+          <a href="/command-deck/settings/" class="cd-nav-link">SETTINGS</a>
+        </div>
+      </details>
+      <span class="cd-nav-sep">·</span>
+      <a href="/publish" class="cd-nav-link">COCKPIT</a>
+    </nav>
+  </header>
+
+  {% include 'includes/today_panel.html' %}
+  {% include 'includes/active_timer_strip.html' %}
+
+  <div class="cd-main full-width">
+
+    <!-- TITLE + ACTIONS -->
+    <section class="cd-mileage-controls">
+      <h1 class="cd-page-title">// Mileage</h1>
+      <div class="cd-mileage-actions">
+        <a href="/command-deck/mileage/new" class="cd-btn primary">+ LOG MILES</a>
+        <button class="cd-btn" id="exportXlsxBtn" type="button">EXPORT XLSX</button>
+      </div>
+    </section>
+
+    <!-- FILTERS -->
+    <section class="cd-mileage-filters">
+      <label class="cd-mileage-filter">
+        <span>From</span>
+        <input type="date" id="filterStart" class="cd-input">
+      </label>
+      <label class="cd-mileage-filter">
+        <span>To</span>
+        <input type="date" id="filterEnd" class="cd-input">
+      </label>
+      <label class="cd-mileage-filter">
+        <span>Project</span>
+        <select id="filterProject" class="cd-input">
+          <option value="">All</option>
+          {% for p in projects %}
+            <option value="{{ p.id }}">{{ p.title }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="cd-mileage-status-pills" role="tablist" aria-label="Reimbursement status">
+        <button class="cd-mileage-status-pill active" data-status="all" type="button">All</button>
+        <button class="cd-mileage-status-pill" data-status="unsubmitted" type="button">Unsubmitted</button>
+        <button class="cd-mileage-status-pill" data-status="submitted" type="button">Submitted</button>
+      </div>
+    </section>
+
+    <!-- SUMMARY -->
+    <section class="cd-mileage-summary" id="mileageSummary">
+      <span class="cd-mileage-summary-loading">loading…</span>
+    </section>
+
+    <!-- BULK ACTIONS BAR (visible when entries selected) -->
+    <section class="cd-mileage-bulkbar" id="bulkBar" hidden>
+      <span id="bulkCount">0 selected</span>
+      <button class="cd-btn primary sm" id="bulkSubmitBtn" type="button">MARK SUBMITTED</button>
+      <button class="cd-btn ghost sm" id="bulkUnsubmitBtn" type="button">MARK UNSUBMITTED</button>
+      <button class="cd-btn ghost sm" id="bulkClearBtn" type="button">Clear</button>
+    </section>
+
+    <!-- ENTRIES TABLE -->
+    <section class="cd-mileage-entries">
+      <table class="cd-mileage-table">
+        <thead>
+          <tr>
+            <th class="cd-mileage-check-col"><input type="checkbox" id="selectAll" aria-label="Select all"></th>
+            <th>Date</th>
+            <th>Project</th>
+            <th>Trip</th>
+            <th class="cd-num">Miles</th>
+            <th class="cd-num">$</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="mileageBody">
+          <tr><td colspan="8" class="cd-mileage-loading">loading…</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+  </div><!-- .cd-main -->
+
+  <!-- FOOTER -->
+  <footer class="cd-footer">
+    <div class="cd-footer-links">
+      <a href="/command-deck/" class="cd-footer-link">Bridge</a>
+      <a href="/command-deck/mileage/new" class="cd-footer-link">+ Log miles</a>
+      <a href="/command-deck/settings/" class="cd-footer-link">Settings</a>
+    </div>
+    {% include 'includes/cd_footer_status.html' %}
+    <span class="cd-footer-ident">YT-1300F · COMMAND DECK · SECURE</span>
+  </footer>
+
+</div><!-- .cd-shell -->
+
+<script>
+(function () {
+  fetch('/below-deck/count').then(r=>r.json()).then(d=>{
+    var b=document.getElementById('bdBadge');
+    if(!b||d.count===0)return;
+    b.classList.add(d.count<=3?'green':d.count<=6?'amber':'red');
+  });
+
+  var INCLUDE_PRIVATE = false;  // wired up by 🔒 unlock if needed; default off
+
+  function escHtml(s) {
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(s == null ? '' : String(s)));
+    return d.innerHTML;
+  }
+  function fmtDollars(cents) {
+    return '$' + (cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtMiles(m) {
+    var v = (Math.round((m || 0) * 10) / 10);
+    return v.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  }
+  function fmtDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso + 'T00:00:00');
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  var state = {
+    status: 'all',
+    project: '',
+    start: '',
+    end: '',
+    selected: new Set(),
+    entries: [],
+  };
+
+  function buildQuery() {
+    var qs = new URLSearchParams();
+    if (state.status && state.status !== 'all') qs.set('status', state.status);
+    if (state.project) qs.set('project', state.project);
+    if (state.start) qs.set('start', state.start);
+    if (state.end) qs.set('end', state.end);
+    if (INCLUDE_PRIVATE) qs.set('include_private', '1');
+    return qs.toString();
+  }
+
+  function renderSummary(totals) {
+    var sum = document.getElementById('mileageSummary');
+    if (!totals.count) {
+      sum.innerHTML = '<span class="cd-mileage-summary-empty">No mileage in this range.</span>';
+      return;
+    }
+    var parts = [
+      totals.count + ' trip' + (totals.count === 1 ? '' : 's'),
+      fmtMiles(totals.miles) + ' mi',
+      fmtDollars(totals.cents),
+    ];
+    if (totals.unsubmitted_cents > 0) {
+      parts.push('<span class="cd-mileage-summary-pending">' +
+        fmtMiles(totals.unsubmitted_miles) + ' mi · ' + fmtDollars(totals.unsubmitted_cents) +
+        ' pending</span>');
+    }
+    sum.innerHTML = parts.join(' · ');
+  }
+
+  function renderEntries(entries) {
+    state.entries = entries;
+    var body = document.getElementById('mileageBody');
+    if (!entries.length) {
+      body.innerHTML = '<tr><td colspan="8" class="cd-mileage-empty">No trips match these filters.</td></tr>';
+      return;
+    }
+    body.innerHTML = entries.map(function (e) {
+      var trip = '';
+      if (e.from_location && e.to_location) trip = escHtml(e.from_location) + ' → ' + escHtml(e.to_location);
+      else if (e.from_location) trip = escHtml(e.from_location);
+      else if (e.to_location) trip = '→ ' + escHtml(e.to_location);
+      else trip = escHtml(e.description || '');
+      if (e.round_trip) trip += ' <span class="cd-mileage-roundtrip">↔</span>';
+      var statusPill = e.is_submitted
+        ? '<button class="cd-mileage-status submitted" data-id="' + e.id + '" data-action="toggle" type="button">submitted</button>'
+        : '<button class="cd-mileage-status pending" data-id="' + e.id + '" data-action="toggle" type="button">pending</button>';
+      return '<tr data-id="' + e.id + '"' + (e.is_submitted ? ' class="is-submitted"' : '') + '>' +
+        '<td><input type="checkbox" class="cd-mileage-row-check" data-id="' + e.id + '"' + (state.selected.has(e.id) ? ' checked' : '') + '></td>' +
+        '<td>' + fmtDate(e.date) + '</td>' +
+        '<td>' + escHtml(e.project_title || '(no project)') + '</td>' +
+        '<td class="cd-mileage-trip">' + trip + '</td>' +
+        '<td class="cd-num">' + fmtMiles(e.miles) + '</td>' +
+        '<td class="cd-num">' + fmtDollars(e.reimbursement_cents) + '</td>' +
+        '<td>' + statusPill + '</td>' +
+        '<td><a class="cd-btn ghost sm" href="/command-deck/mileage/' + e.id + '/edit">EDIT</a></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function refreshBulkBar() {
+    var bar = document.getElementById('bulkBar');
+    if (state.selected.size === 0) { bar.setAttribute('hidden', ''); return; }
+    bar.removeAttribute('hidden');
+    document.getElementById('bulkCount').textContent = state.selected.size + ' selected';
+  }
+
+  function load() {
+    fetch('/command-deck/mileage/data?' + buildQuery(), { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data) return;
+        renderSummary(data.totals);
+        renderEntries(data.entries);
+      });
+  }
+
+  // ---- Filter wires ----
+  document.getElementById('filterStart').addEventListener('change', function (e) { state.start = e.target.value; load(); });
+  document.getElementById('filterEnd').addEventListener('change', function (e) { state.end = e.target.value; load(); });
+  document.getElementById('filterProject').addEventListener('change', function (e) { state.project = e.target.value; load(); });
+  document.querySelectorAll('.cd-mileage-status-pill').forEach(function (p) {
+    p.addEventListener('click', function () {
+      document.querySelectorAll('.cd-mileage-status-pill').forEach(function (x) { x.classList.remove('active'); });
+      p.classList.add('active');
+      state.status = p.dataset.status;
+      load();
+    });
+  });
+
+  // ---- Row interactions (delegated) ----
+  document.getElementById('mileageBody').addEventListener('click', function (ev) {
+    var t = ev.target;
+    if (t.classList.contains('cd-mileage-status') && t.dataset.action === 'toggle') {
+      var id = parseInt(t.dataset.id, 10);
+      var entry = state.entries.find(function (e) { return e.id === id; });
+      var willBeSubmitted = !entry.is_submitted;
+      if (entry.is_submitted && !confirm('Un-submit this trip?')) return;
+      fetch('/command-deck/mileage/' + id + '/submit', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submitted: willBeSubmitted ? 1 : 0 }),
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success) load();
+      });
+      return;
+    }
+  });
+  document.getElementById('mileageBody').addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (t.classList.contains('cd-mileage-row-check')) {
+      var id = parseInt(t.dataset.id, 10);
+      if (t.checked) state.selected.add(id);
+      else state.selected.delete(id);
+      refreshBulkBar();
+    }
+  });
+
+  document.getElementById('selectAll').addEventListener('change', function (e) {
+    var checked = e.target.checked;
+    state.entries.forEach(function (entry) {
+      if (checked) state.selected.add(entry.id);
+      else state.selected.delete(entry.id);
+    });
+    document.querySelectorAll('.cd-mileage-row-check').forEach(function (cb) { cb.checked = checked; });
+    refreshBulkBar();
+  });
+
+  // ---- Bulk actions ----
+  function bulkSubmit(toState) {
+    if (state.selected.size === 0) return;
+    if (state.selected.size > 5) {
+      var verb = toState ? 'mark submitted' : 'mark unsubmitted';
+      if (!confirm('You are about to ' + verb + ' on ' + state.selected.size + ' trips. Continue?')) return;
+    }
+    fetch('/command-deck/mileage/bulk-submit', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: Array.from(state.selected), submitted: toState ? 1 : 0 }),
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.success) {
+        state.selected.clear();
+        document.getElementById('selectAll').checked = false;
+        refreshBulkBar();
+        load();
+      }
+    });
+  }
+  document.getElementById('bulkSubmitBtn').addEventListener('click', function () { bulkSubmit(true); });
+  document.getElementById('bulkUnsubmitBtn').addEventListener('click', function () { bulkSubmit(false); });
+  document.getElementById('bulkClearBtn').addEventListener('click', function () {
+    state.selected.clear();
+    document.querySelectorAll('.cd-mileage-row-check').forEach(function (cb) { cb.checked = false; });
+    document.getElementById('selectAll').checked = false;
+    refreshBulkBar();
+  });
+
+  // ---- xlsx export — passes current filters through ----
+  document.getElementById('exportXlsxBtn').addEventListener('click', function () {
+    var qs = buildQuery();
+    var url = '/command-deck/mileage/export.xlsx' + (qs ? '?' + qs : '');
+    window.location.href = url;
+  });
+
+  load();
+})();
+</script>
+<script src="/static/command_deck_nav.js"></script>
+</body>
+</html>
