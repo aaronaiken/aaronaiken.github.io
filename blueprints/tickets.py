@@ -283,35 +283,15 @@ def ticket_detail(ticket_id):
 @tickets_bp.route('/command-deck/tickets/new', methods=['GET'])
 @cd_auth_required
 def ticket_new_form():
-	conn = get_db()
-	customer_groups = conn.execute(
-		'SELECT id, name, color FROM customer_groups WHERE is_active = 1 '
-		'ORDER BY sort_order ASC, name ASC'
-	).fetchall()
-	ticket_types = conn.execute(
-		'SELECT id, name, color FROM ticket_types WHERE is_active = 1 '
-		'ORDER BY sort_order ASC, name ASC'
-	).fetchall()
-	customers = conn.execute(
-		'SELECT id, name, email, customer_group_id FROM customers '
-		'WHERE archived_at IS NULL ORDER BY name ASC'
-	).fetchall()
-	projects = conn.execute('''
-		SELECT id, title, slug
-		FROM projects
-		WHERE project_type IN ('work_subproject', 'personal')
-		  AND is_private = 0
-		ORDER BY title ASC
-	''').fetchall()
-	conn.close()
-	return render_template(
-		'command_deck_ticket_new.html',
-		customer_groups=[dict(r) for r in customer_groups],
-		ticket_types=[dict(r) for r in ticket_types],
-		customers=[dict(r) for r in customers],
-		projects=[dict(r) for r in projects],
-		query_project_id=_to_int(request.args.get('project_id')),
-	)
+	"""The dedicated new-ticket page is gone — modal lives on the index now.
+	Old bookmarks + cross-page links land here and get redirected to the index
+	with ?new=1 (plus any ?project_id passthrough), which auto-opens the modal."""
+	qs = {'new': '1'}
+	pid = request.args.get('project_id')
+	if pid:
+		qs['project_id'] = pid
+	from urllib.parse import urlencode
+	return redirect(url_for('tickets.tickets_index') + '?' + urlencode(qs))
 
 
 @tickets_bp.route('/command-deck/tickets/new', methods=['POST'])
