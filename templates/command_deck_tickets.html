@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Tickets · Command Deck</title>
+  <link rel="stylesheet" href="/static/command_deck.css">
+</head>
+<body class="command-deck">
+<div class="cd-shell">
+
+  <!-- HEADER -->
+  <header class="cd-header">
+    <div class="cd-header-left">
+      <a href="/command-deck/" class="cd-wordmark">COMMAND DECK</a>
+      <span class="cd-ident">TICKETS · QUEUE</span>
+    </div>
+    <nav class="cd-header-nav">
+      <a href="/command-deck/" class="cd-nav-link">BRIDGE</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/projects/" class="cd-nav-link">PROJECTS</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/below-deck" class="cd-nav-link">
+        BELOW DECK
+        <span class="cd-bd-badge" id="bdBadge"></span>
+      </a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/today/" class="cd-nav-link">TODAY</a>
+      <span class="cd-nav-sep">·</span>
+      <details class="cd-nav-more">
+        <summary class="cd-nav-link cd-nav-more-trigger">MORE ▾</summary>
+        <div class="cd-nav-more-menu">
+          <a href="/command-deck/reports/" class="cd-nav-link">REPORTS</a>
+          <a href="/command-deck/templates/" class="cd-nav-link">TEMPLATES</a>
+          <a href="/command-deck/meetings/" class="cd-nav-link">MEETINGS</a>
+          <a href="/command-deck/mileage/" class="cd-nav-link">MILEAGE</a>
+          <a href="/command-deck/tickets/" class="cd-nav-link">TICKETS</a>
+          <a href="/command-deck/settings/" class="cd-nav-link">SETTINGS</a>
+        </div>
+      </details>
+      <span class="cd-nav-sep">·</span>
+      <a href="/publish" class="cd-nav-link">COCKPIT</a>
+    </nav>
+  </header>
+
+  {% include 'includes/today_panel.html' %}
+  {% include 'includes/active_timer_strip.html' %}
+
+  <div class="cd-main full-width">
+
+    <!-- TITLE + ACTIONS -->
+    <section class="cd-tickets-controls">
+      <h1 class="cd-page-title">// Tickets</h1>
+      <div class="cd-tickets-actions">
+        <a href="/command-deck/tickets/new" class="cd-btn primary">+ NEW TICKET</a>
+      </div>
+    </section>
+
+    <!-- SUMMARY BAR -->
+    <section class="cd-tickets-summary" id="ticketsSummary">
+      <span class="cd-tickets-summary-loading">loading…</span>
+    </section>
+
+    <!-- FILTERS -->
+    <section class="cd-tickets-filters">
+      <div class="cd-tickets-status-pills" role="tablist" aria-label="Status filter">
+        <button class="cd-tickets-status-pill active" data-status="open" type="button">Active</button>
+        <button class="cd-tickets-status-pill" data-status="open_only" type="button">Open</button>
+        <button class="cd-tickets-status-pill" data-status="in_progress" type="button">In progress</button>
+        <button class="cd-tickets-status-pill" data-status="pending" type="button">Pending</button>
+        <button class="cd-tickets-status-pill" data-status="closed" type="button">Closed</button>
+      </div>
+      <label class="cd-tickets-filter">
+        <span>Group</span>
+        <select id="filterGroup" class="cd-input">
+          <option value="">All</option>
+          {% for g in customer_groups %}
+            <option value="{{ g.id }}">{{ g.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="cd-tickets-filter">
+        <span>Customer</span>
+        <select id="filterCustomer" class="cd-input">
+          <option value="">All</option>
+          {% for c in customers %}
+            <option value="{{ c.id }}">{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="cd-tickets-filter">
+        <span>Type</span>
+        <select id="filterType" class="cd-input">
+          <option value="">All</option>
+          {% for t in ticket_types %}
+            <option value="{{ t.id }}">{{ t.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="cd-tickets-filter">
+        <span>Project</span>
+        <select id="filterProject" class="cd-input">
+          <option value="">All</option>
+          {% for p in projects %}
+            <option value="{{ p.id }}">{{ p.title }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </section>
+
+    <!-- ENTRIES TABLE -->
+    <section class="cd-tickets-list">
+      <table class="cd-tickets-table">
+        <thead>
+          <tr>
+            <th>TKT#</th>
+            <th>Title</th>
+            <th>Customer</th>
+            <th>Project</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Updated</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ticketsBody">
+          <tr><td colspan="8" class="cd-tickets-loading">loading…</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+  </div><!-- .cd-main -->
+
+  <!-- FOOTER -->
+  <footer class="cd-footer">
+    <div class="cd-footer-links">
+      <a href="/command-deck/" class="cd-footer-link">Bridge</a>
+      <a href="/command-deck/tickets/new" class="cd-footer-link">+ New ticket</a>
+      <a href="/command-deck/settings/" class="cd-footer-link">Settings</a>
+    </div>
+    {% include 'includes/cd_footer_status.html' %}
+    <span class="cd-footer-ident">YT-1300F · COMMAND DECK · SECURE</span>
+  </footer>
+
+</div><!-- .cd-shell -->
+
+<script>
+(function () {
+  fetch('/below-deck/count').then(r=>r.json()).then(d=>{
+    var b=document.getElementById('bdBadge');
+    if(!b||d.count===0)return;
+    b.classList.add(d.count<=3?'green':d.count<=6?'amber':'red');
+  });
+
+  function escHtml(s) {
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(s == null ? '' : String(s)));
+    return d.innerHTML;
+  }
+  function fmtUpdated(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleString(undefined, {
+      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+    });
+  }
+
+  var state = {
+    status: 'open',
+    type: '',
+    group: '',
+    customer: '',
+    project: '',
+    tickets: [],
+  };
+
+  function buildQuery() {
+    var qs = new URLSearchParams();
+    if (state.status) qs.set('status', state.status);
+    if (state.type) qs.set('type', state.type);
+    if (state.group) qs.set('customer_group', state.group);
+    if (state.customer) qs.set('customer', state.customer);
+    if (state.project) qs.set('project', state.project);
+    return qs.toString();
+  }
+
+  function renderSummary(s) {
+    var el = document.getElementById('ticketsSummary');
+    if (!s.total) {
+      el.innerHTML = '<span class="cd-tickets-summary-empty">No tickets match these filters.</span>';
+      return;
+    }
+    var parts = [];
+    if (s.open) parts.push('<span class="cd-pill open">' + s.open + ' open</span>');
+    if (s.in_progress) parts.push('<span class="cd-pill in-progress">' + s.in_progress + ' in progress</span>');
+    if (s.pending) parts.push('<span class="cd-pill pending">' + s.pending + ' pending</span>');
+    if (s.closed) parts.push('<span class="cd-pill closed">' + s.closed + ' closed</span>');
+    if (s.urgent) parts.push('<span class="cd-pill urgent">' + s.urgent + ' urgent</span>');
+    el.innerHTML = parts.join('  ');
+  }
+
+  function renderTickets(tickets) {
+    var body = document.getElementById('ticketsBody');
+    if (!tickets.length) {
+      body.innerHTML = '<tr><td colspan="8" class="cd-tickets-empty">No tickets match.</td></tr>';
+      return;
+    }
+    body.innerHTML = tickets.map(function (t) {
+      var customerCell = t.customer_name
+        ? '<span class="cd-tickets-cust">' + escHtml(t.customer_name) +
+            (t.customer_archived_at ? ' <em>(archived)</em>' : '') +
+          (t.customer_group_name ? '<span class="cd-tickets-cust-group">' + escHtml(t.customer_group_name) + '</span>' : '') +
+          '</span>'
+        : (t.customer_group_name
+            ? '<span class="cd-tickets-cust-group">' + escHtml(t.customer_group_name) + '</span>'
+            : '<span class="cd-text-dim">—</span>');
+      var typeCell = t.type_name
+        ? '<span class="cd-pill type" style="' +
+          (t.type_color ? '--type-color:' + t.type_color : '') + '">' +
+          escHtml(t.type_name) + '</span>'
+        : '<span class="cd-text-dim">—</span>';
+      var statusCell = '<span class="cd-pill ' + t.status.replace('_', '-') + '">' +
+        t.status.replace('_', ' ') + '</span>' +
+        (t.priority === 'urgent' && t.status !== 'closed'
+          ? ' <span class="cd-pill urgent">urgent</span>'
+          : '');
+      var projectCell = t.project_title
+        ? '<a href="/command-deck/projects/' + escHtml(t.project_slug) + '/">' + escHtml(t.project_title) + '</a>'
+        : '<span class="cd-text-dim">—</span>';
+
+      return '<tr data-id="' + t.id + '"' +
+        (t.status === 'closed' ? ' class="is-closed"' : '') + '>' +
+        '<td><a class="cd-tickets-num" href="/command-deck/tickets/' + t.id + '/">' + escHtml(t.ticket_number) + '</a></td>' +
+        '<td><a class="cd-tickets-title-link" href="/command-deck/tickets/' + t.id + '/">' + escHtml(t.title) + '</a></td>' +
+        '<td>' + customerCell + '</td>' +
+        '<td>' + projectCell + '</td>' +
+        '<td>' + typeCell + '</td>' +
+        '<td>' + statusCell + '</td>' +
+        '<td>' + fmtUpdated(t.updated) + '</td>' +
+        '<td><a class="cd-btn ghost sm" href="/command-deck/tickets/' + t.id + '/">OPEN</a></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function load() {
+    fetch('/command-deck/tickets/data?' + buildQuery(), { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data) return;
+        renderSummary(data.summary);
+        renderTickets(data.tickets);
+      });
+  }
+
+  // ---- Filter wires ----
+  document.querySelectorAll('.cd-tickets-status-pill').forEach(function (p) {
+    p.addEventListener('click', function () {
+      document.querySelectorAll('.cd-tickets-status-pill').forEach(function (x) { x.classList.remove('active'); });
+      p.classList.add('active');
+      state.status = p.dataset.status;
+      load();
+    });
+  });
+  document.getElementById('filterGroup').addEventListener('change', function (e) {
+    state.group = e.target.value; load();
+  });
+  document.getElementById('filterCustomer').addEventListener('change', function (e) {
+    state.customer = e.target.value; load();
+  });
+  document.getElementById('filterType').addEventListener('change', function (e) {
+    state.type = e.target.value; load();
+  });
+  document.getElementById('filterProject').addEventListener('change', function (e) {
+    state.project = e.target.value; load();
+  });
+
+  load();
+})();
+</script>
+<script src="/static/command_deck_nav.js"></script>
+</body>
+</html>
