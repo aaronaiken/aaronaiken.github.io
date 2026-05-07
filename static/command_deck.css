@@ -4498,3 +4498,104 @@ body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
 @media (max-width: 540px) {
   .cd-mileage-field-pair { grid-template-columns: 1fr; }
 }
+
+/* Dashboard mileage quick-panel + project page mileage list — Phase 3 */
+
+.cd-mileage-quickpanel { background: rgba(212, 136, 10, 0.04); }
+.cd-mileage-quickpanel-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.cd-mileage-quickpanel-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.cd-mileage-quickpanel-pending {
+  font-family: var(--cd-font-ui);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--cd-amber-hi);
+}
+.cd-mileage-quickpanel-pending.cd-mileage-quickpanel-clean {
+  color: rgba(80, 180, 100, 0.85);
+  font-style: italic;
+}
+
+/* Project page // Mileage section */
+
+.cd-project-mileage-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cd-project-mileage-row { border-bottom: 1px solid var(--cd-border); }
+.cd-project-mileage-row:last-child { border-bottom: none; }
+
+.cd-project-mileage-link {
+  display: grid;
+  grid-template-columns: 8em 1fr 6em 6em;
+  gap: 0.75rem;
+  padding: 0.4rem 0.2rem;
+  align-items: baseline;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.12s;
+}
+.cd-project-mileage-link:hover { background: rgba(212, 136, 10, 0.05); }
+
+.cd-project-mileage-date,
+.cd-project-mileage-miles {
+  font-family: var(--cd-font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  color: var(--cd-text-dim);
+  white-space: nowrap;
+}
+.cd-project-mileage-miles {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.cd-project-mileage-trip {
+  font-size: 0.85rem;
+  color: var(--cd-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cd-project-mileage-status {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: right;
+  white-space: nowrap;
+}
+.cd-project-mileage-status.pending   { color: var(--cd-amber-hi); }
+.cd-project-mileage-status.submitted { color: rgba(80, 180, 100, 0.85); }
+
+.cd-mileage-project-summary {
+  font-family: var(--cd-font-ui);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  color: var(--cd-text-dim);
+  margin-right: 0.6rem;
+}
+
+@media (max-width: 720px) {
+  .cd-project-mileage-link {
+    grid-template-columns: 6em 1fr 5em;
+    grid-template-areas:
+      "date miles  status"
+      "trip trip   trip";
+    row-gap: 0.15rem;
+  }
+  .cd-project-mileage-date   { grid-area: date; }
+  .cd-project-mileage-trip   { grid-area: trip; }
+  .cd-project-mileage-miles  { grid-area: miles; }
+  .cd-project-mileage-status { grid-area: status; }
+}

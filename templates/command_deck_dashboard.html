@@ -103,6 +103,17 @@
         </div>
       </div>
 
+      <!-- MILEAGE QUICK PANEL (Phase 3) -->
+      <div class="cd-panel cd-mb cd-mileage-quickpanel">
+        <div class="cd-panel-body cd-mileage-quickpanel-body">
+          <div class="cd-mileage-quickpanel-summary">
+            <span class="cd-panel-title">// Mileage</span>
+            <span class="cd-mileage-quickpanel-pending" id="mileageQuickPending">—</span>
+          </div>
+          <a href="/command-deck/mileage/new" class="cd-btn primary sm">+ LOG MILES</a>
+        </div>
+      </div>
+
       <!-- TODAY CALLOUT -->
       <div class="cd-panel cd-mb" id="todayCallout"
            data-today-count="{{ today_count }}"
@@ -397,6 +408,35 @@ function updateBadge() {
       else badge.classList.add('red');
     });
 }
+
+// ============================================================
+// MILEAGE QUICK PANEL (Phase 3) — show pending reimbursement count
+// ============================================================
+function updateMileageQuickPanel() {
+  const el = document.getElementById('mileageQuickPending');
+  if (!el) return;
+  fetch('/command-deck/mileage/data?status=unsubmitted', { credentials: 'same-origin' })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!data) return;
+      const t = data.totals || {};
+      if (!t.count) {
+        el.textContent = 'all caught up';
+        el.classList.add('cd-mileage-quickpanel-clean');
+        return;
+      }
+      const dollars = '$' + (t.cents / 100).toLocaleString(undefined, {
+        minimumFractionDigits: 2, maximumFractionDigits: 2
+      });
+      const miles = (Math.round(t.miles * 10) / 10).toLocaleString(undefined, {
+        minimumFractionDigits: 1, maximumFractionDigits: 1
+      });
+      el.textContent = `${t.count} pending · ${miles} mi · ${dollars}`;
+      el.classList.remove('cd-mileage-quickpanel-clean');
+    })
+    .catch(() => { el.textContent = ''; });
+}
+updateMileageQuickPanel();
 
 (function() {
   let selectedTag = null;
