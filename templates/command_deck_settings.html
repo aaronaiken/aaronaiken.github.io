@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Settings · Command Deck</title>
+  <link rel="stylesheet" href="/static/command_deck.css">
+</head>
+<body class="command-deck">
+<div class="cd-shell">
+
+  <!-- HEADER -->
+  <header class="cd-header">
+    <div class="cd-header-left">
+      <a href="/command-deck/" class="cd-wordmark">COMMAND DECK</a>
+      <span class="cd-ident">SETTINGS · CONFIG</span>
+    </div>
+    <nav class="cd-header-nav">
+      <a href="/command-deck/" class="cd-nav-link">BRIDGE</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/projects/" class="cd-nav-link">PROJECTS</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/below-deck" class="cd-nav-link">
+        BELOW DECK
+        <span class="cd-bd-badge" id="bdBadge"></span>
+      </a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/today/" class="cd-nav-link">TODAY</a>
+      <span class="cd-nav-sep">·</span>
+      <details class="cd-nav-more">
+        <summary class="cd-nav-link cd-nav-more-trigger">MORE ▾</summary>
+        <div class="cd-nav-more-menu">
+          <a href="/command-deck/reports/" class="cd-nav-link">REPORTS</a>
+          <a href="/command-deck/templates/" class="cd-nav-link">TEMPLATES</a>
+          <a href="/command-deck/meetings/" class="cd-nav-link">MEETINGS</a>
+          <a href="/command-deck/mileage/" class="cd-nav-link">MILEAGE</a>
+          <a href="/command-deck/settings/" class="cd-nav-link">SETTINGS</a>
+        </div>
+      </details>
+      <span class="cd-nav-sep">·</span>
+      <a href="/publish" class="cd-nav-link">COCKPIT</a>
+    </nav>
+  </header>
+
+  {% include 'includes/today_panel.html' %}
+  {% include 'includes/active_timer_strip.html' %}
+
+  <div class="cd-main full-width">
+
+    <h1 class="cd-page-title">// Settings</h1>
+
+    <p class="cd-settings-intro">
+      Defaults that flow into the mileage form, time tracking labels, and the
+      Phase 4 idle detector. Changes save on each field's blur or change event.
+    </p>
+
+    <form id="settingsForm" class="cd-settings-form" onsubmit="return false;">
+
+      <section class="cd-settings-section">
+        <h2 class="cd-settings-section-title">// Mileage</h2>
+
+        <label class="cd-settings-row">
+          <span class="cd-settings-label">Reimbursement rate</span>
+          <span class="cd-settings-input-row">
+            <span class="cd-settings-prefix">$</span>
+            <input type="number" inputmode="decimal" step="0.01" min="0"
+                   class="cd-input cd-settings-input cd-settings-input-narrow"
+                   id="rate"
+                   data-field="reimbursement_rate_cents"
+                   data-cents="1"
+                   value="{{ '%.4f' % (settings.reimbursement_rate_cents / 100.0) }}">
+            <span class="cd-settings-suffix">/ mi</span>
+          </span>
+        </label>
+
+        <label class="cd-settings-row">
+          <span class="cd-settings-label">Default mileage project</span>
+          <select class="cd-input cd-settings-input"
+                  id="defaultMileageProject"
+                  data-field="default_mileage_project_id">
+            <option value="">— none —</option>
+            {% for p in projects %}
+              <option value="{{ p.id }}" {% if settings.default_mileage_project_id == p.id %}selected{% endif %}>{{ p.title }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </section>
+
+      <section class="cd-settings-section">
+        <h2 class="cd-settings-section-title">// Vehicles</h2>
+
+        <label class="cd-settings-row">
+          <span class="cd-settings-label">Vehicle A label</span>
+          <input type="text" class="cd-input cd-settings-input"
+                 id="vehicleA"
+                 data-field="vehicle_a_label"
+                 value="{{ settings.vehicle_a_label }}">
+        </label>
+
+        <label class="cd-settings-row">
+          <span class="cd-settings-label">Vehicle B label</span>
+          <input type="text" class="cd-input cd-settings-input"
+                 id="vehicleB"
+                 data-field="vehicle_b_label"
+                 value="{{ settings.vehicle_b_label }}">
+        </label>
+
+        <label class="cd-settings-row">
+          <span class="cd-settings-label">Default vehicle</span>
+          <select class="cd-input cd-settings-input"
+                  id="defaultVehicle"
+                  data-field="default_vehicle">
+            <option value="a" {% if settings.default_vehicle == 'a' %}selected{% endif %}>{{ settings.vehicle_a_label }}</option>
+            <option value="b" {% if settings.default_vehicle == 'b' %}selected{% endif %}>{{ settings.vehicle_b_label }}</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="cd-settings-section">
+        <h2 class="cd-settings-section-title">// Time Tracking</h2>
+
+        <label class="cd-settings-row">
+          <span class="cd-settings-label">Idle threshold</span>
+          <span class="cd-settings-input-row">
+            <input type="number" inputmode="numeric" step="1" min="1" max="480"
+                   class="cd-input cd-settings-input cd-settings-input-narrow"
+                   id="idleThreshold"
+                   data-field="idle_threshold_minutes"
+                   value="{{ settings.idle_threshold_minutes }}">
+            <span class="cd-settings-suffix">minutes (Phase 4)</span>
+          </span>
+        </label>
+      </section>
+
+      <div class="cd-settings-saved" id="settingsSaved" hidden>Saved.</div>
+
+    </form>
+
+  </div><!-- .cd-main -->
+
+  <!-- FOOTER -->
+  <footer class="cd-footer">
+    <div class="cd-footer-links">
+      <a href="/command-deck/" class="cd-footer-link">Bridge</a>
+      <a href="/command-deck/projects/" class="cd-footer-link">Projects</a>
+      <a href="/command-deck/mileage/" class="cd-footer-link">Mileage</a>
+    </div>
+    {% include 'includes/cd_footer_status.html' %}
+    <span class="cd-footer-ident">YT-1300F · COMMAND DECK · SECURE</span>
+  </footer>
+
+</div><!-- .cd-shell -->
+
+<script>
+(function () {
+  // Below-Deck badge
+  fetch('/below-deck/count').then(r=>r.json()).then(d=>{
+    var b=document.getElementById('bdBadge');
+    if(!b||d.count===0)return;
+    b.classList.add(d.count<=3?'green':d.count<=6?'amber':'red');
+  });
+
+  var savedEl = document.getElementById('settingsSaved');
+  var savedTimer;
+  function flashSaved() {
+    savedEl.removeAttribute('hidden');
+    clearTimeout(savedTimer);
+    savedTimer = setTimeout(function () { savedEl.setAttribute('hidden', ''); }, 1400);
+  }
+
+  function patch(field, value) {
+    var body = {};
+    body[field] = value;
+    return fetch('/command-deck/settings/update', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(function (r) { return r.json(); });
+  }
+
+  // Wire all data-field elements: blur for text/number, change for selects
+  document.querySelectorAll('[data-field]').forEach(function (el) {
+    var field = el.dataset.field;
+    var isCents = el.dataset.cents === '1';
+    var isSelect = el.tagName === 'SELECT';
+    var ev = isSelect ? 'change' : 'blur';
+
+    el.addEventListener(ev, function () {
+      var raw = el.value;
+      var value = raw;
+      if (isCents) {
+        var dollars = parseFloat(raw);
+        if (isNaN(dollars) || dollars < 0) return;
+        value = Math.round(dollars * 100);
+      }
+      patch(field, value).then(function (data) {
+        if (data.success) flashSaved();
+      });
+    });
+  });
+
+  // When vehicle labels change, refresh the default-vehicle dropdown
+  // copy so the user can read the actual labels.
+  ['vehicleA', 'vehicleB'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('blur', function () {
+      var sel = document.getElementById('defaultVehicle');
+      if (!sel) return;
+      sel.options[0].textContent = document.getElementById('vehicleA').value || 'Vehicle A';
+      sel.options[1].textContent = document.getElementById('vehicleB').value || 'Vehicle B';
+    });
+  });
+})();
+</script>
+<script src="/static/command_deck_nav.js"></script>
+</body>
+</html>

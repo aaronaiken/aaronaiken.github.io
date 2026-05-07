@@ -4116,3 +4116,99 @@ body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
   .cd-project-meeting-title   { grid-area: title; }
   .cd-project-meeting-actions { grid-area: actions; }
 }
+
+/* ============================================================
+ * SETTINGS — Phase 3
+ * Editable defaults for mileage / vehicles / time tracking.
+ * ============================================================ */
+
+.cd-settings-intro {
+  font-size: 0.85rem;
+  color: var(--cd-text-dim);
+  max-width: 60ch;
+  margin: 0 0 1.5rem 0;
+}
+
+.cd-settings-form {
+  max-width: 640px;
+  margin: 0;
+}
+
+.cd-settings-section {
+  border-top: 1px solid var(--cd-border);
+  padding: 1rem 0;
+}
+.cd-settings-section:first-of-type { border-top: none; }
+
+.cd-settings-section-title {
+  font-family: var(--cd-font-ui);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  color: var(--cd-text-dim);
+  text-transform: uppercase;
+  margin: 0 0 0.75rem 0;
+}
+
+.cd-settings-row {
+  display: grid;
+  grid-template-columns: 12em 1fr;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+
+.cd-settings-label {
+  font-family: var(--cd-font-ui);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  color: var(--cd-text-dim);
+  text-transform: uppercase;
+}
+
+.cd-settings-input {
+  background: transparent;
+  border: 1px solid var(--cd-border);
+  color: var(--cd-text);
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 2px;
+}
+.cd-settings-input:focus { outline: none; border-color: var(--cd-amber); }
+
+.cd-settings-input-narrow { max-width: 8em; }
+
+.cd-settings-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cd-settings-prefix,
+.cd-settings-suffix {
+  font-family: var(--cd-font-ui);
+  font-size: 0.75rem;
+  color: var(--cd-text-dim);
+}
+
+.cd-settings-saved {
+  position: fixed;
+  bottom: 6rem;
+  right: 1rem;
+  background: var(--cd-bg-surface);
+  border: 1px solid var(--cd-border-amber, var(--cd-amber));
+  color: var(--cd-amber-hi);
+  font-family: var(--cd-font-ui);
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  padding: 0.4rem 0.75rem;
+  border-radius: 2px;
+  z-index: 9000;
+}
+
+@media (max-width: 720px) {
+  .cd-settings-row {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+}

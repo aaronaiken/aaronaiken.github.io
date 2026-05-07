@@ -16,6 +16,8 @@
 		'/command-deck/reports',
 		'/command-deck/templates',
 		'/command-deck/meetings',
+		'/command-deck/mileage',
+		'/command-deck/settings',
 	];
 	var underMenu = menuRoutes.some(function (r) { return path.indexOf(r) === 0; });
 
