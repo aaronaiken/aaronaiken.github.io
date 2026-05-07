@@ -5330,3 +5330,26 @@ textarea.cd-ticket-input { min-height: auto; }
   .cd-reports-entries-table th:nth-child(6),
   .cd-reports-entries-table td:nth-child(6) { display: none; }
 }
+
+/* Wider modal variant for forms with many fields (new ticket modal) */
+.cd-modal.cd-modal-wide {
+  max-width: 540px;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+.cd-modal-wide .cd-ticket-form {
+  max-width: none;
+  margin: 0;
+}
+
+/* Button styled like a footer link (no border / underline on hover) */
+.cd-footer-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--cd-amber);
+  cursor: pointer;
+  text-decoration: none;
+}
+.cd-footer-link-btn:hover { color: var(--cd-amber-hi); text-decoration: underline; }
