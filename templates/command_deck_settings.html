@@ -132,6 +132,74 @@
         </label>
       </section>
 
+      <!-- ============================================================ -->
+      <!-- LOOKUPS — Customer Groups / Customers / Ticket Types /
+           Time Categories. Each section is a self-contained CRUD list. -->
+      <!-- ============================================================ -->
+
+      <section class="cd-settings-section cd-lookup-section" data-kind="customer_groups" data-color="1">
+        <div class="cd-lookup-header">
+          <h2 class="cd-settings-section-title">// Customer Groups</h2>
+          <label class="cd-lookup-show-archived">
+            <input type="checkbox" class="cd-lookup-show-archived-cb"> show archived
+          </label>
+        </div>
+        <ul class="cd-lookup-list" data-list="customer_groups"></ul>
+        <div class="cd-lookup-add">
+          <input type="color" class="cd-lookup-add-color" value="#d4880a">
+          <input type="text" class="cd-input cd-lookup-add-name" placeholder="add customer group…">
+          <button type="button" class="cd-btn primary sm cd-lookup-add-btn">ADD</button>
+        </div>
+      </section>
+
+      <section class="cd-settings-section cd-lookup-section" data-kind="customers">
+        <div class="cd-lookup-header">
+          <h2 class="cd-settings-section-title">// Customers</h2>
+          <label class="cd-lookup-show-archived">
+            <input type="checkbox" class="cd-lookup-show-archived-cb"> show archived
+          </label>
+        </div>
+        <ul class="cd-lookup-list" data-list="customers"></ul>
+        <div class="cd-lookup-add cd-lookup-add-customer">
+          <input type="text" class="cd-input cd-lookup-add-name" placeholder="add customer name…">
+          <input type="email" class="cd-input cd-lookup-add-email" placeholder="email (optional)">
+          <select class="cd-input cd-lookup-add-group">
+            <option value="">— group (optional) —</option>
+          </select>
+          <button type="button" class="cd-btn primary sm cd-lookup-add-btn">ADD</button>
+        </div>
+      </section>
+
+      <section class="cd-settings-section cd-lookup-section" data-kind="ticket_types" data-color="1">
+        <div class="cd-lookup-header">
+          <h2 class="cd-settings-section-title">// Ticket Types</h2>
+          <label class="cd-lookup-show-archived">
+            <input type="checkbox" class="cd-lookup-show-archived-cb"> show archived
+          </label>
+        </div>
+        <ul class="cd-lookup-list" data-list="ticket_types"></ul>
+        <div class="cd-lookup-add">
+          <input type="color" class="cd-lookup-add-color" value="#d4880a">
+          <input type="text" class="cd-input cd-lookup-add-name" placeholder="add ticket type…">
+          <button type="button" class="cd-btn primary sm cd-lookup-add-btn">ADD</button>
+        </div>
+      </section>
+
+      <section class="cd-settings-section cd-lookup-section" data-kind="time_categories" data-color="1">
+        <div class="cd-lookup-header">
+          <h2 class="cd-settings-section-title">// Time Categories</h2>
+          <label class="cd-lookup-show-archived">
+            <input type="checkbox" class="cd-lookup-show-archived-cb"> show archived
+          </label>
+        </div>
+        <ul class="cd-lookup-list" data-list="time_categories"></ul>
+        <div class="cd-lookup-add">
+          <input type="color" class="cd-lookup-add-color" value="#d4880a">
+          <input type="text" class="cd-input cd-lookup-add-name" placeholder="add time category…">
+          <button type="button" class="cd-btn primary sm cd-lookup-add-btn">ADD</button>
+        </div>
+      </section>
+
       <div class="cd-settings-saved" id="settingsSaved" hidden>Saved.</div>
 
     </form>
@@ -210,6 +278,220 @@
       if (!sel) return;
       sel.options[0].textContent = document.getElementById('vehicleA').value || 'Vehicle A';
       sel.options[1].textContent = document.getElementById('vehicleB').value || 'Vehicle B';
+    });
+  });
+
+  // ============================================================
+  // LOOKUP CRUD — generic per-kind for the 4 settings-managed lookups
+  // (customer_groups, customers, ticket_types, time_categories).
+  // ============================================================
+
+  function escHtml(s) {
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(s == null ? '' : String(s)));
+    return d.innerHTML;
+  }
+
+  // Cache of customer_groups so the customers section's group dropdowns
+  // can render labels without an extra fetch per row.
+  var groupsCache = [];
+
+  function isCustomers(section) { return section.dataset.kind === 'customers'; }
+  function hasColor(section) { return section.dataset.color === '1'; }
+
+  function rowIsArchived(kind, row) {
+    if (kind === 'customers') return !!row.archived_at;
+    return row.is_active === 0;
+  }
+
+  function buildRowHtml(kind, row, hasColorVal) {
+    var archived = rowIsArchived(kind, row);
+    var name = '<input type="text" class="cd-input cd-lookup-row-name" data-field="name" value="' + escHtml(row.name) + '">';
+    var color = hasColorVal
+      ? '<input type="color" class="cd-lookup-row-color" data-field="color" value="' + escHtml(row.color || '#d4880a') + '">'
+      : '';
+
+    var actions = archived
+      ? '<button type="button" class="cd-btn ghost sm cd-lookup-restore">RESTORE</button>'
+      : '<button type="button" class="cd-btn ghost sm cd-lookup-archive">ARCHIVE</button>';
+
+    if (kind === 'customers') {
+      var groupOpts = '<option value="">— no group —</option>' +
+        groupsCache.map(function (g) {
+          return '<option value="' + g.id + '"' +
+            (row.customer_group_id == g.id ? ' selected' : '') + '>' +
+            escHtml(g.name) + '</option>';
+        }).join('');
+      var email = '<input type="email" class="cd-input cd-lookup-row-email" data-field="email" placeholder="email" value="' + escHtml(row.email || '') + '">';
+      var groupSel = '<select class="cd-input cd-lookup-row-group" data-field="customer_group_id">' + groupOpts + '</select>';
+      return '<div class="cd-lookup-row-grid' + (archived ? ' archived' : '') + '">' +
+        name + email + groupSel + actions +
+        '</div>';
+    }
+
+    return '<div class="cd-lookup-row-grid' + (archived ? ' archived' : '') + '">' +
+      color + name + actions +
+      '</div>';
+  }
+
+  function renderSection(section) {
+    var kind = section.dataset.kind;
+    var list = section.querySelector('.cd-lookup-list');
+    var showArchived = section.querySelector('.cd-lookup-show-archived-cb').checked;
+    var hasColorVal = hasColor(section);
+
+    var url = '/command-deck/lookups/' + kind + (showArchived ? '?include_archived=1' : '');
+    fetch(url, { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : { rows: [] }; })
+      .then(function (data) {
+        var rows = data.rows || [];
+        if (kind === 'customer_groups') groupsCache = rows.filter(function (r) { return r.is_active === 1; });
+        list.innerHTML = rows.map(function (row) {
+          return '<li class="cd-lookup-row" data-id="' + row.id + '">' +
+            buildRowHtml(kind, row, hasColorVal) +
+            '</li>';
+        }).join('') || '<li class="cd-lookup-empty">none yet — add below</li>';
+
+        // If we just refreshed customer_groups, also rebuild any customers
+        // section's group dropdowns so the new group label is available
+        // without a full reload.
+        if (kind === 'customer_groups') {
+          var custSection = document.querySelector('.cd-lookup-section[data-kind="customers"]');
+          if (custSection) renderSection(custSection);
+          // Plus the add-customer form's group dropdown
+          var addGroup = document.querySelector('.cd-lookup-add-customer .cd-lookup-add-group');
+          if (addGroup) {
+            var prev = addGroup.value;
+            addGroup.innerHTML = '<option value="">— group (optional) —</option>' +
+              groupsCache.map(function (g) {
+                return '<option value="' + g.id + '">' + escHtml(g.name) + '</option>';
+              }).join('');
+            addGroup.value = prev;
+          }
+        }
+      });
+  }
+
+  function patchLookup(kind, id, body) {
+    return fetch('/command-deck/lookups/' + kind + '/' + id, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(function (r) { return r.json(); });
+  }
+
+  function archiveLookup(kind, id) {
+    return fetch('/command-deck/lookups/' + kind + '/' + id + '/archive', {
+      method: 'POST', credentials: 'same-origin',
+    }).then(function (r) { return r.json(); });
+  }
+  function restoreLookup(kind, id) {
+    return fetch('/command-deck/lookups/' + kind + '/' + id + '/restore', {
+      method: 'POST', credentials: 'same-origin',
+    }).then(function (r) { return r.json(); });
+  }
+  function createLookup(kind, body) {
+    return fetch('/command-deck/lookups/' + kind + '/new', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(function (r) { return r.json(); });
+  }
+
+  // Wire each lookup section
+  document.querySelectorAll('.cd-lookup-section').forEach(function (section) {
+    var kind = section.dataset.kind;
+
+    // initial load
+    renderSection(section);
+
+    // show-archived toggle
+    section.querySelector('.cd-lookup-show-archived-cb').addEventListener('change', function () {
+      renderSection(section);
+    });
+
+    // Per-row inline edit (blur on text fields; change on selects/colors)
+    section.querySelector('.cd-lookup-list').addEventListener('blur', function (ev) {
+      var input = ev.target;
+      if (!input.matches('.cd-input, .cd-lookup-row-color')) return;
+      var li = input.closest('.cd-lookup-row');
+      if (!li) return;
+      var field = input.dataset.field;
+      if (!field) return;
+      var body = {};
+      body[field] = input.value;
+      patchLookup(kind, li.dataset.id, body).then(function (d) {
+        if (d.success) flashSaved();
+      });
+    }, true);
+
+    section.querySelector('.cd-lookup-list').addEventListener('change', function (ev) {
+      var el = ev.target;
+      if (el.matches('input[type="color"], select')) {
+        var li = el.closest('.cd-lookup-row');
+        if (!li) return;
+        var field = el.dataset.field;
+        if (!field) return;
+        var body = {};
+        body[field] = el.value;
+        patchLookup(kind, li.dataset.id, body).then(function (d) {
+          if (d.success) {
+            flashSaved();
+            // If a customer's group changed, refresh the customers section
+            // so the visible group label updates without a manual reload.
+            if (kind === 'customers' && field === 'customer_group_id') renderSection(section);
+          }
+        });
+      }
+    });
+
+    // Archive / Restore
+    section.querySelector('.cd-lookup-list').addEventListener('click', function (ev) {
+      var t = ev.target;
+      var li = t.closest('.cd-lookup-row');
+      if (!li) return;
+      if (t.classList.contains('cd-lookup-archive')) {
+        archiveLookup(kind, li.dataset.id).then(function (d) {
+          if (d.success) { flashSaved(); renderSection(section); }
+        });
+      } else if (t.classList.contains('cd-lookup-restore')) {
+        restoreLookup(kind, li.dataset.id).then(function (d) {
+          if (d.success) { flashSaved(); renderSection(section); }
+        });
+      }
+    });
+
+    // Add new
+    var addBtn = section.querySelector('.cd-lookup-add-btn');
+    var addName = section.querySelector('.cd-lookup-add-name');
+    var addColor = section.querySelector('.cd-lookup-add-color');
+    var addEmail = section.querySelector('.cd-lookup-add-email');
+    var addGroup = section.querySelector('.cd-lookup-add-group');
+
+    function doAdd() {
+      var name = (addName.value || '').trim();
+      if (!name) { addName.focus(); return; }
+      var body = { name: name };
+      if (addColor) body.color = addColor.value;
+      if (addEmail) body.email = addEmail.value || null;
+      if (addGroup) body.customer_group_id = addGroup.value || null;
+      addBtn.disabled = true;
+      createLookup(kind, body).then(function (d) {
+        addBtn.disabled = false;
+        if (d.success) {
+          addName.value = '';
+          if (addEmail) addEmail.value = '';
+          if (addGroup) addGroup.value = '';
+          flashSaved();
+          renderSection(section);
+        } else {
+          alert('Could not add: ' + (d.error || 'unknown'));
+        }
+      });
+    }
+    addBtn.addEventListener('click', doAdd);
+    addName.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
     });
   });
 })();
