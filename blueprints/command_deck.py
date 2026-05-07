@@ -618,6 +618,26 @@ def cd_project(slug):
 		'SELECT COUNT(*) AS n FROM meetings WHERE project_id = ?', (project['id'],)
 	).fetchone()['n']
 
+	# Tickets — open tickets attached to this project. Detail page handles
+	# the rest of the lifecycle; project page just summarizes.
+	tickets_recent = conn.execute('''
+		SELECT t.id, t.ticket_number, t.title, t.priority, t.status, t.updated,
+		       tt.name AS type_name, tt.color AS type_color,
+		       cg.name AS customer_group_name,
+		       c.name AS customer_name
+		FROM tickets t
+		LEFT JOIN ticket_types tt    ON t.type_id = tt.id
+		LEFT JOIN customer_groups cg ON t.customer_group_id = cg.id
+		LEFT JOIN customers c        ON t.customer_id = c.id
+		WHERE t.project_id = ? AND t.status != 'closed'
+		ORDER BY (t.priority = 'urgent') DESC, t.updated DESC, t.id DESC
+		LIMIT 5
+	''', (project['id'],)).fetchall()
+	tickets_open_count = conn.execute(
+		"SELECT COUNT(*) AS n FROM tickets WHERE project_id = ? AND status != 'closed'",
+		(project['id'],)
+	).fetchone()['n']
+
 	# Phase 3 — mileage rollup for this project. Last 5 trips + totals so the
 	# project page can show a compact strip without paging through the full
 	# mileage index.
@@ -661,6 +681,8 @@ def cd_project(slug):
 		meetings_total=meetings_total,
 		mileage_recent=[dict(m) for m in mileage_recent],
 		mileage_totals=dict(mileage_totals),
+		tickets_recent=[dict(t) for t in tickets_recent],
+		tickets_open_count=tickets_open_count,
 		chat_history=[dict(m) for m in chat_history]
 	)
 
@@ -1499,7 +1521,7 @@ def _huyang_build_context(project=None):
 	return '\n'.join(lines)
 
 
-def _huyang_build_system_with_content(project, blocks, project_tasks, files, meetings=None):
+def _huyang_build_system_with_content(project, blocks, project_tasks, files, meetings=None, tickets=None):
 	"""Full system prompt with all project content injected."""
 	system = _huyang_build_context(project)
 
@@ -1546,14 +1568,38 @@ def _huyang_build_system_with_content(project, blocks, project_tasks, files, mee
 		if mtg_sections:
 			system += '\n\nMEETINGS:\n' + '\n\n---\n\n'.join(mtg_sections)
 
+	if tickets:
+		# Open tickets on this project — Huyang answers "what's in queue?"
+		# without needing a separate tool. Includes type / customer / priority
+		# context so it can prioritize when asked.
+		tkt_sections = []
+		for t in tickets:
+			parts = [t.get('ticket_number') or '', '·', t.get('status') or '']
+			if t.get('priority') == 'urgent':
+				parts.append('· URGENT')
+			if t.get('type_name'):
+				parts.append(f"· {t['type_name']}")
+			if t.get('customer_name'):
+				parts.append(f"· customer: {t['customer_name']}")
+			elif t.get('customer_group_name'):
+				parts.append(f"· {t['customer_group_name']}")
+			head = ' '.join(parts)
+			body_lines = [head, t.get('title') or '']
+			desc = (t.get('description') or '').strip()
+			if desc:
+				body_lines.append('')
+				body_lines.append(desc)
+			tkt_sections.append('\n'.join(body_lines))
+		if tkt_sections:
+			system += '\n\nOPEN TICKETS:\n' + '\n\n---\n\n'.join(tkt_sections)
+
 	return system
 
 
 def _huyang_load_project_content(conn, project_id):
-	"""Blocks (with checklist items), open tasks, files, and meetings for a
-	single project. Phase 5 adds meetings — title + date + notes for the 20
-	most recent meetings linked to this project, so Huyang can answer
-	"what did we decide last sync" without needing a separate tool."""
+	"""Blocks (with checklist items), open tasks, files, meetings, and open
+	tickets for a single project. Each new domain layered on as it shipped:
+	Phase 5 added meetings, tickets followed."""
 	blocks_raw = conn.execute(
 		'SELECT * FROM blocks WHERE project_id = ? ORDER BY "order" ASC', (project_id,)
 	).fetchall()
@@ -1578,7 +1624,21 @@ def _huyang_load_project_content(conn, project_id):
 		'WHERE project_id = ? ORDER BY meeting_date DESC, id DESC LIMIT 20',
 		(project_id,)
 	).fetchall()]
-	return blocks, project_tasks, files, meetings
+	tickets = [dict(t) for t in conn.execute('''
+		SELECT tk.id, tk.ticket_number, tk.title, tk.description, tk.status,
+		       tk.priority,
+		       tt.name AS type_name,
+		       cg.name AS customer_group_name,
+		       c.name  AS customer_name
+		FROM tickets tk
+		LEFT JOIN ticket_types tt    ON tk.type_id = tt.id
+		LEFT JOIN customer_groups cg ON tk.customer_group_id = cg.id
+		LEFT JOIN customers c        ON tk.customer_id = c.id
+		WHERE tk.project_id = ? AND tk.status != 'closed'
+		ORDER BY (tk.priority = 'urgent') DESC, tk.updated DESC, tk.id DESC
+		LIMIT 20
+	''', (project_id,)).fetchall()]
+	return blocks, project_tasks, files, meetings, tickets
 
 
 def _huyang_load_area_content(conn, area_id):
@@ -1822,10 +1882,13 @@ def cd_chat():
 			project = dict(project)
 			if project.get('project_type') == 'work_area':
 				blocks, project_tasks, files = _huyang_load_area_content(conn, project['id'])
-				meetings = []  # area-mode meetings could be aggregated; defer to 5.x
+				# area-mode meetings + tickets aggregation could land in a
+				# follow-on phase; defer for now and pass empty
+				meetings = []
+				tickets = []
 			else:
-				blocks, project_tasks, files, meetings = _huyang_load_project_content(conn, project['id'])
-			system = _huyang_build_system_with_content(project, blocks, project_tasks, files, meetings)
+				blocks, project_tasks, files, meetings, tickets = _huyang_load_project_content(conn, project['id'])
+			system = _huyang_build_system_with_content(project, blocks, project_tasks, files, meetings, tickets)
 		else:
 			system = _huyang_build_context()
 	else:
