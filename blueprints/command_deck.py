@@ -1475,7 +1475,7 @@ def _huyang_build_context(project=None):
 	return '\n'.join(lines)
 
 
-def _huyang_build_system_with_content(project, blocks, project_tasks, files):
+def _huyang_build_system_with_content(project, blocks, project_tasks, files, meetings=None):
 	"""Full system prompt with all project content injected."""
 	system = _huyang_build_context(project)
 
@@ -1506,11 +1506,30 @@ def _huyang_build_system_with_content(project, blocks, project_tasks, files):
 		file_lines = '\n'.join(f"  - {f['filename']}" for f in files)
 		system += f'\n\nATTACHED FILES:\n{file_lines}'
 
+	if meetings:
+		# Phase 5 — meeting notes for the linked project. Format: date + title +
+		# the body of the notes, separated by horizontal rules so Huyang can
+		# treat each meeting as its own block.
+		mtg_sections = []
+		for m in meetings:
+			when = (m.get('meeting_date') or '')[:16]
+			head = f"[{when}] {m.get('title', '')}".strip()
+			body = (m.get('notes') or '').strip()
+			if body:
+				mtg_sections.append(f"{head}\n{body}")
+			else:
+				mtg_sections.append(head)
+		if mtg_sections:
+			system += '\n\nMEETINGS:\n' + '\n\n---\n\n'.join(mtg_sections)
+
 	return system
 
 
 def _huyang_load_project_content(conn, project_id):
-	"""Blocks (with checklist items), open tasks, files for a single project."""
+	"""Blocks (with checklist items), open tasks, files, and meetings for a
+	single project. Phase 5 adds meetings — title + date + notes for the 20
+	most recent meetings linked to this project, so Huyang can answer
+	"what did we decide last sync" without needing a separate tool."""
 	blocks_raw = conn.execute(
 		'SELECT * FROM blocks WHERE project_id = ? ORDER BY "order" ASC', (project_id,)
 	).fetchall()
@@ -1530,7 +1549,12 @@ def _huyang_load_project_content(conn, project_id):
 	files = [dict(f) for f in conn.execute(
 		'SELECT * FROM files WHERE project_id = ?', (project_id,)
 	).fetchall()]
-	return blocks, project_tasks, files
+	meetings = [dict(m) for m in conn.execute(
+		'SELECT id, title, meeting_date, notes FROM meetings '
+		'WHERE project_id = ? ORDER BY meeting_date DESC, id DESC LIMIT 20',
+		(project_id,)
+	).fetchall()]
+	return blocks, project_tasks, files, meetings
 
 
 def _huyang_load_area_content(conn, area_id):
@@ -1774,9 +1798,10 @@ def cd_chat():
 			project = dict(project)
 			if project.get('project_type') == 'work_area':
 				blocks, project_tasks, files = _huyang_load_area_content(conn, project['id'])
+				meetings = []  # area-mode meetings could be aggregated; defer to 5.x
 			else:
-				blocks, project_tasks, files = _huyang_load_project_content(conn, project['id'])
-			system = _huyang_build_system_with_content(project, blocks, project_tasks, files)
+				blocks, project_tasks, files, meetings = _huyang_load_project_content(conn, project['id'])
+			system = _huyang_build_system_with_content(project, blocks, project_tasks, files, meetings)
 		else:
 			system = _huyang_build_context()
 	else:
