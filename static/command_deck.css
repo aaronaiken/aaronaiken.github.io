@@ -4599,3 +4599,48 @@ body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
   .cd-project-mileage-miles  { grid-area: miles; }
   .cd-project-mileage-status { grid-area: status; }
 }
+
+/* Reports Mileage tab — Phase 3 */
+
+.cd-reports-mileage-summary {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  font-family: var(--cd-font-ui);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--cd-text-dim);
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--cd-border);
+  margin-bottom: 1rem;
+}
+.cd-reports-mileage-summary .cd-mileage-summary-clean {
+  color: rgba(80, 180, 100, 0.85);
+  font-style: italic;
+}
+
+.cd-reports-mileage-rollup {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.cd-reports-mileage-rollup th,
+.cd-reports-mileage-rollup td {
+  padding: 0.45rem 0.4rem;
+  border-bottom: 1px solid var(--cd-border);
+  text-align: left;
+}
+.cd-reports-mileage-rollup th {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  color: var(--cd-text-dim);
+  text-transform: uppercase;
+  font-weight: normal;
+}
+.cd-reports-mileage-rollup .cd-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
