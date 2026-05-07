@@ -201,6 +201,17 @@
           </select>
         </label>
 
+        <label class="cd-ticket-field">
+          <span class="cd-ticket-field-label">Time category</span>
+          <select name="time_category_id" class="cd-input cd-ticket-input">
+            <option value="">— none —</option>
+            {% for c in time_categories %}
+              <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+          <span class="cd-ticket-hint">— inherited by timers started from this ticket</span>
+        </label>
+
         <fieldset class="cd-ticket-field cd-ticket-priority">
           <legend class="cd-ticket-field-label">Priority</legend>
           <label><input type="radio" name="priority" value="normal" checked> Normal</label>

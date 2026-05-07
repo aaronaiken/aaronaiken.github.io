@@ -292,9 +292,13 @@ def time_start():
 	# entry's project_id. A ticket with NULL project_id can be timed against
 	# any trackable project Aaron picks (e.g., a Corp ticket that doesn't
 	# tie to a specific sub-project but he's clocking time against Onboarding).
+	#
+	# Category propagation: when the timer is ticket-scoped and the caller
+	# didn't pass an explicit time_category_id, fall back to the ticket's
+	# default category. The caller can still override by passing one.
 	if ticket_id:
 		ticket = conn.execute(
-			'SELECT id, project_id FROM tickets WHERE id = ?', (ticket_id,)
+			'SELECT id, project_id, time_category_id FROM tickets WHERE id = ?', (ticket_id,)
 		).fetchone()
 		if not ticket:
 			conn.close()
@@ -305,6 +309,17 @@ def time_start():
 				'error': 'ticket_project_mismatch',
 				'ticket_project_id': ticket['project_id'],
 			}), 400
+		# Inherit the ticket's default category only if the caller didn't pick
+		# one AND the ticket's category is still active. An archived category
+		# is treated as "no default" rather than an error — the user didn't
+		# choose it, so don't force them to deal with it.
+		if not time_category_id and ticket['time_category_id']:
+			cat = conn.execute(
+				'SELECT id, is_active FROM time_categories WHERE id = ?',
+				(ticket['time_category_id'],)
+			).fetchone()
+			if cat and cat['is_active']:
+				time_category_id = ticket['time_category_id']
 
 	# Time category is just a label — validate existence + active state. Doesn't
 	# need to relate to project / ticket; user picks freely.
