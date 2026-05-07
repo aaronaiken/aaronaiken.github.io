@@ -225,7 +225,38 @@ def mileage_data():
 	})
 
 
-# ---- Edit page ----
+# ---- Form pages (new + edit share a template) ----
+
+
+def _form_context(conn, entry=None):
+	"""Common context for new + edit form pages."""
+	projects = conn.execute('''
+		SELECT id, title, slug, is_private
+		FROM projects
+		WHERE project_type IN ('work_subproject', 'personal')
+		  AND is_private = 0
+		ORDER BY title ASC
+	''').fetchall()
+	settings_row = conn.execute('SELECT * FROM settings WHERE id = 1').fetchone()
+	# Phase 3 — preselect the form's project from query string (?project_id=…)
+	# so the project-page LOG MILES button can deep-link with the project
+	# already chosen.
+	query_project = _to_int(request.args.get('project_id'))
+	return {
+		'entry': entry,
+		'projects': [dict(p) for p in projects],
+		'settings': dict(settings_row) if settings_row else {},
+		'query_project_id': query_project,
+	}
+
+
+@mileage_bp.route('/command-deck/mileage/new', methods=['GET'])
+@cd_auth_required
+def mileage_new_form():
+	conn = get_db()
+	ctx = _form_context(conn, entry=None)
+	conn.close()
+	return render_template('command_deck_mileage_form.html', mode='new', **ctx)
 
 
 @mileage_bp.route('/command-deck/mileage/<int:entry_id>/edit', methods=['GET'])
@@ -242,22 +273,9 @@ def mileage_edit(entry_id):
 		conn.close()
 		return "Mileage entry not found", 404
 
-	projects = conn.execute('''
-		SELECT id, title, slug, is_private
-		FROM projects
-		WHERE project_type IN ('work_subproject', 'personal')
-		  AND is_private = 0
-		ORDER BY title ASC
-	''').fetchall()
-	settings_row = conn.execute('SELECT * FROM settings WHERE id = 1').fetchone()
-
+	ctx = _form_context(conn, entry=_serialize_entry(row))
 	conn.close()
-	return render_template(
-		'command_deck_mileage_edit.html',
-		entry=_serialize_entry(row),
-		projects=[dict(p) for p in projects],
-		settings=dict(settings_row) if settings_row else {},
-	)
+	return render_template('command_deck_mileage_form.html', mode='edit', **ctx)
 
 
 # ---- Create ----
