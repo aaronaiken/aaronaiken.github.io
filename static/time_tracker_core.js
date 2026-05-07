@@ -192,8 +192,16 @@
       });
   }
 
-  function startTimer(projectId, description) {
-    return postJson('/time/start', { project_id: projectId, description: description || '' })
+  function startTimer(projectId, description, opts) {
+    var body = { project_id: projectId, description: description || '' };
+    if (opts) {
+      if (opts.task_id) body.task_id = opts.task_id;
+      if (opts.checklist_item_id) body.checklist_item_id = opts.checklist_item_id;
+      if (opts.meeting_id) body.meeting_id = opts.meeting_id;
+      if (opts.ticket_id) body.ticket_id = opts.ticket_id;
+      if (opts.time_category_id) body.time_category_id = opts.time_category_id;
+    }
+    return postJson('/time/start', body)
       .then(function (result) { if (result.ok) { refresh(); fetchTodayTotal(); } return result; });
   }
 
