@@ -8,8 +8,9 @@
 	'use strict';
 
 	const PRESETS = ['today', 'this-week', 'this-month', 'custom'];
-	const VALID_GROUPS = ['area', 'project', 'day', 'timesheet'];
+	const VALID_GROUPS = ['area', 'project', 'day', 'timesheet', 'mileage'];
 	const TIMESHEET_DAY_CAP = 31;
+	const MILEAGE_GROUP = 'mileage';
 
 	const state = {
 		preset: localStorage.getItem('reportsPeriod') || 'this-week',
@@ -489,9 +490,14 @@
 
 	async function load() {
 		try {
+			if (state.group === MILEAGE_GROUP) {
+				await loadMileage();
+				return;
+			}
 			const resp = await fetch(`/command-deck/reports/data?${buildQuery()}`);
 			if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 			state.data = await resp.json();
+			state.dataKind = 'time';
 			renderHeader();
 			renderEmpty();
 			renderPrivacyNote();
@@ -502,6 +508,173 @@
 			document.getElementById('reportsRollup').innerHTML =
 				`<div class="cd-reports-error">// failed to load report — ${escapeHtml(e.message)}</div>`;
 		}
+	}
+
+	// Mileage view shares the period selector but pulls from a different
+	// endpoint and has its own rollup + entries shape. We compute start/end
+	// in JS (the time-reports endpoint normally resolves preset → dates on
+	// the server, but the mileage endpoint just takes start/end directly).
+	function resolveMileageDates() {
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		if (state.start && state.end) {
+			// state.end is exclusive in time-reports semantics; mileage filter
+			// uses inclusive end. Subtract one day to flip it.
+			const inclusive = addDays(parseISODate(state.end), -1);
+			return { start: state.start, end: fmtDate(inclusive) };
+		}
+		if (state.preset === 'today') {
+			return { start: fmtDate(today), end: fmtDate(today) };
+		}
+		if (state.preset === 'this-month') {
+			const first = startOfMonth(today);
+			const last = addDays(startOfNextMonth(today), -1);
+			return { start: fmtDate(first), end: fmtDate(last) };
+		}
+		// default: this-week (Sun-Sat)
+		const sun = startOfWeekSunday(today);
+		const sat = addDays(sun, 6);
+		return { start: fmtDate(sun), end: fmtDate(sat) };
+	}
+
+	async function loadMileage() {
+		const dates = resolveMileageDates();
+		const params = new URLSearchParams();
+		if (dates.start) params.set('start', dates.start);
+		if (dates.end) params.set('end', dates.end);
+		// Privacy: the mileage endpoint defaults to excluding private projects;
+		// the unlock state lives in localStorage same as time reports.
+		if (localStorage.getItem('cdPrivateUnlocked') === '1') {
+			params.set('include_private', '1');
+		}
+		const resp = await fetch(`/command-deck/mileage/data?${params.toString()}`, {
+			credentials: 'same-origin',
+		});
+		if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+		const data = await resp.json();
+		state.data = data;
+		state.dataKind = 'mileage';
+		// Inject meta.start/end so renderHeader's period label still works
+		state.data.meta = state.data.meta || {};
+		state.data.meta.start = dates.start;
+		state.data.meta.end = fmtDate(addDays(parseISODate(dates.end), 1));  // exclusive for label math
+		renderHeader();
+		renderMileageEmpty(data);
+		renderMileageRollup(data);
+		renderMileageEntries(data);
+	}
+
+	function renderMileageEmpty(data) {
+		const empty = document.getElementById('reportsEmpty');
+		empty.hidden = (data.entries.length > 0);
+		// Privacy note doesn't apply to mileage v1 (no hidden_private_count)
+		document.getElementById('reportsPrivacyNote').hidden = true;
+	}
+
+	function fmtMiles(m) {
+		const v = Math.round((m || 0) * 10) / 10;
+		return v.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+	}
+	function fmtDollars(cents) {
+		return '$' + (cents / 100).toLocaleString(undefined, {
+			minimumFractionDigits: 2, maximumFractionDigits: 2,
+		});
+	}
+
+	function renderMileageRollup(data) {
+		const root = document.getElementById('reportsRollup');
+		const totals = data.totals || {};
+		if (!totals.count) {
+			root.innerHTML = '';
+			return;
+		}
+		// Project rollup — sorted by miles desc
+		const rows = Object.values(totals.by_project || {})
+			.sort((a, b) => b.miles - a.miles);
+		const totalCents = totals.cents || 0;
+		const totalMiles = totals.miles || 0;
+
+		const html = `
+			<div class="cd-reports-mileage-summary">
+				<span>${totals.count} trip${totals.count === 1 ? '' : 's'}</span>
+				<span>${fmtMiles(totalMiles)} mi</span>
+				<span>${fmtDollars(totalCents)}</span>
+				${totals.unsubmitted_cents > 0
+					? `<span class="cd-mileage-summary-pending">${fmtMiles(totals.unsubmitted_miles)} mi · ${fmtDollars(totals.unsubmitted_cents)} pending</span>`
+					: '<span class="cd-mileage-summary-clean">all submitted</span>'}
+				<a href="/command-deck/mileage/" class="cd-btn ghost sm">OPEN MILEAGE</a>
+				<button class="cd-btn sm" id="reportsMileageExport" type="button">EXPORT XLSX</button>
+			</div>
+			<table class="cd-reports-mileage-rollup">
+				<thead>
+					<tr><th>Project</th><th class="cd-num">Miles</th><th class="cd-num">$</th></tr>
+				</thead>
+				<tbody>
+					${rows.map((r) => `
+						<tr>
+							<td>${escapeHtml(r.title || '(no project)')}</td>
+							<td class="cd-num">${fmtMiles(r.miles)}</td>
+							<td class="cd-num">${fmtDollars(r.cents)}</td>
+						</tr>
+					`).join('')}
+				</tbody>
+			</table>
+		`;
+		root.innerHTML = html;
+		const expBtn = document.getElementById('reportsMileageExport');
+		if (expBtn) expBtn.addEventListener('click', () => {
+			const dates = resolveMileageDates();
+			const qs = new URLSearchParams();
+			if (dates.start) qs.set('start', dates.start);
+			if (dates.end) qs.set('end', dates.end);
+			if (localStorage.getItem('cdPrivateUnlocked') === '1') qs.set('include_private', '1');
+			window.location.href = '/command-deck/mileage/export.xlsx?' + qs.toString();
+		});
+	}
+
+	function renderMileageEntries(data) {
+		const body = document.getElementById('reportsEntriesBody');
+		// Replace the table headers when in mileage mode
+		const thead = document.querySelector('.cd-reports-entries-table thead');
+		thead.innerHTML = `
+			<tr>
+				<th>Date</th>
+				<th>Project</th>
+				<th>Trip</th>
+				<th class="cd-num">Miles</th>
+				<th class="cd-num">$</th>
+				<th>Status</th>
+				<th></th>
+			</tr>`;
+		const rows = data.entries.map((e) => {
+			const trip = e.from_location && e.to_location
+				? `${escapeHtml(e.from_location)} → ${escapeHtml(e.to_location)}${e.round_trip ? ' <span class="cd-mileage-roundtrip">↔</span>' : ''}`
+				: escapeHtml(e.description || '');
+			const status = e.is_submitted
+				? '<span class="cd-mileage-status submitted">submitted</span>'
+				: '<span class="cd-mileage-status pending">pending</span>';
+			return `
+				<tr data-id="${e.id}">
+					<td>${escapeHtml(e.date)}</td>
+					<td>${escapeHtml(e.project_title || '(no project)')}</td>
+					<td class="cd-mileage-trip">${trip}</td>
+					<td class="cd-num">${fmtMiles(e.miles)}</td>
+					<td class="cd-num">${fmtDollars(e.reimbursement_cents)}</td>
+					<td>${status}</td>
+					<td><a class="cd-btn ghost sm" href="/command-deck/mileage/${e.id}/edit">EDIT</a></td>
+				</tr>`;
+		}).join('');
+		body.innerHTML = rows || '<tr><td colspan="7" class="cd-reports-loading">No mileage in this range.</td></tr>';
+
+		// Replace the existing time-totals tfoot
+		const tfoot = document.querySelector('.cd-reports-entries-table tfoot tr');
+		const totals = data.totals || {};
+		tfoot.innerHTML = `
+			<td colspan="3" class="cd-reports-total-label">Total</td>
+			<td class="cd-num">${fmtMiles(totals.miles || 0)}</td>
+			<td class="cd-num">${fmtDollars(totals.cents || 0)}</td>
+			<td colspan="2"></td>
+		`;
 	}
 
 	// ---- Wiring ----
@@ -538,11 +711,41 @@
 		load();
 	}
 
+	function resetEntriesTableChrome() {
+		// Restore the time-mode thead/tfoot when leaving mileage mode.
+		const thead = document.querySelector('.cd-reports-entries-table thead');
+		thead.innerHTML = `
+			<tr>
+				<th>Day</th>
+				<th>Area</th>
+				<th>Project</th>
+				<th>Task / Item</th>
+				<th>Description</th>
+				<th>Start → End</th>
+				<th class="cd-num">Duration</th>
+			</tr>`;
+		const tfoot = document.querySelector('.cd-reports-entries-table tfoot tr');
+		tfoot.innerHTML = `
+			<td colspan="6" class="cd-reports-total-label">Total</td>
+			<td class="cd-num" id="reportsTotalDuration">—</td>
+		`;
+	}
+
 	function setGroup(group) {
 		if (!VALID_GROUPS.includes(group)) return;
+		const prevWasMileage = state.group === MILEAGE_GROUP;
 		state.group = group;
 		localStorage.setItem('reportsGroup', group);
-		// No re-fetch — the endpoint returns all four shapes.
+
+		// Mileage mode pulls from a different endpoint; switching to/from it
+		// requires a fresh fetch. The time tabs share one payload and just
+		// re-render client-side.
+		if (group === MILEAGE_GROUP || prevWasMileage) {
+			if (prevWasMileage && group !== MILEAGE_GROUP) resetEntriesTableChrome();
+			renderHeader();
+			load();
+			return;
+		}
 		renderHeader();
 		renderRollup();
 	}
