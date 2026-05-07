@@ -5312,3 +5312,21 @@ textarea.cd-ticket-input { min-height: auto; }
   gap: 0.4rem;
   justify-content: flex-end;
 }
+
+/* Reports entries — Category column dot */
+.cd-reports-cat-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.4em;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* The reports entries table's mobile collapse hides cols 2 + 5 by default;
+ * we added a Category column so re-target — hide Area (2) + Description (6). */
+@media (max-width: 720px) {
+  .cd-reports-entries-table th:nth-child(6),
+  .cd-reports-entries-table td:nth-child(6) { display: none; }
+}
