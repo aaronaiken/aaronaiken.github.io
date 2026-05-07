@@ -77,30 +77,35 @@ def _row_get(row, key, default=None):
 
 def _fetch_entry_with_context(conn, entry_id):
 	"""Re-fetch a time_entries row with task + checklist_item + parent-block
-	+ meeting context joined. Phase 2.1 added the blocks JOIN so client
-	renderers can display [Checklist: <block.title>] for item-scoped entries;
-	Phase 5 added the meetings JOIN so the active strip / panel / reports
-	can show [meeting: <title>] for meeting-scoped entries."""
+	+ meeting + ticket + time-category context joined. The tickets JOIN
+	supports the [TKT-NNNN — title] context badge across all timer surfaces;
+	the time_categories JOIN supplies the work-bucket label rendered as a
+	color dot/pill alongside the scope ctx."""
 	return conn.execute('''
 		SELECT te.*,
-		       t.title  AS task_title,
-		       ci.text  AS checklist_item_text,
-		       b.id     AS block_id,
-		       b.title  AS block_title,
-		       m.title  AS meeting_title
+		       t.title          AS task_title,
+		       ci.text           AS checklist_item_text,
+		       b.id              AS block_id,
+		       b.title           AS block_title,
+		       m.title           AS meeting_title,
+		       tk.ticket_number  AS ticket_number,
+		       tk.title          AS ticket_title,
+		       tc.name           AS time_category_name,
+		       tc.color          AS time_category_color
 		FROM time_entries te
 		LEFT JOIN tasks t            ON te.task_id = t.id
 		LEFT JOIN checklist_items ci ON te.checklist_item_id = ci.id
 		LEFT JOIN blocks b           ON ci.block_id = b.id
 		LEFT JOIN meetings m         ON te.meeting_id = m.id
+		LEFT JOIN tickets tk         ON te.ticket_id = tk.id
+		LEFT JOIN time_categories tc ON te.time_category_id = tc.id
 		WHERE te.id = ?
 	''', (entry_id,)).fetchone()
 
 
 def _serialize_active_entry(row):
-	"""Active-entry shape — Phase 1 §3.1 + Phase 1.5 task/item context +
-	Phase 2.1 block context for item-scoped entries + Phase 5 meeting
-	context for meeting-scoped entries."""
+	"""Active-entry shape — scope ctx (task / item / meeting / ticket — mutex)
+	plus the orthogonal time_category label."""
 	started = _parse_iso_utc(row['started_at'])
 	elapsed = int((datetime.now(pytz.UTC) - started).total_seconds()) if started else 0
 	return {
@@ -121,6 +126,12 @@ def _serialize_active_entry(row):
 		'block_title': _row_get(row, 'block_title'),
 		'meeting_id': _row_get(row, 'meeting_id'),
 		'meeting_title': _row_get(row, 'meeting_title'),
+		'ticket_id': _row_get(row, 'ticket_id'),
+		'ticket_number': _row_get(row, 'ticket_number'),
+		'ticket_title': _row_get(row, 'ticket_title'),
+		'time_category_id': _row_get(row, 'time_category_id'),
+		'time_category_name': _row_get(row, 'time_category_name'),
+		'time_category_color': _row_get(row, 'time_category_color'),
 	}
 
 
@@ -137,6 +148,12 @@ def _serialize_entry(row):
 		'block_title': _row_get(row, 'block_title'),
 		'meeting_id': _row_get(row, 'meeting_id'),
 		'meeting_title': _row_get(row, 'meeting_title'),
+		'ticket_id': _row_get(row, 'ticket_id'),
+		'ticket_number': _row_get(row, 'ticket_number'),
+		'ticket_title': _row_get(row, 'ticket_title'),
+		'time_category_id': _row_get(row, 'time_category_id'),
+		'time_category_name': _row_get(row, 'time_category_name'),
+		'time_category_color': _row_get(row, 'time_category_color'),
 		'description': row['description'],
 		'started_at': row['started_at'],
 		'ended_at': row['ended_at'],
@@ -157,6 +174,7 @@ def time_active():
 	rows = conn.execute('''
 		SELECT te.id, te.project_id, te.description, te.started_at,
 		       te.task_id, te.checklist_item_id, te.meeting_id,
+		       te.ticket_id, te.time_category_id,
 		       p.title             AS project_title,
 		       p.parent_project_id,
 		       parent.id           AS area_id,
@@ -166,7 +184,11 @@ def time_active():
 		       ci.text             AS checklist_item_text,
 		       b.id                AS block_id,
 		       b.title             AS block_title,
-		       m.title             AS meeting_title
+		       m.title             AS meeting_title,
+		       tk.ticket_number    AS ticket_number,
+		       tk.title            AS ticket_title,
+		       tc.name             AS time_category_name,
+		       tc.color            AS time_category_color
 		FROM time_entries te
 		JOIN projects p ON te.project_id = p.id
 		LEFT JOIN projects parent    ON p.parent_project_id = parent.id
@@ -174,6 +196,8 @@ def time_active():
 		LEFT JOIN checklist_items ci ON te.checklist_item_id = ci.id
 		LEFT JOIN blocks b           ON ci.block_id = b.id
 		LEFT JOIN meetings m         ON te.meeting_id = m.id
+		LEFT JOIN tickets tk         ON te.ticket_id = tk.id
+		LEFT JOIN time_categories tc ON te.time_category_id = tc.id
 		WHERE te.ended_at IS NULL
 		ORDER BY te.started_at ASC
 	''').fetchall()
@@ -191,14 +215,16 @@ def time_start():
 	task_id = data.get('task_id')
 	checklist_item_id = data.get('checklist_item_id')
 	meeting_id = data.get('meeting_id')
+	ticket_id = data.get('ticket_id')
+	time_category_id = data.get('time_category_id')
 
 	if not project_id:
 		return jsonify({'error': 'project_id required'}), 400
 
-	# Phase 1.5 + Phase 5 — at most one of task / item / meeting may scope an entry
-	scopes_set = sum(1 for x in (task_id, checklist_item_id, meeting_id) if x)
+	# 4-way mutex — at most one of task / item / meeting / ticket may scope an entry
+	scopes_set = sum(1 for x in (task_id, checklist_item_id, meeting_id, ticket_id) if x)
 	if scopes_set > 1:
-		return jsonify({'error': 'task_item_or_meeting_not_multiple'}), 400
+		return jsonify({'error': 'task_item_meeting_or_ticket_not_multiple'}), 400
 
 	conn = get_db()
 	project = conn.execute(
@@ -262,6 +288,39 @@ def time_start():
 				'meeting_project_id': meeting['project_id'],
 			}), 400
 
+	# Tickets — ticket must exist; if it has a project_id, must match the
+	# entry's project_id. A ticket with NULL project_id can be timed against
+	# any trackable project Aaron picks (e.g., a Corp ticket that doesn't
+	# tie to a specific sub-project but he's clocking time against Onboarding).
+	if ticket_id:
+		ticket = conn.execute(
+			'SELECT id, project_id FROM tickets WHERE id = ?', (ticket_id,)
+		).fetchone()
+		if not ticket:
+			conn.close()
+			return jsonify({'error': 'ticket_not_found'}), 404
+		if ticket['project_id'] is not None and ticket['project_id'] != int(project_id):
+			conn.close()
+			return jsonify({
+				'error': 'ticket_project_mismatch',
+				'ticket_project_id': ticket['project_id'],
+			}), 400
+
+	# Time category is just a label — validate existence + active state. Doesn't
+	# need to relate to project / ticket; user picks freely.
+	if time_category_id:
+		cat = conn.execute(
+			'SELECT id, is_active FROM time_categories WHERE id = ?',
+			(time_category_id,)
+		).fetchone()
+		if not cat:
+			conn.close()
+			return jsonify({'error': 'time_category_not_found'}), 404
+		# Allow archived categories on existing references but not on new starts
+		if not cat['is_active']:
+			conn.close()
+			return jsonify({'error': 'time_category_archived'}), 400
+
 	# §0a.2 #3 — 409 on concurrent same-project timer
 	existing = conn.execute(
 		'SELECT id FROM time_entries WHERE project_id = ? AND ended_at IS NULL',
@@ -277,14 +336,16 @@ def time_start():
 	now = _utc_now_iso()
 	cur = conn.execute('''
 		INSERT INTO time_entries
-			(project_id, task_id, checklist_item_id, meeting_id,
-			 description, started_at, created, updated)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			(project_id, task_id, checklist_item_id, meeting_id, ticket_id,
+			 time_category_id, description, started_at, created, updated)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	''', (
 		project_id,
 		int(task_id) if task_id else None,
 		int(checklist_item_id) if checklist_item_id else None,
 		int(meeting_id) if meeting_id else None,
+		int(ticket_id) if ticket_id else None,
+		int(time_category_id) if time_category_id else None,
 		description, now, now, now,
 	))
 	new_id = cur.lastrowid
@@ -352,6 +413,8 @@ def time_update(entry_id):
 	new_task_id = row['task_id']
 	new_item_id = row['checklist_item_id']
 	new_meeting_id = _row_get(row, 'meeting_id')
+	new_ticket_id = _row_get(row, 'ticket_id')
+	new_category_id = _row_get(row, 'time_category_id')
 
 	if 'description' in data:
 		new_description = (data.get('description') or '').strip()
@@ -411,10 +474,32 @@ def time_update(entry_id):
 				conn.close()
 				return jsonify({'error': 'invalid_meeting_id'}), 400
 
-	scopes_set = sum(1 for x in (new_task_id, new_item_id, new_meeting_id) if x is not None)
+	if 'ticket_id' in data:
+		val = data.get('ticket_id')
+		if val in (None, '', 'null'):
+			new_ticket_id = None
+		else:
+			try:
+				new_ticket_id = int(val)
+			except (ValueError, TypeError):
+				conn.close()
+				return jsonify({'error': 'invalid_ticket_id'}), 400
+
+	if 'time_category_id' in data:
+		val = data.get('time_category_id')
+		if val in (None, '', 'null'):
+			new_category_id = None
+		else:
+			try:
+				new_category_id = int(val)
+			except (ValueError, TypeError):
+				conn.close()
+				return jsonify({'error': 'invalid_time_category_id'}), 400
+
+	scopes_set = sum(1 for x in (new_task_id, new_item_id, new_meeting_id, new_ticket_id) if x is not None)
 	if scopes_set > 1:
 		conn.close()
-		return jsonify({'error': 'task_item_or_meeting_not_multiple'}), 400
+		return jsonify({'error': 'task_item_meeting_or_ticket_not_multiple'}), 400
 
 	entry_project_id = row['project_id']
 
@@ -463,6 +548,28 @@ def time_update(entry_id):
 				'meeting_project_id': meeting['project_id'],
 			}), 400
 
+	if 'ticket_id' in data and new_ticket_id is not None:
+		ticket = conn.execute(
+			'SELECT id, project_id FROM tickets WHERE id = ?', (new_ticket_id,)
+		).fetchone()
+		if not ticket:
+			conn.close()
+			return jsonify({'error': 'ticket_not_found'}), 404
+		if ticket['project_id'] is not None and ticket['project_id'] != entry_project_id:
+			conn.close()
+			return jsonify({
+				'error': 'ticket_project_mismatch',
+				'ticket_project_id': ticket['project_id'],
+			}), 400
+
+	if 'time_category_id' in data and new_category_id is not None:
+		cat = conn.execute(
+			'SELECT id FROM time_categories WHERE id = ?', (new_category_id,)
+		).fetchone()
+		if not cat:
+			conn.close()
+			return jsonify({'error': 'time_category_not_found'}), 404
+
 	if new_ended:
 		try:
 			s = _parse_iso_utc(new_started)
@@ -479,11 +586,13 @@ def time_update(entry_id):
 		UPDATE time_entries
 		SET description = ?, started_at = ?, ended_at = ?,
 		    duration_seconds = ?, task_id = ?, checklist_item_id = ?,
-		    meeting_id = ?, updated = ?
+		    meeting_id = ?, ticket_id = ?, time_category_id = ?,
+		    updated = ?
 		WHERE id = ?
 	''', (
 		new_description, new_started, new_ended, new_duration,
-		new_task_id, new_item_id, new_meeting_id, now_iso, entry_id,
+		new_task_id, new_item_id, new_meeting_id,
+		new_ticket_id, new_category_id, now_iso, entry_id,
 	))
 	conn.commit()
 	row = _fetch_entry_with_context(conn, entry_id)
@@ -606,16 +715,22 @@ def time_today(project_id):
 	conn = get_db()
 	rows = conn.execute('''
 		SELECT te.*,
-		       t.title  AS task_title,
-		       ci.text  AS checklist_item_text,
-		       b.id     AS block_id,
-		       b.title  AS block_title,
-		       m.title  AS meeting_title
+		       t.title           AS task_title,
+		       ci.text            AS checklist_item_text,
+		       b.id               AS block_id,
+		       b.title            AS block_title,
+		       m.title            AS meeting_title,
+		       tk.ticket_number   AS ticket_number,
+		       tk.title           AS ticket_title,
+		       tc.name            AS time_category_name,
+		       tc.color           AS time_category_color
 		FROM time_entries te
 		LEFT JOIN tasks t            ON te.task_id = t.id
 		LEFT JOIN checklist_items ci ON te.checklist_item_id = ci.id
 		LEFT JOIN blocks b           ON ci.block_id = b.id
 		LEFT JOIN meetings m         ON te.meeting_id = m.id
+		LEFT JOIN tickets tk         ON te.ticket_id = tk.id
+		LEFT JOIN time_categories tc ON te.time_category_id = tc.id
 		WHERE te.project_id = ?
 		  AND te.started_at >= ?
 		  AND te.started_at <  ?

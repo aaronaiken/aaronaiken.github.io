@@ -118,6 +118,21 @@
   min-width: 50px;
   text-align: right;
 }
+.tt-row-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+  color: rgba(212, 136, 10, 0.65);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.tt-row-cat-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 .tt-row-stop {
   background: none;
   border: 1px solid rgba(212, 136, 10, 0.25);
@@ -267,11 +282,29 @@
           : 'meeting';
         ctx = '<span class="tt-row-ctx">[' + mLabel + ']</span>';
       }
+      else if (e.ticket_id) {
+        // Tickets: [TKT-NNNN — title]
+        var tNum = e.ticket_number || ('TKT-' + e.ticket_id);
+        var tLabel = e.ticket_title
+          ? tNum + ' — ' + escHtml(e.ticket_title)
+          : tNum;
+        ctx = '<span class="tt-row-ctx">[' + tLabel + ']</span>';
+      }
+      // Time category — orthogonal to scope; small color dot + name when set
+      var catChip = '';
+      if (e.time_category_name) {
+        var dotColor = e.time_category_color || 'rgba(212,136,10,0.55)';
+        catChip = '<span class="tt-row-cat" title="time category">'
+          + '<span class="tt-row-cat-dot" style="background:' + dotColor + ';"></span>'
+          + escHtml(e.time_category_name)
+          + '</span>';
+      }
       return '<div class="tt-row" data-id="' + e.id + '">' +
         '<span class="tt-row-dot" style="background:' + color + ';"></span>' +
         '<span class="tt-row-area">' + escHtml(areaName) + '</span>' +
         ctx +
         '<span class="tt-row-desc">' + escHtml(desc) + '</span>' +
+        catChip +
         '<span class="tt-row-elapsed">' + TTC.formatElapsed(TTC.elapsedSeconds(e)) + '</span>' +
         '<button class="tt-row-stop" data-id="' + e.id + '" type="button">STOP</button>' +
         '</div>';
