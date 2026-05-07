@@ -295,6 +295,44 @@
         </div>
       </div>
 
+      <!-- MILEAGE -->
+      <div class="cd-panel cd-mb">
+        <div class="cd-panel-header">
+          <span class="cd-panel-title">// Mileage</span>
+          <div class="cd-panel-actions">
+            {% if mileage_totals.count > 0 %}
+              <span class="cd-mileage-project-summary">
+                {{ '%.1f' % mileage_totals.miles }} mi · ${{ '%.2f' % (mileage_totals.cents / 100.0) }}{% if mileage_totals.unsubmitted_cents > 0 %} · <span class="cd-mileage-summary-pending">${{ '%.2f' % (mileage_totals.unsubmitted_cents / 100.0) }} pending</span>{% endif %}
+              </span>
+              <a href="/command-deck/mileage/?project={{ project.id }}" class="cd-btn ghost sm">VIEW ALL</a>
+            {% endif %}
+            <a href="/command-deck/mileage/new?project_id={{ project.id }}" class="cd-btn primary sm">+ LOG MILES</a>
+          </div>
+        </div>
+        <div class="cd-panel-body">
+          {% if mileage_recent %}
+            <ul class="cd-project-mileage-list">
+              {% for m in mileage_recent %}
+                <li class="cd-project-mileage-row">
+                  <a class="cd-project-mileage-link" href="/command-deck/mileage/{{ m.id }}/edit">
+                    <span class="cd-project-mileage-date">{{ m.date }}</span>
+                    <span class="cd-project-mileage-trip">
+                      {% if m.from_location and m.to_location %}{{ m.from_location }} → {{ m.to_location }}{% if m.round_trip %} <span class="cd-mileage-roundtrip">↔</span>{% endif %}{% else %}{{ m.description or 'Trip' }}{% endif %}
+                    </span>
+                    <span class="cd-project-mileage-miles">{{ '%.1f' % m.miles }} mi</span>
+                    <span class="cd-project-mileage-status {% if m.submitted_at %}submitted{% else %}pending{% endif %}">
+                      {% if m.submitted_at %}submitted{% else %}pending{% endif %}
+                    </span>
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="cd-empty">No mileage logged for this project yet.</div>
+          {% endif %}
+        </div>
+      </div>
+
       <!-- FILES -->
       <div class="cd-panel cd-mb">
         <div class="cd-panel-header">
