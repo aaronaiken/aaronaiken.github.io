@@ -618,6 +618,28 @@ def cd_project(slug):
 		'SELECT COUNT(*) AS n FROM meetings WHERE project_id = ?', (project['id'],)
 	).fetchone()['n']
 
+	# Phase 3 — mileage rollup for this project. Last 5 trips + totals so the
+	# project page can show a compact strip without paging through the full
+	# mileage index.
+	mileage_recent = conn.execute('''
+		SELECT id, date, description, from_location, to_location,
+		       round_trip, miles, rate_cents, submitted_at
+		FROM mileage_entries
+		WHERE project_id = ?
+		ORDER BY date DESC, id DESC
+		LIMIT 5
+	''', (project['id'],)).fetchall()
+	mileage_totals = conn.execute('''
+		SELECT
+		    COUNT(*)                                                                   AS count,
+		    COALESCE(SUM(miles), 0)                                                    AS miles,
+		    COALESCE(SUM(miles * rate_cents), 0)                                       AS cents,
+		    COALESCE(SUM(CASE WHEN submitted_at IS NULL THEN miles ELSE 0 END), 0)     AS unsubmitted_miles,
+		    COALESCE(SUM(CASE WHEN submitted_at IS NULL THEN miles * rate_cents ELSE 0 END), 0) AS unsubmitted_cents
+		FROM mileage_entries
+		WHERE project_id = ?
+	''', (project['id'],)).fetchone()
+
 	# Huyang chat — last 50 messages for this project
 	chat_history = conn.execute('''
 		SELECT * FROM chat_messages
@@ -637,6 +659,8 @@ def cd_project(slug):
 		files=[dict(f) for f in files],
 		meetings_recent=[dict(m) for m in meetings_recent],
 		meetings_total=meetings_total,
+		mileage_recent=[dict(m) for m in mileage_recent],
+		mileage_totals=dict(mileage_totals),
 		chat_history=[dict(m) for m in chat_history]
 	)
 
