@@ -1,0 +1,24 @@
+# Cockpit / Command Deck — Python dependencies.
+#
+# Local: source .venv/bin/activate && pip install -r requirements.txt
+# PA:    pip3.10 install --user -r requirements.txt
+#         (substitute whichever pip3.X matches the PA web app's Python)
+#
+# These are the third-party imports the Flask app reaches for. The standard
+# library is unpinned for obvious reasons. Versions are floors — newer is
+# fine — except where a known pin is documented. Anthropic SDK and openpyxl
+# are the two libraries with the loudest changelogs; bump deliberately.
+
+Flask>=3.1
+python-dotenv>=1.0
+pytz
+requests
+emoji
+Pillow
+
+# Anthropic API — Huyang + Cockpit assistant flows.
+anthropic>=0.97
+
+# Phase 3 — mileage xlsx export. Without this, /command-deck/mileage/export.xlsx
+# returns a 500 with install instructions; the rest of the app stays fine.
+openpyxl>=3.1
