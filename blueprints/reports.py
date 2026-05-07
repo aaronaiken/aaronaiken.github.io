@@ -106,8 +106,8 @@ def _started_at_to_et_day(started_at_iso):
 
 
 def _build_totals(entries, start_date, end_date):
-	"""Walk the entries list once, build all four totals shapes."""
-	by_area, by_project, by_day, by_timesheet = {}, {}, {}, {}
+	"""Walk the entries list once, build all five totals shapes."""
+	by_area, by_project, by_day, by_timesheet, by_category = {}, {}, {}, {}, {}
 
 	# Pre-seed by_day + by_timesheet day keys so missing days render as 0
 	day_keys = []
@@ -159,11 +159,25 @@ def _build_totals(entries, start_date, end_date):
 			by_timesheet[proj_key]['days'][day_key] += secs
 		by_timesheet[proj_key]['total'] += secs
 
+		# By Category — bucket by time_category_name. Entries with NULL
+		# category roll up under "(uncategorized)" so the total still
+		# reconciles with the period total.
+		cat_id = e.get('time_category_id') or 0
+		cat_key = str(cat_id)
+		if cat_key not in by_category:
+			by_category[cat_key] = {
+				'title': e.get('time_category_name') or '(uncategorized)',
+				'color': e.get('time_category_color') or '',
+				'seconds': 0,
+			}
+		by_category[cat_key]['seconds'] += secs
+
 	return {
 		'by_area': by_area,
 		'by_project': by_project,
 		'by_day': by_day,
 		'by_timesheet': by_timesheet,
+		'by_category': by_category,
 		'total_seconds': total_seconds,
 	}
 
@@ -344,5 +358,6 @@ def reports_data():
 			'by_project': totals['by_project'],
 			'by_day': totals['by_day'],
 			'by_timesheet': totals['by_timesheet'],
+			'by_category': totals['by_category'],
 		},
 	})

@@ -8,7 +8,7 @@
 	'use strict';
 
 	const PRESETS = ['today', 'this-week', 'this-month', 'custom'];
-	const VALID_GROUPS = ['area', 'project', 'day', 'timesheet', 'mileage'];
+	const VALID_GROUPS = ['area', 'project', 'day', 'timesheet', 'category', 'mileage'];
 	const TIMESHEET_DAY_CAP = 31;
 	const MILEAGE_GROUP = 'mileage';
 
@@ -177,6 +177,9 @@
 			renderDayRows(root, data.totals.by_day, total);
 		} else if (state.group === 'timesheet') {
 			renderTimesheet(root, data);
+		} else if (state.group === 'category') {
+			bucket = data.totals.by_category;
+			renderBucketRows(root, bucket, total, { label: 'category' });
 		}
 	}
 
@@ -350,6 +353,16 @@
 					? `meeting: ${escapeHtml(e.meeting_title)}`
 					: 'meeting';
 			}
+			else if (e.ticket_id) {
+				// Tickets: TKT-NNNN (— title shown alongside if present)
+				const tNum = e.ticket_number || ('TKT-' + e.ticket_id);
+				context = e.ticket_title
+					? `${tNum} — ${escapeHtml(e.ticket_title)}`
+					: tNum;
+			}
+			const categoryCell = e.time_category_name
+				? `<span class="cd-reports-cat-dot" style="background:${e.time_category_color || 'rgba(212,136,10,0.55)'}"></span>${escapeHtml(e.time_category_name)}`
+				: '<span class="cd-text-dim">—</span>';
 			const runningCls = e.running ? ' is-running' : '';
 			const runningGlyph = e.running ? ' <span class="cd-reports-running-dot" title="still running"></span>' : '';
 			// Click-to-edit on stopped entries; running entries stay static.
@@ -362,6 +375,7 @@
 					<td><span class="cd-reports-area-stripe" style="background:${stripe}"></span>${escapeHtml(e.area_title || '—')}</td>
 					<td>${escapeHtml(e.project_title || '—')}</td>
 					<td>${context}</td>
+					<td>${categoryCell}</td>
 					<td>${escapeHtml(e.description || '')}</td>
 					<td>${timeCell}</td>
 					<td class="cd-num">${fmtSeconds(e.duration_seconds)}</td>
@@ -719,14 +733,15 @@
 				<th>Day</th>
 				<th>Area</th>
 				<th>Project</th>
-				<th>Task / Item</th>
+				<th>Scope</th>
+				<th>Category</th>
 				<th>Description</th>
 				<th>Start → End</th>
 				<th class="cd-num">Duration</th>
 			</tr>`;
 		const tfoot = document.querySelector('.cd-reports-entries-table tfoot tr');
 		tfoot.innerHTML = `
-			<td colspan="6" class="cd-reports-total-label">Total</td>
+			<td colspan="7" class="cd-reports-total-label">Total</td>
 			<td class="cd-num" id="reportsTotalDuration">—</td>
 		`;
 	}

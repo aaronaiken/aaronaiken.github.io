@@ -80,6 +80,7 @@
         <button class="cd-reports-group" data-group="project">Project</button>
         <button class="cd-reports-group" data-group="day">Day</button>
         <button class="cd-reports-group" data-group="timesheet">Timesheet</button>
+        <button class="cd-reports-group" data-group="category">Category</button>
         <button class="cd-reports-group" data-group="mileage">Mileage</button>
       </div>
 
@@ -109,18 +110,19 @@
             <th>Day</th>
             <th>Area</th>
             <th>Project</th>
-            <th>Task / Item</th>
+            <th>Scope</th>
+            <th>Category</th>
             <th>Description</th>
             <th>Start → End</th>
             <th class="cd-num">Duration</th>
           </tr>
         </thead>
         <tbody id="reportsEntriesBody">
-          <tr><td colspan="7" class="cd-reports-loading">loading…</td></tr>
+          <tr><td colspan="8" class="cd-reports-loading">loading…</td></tr>
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="6" class="cd-reports-total-label">Total</td>
+            <td colspan="7" class="cd-reports-total-label">Total</td>
             <td class="cd-num" id="reportsTotalDuration">—</td>
           </tr>
         </tfoot>
