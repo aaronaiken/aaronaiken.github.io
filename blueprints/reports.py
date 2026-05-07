@@ -238,19 +238,23 @@ def reports_data():
 	conn = get_db()
 	rows = conn.execute(f'''
 		SELECT te.id, te.project_id, te.task_id, te.checklist_item_id,
-		       te.meeting_id,
+		       te.meeting_id, te.ticket_id, te.time_category_id,
 		       te.description, te.started_at, te.ended_at,
 		       te.duration_seconds,
-		       p.title           AS project_title,
-		       p.is_private      AS project_is_private,
-		       parent.id         AS area_id,
-		       parent.title      AS area_title,
-		       parent.area_color AS area_color,
-		       t.title           AS task_title,
-		       ci.text           AS checklist_item_text,
-		       b.id              AS block_id,
-		       b.title           AS block_title,
-		       m.title           AS meeting_title
+		       p.title             AS project_title,
+		       p.is_private        AS project_is_private,
+		       parent.id           AS area_id,
+		       parent.title        AS area_title,
+		       parent.area_color   AS area_color,
+		       t.title             AS task_title,
+		       ci.text             AS checklist_item_text,
+		       b.id                AS block_id,
+		       b.title             AS block_title,
+		       m.title             AS meeting_title,
+		       tk.ticket_number    AS ticket_number,
+		       tk.title            AS ticket_title,
+		       tc.name             AS time_category_name,
+		       tc.color            AS time_category_color
 		FROM time_entries te
 		JOIN projects p              ON te.project_id = p.id
 		LEFT JOIN projects parent    ON p.parent_project_id = parent.id
@@ -258,6 +262,8 @@ def reports_data():
 		LEFT JOIN checklist_items ci ON te.checklist_item_id = ci.id
 		LEFT JOIN blocks b           ON ci.block_id = b.id
 		LEFT JOIN meetings m         ON te.meeting_id = m.id
+		LEFT JOIN tickets tk         ON te.ticket_id = tk.id
+		LEFT JOIN time_categories tc ON te.time_category_id = tc.id
 		WHERE {where_sql}
 		ORDER BY te.started_at ASC
 	''', args).fetchall()
@@ -307,6 +313,12 @@ def reports_data():
 			'block_title': r['block_title'],
 			'meeting_id': r['meeting_id'],
 			'meeting_title': r['meeting_title'],
+			'ticket_id': r['ticket_id'],
+			'ticket_number': r['ticket_number'],
+			'ticket_title': r['ticket_title'],
+			'time_category_id': r['time_category_id'],
+			'time_category_name': r['time_category_name'],
+			'time_category_color': r['time_category_color'],
 			'description': r['description'],
 			'started_at': r['started_at'],
 			'ended_at': ended,

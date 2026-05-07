@@ -31,6 +31,10 @@
 	var formCancel   = document.getElementById('ttp-form-cancel');
 	var formNewWrap  = document.getElementById('ttp-form-new-title-wrap');
 	var formNewTitle = document.getElementById('ttp-form-new-title');
+	var formCategory = document.getElementById('ttp-form-category');
+
+	var LAST_CAT_KEY = 'cdLastTimeCategory';
+	var cachedCategories = null;
 
 	var state = {
 		forced: false,
@@ -164,6 +168,21 @@
 								: 'meeting';
 							ctxLine = '<span class="ttp-row-ctx">' + mLabel + '</span>';
 						}
+						else if (e.ticket_id) {
+							// Ticket-scoped entry — TKT-NNNN — title
+							var tNum = e.ticket_number || ('TKT-' + e.ticket_id);
+							var tLabel = e.ticket_title
+								? tNum + ' · ' + escHtml(e.ticket_title)
+								: tNum;
+							ctxLine = '<span class="ttp-row-ctx">' + tLabel + '</span>';
+						}
+						// Append category chip alongside the scope ctx (orthogonal axis)
+						if (e.time_category_name) {
+							var dotColor = e.time_category_color || 'rgba(212,136,10,0.55)';
+							ctxLine += '<span class="ttp-row-cat" title="time category">'
+								+ '<span class="ttp-row-cat-dot" style="background:' + dotColor + ';"></span>'
+								+ escHtml(e.time_category_name) + '</span>';
+						}
 						var descNode = isEditing
 							? '<input class="ttp-row-desc-input" data-id="' + e.id + '" value="' + escHtml(desc) + '">'
 							: '<span class="ttp-row-desc" data-id="' + e.id + '">' + escHtml(desc) + '</span>';
@@ -296,6 +315,36 @@
 			if (formNewWrap) formNewWrap.hidden = true;
 		}
 	}
+	function fetchCategoriesOnce() {
+		if (cachedCategories) return Promise.resolve(cachedCategories);
+		return fetch('/command-deck/lookups/time_categories', { credentials: 'same-origin' })
+			.then(function (r) { return r.ok ? r.json() : { rows: [] }; })
+			.then(function (data) {
+				cachedCategories = data.rows || [];
+				return cachedCategories;
+			})
+			.catch(function () { return []; });
+	}
+
+	function populateCategoryPicker() {
+		if (!formCategory) return;
+		fetchCategoriesOnce().then(function (cats) {
+			// Reset, keep the "— none —" placeholder option
+			while (formCategory.options.length > 1) formCategory.remove(1);
+			cats.forEach(function (c) {
+				var opt = document.createElement('option');
+				opt.value = c.id;
+				opt.textContent = c.name;
+				formCategory.appendChild(opt);
+			});
+			// Pre-select last-used from localStorage if it's still in the active list
+			var last = localStorage.getItem(LAST_CAT_KEY);
+			if (last && cats.some(function (c) { return String(c.id) === String(last); })) {
+				formCategory.value = last;
+			}
+		});
+	}
+
 	function openForm() {
 		state.formOpen = true;
 		state.forced = true;
@@ -304,6 +353,7 @@
 		fetchProjects().then(function () {
 			populateAreaPicker();
 			populateProjectPicker();
+			populateCategoryPicker();
 			if (formDesc) formDesc.focus();
 		});
 	}
@@ -319,6 +369,11 @@
 		if (!window.TimeTrackerCore.isLoaded()) return;
 
 		var description = (formDesc.value || '').trim();
+		var startOpts = {};
+		if (formCategory && formCategory.value) {
+			startOpts.time_category_id = parseInt(formCategory.value, 10);
+			localStorage.setItem(LAST_CAT_KEY, formCategory.value);
+		}
 		if (state.formCreating) {
 			var areaSlug = formArea.options[formArea.selectedIndex].dataset.areaSlug;
 			var newTitle = (formNewTitle.value || '').trim();
@@ -333,7 +388,7 @@
 				.then(function (r) { return r.json(); })
 				.then(function (resp) {
 					if (resp && resp.success) {
-						return window.TimeTrackerCore.startTimer(resp.subproject.id, description);
+						return window.TimeTrackerCore.startTimer(resp.subproject.id, description, startOpts);
 					}
 				})
 				.then(function () {
@@ -346,8 +401,13 @@
 		}
 		var pid = parseInt(formProject.value, 10);
 		if (!pid) return;
+		var opts = {};
+		if (formCategory && formCategory.value) {
+			opts.time_category_id = parseInt(formCategory.value, 10);
+			localStorage.setItem(LAST_CAT_KEY, formCategory.value);
+		}
 		formStart.disabled = true;
-		window.TimeTrackerCore.startTimer(pid, description).then(function (result) {
+		window.TimeTrackerCore.startTimer(pid, description, opts).then(function (result) {
 			formStart.disabled = false;
 			if (result.ok) {
 				formDesc.value = '';
