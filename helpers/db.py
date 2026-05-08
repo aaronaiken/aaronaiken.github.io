@@ -80,6 +80,7 @@ def fetch_assign_picker_groups(conn):
 		LEFT JOIN projects parent ON p.parent_project_id = parent.id
 		WHERE p.is_private = 0
 		  AND p.project_type IN ('personal', 'work_subproject')
+		  AND p.archived_at IS NULL
 		ORDER BY p.project_type ASC, parent.title ASC, p.title ASC
 	''').fetchall()
 	work_groups = {}
