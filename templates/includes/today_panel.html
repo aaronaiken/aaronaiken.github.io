@@ -150,11 +150,13 @@
 }
 
 /* ---- TASK ROWS ---- */
-a.today-ticket-row {
+a.today-ticket-row,
+a.today-row-link {
   text-decoration: none;
   color: inherit;
 }
-a.today-ticket-row:hover { color: var(--cd-amber-hi); }
+a.today-ticket-row:hover,
+a.today-row-link:hover { color: var(--cd-amber-hi); }
 .today-task-row {
   display: flex;
   align-items: center;
@@ -452,7 +454,11 @@ a.today-ticket-row:hover { color: var(--cd-amber-hi); }
     });
     body.innerHTML = html;
     body.querySelectorAll('.today-check-btn:not([disabled])').forEach(function(btn) {
-      btn.addEventListener('click', function() {
+      btn.addEventListener('click', function(ev) {
+        // Stop the click from bubbling to the parent <a> row — checkbox is
+        // mark-complete-in-place; the row link is for navigation.
+        ev.preventDefault();
+        ev.stopPropagation();
         completeRow(btn.getAttribute('data-kind'), btn.getAttribute('data-id'), btn);
       });
     });
@@ -493,6 +499,23 @@ a.today-ticket-row:hover { color: var(--cd-amber-hi); }
         '</a>';
     }
 
+    // Compute the navigation target — clicking the row body lands the user
+    // on the right page anchored at the right element so they can hit ⏱.
+    function hrefForEntry(e, k) {
+      if (k === 'task') {
+        if (e.project_slug) return '/command-deck/projects/' + encodeURIComponent(e.project_slug) + '/#task-' + e.id;
+        return '/below-deck#task-' + e.id;
+      }
+      if (k === 'item') {
+        if (e.project_slug) return '/command-deck/projects/' + encodeURIComponent(e.project_slug) + '/#item-' + e.id;
+      }
+      if (k === 'block') {
+        if (e.project_slug) return '/command-deck/projects/' + encodeURIComponent(e.project_slug) + '/#block-' + e.id;
+      }
+      return '#';
+    }
+    var rowHref = hrefForEntry(entry, kind);
+
     if (kind === 'block') {
       // Block row: title + progress, no checkbox. Progress is the source-
       // line content; project title shifts to a small dim suffix line.
@@ -507,11 +530,11 @@ a.today-ticket-row:hover { color: var(--cd-amber-hi); }
       // Use a non-clickable spacer in the checkbox slot so the row layout
       // stays aligned with task and item rows.
       btnHtml = '<span class="today-block-spacer" aria-hidden="true">▣</span>';
-      return '<div class="today-task-row today-block-row' + (isDone ? ' is-done' : '') + '" data-id="' + entry.id + '" data-kind="block">' +
+      return '<a class="today-task-row today-block-row today-row-link' + (isDone ? ' is-done' : '') + '" data-id="' + entry.id + '" data-kind="block" href="' + rowHref + '">' +
         btnHtml +
         '<span class="today-task-title">' + titleHtml + '</span>' +
         '<span class="today-task-source">' + escHtml(progressText) + ' · ' + escHtml(source) + '</span>' +
-        '</div>';
+        '</a>';
     }
 
     if (kind === 'item') {
@@ -525,12 +548,15 @@ a.today-ticket-row:hover { color: var(--cd-amber-hi); }
     var btnAttrs = 'data-id="' + entry.id + '" data-kind="' + kind + '"';
     btnHtml = isDone
       ? '<button class="today-check-btn checked" disabled title="Completed">' + btnInner + '</button>'
-      : '<button class="today-check-btn" ' + btnAttrs + ' title="Mark complete">' + btnInner + '</button>';
-    return '<div class="today-task-row' + (isDone ? ' is-done' : '') + '" data-id="' + entry.id + '" data-kind="' + kind + '">' +
+      : '<button class="today-check-btn today-row-stop-prop" ' + btnAttrs + ' title="Mark complete">' + btnInner + '</button>';
+    // Wrap the row body in an anchor so tapping anywhere except the checkbox
+    // navigates to the source. The checkbox button stops propagation in JS so
+    // a click there fires the complete action without also navigating.
+    return '<a class="today-task-row today-row-link' + (isDone ? ' is-done' : '') + '" data-id="' + entry.id + '" data-kind="' + kind + '" href="' + rowHref + '">' +
       btnHtml +
       '<span class="today-task-title">' + titleHtml + '</span>' +
       '<span class="today-task-source">' + escHtml(source) + '</span>' +
-      '</div>';
+      '</a>';
   }
 
   function completeRow(kind, id, btn) {
