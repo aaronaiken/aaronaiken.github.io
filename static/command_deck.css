@@ -5353,3 +5353,22 @@ textarea.cd-ticket-input { min-height: auto; }
   text-decoration: none;
 }
 .cd-footer-link-btn:hover { color: var(--cd-amber-hi); text-decoration: underline; }
+
+/* customer_groups settings rows: color + name + default-project + actions */
+.cd-lookup-section[data-kind="customer_groups"] .cd-lookup-row-grid {
+  grid-template-columns: auto 1fr 1.2fr auto;
+}
+@media (max-width: 720px) {
+  .cd-lookup-section[data-kind="customer_groups"] .cd-lookup-row-grid {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "color name action"
+      "proj  proj proj";
+    row-gap: 0.3rem;
+  }
+  .cd-lookup-section[data-kind="customer_groups"] .cd-lookup-row-color { grid-area: color; }
+  .cd-lookup-section[data-kind="customer_groups"] .cd-lookup-row-name  { grid-area: name; }
+  .cd-lookup-section[data-kind="customer_groups"] .cd-lookup-row-default-project { grid-area: proj; }
+  .cd-lookup-section[data-kind="customer_groups"] .cd-lookup-archive,
+  .cd-lookup-section[data-kind="customer_groups"] .cd-lookup-restore { grid-area: action; }
+}
