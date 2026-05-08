@@ -150,6 +150,11 @@
 }
 
 /* ---- TASK ROWS ---- */
+a.today-ticket-row {
+  text-decoration: none;
+  color: inherit;
+}
+a.today-ticket-row:hover { color: var(--cd-amber-hi); }
 .today-task-row {
   display: flex;
   align-items: center;
@@ -457,6 +462,9 @@
     // Phase 2.1: entry.kind is 'task' or 'item'.
     // Phase 2.2: also 'block' — rendered with progress (`3/8 done`)
     // and no checkbox (block completes implicitly via item checks).
+    // Tickets: kind 'ticket' — rendered as a navigation link (no inline
+    // checkbox — closing requires a resolution prompt that lives on the
+    // detail page).
     // Source line prefixes the area name when the entry sits under a
     // work sub-project, so the user sees PennDOT · Bridge 47 calc rather
     // than just Bridge 47 calc.
@@ -468,6 +476,22 @@
     var titleHtml;
     var btnHtml;
     var btnInner = '<svg viewBox="0 0 12 10"><polyline points="1.5,5 4.5,8.5 10.5,1.5"/></svg>';
+
+    if (kind === 'ticket') {
+      var num = entry.ticket_number || ('TKT-' + entry.id);
+      var custLabel = entry.customer_name || entry.customer_group_name || '';
+      var ticketSource = custLabel
+        ? custLabel + (projectTitle && projectTitle !== 'Below Deck' ? ' · ' + projectTitle : '')
+        : source;
+      titleHtml = '<span class="today-task-block-context">' + escHtml(num) + ' · </span>' + escHtml(entry.title);
+      // Spacer in the action slot; whole row is wrapped in a link below.
+      btnHtml = '<span class="today-block-spacer" aria-hidden="true">⌖</span>';
+      return '<a class="today-task-row today-ticket-row' + (isDone ? ' is-done' : '') + '" data-id="' + entry.id + '" data-kind="ticket" href="/command-deck/tickets/' + entry.id + '/">' +
+        btnHtml +
+        '<span class="today-task-title">' + titleHtml + '</span>' +
+        '<span class="today-task-source">' + escHtml(ticketSource) + '</span>' +
+        '</a>';
+    }
 
     if (kind === 'block') {
       // Block row: title + progress, no checkbox. Progress is the source-

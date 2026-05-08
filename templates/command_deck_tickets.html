@@ -113,6 +113,7 @@
       <table class="cd-tickets-table">
         <thead>
           <tr>
+            <th></th>
             <th>TKT#</th>
             <th>Title</th>
             <th>Customer</th>
@@ -124,7 +125,7 @@
           </tr>
         </thead>
         <tbody id="ticketsBody">
-          <tr><td colspan="8" class="cd-tickets-loading">loading…</td></tr>
+          <tr><td colspan="9" class="cd-tickets-loading">loading…</td></tr>
         </tbody>
       </table>
     </section>
@@ -304,7 +305,7 @@
   function renderTickets(tickets) {
     var body = document.getElementById('ticketsBody');
     if (!tickets.length) {
-      body.innerHTML = '<tr><td colspan="8" class="cd-tickets-empty">No tickets match.</td></tr>';
+      body.innerHTML = '<tr><td colspan="9" class="cd-tickets-empty">No tickets match.</td></tr>';
       return;
     }
     body.innerHTML = tickets.map(function (t) {
@@ -330,8 +331,24 @@
         ? '<a href="/command-deck/projects/' + escHtml(t.project_slug) + '/">' + escHtml(t.project_title) + '</a>'
         : '<span class="cd-text-dim">—</span>';
 
+      // Star button: closed tickets show a disabled placeholder (★ wouldn't
+      // make sense on something already done). Active tickets get the toggle.
+      var starCell;
+      if (t.status === 'closed') {
+        starCell = '<td class="cd-tickets-star-cell"></td>';
+      } else {
+        var starred = !!t.today;
+        starCell = '<td class="cd-tickets-star-cell">' +
+          '<button class="cd-tickets-star' + (starred ? ' starred' : '') + '" ' +
+                  'data-id="' + t.id + '" ' +
+                  'title="' + (starred ? 'Remove from Today' : 'Add to Today') + '" type="button">' +
+            (starred ? '★' : '☆') +
+          '</button></td>';
+      }
+
       return '<tr data-id="' + t.id + '"' +
         (t.status === 'closed' ? ' class="is-closed"' : '') + '>' +
+        starCell +
         '<td><a class="cd-tickets-num" href="/command-deck/tickets/' + t.id + '/">' + escHtml(t.ticket_number) + '</a></td>' +
         '<td><a class="cd-tickets-title-link" href="/command-deck/tickets/' + t.id + '/">' + escHtml(t.title) + '</a></td>' +
         '<td>' + customerCell + '</td>' +
@@ -342,6 +359,26 @@
         '<td><a class="cd-btn ghost sm" href="/command-deck/tickets/' + t.id + '/">OPEN</a></td>' +
         '</tr>';
     }).join('');
+
+    // Wire star toggles
+    body.querySelectorAll('.cd-tickets-star').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-id');
+        var was = btn.classList.contains('starred');
+        btn.classList.toggle('starred', !was);
+        btn.textContent = !was ? '★' : '☆';
+        btn.title = !was ? 'Remove from Today' : 'Add to Today';
+        var fd = new FormData(); fd.append('ticket_id', id);
+        fetch('/today/star', { method: 'POST', credentials: 'same-origin', body: fd })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (!d.success) {
+              btn.classList.toggle('starred', was);
+              btn.textContent = was ? '★' : '☆';
+            }
+          });
+      });
+    });
   }
 
   function load() {
