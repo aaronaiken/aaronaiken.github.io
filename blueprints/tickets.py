@@ -93,7 +93,7 @@ def tickets_index():
 	conn = get_db()
 	# Lookups for filter pills + ticket form
 	customer_groups = conn.execute(
-		'SELECT id, name, color FROM customer_groups WHERE is_active = 1 '
+		'SELECT id, name, color, default_project_id FROM customer_groups WHERE is_active = 1 '
 		'ORDER BY sort_order ASC, name ASC'
 	).fetchall()
 	ticket_types = conn.execute(
