@@ -113,6 +113,7 @@ def tickets_index():
 		FROM projects
 		WHERE project_type IN ('work_subproject', 'personal')
 		  AND is_private = 0
+		  AND archived_at IS NULL
 		ORDER BY title ASC
 	''').fetchall()
 	conn.close()
@@ -264,6 +265,7 @@ def ticket_detail(ticket_id):
 		FROM projects
 		WHERE project_type IN ('work_subproject', 'personal')
 		  AND is_private = 0
+		  AND archived_at IS NULL
 		ORDER BY title ASC
 	''').fetchall()
 	time_categories = conn.execute(

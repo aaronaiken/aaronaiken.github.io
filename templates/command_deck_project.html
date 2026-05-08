@@ -64,10 +64,17 @@
       </div>
       {% endif %}
 
+      {% if project.archived_at %}
+      <div class="cd-archived-banner">
+        <span><strong>// ARCHIVED</strong> — this project is hidden from active views. Time entries, tickets, meetings, and mileage still work.</span>
+        <button type="button" class="cd-btn ghost sm" id="unarchiveBannerBtn">UNARCHIVE</button>
+      </div>
+      {% endif %}
+
       <!-- PROJECT TITLE + META -->
       <div class="cd-flex-between cd-mb-sm">
         <div>
-          <h1 class="cd-page-title" id="projectTitle">
+          <h1 class="cd-page-title{% if project.archived_at %} is-archived{% endif %}" id="projectTitle">
             {{ project.title }}
             {% if project.tracking_enabled %}
               <span class="cd-tracking-icon cd-title-icon" title="Time tracking enabled">⏱</span>
@@ -564,7 +571,9 @@
             ⏱ TIME TRACKING
           </label>
         </div>
-    <div class="cd-modal-actions">
+    <div class="cd-modal-actions cd-project-edit-actions">
+      <button class="cd-btn ghost cd-project-archive-btn" id="editArchiveBtn">{% if project.archived_at %}UNARCHIVE PROJECT{% else %}ARCHIVE PROJECT{% endif %}</button>
+      <span class="cd-project-edit-spacer"></span>
       <button class="cd-btn ghost" id="editCancelBtn">CANCEL</button>
       <button class="cd-btn primary" id="editConfirmBtn">SAVE</button>
     </div>
@@ -1266,6 +1275,20 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
   document.getElementById('editModal').addEventListener('click',function(e){
     if(e.target===this) this.classList.remove('open');
   });
+  // Archive toggle — same endpoint handles archive + unarchive
+  function toggleArchive() {
+    if (!confirm({% if project.archived_at %}'Restore this project to active?'{% else %}'Archive this project? It will hide from active views; data is preserved and can be restored.'{% endif %})) return;
+    fetch(`/command-deck/projects/${PROJECT_SLUG}/archive`, {
+      method: 'POST', credentials: 'same-origin'
+    }).then(r => r.json()).then(d => {
+      if (d.success) window.location.reload();
+    });
+  }
+  var archiveBtn = document.getElementById('editArchiveBtn');
+  if (archiveBtn) archiveBtn.addEventListener('click', toggleArchive);
+  var unarchiveBanner = document.getElementById('unarchiveBannerBtn');
+  if (unarchiveBanner) unarchiveBanner.addEventListener('click', toggleArchive);
+
   document.getElementById('editConfirmBtn').addEventListener('click', async function(){
     const title=document.getElementById('editTitle').value.trim();
     const desc=document.getElementById('editDesc').value.trim();

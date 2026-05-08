@@ -228,7 +228,7 @@ def time_start():
 
 	conn = get_db()
 	project = conn.execute(
-		'SELECT id, project_type FROM projects WHERE id = ?', (project_id,)
+		'SELECT id, project_type, archived_at FROM projects WHERE id = ?', (project_id,)
 	).fetchone()
 	if not project:
 		conn.close()
@@ -239,6 +239,12 @@ def time_start():
 			'error': 'project_not_trackable',
 			'project_type': project['project_type'],
 		}), 400
+	# Don't allow new timers on archived projects. Existing running timers
+	# keep ticking (we don't auto-stop them on archive); the user just can't
+	# start a fresh one.
+	if project['archived_at']:
+		conn.close()
+		return jsonify({'error': 'project_archived'}), 400
 
 	# Phase 1.5 — task_id must point to a task on this project
 	if task_id:
@@ -699,6 +705,7 @@ def time_projects():
 		FROM projects
 		WHERE project_type = 'work_area'
 		  AND is_private = 0
+		  AND archived_at IS NULL
 		ORDER BY title ASC
 	''').fetchall()
 	out = {'areas': [], 'personal': []}
@@ -709,6 +716,7 @@ def time_projects():
 			WHERE project_type = 'work_subproject'
 			  AND parent_project_id = ?
 			  AND is_private = 0
+			  AND archived_at IS NULL
 			ORDER BY updated DESC, title ASC
 		''', (a['id'],)).fetchall()
 		out['areas'].append({
@@ -724,6 +732,7 @@ def time_projects():
 		WHERE project_type = 'personal'
 		  AND is_private = 0
 		  AND tracking_enabled = 1
+		  AND archived_at IS NULL
 		ORDER BY updated DESC, title ASC
 	''').fetchall()
 	out['personal'] = [dict(p) for p in personals]

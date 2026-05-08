@@ -48,8 +48,15 @@
     <div class="cd-content">
 
       <div class="cd-flex-between cd-mb">
-        <h1 class="cd-page-title">Projects</h1>
-        <button class="cd-btn primary" id="newProjectBtn">+ NEW PROJECT</button>
+        <h1 class="cd-page-title">Projects{% if include_archived %} <span class="cd-projects-archived-mode">// archived view</span>{% endif %}</h1>
+        <div class="cd-projects-actions">
+          {% if include_archived %}
+            <a class="cd-btn ghost sm" href="/command-deck/projects/">← back to active</a>
+          {% else %}
+            <a class="cd-btn ghost sm" href="/command-deck/projects/?archived=1">show archived</a>
+            <button class="cd-btn primary" id="newProjectBtn">+ NEW PROJECT</button>
+          {% endif %}
+        </div>
       </div>
 
       <!-- WORK / PERSONAL TABS -->
