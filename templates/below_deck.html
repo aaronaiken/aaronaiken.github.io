@@ -120,7 +120,7 @@
         {% set open_tasks = tasks | selectattr('status', 'equalto', 'open') | list %}
         {% if open_tasks %}
             {% for task in open_tasks %}
-            <li class="bd-item" data-id="{{ task.id }}" draggable="true">
+            <li class="bd-item" id="task-{{ task.id }}" data-id="{{ task.id }}" draggable="true">
                 <div class="bd-drop-indicator"></div>
                 <span class="bd-handle" title="Hold to reorder">⠿</span>
                 <button class="bd-check" onclick="bdComplete('{{ task.id }}')" title="Done"></button>
