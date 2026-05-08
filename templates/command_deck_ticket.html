@@ -35,6 +35,11 @@
       <span class="cd-breadcrumb-sep">›</span>
       <span class="cd-breadcrumb-tail">{{ ticket.ticket_number }}</span>
       <span class="cd-breadcrumb-actions">
+        {% if ticket.status != 'closed' %}
+          <button class="cd-ticket-today-btn{% if ticket.today %} starred{% endif %}"
+                  id="ticketTodayBtn" type="button"
+                  title="{% if ticket.today %}Remove from Today{% else %}Add to Today{% endif %}">{% if ticket.today %}★ TODAY{% else %}☆ TODAY{% endif %}</button>
+        {% endif %}
         <button class="cd-btn ghost sm" id="ticketDeleteBtn" type="button">DELETE</button>
       </span>
     </div>
@@ -444,6 +449,26 @@ const TICKET_LIFETIME_SECONDS = {{ lifetime_seconds | tojson }};
       if (d.success) window.location.href = '/command-deck/tickets/';
     });
   });
+
+  // ---- TODAY toggle ----
+  var todayBtn = document.getElementById('ticketTodayBtn');
+  if (todayBtn) {
+    todayBtn.addEventListener('click', function () {
+      var was = todayBtn.classList.contains('starred');
+      todayBtn.classList.toggle('starred', !was);
+      todayBtn.textContent = !was ? '★ TODAY' : '☆ TODAY';
+      todayBtn.title = !was ? 'Remove from Today' : 'Add to Today';
+      var fd = new FormData(); fd.append('ticket_id', TICKET_ID);
+      fetch('/today/star', { method: 'POST', credentials: 'same-origin', body: fd })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d.success) {
+            todayBtn.classList.toggle('starred', was);
+            todayBtn.textContent = was ? '★ TODAY' : '☆ TODAY';
+          }
+        });
+    });
+  }
 
   // ---- ⏱ TIMER button + lifetime + today tag ----
   function fmtLifetime() {
