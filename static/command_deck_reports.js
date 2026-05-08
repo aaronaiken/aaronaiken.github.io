@@ -360,9 +360,12 @@
 					? `${tNum} — ${escapeHtml(e.ticket_title)}`
 					: tNum;
 			}
-			const categoryCell = e.time_category_name
+			// Click-to-edit category: open an inline <select> with all active
+			// categories so retroactive classification stays cheap.
+			const catLabel = e.time_category_name
 				? `<span class="cd-reports-cat-dot" style="background:${e.time_category_color || 'rgba(212,136,10,0.55)'}"></span>${escapeHtml(e.time_category_name)}`
-				: '<span class="cd-text-dim">—</span>';
+				: '<span class="cd-text-dim">— set —</span>';
+			const categoryCell = `<button type="button" class="cd-reports-cat-edit" data-entry-id="${e.id}" data-cat-id="${e.time_category_id || ''}" title="Set / change category">${catLabel}</button>`;
 			const runningCls = e.running ? ' is-running' : '';
 			const runningGlyph = e.running ? ' <span class="cd-reports-running-dot" title="still running"></span>' : '';
 			// Click-to-edit on stopped entries; running entries stay static.
@@ -392,6 +395,65 @@
 				openTimeEditor(btn);
 			});
 		});
+		tbody.querySelectorAll('.cd-reports-cat-edit').forEach((btn) => {
+			btn.addEventListener('click', (ev) => {
+				ev.stopPropagation();
+				openCategoryEditor(btn);
+			});
+		});
+	}
+
+	let categoriesCache = null;
+	async function getCategories() {
+		if (categoriesCache) return categoriesCache;
+		try {
+			const r = await fetch('/command-deck/lookups/time_categories', { credentials: 'same-origin' });
+			const data = await r.json();
+			categoriesCache = data.rows || [];
+		} catch (_e) {
+			categoriesCache = [];
+		}
+		return categoriesCache;
+	}
+
+	async function openCategoryEditor(triggerBtn) {
+		const entryId = triggerBtn.getAttribute('data-entry-id');
+		const currentId = triggerBtn.getAttribute('data-cat-id') || '';
+		const cats = await getCategories();
+
+		const wrap = document.createElement('span');
+		wrap.className = 'cd-reports-cat-editor';
+		const opts = ['<option value="">— none —</option>']
+			.concat(cats.map((c) =>
+				`<option value="${c.id}"${String(c.id) === currentId ? ' selected' : ''}>${escapeHtml(c.name)}</option>`
+			));
+		wrap.innerHTML = `<select class="cd-reports-cat-select">${opts.join('')}</select>`;
+		triggerBtn.replaceWith(wrap);
+
+		const sel = wrap.querySelector('select');
+		const close = () => load();
+		const save = async () => {
+			sel.disabled = true;
+			try {
+				const r = await fetch(`/time/${entryId}/update`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					credentials: 'same-origin',
+					body: JSON.stringify({ time_category_id: sel.value || null }),
+				});
+				if (r.ok) load();
+				else { sel.disabled = false; alert('Could not save.'); }
+			} catch (_e) {
+				sel.disabled = false;
+				alert('Could not save.');
+			}
+		};
+		sel.addEventListener('change', save);
+		sel.addEventListener('blur', close);
+		sel.addEventListener('keydown', (ev) => {
+			if (ev.key === 'Escape') { ev.preventDefault(); close(); }
+		});
+		sel.focus();
 	}
 
 	// Inline start/end time edit on stopped entries. Same UX as the
