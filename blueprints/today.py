@@ -207,6 +207,17 @@ def _today_autoclear(conn):
 		      )
 		  )
 	''', (cutoff_utc,))
+	# Tickets — clear today when status='closed' AND closed_date < cutoff.
+	# Mirrors the task pattern (completed + completed_date). Closed tickets
+	# from earlier today survive until 4am the next morning so Aaron can
+	# review what landed today before they roll off the list.
+	conn.execute('''
+		UPDATE tickets SET today = 0
+		WHERE today = 1
+		  AND status = 'closed'
+		  AND closed_date IS NOT NULL
+		  AND closed_date < ?
+	''', (cutoff_et,))
 
 	# Phase 2.4 — recurrence-spawn pass. For each recurring block whose cycle
 	# boundary has passed since last_reset_at, archive the current cycle and
@@ -291,8 +302,11 @@ def today_count():
 	block_count = conn.execute(
 		"SELECT COUNT(*) as cnt FROM blocks WHERE today = 1"
 	).fetchone()['cnt']
+	ticket_count = conn.execute(
+		"SELECT COUNT(*) as cnt FROM tickets WHERE today = 1 AND status != 'closed'"
+	).fetchone()['cnt']
 	conn.close()
-	return jsonify({'count': task_count + item_count + block_count})
+	return jsonify({'count': task_count + item_count + block_count + ticket_count})
 
 
 @today_bp.route('/today/data')
@@ -386,6 +400,68 @@ def today_data():
 			today_blocks_done.append(d)
 		else:
 			today_blocks_open.append(d)
+
+	# Tickets — starred non-closed go in today_open; starred closed go in
+	# today_done (post-resolution limbo until 4am autoclear). The slim panel
+	# treats ticket rows as navigation-only (no inline complete button —
+	# closing requires a resolution prompt).
+	today_tickets_open = conn.execute('''
+		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today,
+		       t.project_id,
+		       p.title AS project_title, p.slug AS project_slug,
+		       parent.id AS area_id, parent.title AS area_title,
+		       parent.area_color AS area_color,
+		       cg.name AS customer_group_name,
+		       c.name AS customer_name,
+		       tt.name AS type_name, tt.color AS type_color
+		FROM tickets t
+		LEFT JOIN projects p             ON t.project_id = p.id
+		LEFT JOIN projects parent        ON p.parent_project_id = parent.id
+		LEFT JOIN customer_groups cg     ON t.customer_group_id = cg.id
+		LEFT JOIN customers c            ON t.customer_id = c.id
+		LEFT JOIN ticket_types tt        ON t.type_id = tt.id
+		WHERE t.today = 1 AND t.status != 'closed'
+		ORDER BY (t.priority = 'urgent') DESC, t.updated DESC
+	''').fetchall()
+	today_tickets_done = conn.execute('''
+		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today,
+		       t.project_id, t.closed_date,
+		       p.title AS project_title, p.slug AS project_slug,
+		       parent.id AS area_id, parent.title AS area_title,
+		       parent.area_color AS area_color,
+		       cg.name AS customer_group_name,
+		       c.name AS customer_name,
+		       tt.name AS type_name, tt.color AS type_color
+		FROM tickets t
+		LEFT JOIN projects p             ON t.project_id = p.id
+		LEFT JOIN projects parent        ON p.parent_project_id = parent.id
+		LEFT JOIN customer_groups cg     ON t.customer_group_id = cg.id
+		LEFT JOIN customers c            ON t.customer_id = c.id
+		LEFT JOIN ticket_types tt        ON t.type_id = tt.id
+		WHERE t.today = 1 AND t.status = 'closed'
+		ORDER BY t.closed_date DESC
+	''').fetchall()
+
+	# All non-closed tickets (browseable list for the master picker on /today/)
+	# — top-level group like Below Deck, sorted urgent-first then recency.
+	tickets_browse = conn.execute('''
+		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today,
+		       t.project_id,
+		       p.title AS project_title, p.slug AS project_slug,
+		       parent.title AS area_title,
+		       parent.area_color AS area_color,
+		       cg.name AS customer_group_name,
+		       c.name AS customer_name,
+		       tt.name AS type_name, tt.color AS type_color
+		FROM tickets t
+		LEFT JOIN projects p             ON t.project_id = p.id
+		LEFT JOIN projects parent        ON p.parent_project_id = parent.id
+		LEFT JOIN customer_groups cg     ON t.customer_group_id = cg.id
+		LEFT JOIN customers c            ON t.customer_id = c.id
+		LEFT JOIN ticket_types tt        ON t.type_id = tt.id
+		WHERE t.status != 'closed'
+		ORDER BY (t.priority = 'urgent') DESC, t.updated DESC
+	''').fetchall()
 
 	# Master browse — Below Deck (project_id NULL) +
 	# per-area groups for work sub-projects + Personal group.
@@ -489,18 +565,25 @@ def today_data():
 		d['kind'] = 'block'
 		return d
 
+	def _serialize_ticket(row):
+		d = dict(row)
+		d['kind'] = 'ticket'
+		return d
+
 	return jsonify({
-		# Mixed lists — kind='task' / 'item' / 'block' on each entry.
+		# Mixed lists — kind='task' / 'item' / 'block' / 'ticket' on each entry.
 		# Each carries area_title + area_color when under a sub-project.
 		'today_open': (
 			[_serialize_task(r) for r in today_tasks_open] +
 			[_serialize_item(r) for r in today_items_open] +
-			[_serialize_block(r) for r in today_blocks_open]
+			[_serialize_block(r) for r in today_blocks_open] +
+			[_serialize_ticket(r) for r in today_tickets_open]
 		),
 		'today_done': (
 			[_serialize_task(r) for r in today_tasks_done] +
 			[_serialize_item(r) for r in today_items_done] +
-			[_serialize_block(r) for r in today_blocks_done]
+			[_serialize_block(r) for r in today_blocks_done] +
+			[_serialize_ticket(r) for r in today_tickets_done]
 		),
 		'below_deck': [dict(t) for t in below_deck_tasks],
 		# Phase 2.2 — master browse grouped by parent area for sub-projects;
@@ -508,6 +591,10 @@ def today_data():
 		# top-level group above all of this.
 		'area_groups': area_groups,
 		'personal_projects': personal_projects,
+		# Tickets — top-level browseable list of non-closed tickets, parallel
+		# to below_deck. Surfaces in /today/ as its own panel with star buttons
+		# so Aaron can pick which tickets he intends to work on today.
+		'tickets_browse': [dict(t) for t in tickets_browse],
 		# Backward-compat: legacy 'projects' field kept for any consumer
 		# still expecting flat per-project shape. Equals area_groups
 		# flattened + personal_projects appended.
@@ -519,10 +606,11 @@ def today_data():
 
 @today_bp.route('/today/star', methods=['POST'])
 def today_star():
-	"""Toggle the today flag on a task OR a checklist item OR a checklist block.
+	"""Toggle the today flag on a task / checklist item / checklist block / ticket.
 
 	Phase 2.1: accepts task_id or item_id.
-	Phase 2.2: also accepts block_id. All three mutually exclusive.
+	Phase 2.2: also accepts block_id.
+	Tickets: also accepts ticket_id. All four mutually exclusive.
 	Form-encoded for parity with existing star UIs; fields picked up via
 	request.form. 400 if zero or 2+ fields, 404 if not found."""
 	if not is_authenticated():
@@ -531,12 +619,13 @@ def today_star():
 	task_id = request.form.get('task_id') or request.form.get('id')  # legacy fallback = task
 	item_id = request.form.get('item_id')
 	block_id = request.form.get('block_id')
+	ticket_id = request.form.get('ticket_id')
 
-	provided = [x for x in (task_id, item_id, block_id) if x]
+	provided = [x for x in (task_id, item_id, block_id, ticket_id) if x]
 	if len(provided) > 1:
-		return jsonify({'error': 'one_of_task_item_or_block_only'}), 400
+		return jsonify({'error': 'one_of_task_item_block_or_ticket_only'}), 400
 	if not provided:
-		return jsonify({'error': 'task_id_or_item_id_or_block_id_required'}), 400
+		return jsonify({'error': 'task_id_or_item_id_or_block_id_or_ticket_id_required'}), 400
 
 	conn = get_db()
 	if task_id:
@@ -553,8 +642,7 @@ def today_star():
 			return jsonify({'error': 'not_found'}), 404
 		new_today = 0 if row['today'] else 1
 		conn.execute('UPDATE checklist_items SET today = ? WHERE id = ?', (new_today, item_id))
-	else:
-		# block_id
+	elif block_id:
 		row = conn.execute(
 			"SELECT id, today, type FROM blocks WHERE id = ?", (block_id,)
 		).fetchone()
@@ -566,13 +654,24 @@ def today_star():
 			return jsonify({'error': 'block_not_checklist'}), 400
 		new_today = 0 if row['today'] else 1
 		conn.execute('UPDATE blocks SET today = ? WHERE id = ?', (new_today, block_id))
+	else:
+		# ticket_id
+		row = conn.execute(
+			'SELECT id, today FROM tickets WHERE id = ?', (ticket_id,)
+		).fetchone()
+		if not row:
+			conn.close()
+			return jsonify({'error': 'not_found'}), 404
+		new_today = 0 if row['today'] else 1
+		conn.execute('UPDATE tickets SET today = ? WHERE id = ?', (new_today, ticket_id))
 
 	conn.commit()
-	# Combined open count for the badge — tasks + items + blocks
+	# Combined open count for the badge — tasks + items + blocks + tickets
 	count = conn.execute(
 		"SELECT (SELECT COUNT(*) FROM tasks WHERE today = 1 AND status = 'open') + "
 		"       (SELECT COUNT(*) FROM checklist_items WHERE today = 1 AND checked = 0 AND archived_at IS NULL) + "
-		"       (SELECT COUNT(*) FROM blocks WHERE today = 1) "
+		"       (SELECT COUNT(*) FROM blocks WHERE today = 1) + "
+		"       (SELECT COUNT(*) FROM tickets WHERE today = 1 AND status != 'closed') "
 		"AS cnt"
 	).fetchone()['cnt']
 	conn.close()

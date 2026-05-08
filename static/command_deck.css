@@ -5372,3 +5372,45 @@ textarea.cd-ticket-input { min-height: auto; }
   .cd-lookup-section[data-kind="customer_groups"] .cd-lookup-archive,
   .cd-lookup-section[data-kind="customer_groups"] .cd-lookup-restore { grid-area: action; }
 }
+
+/* Tickets index — star column */
+.cd-tickets-table .cd-tickets-star-cell { width: 2em; text-align: center; }
+.cd-tickets-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  font-size: 1rem;
+  line-height: 1;
+  color: rgba(212,136,10,0.25);
+  transition: color 0.15s, transform 0.15s;
+}
+.cd-tickets-star:hover { color: rgba(212,136,10,0.7); transform: scale(1.15); }
+.cd-tickets-star.starred {
+  color: var(--cd-amber);
+  text-shadow: 0 0 8px rgba(212,136,10,0.4);
+}
+
+/* Ticket detail — ☆ TODAY button in the breadcrumb actions */
+.cd-ticket-today-btn {
+  background: none;
+  border: 1px solid var(--cd-border);
+  color: var(--cd-text-dim);
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.16em;
+  padding: 0.3rem 0.65rem;
+  border-radius: 2px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.15s;
+}
+.cd-ticket-today-btn:hover {
+  border-color: var(--cd-amber);
+  color: var(--cd-amber-hi);
+}
+.cd-ticket-today-btn.starred {
+  background: rgba(212, 136, 10, 0.12);
+  border-color: var(--cd-amber);
+  color: var(--cd-amber-hi);
+}

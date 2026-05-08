@@ -159,6 +159,31 @@
   text-transform: uppercase;
   letter-spacing: 0.18em;
 }
+/* Tickets — master row chips inline with the title */
+.today-master-ticket-row {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.today-master-ticket-link {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.today-master-ticket-link:hover { color: var(--cd-amber-hi); }
+.today-master-ticket-num {
+  font-family: var(--cd-font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  color: var(--cd-amber);
+}
+.today-master-ticket-cust {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  color: var(--cd-text-dim);
+  text-transform: uppercase;
+}
 .today-project-subsection {
   margin: 4px 0 10px;
 }
@@ -203,7 +228,8 @@
           data.below_deck || [],
           data.area_groups || [],
           data.personal_projects || [],
-          data.today_open || []
+          data.today_open || [],
+          data.tickets_browse || []
         );
         updateCountLabel((data.today_open || []).length);
       })
@@ -213,24 +239,26 @@
       });
   }
 
-  function renderMasterList(belowDeck, areaGroups, personalProjects, todayOpen) {
-    // Phase 2.1+2.2 — todayOpen mixes tasks/items/blocks. Build per-kind
-    // lookups so the starred-state on master rows is unambiguous.
+  function renderMasterList(belowDeck, areaGroups, personalProjects, todayOpen, ticketsBrowse) {
+    // Phase 2.1+2.2 — todayOpen mixes tasks/items/blocks/tickets. Build
+    // per-kind lookups so the starred-state on master rows is unambiguous.
     var todayTaskIds = {};
     var todayItemIds = {};
     var todayBlockIds = {};
+    var todayTicketIds = {};
     todayOpen.forEach(function(e) {
       var kind = e.kind || 'task';
       if (kind === 'task') todayTaskIds[e.id] = true;
       else if (kind === 'item') todayItemIds[e.id] = true;
       else if (kind === 'block') todayBlockIds[e.id] = true;
+      else if (kind === 'ticket') todayTicketIds[e.id] = true;
     });
 
     function projectHasContent(p) {
       return (p.tasks || []).length > 0 || (p.blocks || []).length > 0;
     }
 
-    var totalThings = belowDeck.length;
+    var totalThings = belowDeck.length + (ticketsBrowse || []).length;
     areaGroups.forEach(function(ag) {
       ag.projects.forEach(function(p) {
         totalThings += (p.tasks || []).length;
@@ -262,6 +290,20 @@
       belowDeck.forEach(function(t) {
         var starred = todayTaskIds[t.id] || t.today == 1;
         html += masterRow('task', t.id, t.title, starred, false);
+      });
+      html += '</div></div>';
+    }
+
+    // Tickets — top-level group of all non-closed tickets, browseable to pick
+    // which ones to work on today. Each row gets a star button + a quick
+    // hop to the ticket detail via the title link.
+    if ((ticketsBrowse || []).length > 0) {
+      html += '<div class="cd-panel cd-mb today-group">';
+      html += '<div class="cd-panel-header"><span class="cd-panel-title">// Tickets</span></div>';
+      html += '<div class="cd-panel-body" style="padding:4px 0;">';
+      ticketsBrowse.forEach(function(t) {
+        var starred = todayTicketIds[t.id] || t.today == 1;
+        html += ticketMasterRow(t, starred);
       });
       html += '</div></div>';
     }
@@ -344,6 +386,38 @@
       '</div>';
   }
 
+  function ticketMasterRow(t, starred) {
+    // Ticket browse row: star + TKT-NNNN + title (link to detail) + status/
+    // priority/customer chips. Title is clickable to navigate; star toggles
+    // today flag like other master rows.
+    var titleCls = 'today-master-title' + (starred ? ' is-starred' : '');
+    var num = t.ticket_number || ('TKT-' + t.id);
+    var status = (t.status || '').replace('_', ' ');
+    var statusCls = 'cd-pill ' + (t.status || 'open').replace('_', '-');
+    var urgentBadge = (t.priority === 'urgent' && t.status !== 'closed')
+      ? ' <span class="cd-pill urgent">urgent</span>' : '';
+    var custLabel = t.customer_name || t.customer_group_name || '';
+    var custBadge = custLabel
+      ? ' <span class="today-master-ticket-cust">' + escHtml(custLabel) + '</span>'
+      : '';
+    var typeBadge = t.type_name
+      ? ' <span class="cd-pill type"' + (t.type_color ? ' style="--type-color:' + t.type_color + '"' : '') + '>' + escHtml(t.type_name) + '</span>'
+      : '';
+    return '<div class="today-master-row today-master-ticket-row" data-id="' + t.id + '" data-kind="ticket">' +
+      '<button class="today-star-btn' + (starred ? ' starred' : '') + '" ' +
+              'data-id="' + t.id + '" data-kind="ticket" ' +
+              'title="' + (starred ? 'Remove from Today' : 'Add to Today') + '">' +
+        (starred ? '★' : '☆') +
+      '</button>' +
+      '<a class="' + titleCls + ' today-master-ticket-link" href="/command-deck/tickets/' + t.id + '/">' +
+        '<span class="today-master-ticket-num">' + escHtml(num) + '</span> ' +
+        escHtml(t.title) +
+      '</a>' +
+      '<span class="' + statusCls + '">' + escHtml(status) + '</span>' +
+      urgentBadge + typeBadge + custBadge +
+      '</div>';
+  }
+
   function starEntity(kind, id, btn) {
     var wasStarred = btn.classList.contains('starred');
     // Optimistic UI
@@ -353,6 +427,7 @@
     var fieldName = 'task_id';
     if (kind === 'item') fieldName = 'item_id';
     else if (kind === 'block') fieldName = 'block_id';
+    else if (kind === 'ticket') fieldName = 'ticket_id';
     fd.append(fieldName, id);
     fetch('/today/star', { method: 'POST', body: fd })
       .then(function(r) { return r.json(); })
