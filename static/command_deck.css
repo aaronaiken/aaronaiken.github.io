@@ -5474,3 +5474,37 @@ textarea.cd-ticket-input { min-height: auto; }
   text-transform: uppercase;
   margin-left: 0.5rem;
 }
+
+/* Reports — click-to-edit category cell */
+.cd-reports-cat-edit {
+  background: none;
+  border: 1px solid transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  border-radius: 2px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s;
+}
+.cd-reports-cat-edit:hover,
+.cd-reports-cat-edit:focus-visible {
+  border-color: var(--cd-amber-lo, rgba(212,136,10,0.4));
+  background: rgba(212, 136, 10, 0.06);
+  outline: none;
+}
+.cd-reports-cat-edit .cd-text-dim {
+  font-style: italic;
+}
+.cd-reports-cat-editor select {
+  background: var(--cd-bg-surface, rgba(0,0,0,0.6));
+  border: 1px solid var(--cd-amber);
+  color: var(--cd-text);
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
