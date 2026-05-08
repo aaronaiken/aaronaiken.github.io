@@ -16,7 +16,7 @@ import pytz
 from flask import Blueprint, request, jsonify
 
 from helpers.auth import is_authenticated
-from helpers.db import get_db
+from helpers.db import get_db, et_now
 
 
 time_tracking_bp = Blueprint('time_tracking', __name__)
@@ -298,7 +298,7 @@ def time_start():
 	# default category. The caller can still override by passing one.
 	if ticket_id:
 		ticket = conn.execute(
-			'SELECT id, project_id, time_category_id FROM tickets WHERE id = ?', (ticket_id,)
+			'SELECT id, project_id, status, time_category_id FROM tickets WHERE id = ?', (ticket_id,)
 		).fetchone()
 		if not ticket:
 			conn.close()
@@ -320,6 +320,15 @@ def time_start():
 			).fetchone()
 			if cat and cat['is_active']:
 				time_category_id = ticket['time_category_id']
+		# Auto-advance ticket status: starting a timer means Aaron is engaging
+		# with the ticket, so bump open/pending → in_progress. Don't touch
+		# tickets that are already in_progress (no-op) or closed (don't auto-
+		# reopen — reopening is an explicit user action).
+		if ticket['status'] in ('open', 'pending'):
+			conn.execute(
+				"UPDATE tickets SET status = 'in_progress', updated = ? WHERE id = ?",
+				(et_now(), ticket_id)
+			)
 
 	# Time category is just a label — validate existence + active state. Doesn't
 	# need to relate to project / ticket; user picks freely.
