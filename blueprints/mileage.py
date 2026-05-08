@@ -165,6 +165,7 @@ def mileage_index():
 		FROM projects
 		WHERE project_type IN ('work_subproject', 'personal')
 		  AND is_private = 0
+		  AND archived_at IS NULL
 		ORDER BY title ASC
 	''').fetchall()
 
@@ -235,6 +236,7 @@ def _form_context(conn, entry=None):
 		FROM projects
 		WHERE project_type IN ('work_subproject', 'personal')
 		  AND is_private = 0
+		  AND archived_at IS NULL
 		ORDER BY title ASC
 	''').fetchall()
 	settings_row = conn.execute('SELECT * FROM settings WHERE id = 1').fetchone()

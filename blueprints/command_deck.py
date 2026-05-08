@@ -44,17 +44,21 @@ command_deck_bp = Blueprint('command_deck', __name__)
 
 # ---- Project-query helpers (Phase 1 time-tracking) ----
 
-def _fetch_work_areas(conn):
-	"""Work areas with sub-project, open-task, and active-timer counts."""
-	return conn.execute('''
+def _fetch_work_areas(conn, include_archived=False):
+	"""Work areas with sub-project, open-task, and active-timer counts.
+	By default filters archived areas; pass include_archived=True to surface
+	them in the projects-list "show archived" view."""
+	sql = '''
 		SELECT a.id, a.title, a.slug, a.description, a.area_color,
-		       a.is_private, a.created, a.updated, a.is_favorite,
+		       a.is_private, a.created, a.updated, a.is_favorite, a.archived_at,
 		       (SELECT COUNT(*) FROM projects sp
 		        WHERE sp.parent_project_id = a.id
-		          AND sp.project_type = 'work_subproject') AS subproject_count,
+		          AND sp.project_type = 'work_subproject'
+		          AND sp.archived_at IS NULL) AS subproject_count,
 		       (SELECT COUNT(*) FROM tasks t
 		        JOIN projects sp ON t.project_id = sp.id
 		        WHERE sp.parent_project_id = a.id
+		          AND sp.archived_at IS NULL
 		          AND t.status = 'open') AS open_task_count,
 		       (SELECT COUNT(*) FROM time_entries te
 		        JOIN projects sp ON te.project_id = sp.id
@@ -62,12 +66,16 @@ def _fetch_work_areas(conn):
 		          AND te.ended_at IS NULL) AS active_timer_count
 		FROM projects a
 		WHERE a.project_type = 'work_area'
-		ORDER BY a.title ASC
-	''').fetchall()
+	'''
+	if not include_archived:
+		sql += ' AND a.archived_at IS NULL'
+	sql += ' ORDER BY a.title ASC'
+	return conn.execute(sql).fetchall()
 
 
-def _fetch_subprojects(conn, area_id=None, favorites_only=False):
-	"""Sub-projects with parent area joined. Optional filters by area or favorite."""
+def _fetch_subprojects(conn, area_id=None, favorites_only=False, include_archived=False):
+	"""Sub-projects with parent area joined. Optional filters by area or favorite.
+	include_archived=False (default) hides archived; True surfaces them."""
 	sql = '''
 		SELECT sp.*,
 		       parent.id         AS area_id,
@@ -87,6 +95,8 @@ def _fetch_subprojects(conn, area_id=None, favorites_only=False):
 		args.append(area_id)
 	if favorites_only:
 		sql += ' AND sp.is_favorite = 1'
+	if not include_archived:
+		sql += ' AND sp.archived_at IS NULL'
 	sql += ' ORDER BY sp.updated DESC'
 	return conn.execute(sql, args).fetchall()
 
@@ -318,6 +328,8 @@ def cd_dashboard():
 
 	# Personal projects only — work areas + sub-projects flow through
 	# work_areas / favorited_subprojects below. (§3.2 partitioning)
+	# Dashboard never shows archived; archived projects only appear via the
+	# /command-deck/projects/?archived=1 toggle.
 	projects = conn.execute('''
 		SELECT p.*,
 		       (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.status = 'open') AS open_task_count,
@@ -325,6 +337,7 @@ def cd_dashboard():
 		       (SELECT id FROM time_entries WHERE project_id = p.id AND ended_at IS NULL LIMIT 1) AS active_timer_id
 		FROM projects p
 		WHERE p.project_type = 'personal'
+		  AND p.archived_at IS NULL
 		ORDER BY p.updated DESC
 	''').fetchall()
 
@@ -366,8 +379,12 @@ def cd_dashboard():
 @command_deck_bp.route('/command-deck/projects')
 @cd_auth_required
 def cd_projects():
+	"""Projects index. Hides archived by default; the page header has a
+	toggle that flips ?archived=1, which surfaces archived rows alongside
+	active so the user can browse + restore them."""
+	include_archived = request.args.get('archived') == '1'
 	conn = get_db()
-	projects = conn.execute('''
+	personal_sql = '''
 		SELECT p.*,
 		       (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.status = 'open') AS open_task_count,
 		       (SELECT COUNT(*) FROM blocks b WHERE b.project_id = p.id) AS block_count,
@@ -375,10 +392,13 @@ def cd_projects():
 		       (SELECT id FROM time_entries WHERE project_id = p.id AND ended_at IS NULL LIMIT 1) AS active_timer_id
 		FROM projects p
 		WHERE p.project_type = 'personal'
-		ORDER BY p.updated DESC
-	''').fetchall()
-	work_areas = _fetch_work_areas(conn)
-	subprojects = _fetch_subprojects(conn)
+	'''
+	if not include_archived:
+		personal_sql += ' AND p.archived_at IS NULL'
+	personal_sql += ' ORDER BY p.updated DESC'
+	projects = conn.execute(personal_sql).fetchall()
+	work_areas = _fetch_work_areas(conn, include_archived=include_archived)
+	subprojects = _fetch_subprojects(conn, include_archived=include_archived)
 	conn.close()
 	return render_template(
 		'command_deck_projects.html',
@@ -386,6 +406,7 @@ def cd_projects():
 		work_areas=[dict(a) for a in work_areas],
 		subprojects=[dict(s) for s in subprojects],
 		private_projects_enabled=bool(PRIVATE_PROJECTS_PIN),
+		include_archived=include_archived,
 	)
 
 
@@ -725,6 +746,33 @@ def cd_project_delete(slug):
 		conn.commit()
 	conn.close()
 	return redirect(url_for('command_deck.cd_projects'))
+
+
+@command_deck_bp.route('/command-deck/projects/<slug>/archive', methods=['POST'])
+@cd_auth_required
+def cd_project_archive(slug):
+	"""Toggle the project's archive state. Soft-delete pattern — projects
+	with archived_at set are filtered out of active views (dashboard,
+	pickers, etc.) but their data persists. Time entries, tickets, meetings,
+	mileage all keep working with the archived project as a passive parent."""
+	conn = get_db()
+	project = conn.execute('SELECT * FROM projects WHERE slug = ?', (slug,)).fetchone()
+	if not project:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+	now = et_now()
+	new_state = None if project['archived_at'] else now
+	conn.execute(
+		'UPDATE projects SET archived_at = ?, updated = ? WHERE id = ?',
+		(new_state, now, project['id'])
+	)
+	conn.commit()
+	conn.close()
+	return jsonify({
+		'success': True,
+		'archived': bool(new_state),
+		'archived_at': new_state,
+	})
 
 
 @command_deck_bp.route('/command-deck/areas/<slug>/')

@@ -55,6 +55,7 @@ def settings_page():
 		FROM projects
 		WHERE project_type IN ('work_subproject', 'personal')
 		  AND is_private = 0
+		  AND archived_at IS NULL
 		ORDER BY title ASC
 	''').fetchall()
 	conn.close()
