@@ -5414,3 +5414,17 @@ textarea.cd-ticket-input { min-height: auto; }
   border-color: var(--cd-amber);
   color: var(--cd-amber-hi);
 }
+
+/* Today bar drilldown — landing pulse on :target rows */
+@keyframes cd-target-pulse {
+  0%   { background: rgba(212, 136, 10, 0.32); }
+  60%  { background: rgba(212, 136, 10, 0.18); }
+  100% { background: transparent; }
+}
+.cd-task-item:target,
+.cd-checklist-item:target,
+.cd-block:target,
+.bd-item:target {
+  animation: cd-target-pulse 1.6s ease-out;
+  scroll-margin-top: 80px;  /* stay clear of the fixed top bars */
+}
