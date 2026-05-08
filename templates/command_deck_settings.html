@@ -221,6 +221,13 @@
 </div><!-- .cd-shell -->
 
 <script>
+// Cached project list for the customer_groups default-project dropdown.
+// Server already passed `projects` for the existing default_mileage_project_id
+// setting; reuse it client-side.
+const CD_PROJECTS = [
+  {% for p in projects %}{ id: {{ p.id }}, title: {{ p.title | tojson }} }{% if not loop.last %},{% endif %}{% endfor %}
+];
+
 (function () {
   // Below-Deck badge
   fetch('/below-deck/count').then(r=>r.json()).then(d=>{
@@ -327,6 +334,22 @@
       var groupSel = '<select class="cd-input cd-lookup-row-group" data-field="customer_group_id">' + groupOpts + '</select>';
       return '<div class="cd-lookup-row-grid' + (archived ? ' archived' : '') + '">' +
         name + email + groupSel + actions +
+        '</div>';
+    }
+
+    if (kind === 'customer_groups') {
+      // 4-col layout: color + name + default-project select + actions.
+      // Picking a default project here is what makes the new-ticket modal
+      // auto-fill the project field once the group is chosen.
+      var projOpts = '<option value="">— no default project —</option>' +
+        CD_PROJECTS.map(function (p) {
+          return '<option value="' + p.id + '"' +
+            (row.default_project_id == p.id ? ' selected' : '') + '>' +
+            escHtml(p.title) + '</option>';
+        }).join('');
+      var projSel = '<select class="cd-input cd-lookup-row-default-project" data-field="default_project_id">' + projOpts + '</select>';
+      return '<div class="cd-lookup-row-grid' + (archived ? ' archived' : '') + '">' +
+        color + name + projSel + actions +
         '</div>';
     }
 

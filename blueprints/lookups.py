@@ -35,7 +35,7 @@ KINDS = {
 	'customer_groups': {
 		'table': 'customer_groups',
 		'archive_field': 'is_active',
-		'fields': {'name', 'color', 'sort_order'},
+		'fields': {'name', 'color', 'sort_order', 'default_project_id'},
 		'archive_active': '1',
 		'archive_archived': '0',
 		'active_predicate': 'is_active = 1',
@@ -204,6 +204,14 @@ def lookups_update(kind, row_id):
 					updates[field] = int(val)
 				except (ValueError, TypeError):
 					return jsonify({'error': 'invalid_customer_group_id'}), 400
+		elif field == 'default_project_id':
+			if val in (None, '', 'null'):
+				updates[field] = None
+			else:
+				try:
+					updates[field] = int(val)
+				except (ValueError, TypeError):
+					return jsonify({'error': 'invalid_default_project_id'}), 400
 
 	if not updates:
 		return jsonify({'error': 'no_fields'}), 400

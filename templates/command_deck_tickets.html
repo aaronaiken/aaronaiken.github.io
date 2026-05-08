@@ -176,7 +176,7 @@
           <select name="customer_group_id" class="cd-input cd-ticket-input" id="ntGroupSelect">
             <option value="">— none —</option>
             {% for g in customer_groups %}
-              <option value="{{ g.id }}">{{ g.name }}</option>
+              <option value="{{ g.id }}" data-default-project="{{ g.default_project_id or '' }}">{{ g.name }}</option>
             {% endfor %}
           </select>
           <span class="cd-ticket-hint">— auto-fills from customer; override here if needed</span>
@@ -418,7 +418,18 @@
     if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
   });
 
-  // Customer change → reveal new-customer block OR auto-fill group
+  // Helper: when group is set (manually or via customer auto-fill), apply
+  // the group's default project — but only if the project field is empty
+  // (don't clobber a manually-picked project).
+  function applyGroupDefaultProject() {
+    if (!groupSelect.value) return;
+    if (projectSelect.value) return;
+    var gOpt = groupSelect.options[groupSelect.selectedIndex];
+    var def = gOpt && gOpt.dataset.defaultProject;
+    if (def) projectSelect.value = def;
+  }
+
+  // Customer change → reveal new-customer block OR auto-fill group → auto-fill project
   custSelect.addEventListener('change', function () {
     if (custSelect.value === '__add_new__') {
       custNewBlock.removeAttribute('hidden');
@@ -429,8 +440,14 @@
     custNewBlock.setAttribute('hidden', '');
     var opt = custSelect.options[custSelect.selectedIndex];
     var groupId = opt && opt.dataset.groupId;
-    if (groupId) groupSelect.value = groupId;
+    if (groupId) {
+      groupSelect.value = groupId;
+      applyGroupDefaultProject();
+    }
   });
+
+  // Group change (manual) → auto-fill project from group default
+  groupSelect.addEventListener('change', applyGroupDefaultProject);
 
   newCancel.addEventListener('click', function () {
     custNewBlock.setAttribute('hidden', '');
