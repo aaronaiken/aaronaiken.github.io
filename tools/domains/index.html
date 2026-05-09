@@ -1,0 +1,1169 @@
+---
+layout: tool-fullscreen
+title: ASTROMECH // DOMAIN SCANNER
+description: Bulk domain availability checker. Paste a list or sweep a name across TLDs. DNS first, RDAP fallback, honest UNKNOWNs when CORS blocks the truth.
+permalink: /tools/domains/
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASTROMECH // DOMAIN SCANNER</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --bg:        #080a06;
+    --panel:     #0c100a;
+    --panel-2:   #0a0e08;
+    --amber:     #d4880a;
+    --amber-hi:  #f5b332;
+    --amber-lo:  #9a6018;
+    --green:     #4dbb6a;
+    --green-lo:  #2a6b3c;
+    --green-dim: #163d22;
+    --red:       #b8443a;
+    --red-lo:    #6a2a24;
+    --border:    #2e1e08;
+    --border-hi: #4a3210;
+    --text:      #c9b48a;
+    --text-dim:  #7a6840;
+    --scan:      rgba(0,0,0,0.20);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: 18px;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 20px 14px 48px;
+  }
+
+  /* CRT scanlines + vignette + grain */
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 900;
+    background: repeating-linear-gradient(to bottom,
+      transparent 0px, transparent 3px, var(--scan) 3px, var(--scan) 4px);
+  }
+  body::after {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 901;
+    background: radial-gradient(ellipse at 50% 35%, transparent 45%, rgba(0,0,0,0.7) 100%);
+  }
+  .grain {
+    position: fixed; inset: 0; z-index: 902; pointer-events: none; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 180px 180px;
+  }
+
+  .corner { position: fixed; font-size: 0.55rem; color: #1a1408; letter-spacing: 1px; z-index: 5; }
+  .corner.tl { top: 40px; left: 14px; }
+  .corner.br { bottom: 8px; right: 12px; }
+
+  /* HEADER */
+  header {
+    width: 100%; max-width: 880px;
+    display: flex; align-items: baseline; justify-content: space-between;
+    border-bottom: 1px solid var(--border-hi);
+    padding-bottom: 12px; margin-bottom: 18px;
+    flex-wrap: wrap; gap: 10px;
+    position: relative; z-index: 10;
+  }
+  .logo {
+    font-family: 'VT323', monospace; font-weight: 400;
+    font-size: 2.4rem; letter-spacing: 0.04em;
+    color: var(--amber-hi);
+    text-shadow: 0 0 18px rgba(212,136,10,0.5);
+    line-height: 1;
+    animation: amber-breathe 5s ease-in-out infinite;
+  }
+  .logo span { color: var(--amber-lo); }
+  .tagline {
+    font-size: 0.62rem; color: var(--amber-lo);
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  @keyframes amber-breathe {
+    0%,100% { text-shadow: 0 0 18px rgba(212,136,10,0.5); }
+    50%     { text-shadow: 0 0 28px rgba(245,179,50,0.75); }
+  }
+
+  /* BANNER (bootstrap failure) */
+  .banner {
+    width: 100%; max-width: 880px;
+    margin-bottom: 12px; padding: 10px 14px;
+    border: 1px solid var(--red-lo); background: rgba(184,68,58,0.08);
+    color: var(--red); font-size: 0.78rem; letter-spacing: 0.04em;
+    display: none;
+    position: relative; z-index: 10;
+  }
+  .banner.show { display: block; }
+
+  /* MODE TABS */
+  .tabs {
+    width: 100%; max-width: 880px;
+    display: flex; gap: 0;
+    border-bottom: 1px solid var(--border-hi);
+    margin-bottom: 14px;
+    position: relative; z-index: 10;
+  }
+  .tab {
+    background: transparent; border: none; cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem; letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 10px 18px;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--amber-hi);
+    border-bottom-color: var(--amber);
+  }
+
+  /* PANEL */
+  .panel {
+    width: 100%; max-width: 880px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 18px;
+    margin-bottom: 12px;
+    position: relative; z-index: 10;
+  }
+  .pane { display: none; }
+  .pane.active { display: block; }
+
+  .section-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem; letter-spacing: 0.22em;
+    color: var(--amber-lo); text-transform: uppercase;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+
+  /* Paste textarea */
+  textarea#paste-input {
+    width: 100%; min-height: 180px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.95rem; line-height: 1.5;
+    padding: 12px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  textarea#paste-input:focus { border-color: var(--amber-lo); }
+
+  /* Sweep input */
+  .sweep-row {
+    display: flex; gap: 12px; align-items: center;
+    margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .sweep-row label {
+    font-size: 0.7rem; letter-spacing: 0.2em;
+    color: var(--amber-lo); text-transform: uppercase;
+    min-width: 80px;
+  }
+  input#sweep-base {
+    flex: 1; min-width: 180px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--amber-hi);
+    font-family: 'VT323', monospace;
+    font-size: 1.4rem; letter-spacing: 0.02em;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input#sweep-base:focus { border-color: var(--amber-lo); }
+
+  /* TLD chips */
+  .chips {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 14px;
+  }
+  .chip {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem; letter-spacing: 0.06em;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-transform: lowercase;
+  }
+  .chip:hover { border-color: var(--amber-lo); color: var(--text); }
+  .chip.on {
+    background: rgba(212,136,10,0.12);
+    border-color: var(--amber-lo);
+    color: var(--amber-hi);
+  }
+
+  .custom-toggle {
+    display: inline-block; cursor: pointer;
+    font-size: 0.7rem; letter-spacing: 0.08em;
+    color: var(--amber-lo);
+    margin-bottom: 8px;
+  }
+  .custom-toggle:hover { color: var(--amber); }
+  .custom-tld-wrap { display: none; }
+  .custom-tld-wrap.open { display: block; }
+  input#custom-tlds {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    outline: none;
+    margin-top: 4px;
+  }
+  input#custom-tlds:focus { border-color: var(--amber-lo); }
+
+  /* ACTION ROW */
+  .actions {
+    display: flex; gap: 10px; align-items: center;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem; letter-spacing: 0.18em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--amber-lo);
+    color: var(--amber-hi);
+    padding: 10px 22px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .btn:hover {
+    background: rgba(212,136,10,0.15);
+    border-color: var(--amber);
+    box-shadow: 0 0 10px rgba(212,136,10,0.2);
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn.primary {
+    background: rgba(212,136,10,0.18);
+    border-color: var(--amber);
+  }
+  .btn.primary:hover { background: rgba(245,179,50,0.25); }
+  .btn.danger {
+    border-color: var(--red-lo);
+    color: var(--red);
+  }
+  .btn.danger:hover {
+    background: rgba(184,68,58,0.15);
+    border-color: var(--red);
+    box-shadow: 0 0 10px rgba(184,68,58,0.2);
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn:disabled:hover { background: transparent; box-shadow: none; }
+
+  .counter {
+    font-size: 0.78rem; letter-spacing: 0.14em;
+    color: var(--text-dim); text-transform: uppercase;
+    margin-left: auto;
+  }
+  .counter.active { color: var(--amber-hi); }
+
+  /* FILTER BAR */
+  .filter-bar {
+    width: 100%; max-width: 880px;
+    display: none; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 8px;
+    position: relative; z-index: 10;
+  }
+  .filter-bar.show { display: flex; }
+  .pill {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem; letter-spacing: 0.14em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .pill:hover { color: var(--text); border-color: var(--border-hi); }
+  .pill.on.available { color: var(--green); border-color: var(--green-lo); background: rgba(77,187,106,0.08); }
+  .pill.on.taken     { color: var(--red);   border-color: var(--red-lo);   background: rgba(184,68,58,0.08); }
+  .pill.on.unknown   { color: var(--amber); border-color: var(--amber-lo); background: rgba(212,136,10,0.08); }
+
+  /* RESULTS TABLE */
+  .table-wrap {
+    width: 100%; max-width: 880px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    margin-bottom: 12px;
+    max-height: 480px;
+    overflow-y: auto;
+    position: relative; z-index: 10;
+    display: none;
+  }
+  .table-wrap.show { display: block; }
+  table.results {
+    width: 100%; border-collapse: collapse;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  table.results thead {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--panel);
+  }
+  table.results th {
+    text-align: left; padding: 10px 12px;
+    font-size: 0.62rem; letter-spacing: 0.22em;
+    color: var(--amber-lo); text-transform: uppercase;
+    border-bottom: 1px solid var(--border-hi);
+    font-weight: normal;
+  }
+  table.results td {
+    padding: 9px 12px;
+    font-size: 0.86rem;
+    border-bottom: 1px solid #1a1408;
+    vertical-align: middle;
+  }
+  table.results tr:last-child td { border-bottom: none; }
+  table.results tr.row { border-left: 3px solid transparent; }
+  table.results tr.row.taken     { border-left-color: var(--red-lo); }
+  table.results tr.row.taken td.domain { color: var(--text-dim); }
+  table.results tr.row.taken td.status { color: var(--red); }
+  table.results tr.row.available { border-left-color: var(--green); background: rgba(77,187,106,0.04); }
+  table.results tr.row.available td.domain { color: var(--green); text-shadow: 0 0 8px rgba(77,187,106,0.3); }
+  table.results tr.row.available td.status { color: var(--green); font-weight: bold; }
+  table.results tr.row.unknown   { border-left-color: var(--amber-lo); }
+  table.results tr.row.unknown td.status { color: var(--amber); }
+  table.results tr.row.hide { display: none; }
+  table.results td.domain {
+    cursor: copy;
+    transition: opacity 0.15s;
+  }
+  table.results td.domain:hover { opacity: 0.7; }
+  table.results td.domain.copied {
+    color: var(--green) !important;
+    text-shadow: 0 0 8px var(--green) !important;
+  }
+  table.results td.detail {
+    color: var(--text-dim); font-size: 0.78rem;
+  }
+
+  .empty-state {
+    padding: 30px 20px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+  }
+
+  /* EXPORT ROW */
+  .export-row {
+    width: 100%; max-width: 880px;
+    display: none; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 12px;
+    position: relative; z-index: 10;
+  }
+  .export-row.show { display: flex; }
+  .btn.export {
+    font-size: 0.7rem; padding: 8px 14px;
+  }
+  .btn.export.confirmed {
+    color: var(--green) !important;
+    border-color: var(--green) !important;
+    background: rgba(77,187,106,0.1) !important;
+  }
+  .export-hint {
+    font-size: 0.65rem; color: var(--text-dim);
+    letter-spacing: 0.08em;
+    align-self: center;
+    margin-left: auto;
+  }
+
+  /* TERMINAL LOG */
+  .log-wrap {
+    width: 100%; max-width: 880px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    margin-bottom: 12px;
+    position: relative; z-index: 10;
+  }
+  .log-toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    background: transparent;
+    border: none;
+    width: 100%;
+    cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem; letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--amber-lo);
+    transition: color 0.15s;
+  }
+  .log-toggle:hover { color: var(--amber); }
+  .log-toggle .arrow { display: inline-block; transition: transform 0.2s; }
+  .log-wrap.open .log-toggle .arrow { transform: rotate(90deg); }
+  .log-body {
+    display: none;
+    border-top: 1px solid var(--border);
+    background: #050805;
+    padding: 12px 14px;
+    max-height: 280px;
+    overflow-y: auto;
+    font-family: 'Courier New', 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: var(--green);
+  }
+  .log-wrap.open .log-body { display: block; }
+  .log-line { white-space: pre-wrap; word-break: break-all; }
+  .log-line .ts { color: var(--green-lo); }
+  .log-line.warn { color: var(--amber); }
+  .log-line.err  { color: var(--red); }
+  .log-line.ok   { color: var(--green); }
+
+  /* STATUS BAR */
+  .status-bar {
+    width: 100%; max-width: 880px;
+    border-top: 1px solid var(--border);
+    padding-top: 8px; margin-top: 4px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 0.7rem; color: var(--text-dim);
+    letter-spacing: 0.08em;
+    position: relative; z-index: 10;
+  }
+  .blinker {
+    width: 7px; height: 7px;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: blink 1.2s step-end infinite;
+    flex-shrink: 0;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  .ver { font-size: 0.6rem; color: #1a1408; margin-left: auto; }
+
+  /* LIGHT MODE */
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg:        #faf6ef;
+      --panel:     #f0ead8;
+      --panel-2:   #e8e0c8;
+      --amber:     #7a3e00;
+      --amber-hi:  #5a2e00;
+      --amber-lo:  #a06020;
+      --green:     #1e6e3a;
+      --green-lo:  #4a8c60;
+      --green-dim: #8ab89a;
+      --red:       #a02820;
+      --red-lo:    #c87060;
+      --border:    #c8bfad;
+      --border-hi: #a89878;
+      --text:      #3a2e1a;
+      --text-dim:  #7a6a48;
+    }
+    body { background: var(--bg); color: var(--text); }
+    body::before, body::after { display: none; }
+    .grain { display: none; }
+    .corner { color: #d8d0c0; }
+    .logo {
+      color: var(--amber-hi);
+      text-shadow: none;
+      animation: none;
+    }
+    .logo span { color: var(--amber-lo); }
+    table.results tr.row.available td.domain {
+      text-shadow: none;
+    }
+    .blinker { box-shadow: none; }
+    * { text-shadow: none !important; }
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    .logo { font-size: 1.8rem; }
+    .tagline { display: none; }
+    .tab { font-size: 0.7rem; padding: 8px 12px; }
+    table.results td { font-size: 0.78rem; padding: 8px 8px; }
+    table.results td.detail { font-size: 0.7rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+<div class="corner tl">SYS::DOMAIN_SCANNER_v1.0</div>
+<div class="corner br">DNS//RDAP//STAGE_2_FALLBACK</div>
+
+<header>
+  <div class="logo">ASTRO<span>MECH</span> // SCANNER</div>
+  <div class="tagline">BULK DOMAIN AVAILABILITY · DNS + RDAP</div>
+</header>
+
+<div class="banner" id="banner"></div>
+
+<div class="tabs" role="tablist">
+  <button class="tab active" data-mode="paste" role="tab">[ Paste List ]</button>
+  <button class="tab" data-mode="sweep" role="tab">[ Sweep TLDs ]</button>
+</div>
+
+<div class="panel">
+
+  <!-- PASTE PANE -->
+  <div class="pane active" data-pane="paste">
+    <div class="section-label">// Paste domains, one per line</div>
+    <textarea id="paste-input" spellcheck="false" autocapitalize="off" autocorrect="off"
+      placeholder="example.com&#10;something.io&#10;another-name.app"></textarea>
+  </div>
+
+  <!-- SWEEP PANE -->
+  <div class="pane" data-pane="sweep">
+    <div class="section-label">// Base name + TLD set</div>
+    <div class="sweep-row">
+      <label for="sweep-base">// Base</label>
+      <input id="sweep-base" type="text" spellcheck="false" autocapitalize="off"
+        autocorrect="off" placeholder="aaronaiken">
+    </div>
+
+    <div class="section-label">// TLDs (click to toggle)</div>
+    <div class="chips" id="tld-chips"></div>
+
+    <span class="custom-toggle" id="custom-toggle">▸ Add custom TLDs</span>
+    <div class="custom-tld-wrap" id="custom-tld-wrap">
+      <input id="custom-tlds" type="text" spellcheck="false" autocapitalize="off"
+        autocorrect="off" placeholder="space- or comma-separated, with or without leading dot">
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="actions">
+    <button class="btn primary" id="scan-btn">[ Scan ]</button>
+    <button class="btn danger" id="stop-btn" style="display:none;">[ Stop ]</button>
+    <button class="btn" id="clear-btn">[ Clear ]</button>
+    <span class="counter" id="counter"></span>
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="filter-bar" id="filter-bar">
+  <button class="pill on available" data-filter="available">[ Available <span data-count>0</span> ]</button>
+  <button class="pill on taken"     data-filter="taken">[ Taken <span data-count>0</span> ]</button>
+  <button class="pill on unknown"   data-filter="unknown">[ Unknown <span data-count>0</span> ]</button>
+</div>
+
+<!-- RESULTS TABLE -->
+<div class="table-wrap" id="table-wrap">
+  <table class="results">
+    <thead>
+      <tr>
+        <th style="width:42%">Domain</th>
+        <th style="width:18%">Status</th>
+        <th>Detail</th>
+      </tr>
+    </thead>
+    <tbody id="results-tbody"></tbody>
+  </table>
+</div>
+
+<!-- EXPORT ROW -->
+<div class="export-row" id="export-row">
+  <button class="btn export" id="copy-text-btn" title="Plain list of AVAILABLE domains. Hold Shift to copy all states.">[ Copy as Text ]</button>
+  <button class="btn export" id="copy-md-btn" title="Full table in Markdown.">[ Copy as Markdown ]</button>
+  <button class="btn export" id="dl-csv-btn" title="Download CSV — all rows.">[ Download CSV ]</button>
+  <span class="export-hint">Click a domain to copy · Shift-click "Copy as Text" for all states</span>
+</div>
+
+<!-- TERMINAL LOG -->
+<div class="log-wrap" id="log-wrap">
+  <button class="log-toggle" id="log-toggle">
+    <span><span class="arrow">▸</span> Terminal Log</span>
+    <span id="log-count">0 lines</span>
+  </button>
+  <div class="log-body" id="log-body"></div>
+</div>
+
+<div class="status-bar">
+  <div class="blinker"></div>
+  <div id="status-msg">Ready. DNS-over-HTTPS via Cloudflare · RDAP via IANA bootstrap.</div>
+  <div class="ver">2026.05</div>
+</div>
+
+<script>
+'use strict';
+
+// ── CONSTANTS ───────────────────────────────────────────────────────────────
+const TOOL_NAME      = 'ASTROMECH // DOMAIN SCANNER';
+const DEFAULT_TLDS   = ['com','net','org','io','me','dev','app','co','xyz','ai','so','gg','lol','fm'];
+const PACE_MS        = 200;
+const LARGE_PASTE    = 500;
+const DOH_URL        = 'https://cloudflare-dns.com/dns-query';
+const IANA_BOOTSTRAP = 'https://data.iana.org/rdap/dns.json';
+const LS_MODE        = 'domain-scanner-mode';
+const LS_TLDS        = 'domain-scanner-tlds';
+const LS_LOG_OPEN    = 'domain-scanner-log-open';
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+const state = {
+  mode: 'paste',
+  rdapMap: null,         // tld -> rdap_server_url, or null until bootstrap loads
+  rdapLoaded: false,
+  scanning: false,
+  abortController: null,
+  results: [],           // [{domain, status:'taken'|'available'|'unknown', detail}]
+  selectedTlds: new Set(DEFAULT_TLDS),
+  filters: { available: true, taken: true, unknown: true },
+  logUserScrolled: false,
+};
+
+// ── ELEMENTS ────────────────────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+const els = {
+  banner:       $('banner'),
+  tabs:         document.querySelectorAll('.tab'),
+  panes:        document.querySelectorAll('.pane'),
+  pasteInput:   $('paste-input'),
+  sweepBase:    $('sweep-base'),
+  tldChips:     $('tld-chips'),
+  customToggle: $('custom-toggle'),
+  customWrap:   $('custom-tld-wrap'),
+  customTlds:   $('custom-tlds'),
+  scanBtn:      $('scan-btn'),
+  stopBtn:      $('stop-btn'),
+  clearBtn:     $('clear-btn'),
+  counter:      $('counter'),
+  filterBar:    $('filter-bar'),
+  tableWrap:    $('table-wrap'),
+  tbody:        $('results-tbody'),
+  exportRow:    $('export-row'),
+  copyTextBtn:  $('copy-text-btn'),
+  copyMdBtn:    $('copy-md-btn'),
+  dlCsvBtn:     $('dl-csv-btn'),
+  logWrap:      $('log-wrap'),
+  logToggle:    $('log-toggle'),
+  logBody:      $('log-body'),
+  logCount:     $('log-count'),
+  statusMsg:    $('status-msg'),
+};
+
+// ── LOG ─────────────────────────────────────────────────────────────────────
+function ts() {
+  const d = new Date();
+  return d.toTimeString().slice(0, 8);
+}
+function log(msg, kind) {
+  const line = document.createElement('div');
+  line.className = 'log-line' + (kind ? ' ' + kind : '');
+  line.innerHTML = `<span class="ts">[${ts()}]</span> ${escapeHtml(msg)}`;
+  els.logBody.appendChild(line);
+  const count = els.logBody.children.length;
+  els.logCount.textContent = count + ' line' + (count === 1 ? '' : 's');
+  if (!state.logUserScrolled) {
+    els.logBody.scrollTop = els.logBody.scrollHeight;
+  }
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function setStatus(msg) { els.statusMsg.textContent = msg; }
+
+els.logBody.addEventListener('scroll', () => {
+  const atBottom = els.logBody.scrollHeight - els.logBody.scrollTop - els.logBody.clientHeight < 20;
+  state.logUserScrolled = !atBottom;
+});
+
+// ── MODE TABS ───────────────────────────────────────────────────────────────
+els.tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    const mode = tab.dataset.mode;
+    setMode(mode);
+  });
+});
+
+function setMode(mode) {
+  state.mode = mode;
+  els.tabs.forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+  els.panes.forEach(p => p.classList.toggle('active', p.dataset.pane === mode));
+  try { localStorage.setItem(LS_MODE, mode); } catch (e) {}
+}
+
+// ── TLD CHIPS ───────────────────────────────────────────────────────────────
+function renderChips() {
+  els.tldChips.innerHTML = '';
+  DEFAULT_TLDS.forEach(tld => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip' + (state.selectedTlds.has(tld) ? ' on' : '');
+    chip.textContent = '.' + tld;
+    chip.dataset.tld = tld;
+    chip.addEventListener('click', () => {
+      if (state.selectedTlds.has(tld)) state.selectedTlds.delete(tld);
+      else state.selectedTlds.add(tld);
+      chip.classList.toggle('on');
+      try { localStorage.setItem(LS_TLDS, JSON.stringify([...state.selectedTlds])); } catch (e) {}
+    });
+    els.tldChips.appendChild(chip);
+  });
+}
+
+els.customToggle.addEventListener('click', () => {
+  const open = els.customWrap.classList.toggle('open');
+  els.customToggle.textContent = (open ? '▾' : '▸') + ' Add custom TLDs';
+});
+
+function getSweepTlds() {
+  // Selected defaults + parsed customs (deduped, normalized)
+  const set = new Set();
+  state.selectedTlds.forEach(t => set.add(t));
+  const raw = els.customTlds.value || '';
+  raw.split(/[,\s]+/).forEach(t => {
+    let s = t.trim().toLowerCase().replace(/^\.+/, '').replace(/\.+$/, '');
+    if (s) set.add(s);
+  });
+  // Preserve default-list ordering, then customs in insertion order
+  const ordered = DEFAULT_TLDS.filter(t => set.has(t));
+  const seen = new Set(ordered);
+  set.forEach(t => { if (!seen.has(t)) ordered.push(t); });
+  return ordered;
+}
+
+// ── DOMAIN PARSING ──────────────────────────────────────────────────────────
+function normalizeDomain(line) {
+  return line
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/\/.*$/, '')
+    .replace(/^\.+/, '')
+    .replace(/\.+$/, '');
+}
+function isPlausibleDomain(s) {
+  if (!s || s.length > 253) return false;
+  if (!/\./.test(s)) return false;
+  if (/\.\./.test(s)) return false;
+  if (!/^[a-z0-9.-]+$/.test(s)) return false;
+  if (/^-/.test(s) || /-$/.test(s)) return false;
+  return true;
+}
+function hasNonAscii(s) {
+  return /[^\x00-\x7F]/.test(s);
+}
+function tldOf(domain) {
+  const parts = domain.split('.');
+  return parts[parts.length - 1];
+}
+
+function parsePasteInput(text) {
+  const lines = text.split(/\r?\n/);
+  const out = [];
+  const seen = new Set();
+  let dupes = 0, idn = 0, invalid = 0;
+  lines.forEach((line) => {
+    const raw = line.trim();
+    if (!raw) return;
+    if (hasNonAscii(raw)) { idn++; log('skipped non-ASCII domain: ' + raw + ' (IDN not supported in v1)', 'warn'); return; }
+    const d = normalizeDomain(raw);
+    if (!d) return;
+    if (!isPlausibleDomain(d)) { invalid++; log('skipped invalid line: ' + raw, 'warn'); return; }
+    if (seen.has(d)) { dupes++; return; }
+    seen.add(d);
+    out.push(d);
+  });
+  if (dupes)   log(`dedupe: removed ${dupes} duplicate${dupes===1?'':'s'}`, 'warn');
+  if (invalid) log(`skipped ${invalid} invalid line${invalid===1?'':'s'}`, 'warn');
+  if (idn)     log(`skipped ${idn} IDN domain${idn===1?'':'s'}`, 'warn');
+  return out;
+}
+
+// ── DNS-OVER-HTTPS (Stage 1) ────────────────────────────────────────────────
+async function checkDns(domain, signal) {
+  const url = `${DOH_URL}?name=${encodeURIComponent(domain)}&type=A`;
+  const res = await fetch(url, {
+    headers: { 'Accept': 'application/dns-json' },
+    signal,
+  });
+  if (!res.ok) throw new Error('DoH HTTP ' + res.status);
+  const data = await res.json();
+  // Status: 0 = NOERROR, 3 = NXDOMAIN
+  const aRecords = (data.Answer || []).filter(a => a.type === 1);
+  return {
+    hasA: aRecords.length > 0,
+    count: aRecords.length,
+    nxdomain: data.Status === 3,
+  };
+}
+
+// ── RDAP BOOTSTRAP + LOOKUP (Stage 2) ───────────────────────────────────────
+async function loadRdapBootstrap() {
+  try {
+    log('init: fetching IANA RDAP bootstrap');
+    const res = await fetch(IANA_BOOTSTRAP);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const map = {};
+    let entries = 0;
+    (data.services || []).forEach(([tlds, servers]) => {
+      const server = (servers && servers[0]) ? servers[0].replace(/\/$/, '') : null;
+      if (!server) return;
+      tlds.forEach(t => {
+        map[t.toLowerCase()] = server;
+        entries++;
+      });
+    });
+    state.rdapMap = map;
+    state.rdapLoaded = true;
+    log(`init: loaded RDAP bootstrap (${entries} TLD entries cached)`, 'ok');
+  } catch (e) {
+    state.rdapLoaded = false;
+    state.rdapMap = {};
+    log('init: RDAP bootstrap failed — DNS-only mode active. ' + e.message, 'err');
+    els.banner.textContent = 'RDAP bootstrap failed to load — DNS-only mode active. Some results may be inaccurate.';
+    els.banner.classList.add('show');
+  }
+}
+
+async function checkRdap(domain, signal) {
+  const tld = tldOf(domain);
+  if (!state.rdapLoaded || !state.rdapMap) {
+    return { state: 'unknown', detail: 'RDAP bootstrap unavailable' };
+  }
+  const server = state.rdapMap[tld];
+  if (!server) {
+    return { state: 'unknown', detail: `no RDAP server registered for .${tld}` };
+  }
+  const url = `${server}/domain/${encodeURIComponent(domain)}`;
+  let res;
+  try {
+    res = await fetch(url, { signal });
+  } catch (e) {
+    if (e.name === 'AbortError') throw e;
+    return { state: 'unknown', detail: `RDAP CORS blocked or unreachable for .${tld}` };
+  }
+  if (res.status === 404) return { state: 'available', detail: 'RDAP: 404' };
+  if (res.status === 200) return { state: 'taken', detail: 'RDAP: 200 (registered, no DNS)' };
+  if (res.status === 429) return { state: 'unknown', detail: 'RDAP rate limited — try again later' };
+  return { state: 'unknown', detail: `RDAP: HTTP ${res.status}` };
+}
+
+// ── COMBINED PIPELINE ───────────────────────────────────────────────────────
+async function checkDomain(domain, signal) {
+  // Stage 1: DNS
+  let dns;
+  try {
+    dns = await checkDns(domain, signal);
+  } catch (e) {
+    if (e.name === 'AbortError') throw e;
+    log(`${domain} → DNS error: ${e.message}`, 'err');
+    return { domain, status: 'unknown', detail: 'DNS lookup failed' };
+  }
+  if (dns.hasA) {
+    log(`${domain} → DNS A records found (${dns.count}) → TAKEN`);
+    return { domain, status: 'taken', detail: `DNS: ${dns.count} A record${dns.count===1?'':'s'}` };
+  }
+  log(`${domain} → DNS empty${dns.nxdomain?' (NXDOMAIN)':''} → RDAP query`);
+
+  // Stage 2: RDAP
+  const r = await checkRdap(domain, signal);
+  const arrow = r.state === 'available' ? '→ AVAILABLE' : (r.state === 'taken' ? '→ TAKEN' : '→ UNKNOWN');
+  const kind  = r.state === 'available' ? 'ok' : (r.state === 'unknown' ? 'warn' : null);
+  log(`${domain} → ${r.detail} ${arrow}`, kind);
+  return { domain, status: r.state, detail: r.detail };
+}
+
+// ── SCAN LOOP ───────────────────────────────────────────────────────────────
+async function runScan(domains) {
+  if (!domains.length) {
+    setStatus('No valid domains to scan.');
+    return;
+  }
+  if (domains.length > LARGE_PASTE) {
+    const mins = Math.ceil((domains.length * PACE_MS) / 60000);
+    if (!confirm(`Scan ${domains.length} domains? This will take ~${mins} minute${mins===1?'':'s'}.`)) {
+      log(`scan cancelled by user (${domains.length} domains)`, 'warn');
+      return;
+    }
+  }
+
+  state.scanning = true;
+  state.abortController = new AbortController();
+  state.results = [];
+  els.tbody.innerHTML = '';
+  els.scanBtn.disabled = true;
+  els.stopBtn.style.display = '';
+  els.tableWrap.classList.add('show');
+  els.filterBar.classList.add('show');
+  els.exportRow.classList.add('show');
+  resetCounts();
+
+  log(`scan: ${domains.length} domain${domains.length===1?'':'s'} queued`);
+  setStatus(`Scanning ${domains.length} domain${domains.length===1?'':'s'}...`);
+
+  let completed = 0;
+  for (let i = 0; i < domains.length; i++) {
+    if (!state.scanning) {
+      log(`scan aborted at ${completed}/${domains.length}`, 'warn');
+      break;
+    }
+    updateCounter(i + 1, domains.length);
+    let result;
+    try {
+      result = await checkDomain(domains[i], state.abortController.signal);
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        log(`scan aborted at ${completed}/${domains.length}`, 'warn');
+        break;
+      }
+      result = { domain: domains[i], status: 'unknown', detail: 'unexpected error: ' + e.message };
+    }
+    state.results.push(result);
+    appendRow(result);
+    bumpCount(result.status);
+    completed++;
+    if (i < domains.length - 1 && state.scanning) {
+      await sleep(PACE_MS, state.abortController.signal);
+    }
+  }
+
+  finishScan(completed, domains.length);
+}
+
+function sleep(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(resolve, ms);
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        clearTimeout(t);
+        reject(new DOMException('aborted', 'AbortError'));
+      }, { once: true });
+    }
+  });
+}
+
+function finishScan(completed, total) {
+  state.scanning = false;
+  state.abortController = null;
+  els.scanBtn.disabled = false;
+  els.stopBtn.style.display = 'none';
+  const avail = state.results.filter(r => r.status === 'available').length;
+  setStatus(`Done. ${completed}/${total} checked · ${avail} available.`);
+  els.counter.textContent = `${completed}/${total} done`;
+  els.counter.classList.remove('active');
+  log(`scan complete: ${completed}/${total} · available=${avail}`, 'ok');
+}
+
+function updateCounter(i, total) {
+  els.counter.textContent = `Checking ${i} / ${total}`;
+  els.counter.classList.add('active');
+}
+
+// ── ROW RENDERING ───────────────────────────────────────────────────────────
+function appendRow(r) {
+  const tr = document.createElement('tr');
+  tr.className = 'row ' + r.status;
+  tr.dataset.status = r.status;
+  if (!state.filters[r.status]) tr.classList.add('hide');
+  tr.innerHTML = `
+    <td class="domain" title="Click to copy">${escapeHtml(r.domain)}</td>
+    <td class="status">${r.status.toUpperCase()}</td>
+    <td class="detail">${escapeHtml(r.detail)}</td>
+  `;
+  const domainCell = tr.querySelector('.domain');
+  domainCell.addEventListener('click', () => {
+    copyToClipboard(r.domain).then(() => {
+      domainCell.classList.add('copied');
+      setTimeout(() => domainCell.classList.remove('copied'), 600);
+    });
+  });
+  els.tbody.appendChild(tr);
+}
+
+// ── COUNTS / FILTERS ────────────────────────────────────────────────────────
+const counts = { available: 0, taken: 0, unknown: 0 };
+function resetCounts() {
+  counts.available = counts.taken = counts.unknown = 0;
+  paintCounts();
+}
+function bumpCount(status) {
+  counts[status] = (counts[status] || 0) + 1;
+  paintCounts();
+}
+function paintCounts() {
+  els.filterBar.querySelectorAll('.pill').forEach(pill => {
+    const k = pill.dataset.filter;
+    pill.querySelector('[data-count]').textContent = counts[k];
+  });
+}
+els.filterBar.addEventListener('click', (e) => {
+  const pill = e.target.closest('.pill');
+  if (!pill) return;
+  const k = pill.dataset.filter;
+  state.filters[k] = !state.filters[k];
+  pill.classList.toggle('on', state.filters[k]);
+  applyFilters();
+});
+function applyFilters() {
+  els.tbody.querySelectorAll('tr.row').forEach(tr => {
+    tr.classList.toggle('hide', !state.filters[tr.dataset.status]);
+  });
+}
+
+// ── SCAN / STOP BUTTONS ─────────────────────────────────────────────────────
+els.scanBtn.addEventListener('click', async () => {
+  if (state.scanning) return;
+  let domains = [];
+  if (state.mode === 'paste') {
+    const before = els.logBody.children.length;
+    domains = parsePasteInput(els.pasteInput.value);
+    if (!domains.length && els.logBody.children.length === before) {
+      log('paste: no domains parsed from input', 'warn');
+    }
+  } else {
+    const base = (els.sweepBase.value || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+    if (!base) { log('sweep: base name is empty', 'warn'); setStatus('Enter a base name to sweep.'); return; }
+    const tlds = getSweepTlds();
+    if (!tlds.length) { log('sweep: no TLDs selected', 'warn'); setStatus('Select at least one TLD.'); return; }
+    domains = tlds.map(t => `${base}.${t}`);
+    log(`sweep: ${base} across ${tlds.length} TLD${tlds.length===1?'':'s'}`);
+  }
+  await runScan(domains);
+});
+
+els.stopBtn.addEventListener('click', () => {
+  if (!state.scanning) return;
+  state.scanning = false;
+  if (state.abortController) state.abortController.abort();
+  log('stop requested by user', 'warn');
+});
+
+els.clearBtn.addEventListener('click', () => {
+  if (state.scanning) return;
+  if (state.mode === 'paste') {
+    els.pasteInput.value = '';
+    els.pasteInput.focus();
+  } else {
+    els.sweepBase.value = '';
+    els.customTlds.value = '';
+    els.sweepBase.focus();
+  }
+  state.results = [];
+  els.tbody.innerHTML = '';
+  els.tableWrap.classList.remove('show');
+  els.filterBar.classList.remove('show');
+  els.exportRow.classList.remove('show');
+  els.logBody.innerHTML = '';
+  els.logCount.textContent = '0 lines';
+  state.logUserScrolled = false;
+  resetCounts();
+  els.counter.textContent = '';
+  els.counter.classList.remove('active');
+  setStatus(state.rdapLoaded
+    ? 'Ready. DNS via Cloudflare · RDAP via IANA bootstrap.'
+    : 'Ready. DNS-only — RDAP bootstrap failed.');
+  log('cleared — ready for next scan', 'ok');
+});
+
+// ── EXPORT ──────────────────────────────────────────────────────────────────
+function flashBtn(btn, label) {
+  const old = btn.textContent;
+  btn.textContent = label;
+  btn.classList.add('confirmed');
+  setTimeout(() => { btn.textContent = old; btn.classList.remove('confirmed'); }, 1200);
+}
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (_) {}
+    document.body.removeChild(ta);
+    return true;
+  }
+}
+
+els.copyTextBtn.addEventListener('click', async (e) => {
+  if (!state.results.length) return;
+  const all = e.shiftKey;
+  const rows = state.results.filter(r => all ? true : r.status === 'available');
+  const text = rows.map(r => r.domain).join('\n');
+  await copyToClipboard(text);
+  flashBtn(els.copyTextBtn, all ? '[ Copied ✓ all ]' : `[ Copied ✓ ${rows.length} ]`);
+});
+
+els.copyMdBtn.addEventListener('click', async () => {
+  if (!state.results.length) return;
+  const head = '| Domain | Status | Detail |\n| --- | --- | --- |';
+  const body = state.results.map(r =>
+    `| ${r.domain} | ${r.status.toUpperCase()} | ${r.detail.replace(/\|/g, '\\|')} |`
+  ).join('\n');
+  await copyToClipboard(head + '\n' + body);
+  flashBtn(els.copyMdBtn, '[ Copied ✓ ]');
+});
+
+els.dlCsvBtn.addEventListener('click', () => {
+  if (!state.results.length) return;
+  const esc = (s) => `"${String(s).replace(/"/g, '""')}"`;
+  const csv = ['domain,status,detail',
+    ...state.results.map(r => [esc(r.domain), esc(r.status.toUpperCase()), esc(r.detail)].join(','))
+  ].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2,'0');
+  const fname = `domain-scan-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.csv`;
+  const a = document.createElement('a');
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  flashBtn(els.dlCsvBtn, '[ Downloaded ✓ ]');
+});
+
+// ── LOG TOGGLE + PERSISTENCE ────────────────────────────────────────────────
+els.logToggle.addEventListener('click', () => {
+  const open = els.logWrap.classList.toggle('open');
+  try { localStorage.setItem(LS_LOG_OPEN, open ? '1' : '0'); } catch (e) {}
+});
+
+// ── RESTORE PERSISTED PREFS ─────────────────────────────────────────────────
+function restorePrefs() {
+  try {
+    const m = localStorage.getItem(LS_MODE);
+    if (m === 'paste' || m === 'sweep') setMode(m);
+    const t = localStorage.getItem(LS_TLDS);
+    if (t) {
+      const arr = JSON.parse(t);
+      if (Array.isArray(arr)) state.selectedTlds = new Set(arr);
+    }
+    const lo = localStorage.getItem(LS_LOG_OPEN);
+    if (lo === '1') els.logWrap.classList.add('open');
+  } catch (e) {}
+}
+
+// ── INIT ────────────────────────────────────────────────────────────────────
+(async function init() {
+  restorePrefs();
+  renderChips();
+  log('init: ready', 'ok');
+  await loadRdapBootstrap();
+  setStatus(state.rdapLoaded
+    ? 'Ready. DNS via Cloudflare · RDAP via IANA bootstrap.'
+    : 'Ready. DNS-only — RDAP bootstrap failed.');
+})();
+</script>
+
+</body>
+</html>
