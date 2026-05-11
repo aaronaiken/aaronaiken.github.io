@@ -106,8 +106,8 @@ def _started_at_to_et_day(started_at_iso):
 
 
 def _build_totals(entries, start_date, end_date):
-	"""Walk the entries list once, build all five totals shapes."""
-	by_area, by_project, by_day, by_timesheet, by_category = {}, {}, {}, {}, {}
+	"""Walk the entries list once, build all six totals shapes."""
+	by_area, by_project, by_day, by_timesheet, by_category, by_timesheet_category = {}, {}, {}, {}, {}, {}
 
 	# Pre-seed by_day + by_timesheet day keys so missing days render as 0
 	day_keys = []
@@ -172,12 +172,27 @@ def _build_totals(entries, start_date, end_date):
 			}
 		by_category[cat_key]['seconds'] += secs
 
+		# By Timesheet Category — same shape as by_timesheet, but rows are
+		# categories instead of projects. Lets the timesheet grid be re-pivoted
+		# without re-fetching.
+		if cat_key not in by_timesheet_category:
+			by_timesheet_category[cat_key] = {
+				'title': e.get('time_category_name') or '(uncategorized)',
+				'color': e.get('time_category_color') or '',
+				'days': {k: 0 for k in day_keys},
+				'total': 0,
+			}
+		if day_key in by_timesheet_category[cat_key]['days']:
+			by_timesheet_category[cat_key]['days'][day_key] += secs
+		by_timesheet_category[cat_key]['total'] += secs
+
 	return {
 		'by_area': by_area,
 		'by_project': by_project,
 		'by_day': by_day,
 		'by_timesheet': by_timesheet,
 		'by_category': by_category,
+		'by_timesheet_category': by_timesheet_category,
 		'total_seconds': total_seconds,
 	}
 
@@ -359,5 +374,6 @@ def reports_data():
 			'by_day': totals['by_day'],
 			'by_timesheet': totals['by_timesheet'],
 			'by_category': totals['by_category'],
+			'by_timesheet_category': totals['by_timesheet_category'],
 		},
 	})

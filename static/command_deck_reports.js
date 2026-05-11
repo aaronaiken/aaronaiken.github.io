@@ -15,6 +15,7 @@
 	const state = {
 		preset: localStorage.getItem('reportsPeriod') || 'this-week',
 		group: localStorage.getItem('reportsGroup') || 'area',
+		timesheetBy: localStorage.getItem('reportsTimesheetBy') || 'project', // 'project' | 'category'
 		start: null,   // 'YYYY-MM-DD' (custom mode only — server resolves for presets)
 		end: null,     // 'YYYY-MM-DD' (custom mode only)
 		data: null,    // last fetched payload
@@ -200,12 +201,16 @@
 			return;
 		}
 
-		const projects = Object.entries(data.totals.by_timesheet)
+		const byCategory = state.timesheetBy === 'category';
+		const bucket = byCategory ? data.totals.by_timesheet_category : data.totals.by_timesheet;
+		const rowHead = byCategory ? 'Category' : 'Project';
+
+		const rowsData = Object.entries(bucket || {})
 			.map(([id, info]) => ({ id, ...info }))
 			.filter((p) => p.total > 0)
 			.sort((a, b) => b.total - a.total);
 
-		if (!projects.length) {
+		if (!rowsData.length) {
 			root.innerHTML = '';
 			return;
 		}
@@ -213,15 +218,18 @@
 		const header = `
 			<thead>
 				<tr>
-					<th class="cd-timesheet-row-head">Project</th>
+					<th class="cd-timesheet-row-head">${rowHead}</th>
 					${dayKeys.map((d) => `<th class="cd-num">${escapeHtml(timesheetDayHead(d))}</th>`).join('')}
 					<th class="cd-num cd-timesheet-total-head">Total</th>
 				</tr>
 			</thead>
 		`;
 
-		const rows = projects.map((p) => {
-			const stripe = p.area_color || 'var(--cd-amber-lo)';
+		const rows = rowsData.map((p) => {
+			const stripe = byCategory
+				? (p.color || 'var(--cd-amber-lo)')
+				: (p.area_color || 'var(--cd-amber-lo)');
+			const sub = byCategory ? '' : `<span class="cd-reports-row-sub">${escapeHtml(p.area_title || '')}</span>`;
 			const cells = dayKeys.map((d) => {
 				const secs = p.days[d] || 0;
 				return `<td class="cd-num">${secs > 0 ? fmtSeconds(secs) : ''}</td>`;
@@ -231,7 +239,7 @@
 					<th scope="row" class="cd-timesheet-row-head">
 						<span class="cd-reports-area-stripe" style="background:${stripe}"></span>
 						${escapeHtml(p.title)}
-						<span class="cd-reports-row-sub">${escapeHtml(p.area_title || '')}</span>
+						${sub}
 					</th>
 					${cells}
 					<td class="cd-num cd-timesheet-row-total">${fmtSeconds(p.total)}</td>
@@ -536,6 +544,13 @@
 		document.querySelectorAll('.cd-reports-group').forEach((b) => {
 			b.classList.toggle('active', b.dataset.group === state.group);
 		});
+		const sub = document.getElementById('reportsTimesheetSub');
+		if (sub) {
+			sub.hidden = (state.group !== 'timesheet');
+			sub.querySelectorAll('.cd-reports-subgroup').forEach((b) => {
+				b.classList.toggle('active', b.dataset.timesheetBy === state.timesheetBy);
+			});
+		}
 	}
 
 	function renderPrivacyNote() {
@@ -827,6 +842,14 @@
 		renderRollup();
 	}
 
+	function setTimesheetBy(by) {
+		if (by !== 'project' && by !== 'category') return;
+		state.timesheetBy = by;
+		localStorage.setItem('reportsTimesheetBy', by);
+		renderHeader();
+		if (state.group === 'timesheet' && state.data) renderRollup();
+	}
+
 	document.addEventListener('DOMContentLoaded', () => {
 		document.getElementById('reportsPrev').addEventListener('click', () => shiftPeriod(-1));
 		document.getElementById('reportsNext').addEventListener('click', () => shiftPeriod(+1));
@@ -843,6 +866,9 @@
 		}
 		document.querySelectorAll('.cd-reports-group').forEach((b) => {
 			b.addEventListener('click', () => setGroup(b.dataset.group));
+		});
+		document.querySelectorAll('.cd-reports-subgroup').forEach((b) => {
+			b.addEventListener('click', () => setTimesheetBy(b.dataset.timesheetBy));
 		});
 
 		// Below Deck badge — same dot pattern as the dashboard.
