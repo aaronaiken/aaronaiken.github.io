@@ -108,20 +108,39 @@ def _all_items_checked(conn, block_id):
 	return row['checked'] == row['total']
 
 
-def _spawn_cycle(conn, block_id, cycle_due_date, et_now):
+def _spawn_cycle(conn, block_id, cycle_due_date, et_now, expected_boundary=None):
 	"""Archive current active items + spawn fresh instances with the new due_date.
 
 	Idempotent at the cycle boundary because last_reset_at is bumped after spawn —
 	subsequent autoclear passes the same day skip.
-	Returns the count of spawned items (0 if the block had no structure)."""
+
+	Concurrency (autoclear path, expected_boundary supplied): the bump of
+	last_reset_at runs FIRST as a conditional UPDATE — only the first concurrent
+	caller's WHERE clause matches against committed state; subsequent callers
+	see the bumped value and bail (rowcount=0). Fix for 2026-05-11 where two
+	near-simultaneous /today/data requests each spawned a fresh daily cycle,
+	leaving the first batch as never-checked orphans in history.
+
+	Manual reset path (expected_boundary=None): always proceeds.
+
+	Returns the count of spawned items (0 if claim lost or block had no structure)."""
 	now_iso = et_now.strftime(_ET_FORMAT)
+	if expected_boundary is not None:
+		cur = conn.execute(
+			'UPDATE blocks SET last_reset_at = ? '
+			'WHERE id = ? AND (last_reset_at IS NULL OR last_reset_at < ?)',
+			(now_iso, block_id, expected_boundary)
+		)
+		if cur.rowcount == 0:
+			return 0
 	structure = conn.execute('''
 		SELECT text FROM checklist_items
 		WHERE block_id = ? AND archived_at IS NULL
 		ORDER BY id ASC
 	''', (block_id,)).fetchall()
 	if not structure:
-		# Empty block — bump last_reset_at so we don't loop, return 0
+		# Empty block — bump last_reset_at so we don't loop, return 0.
+		# (Claim path already bumped it; redundant but harmless.)
 		conn.execute('UPDATE blocks SET last_reset_at = ? WHERE id = ?', (now_iso, block_id))
 		return 0
 	conn.execute('''
@@ -133,10 +152,13 @@ def _spawn_cycle(conn, block_id, cycle_due_date, et_now):
 			INSERT INTO checklist_items (block_id, text, due_date, checked, today)
 			VALUES (?, ?, ?, 0, 0)
 		''', (block_id, row['text'], cycle_due_date))
-	conn.execute(
-		'UPDATE blocks SET today = 0, last_reset_at = ? WHERE id = ?',
-		(now_iso, block_id)
-	)
+	if expected_boundary is None:
+		conn.execute(
+			'UPDATE blocks SET today = 0, last_reset_at = ? WHERE id = ?',
+			(now_iso, block_id)
+		)
+	else:
+		conn.execute('UPDATE blocks SET today = 0 WHERE id = ?', (block_id,))
 	return len(structure)
 
 
@@ -239,7 +261,8 @@ def _today_autoclear(conn):
 				continue
 		if b['last_reset_at'] and b['last_reset_at'] >= daily_boundary:
 			continue
-		_spawn_cycle(conn, b['id'], cycle_due_date=now_et.strftime('%Y-%m-%d'), et_now=now_et)
+		_spawn_cycle(conn, b['id'], cycle_due_date=now_et.strftime('%Y-%m-%d'),
+		             et_now=now_et, expected_boundary=daily_boundary)
 
 	# WEEKLY — fires Monday 4am ET, ONLY IF all current items are checked.
 	if today_short == 'Mon' or now_et.hour >= 4:
@@ -257,7 +280,8 @@ def _today_autoclear(conn):
 				continue
 			target_day = (b['recurrence_days'] or 'Fri').split(',')[0].strip() or 'Fri'
 			due = _next_weekday_iso(now_et, target_day)
-			_spawn_cycle(conn, b['id'], cycle_due_date=due, et_now=now_et)
+			_spawn_cycle(conn, b['id'], cycle_due_date=due, et_now=now_et,
+			             expected_boundary=weekly_boundary)
 
 	# MONTHLY — fires 1st of month 4am ET, ONLY IF all current items are checked.
 	monthly_boundary = _et_first_of_month_4am_iso(now_et)
@@ -272,9 +296,38 @@ def _today_autoclear(conn):
 			continue
 		target = (b['recurrence_days'] or '1').strip() or '1'
 		due = _this_month_target_iso(now_et, target)
-		_spawn_cycle(conn, b['id'], cycle_due_date=due, et_now=now_et)
+		_spawn_cycle(conn, b['id'], cycle_due_date=due, et_now=now_et,
+		             expected_boundary=monthly_boundary)
 
 	conn.commit()
+
+
+_AUTOCLEAR_LAST_RUN_TS = 0.0
+_AUTOCLEAR_THROTTLE_SEC = 60
+
+
+def maybe_run_autoclear():
+	"""Run _today_autoclear at most once per minute per worker process.
+
+	Used by app.before_request so the daily/weekly/monthly recurrence cycle
+	fires regardless of which page Aaron lands on after 4am ET. Originally
+	the cycle only ran on /today/data hits, which meant skipping Today
+	(e.g. going straight to a Command Deck project) left yesterday's
+	checked items stuck at the top.
+
+	Race-safe across PA workers because _spawn_cycle's claim-then-spawn
+	makes duplicate fires a no-op (cur.rowcount==0 → bail)."""
+	global _AUTOCLEAR_LAST_RUN_TS
+	import time
+	now = time.time()
+	if now - _AUTOCLEAR_LAST_RUN_TS < _AUTOCLEAR_THROTTLE_SEC:
+		return
+	_AUTOCLEAR_LAST_RUN_TS = now
+	conn = get_db()
+	try:
+		_today_autoclear(conn)
+	finally:
+		conn.close()
 
 
 @today_bp.route('/today/')
