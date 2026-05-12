@@ -164,4 +164,25 @@ app.register_blueprint(tickets_bp)
 app.register_blueprint(lookups_bp)
 
 
+# Global recurrence-cycle trigger. Originally only /today/data fired the
+# autoclear+spawn pass, so going straight to Command Deck after 4am ET left
+# yesterday's checked items stuck at the top of recurring blocks. Now any
+# authenticated request fires it — throttled to once per 60s per worker.
+# Static + healthz are skipped to keep them fast. The race-safe claim in
+# blueprints/today.py:_spawn_cycle makes cross-worker duplicates a no-op.
+from blueprints.today import maybe_run_autoclear
+
+@app.before_request
+def _global_autoclear():
+	path = request.path or ''
+	if path.startswith('/static/') or path == '/healthz':
+		return
+	if not is_authenticated():
+		return
+	try:
+		maybe_run_autoclear()
+	except Exception:
+		pass  # never break a request because of autoclear
+
+
 if __name__ == "__main__": app.run(debug=True)
