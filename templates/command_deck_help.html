@@ -1,0 +1,226 @@
+{# In-app help — keyboard shortcuts, task/today/recurrence rules, gotchas.
+   Content is intentionally inline (no DB, no helpers) so edits ship as
+   normal template changes. Section anchors are deep-linkable. #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Help · Command Deck</title>
+  <link rel="stylesheet" href="/static/command_deck.css">
+</head>
+<body class="command-deck">
+<div class="cd-shell">
+
+  <!-- HEADER -->
+  <header class="cd-header">
+    <div class="cd-header-left">
+      <a href="/command-deck/" class="cd-wordmark">COMMAND DECK</a>
+      <span class="cd-ident">HELP · MANUAL</span>
+    </div>
+    <nav class="cd-header-nav">
+      <a href="/command-deck/" class="cd-nav-link">BRIDGE</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/command-deck/projects/" class="cd-nav-link">PROJECTS</a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/below-deck" class="cd-nav-link">
+        BELOW DECK
+        <span class="cd-bd-badge" id="bdBadge"></span>
+      </a>
+      <span class="cd-nav-sep">·</span>
+      <a href="/today/" class="cd-nav-link">TODAY</a>
+      <span class="cd-nav-sep">·</span>
+      <details class="cd-nav-more">
+        <summary class="cd-nav-link cd-nav-more-trigger">MORE ▾</summary>
+        <div class="cd-nav-more-menu">
+          <a href="/command-deck/reports/" class="cd-nav-link">REPORTS</a>
+          <a href="/command-deck/templates/" class="cd-nav-link">TEMPLATES</a>
+          <a href="/command-deck/meetings/" class="cd-nav-link">MEETINGS</a>
+          <a href="/command-deck/mileage/" class="cd-nav-link">MILEAGE</a>
+          <a href="/command-deck/tickets/" class="cd-nav-link">TICKETS</a>
+          <a href="/command-deck/settings/" class="cd-nav-link">SETTINGS</a>
+          <a href="/command-deck/help/" class="cd-nav-link active">HELP</a>
+        </div>
+      </details>
+      <span class="cd-nav-sep">·</span>
+      <a href="/publish" class="cd-nav-link">COCKPIT</a>
+    </nav>
+  </header>
+
+  {% include 'includes/today_panel.html' %}
+  {% include 'includes/active_timer_strip.html' %}
+
+  <div class="cd-main full-width">
+    <div class="cd-content cd-help-layout">
+
+      <!-- SIDEBAR NAV -->
+      <aside class="cd-help-sidebar">
+        <h2 class="cd-help-sidebar-title">// Help</h2>
+        <nav class="cd-help-nav">
+          <a href="#shortcuts" class="cd-help-nav-link">Keyboard shortcuts</a>
+          <a href="#tasks-today" class="cd-help-nav-link">Tasks &amp; Today</a>
+          <a href="#recurring" class="cd-help-nav-link">Recurring blocks</a>
+          <a href="#tickets" class="cd-help-nav-link">Tickets</a>
+          <a href="#gotchas" class="cd-help-nav-link">Gotchas &amp; FAQ</a>
+        </nav>
+      </aside>
+
+      <!-- CONTENT -->
+      <main class="cd-help-content">
+
+        <section class="cd-panel cd-mb" id="shortcuts">
+          <div class="cd-panel-header"><span class="cd-panel-title">// Keyboard shortcuts</span></div>
+          <div class="cd-panel-body">
+            <p class="cd-help-lede">Most shortcuts work anywhere in Command Deck or the Cockpit. On Mac, <kbd>Ctrl</kbd> is interchangeable with <kbd>⌘</kbd> for the quick switcher; everything else uses <kbd>Ctrl</kbd>.</p>
+
+            <h3 class="cd-help-h3">Global</h3>
+            <table class="cd-help-kbd-table">
+              <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>Open quick switcher — search projects, tasks, tickets, anywhere</td></tr>
+              <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd></td><td>Toggle the Today bar (slim panel at top)</td></tr>
+              <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>Toggle the Scratch pad</td></tr>
+              <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd></td><td>Toggle the Ani panel</td></tr>
+              <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd></td><td>Open PIN modal — unlocks private projects</td></tr>
+              <tr><td><kbd>Esc</kbd></td><td>Close the open modal, panel, or inline editor</td></tr>
+            </table>
+
+            <h3 class="cd-help-h3">Cockpit (publish flow)</h3>
+            <table class="cd-help-kbd-table">
+              <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>U</kbd></td><td>Quick transmission overlay (work + after-dark modes only)</td></tr>
+            </table>
+
+            <h3 class="cd-help-h3">Inline edits</h3>
+            <table class="cd-help-kbd-table">
+              <tr><td><kbd>Enter</kbd></td><td>Submit / save / send. In multiline fields (Huyang chat, descriptions), <kbd>Shift</kbd>+<kbd>Enter</kbd> inserts a newline.</td></tr>
+              <tr><td><kbd>Esc</kbd></td><td>Cancel inline edit and revert</td></tr>
+            </table>
+          </div>
+        </section>
+
+        <section class="cd-panel cd-mb" id="tasks-today">
+          <div class="cd-panel-header"><span class="cd-panel-title">// Tasks &amp; Today</span></div>
+          <div class="cd-panel-body">
+
+            <h3 class="cd-help-h3">Starring (★) for Today</h3>
+            <p>Any task, checklist item, checklist block, or ticket can be starred for Today. Stars are the "I plan to work on this today" signal — they're not commitments, just focus. The Today bar at the top of every page shows your count.</p>
+
+            <h3 class="cd-help-h3">The 4am ET cutoff</h3>
+            <p>Today's list rolls over at <strong>4am Eastern</strong>, not midnight. The rationale is that work nights bleed past midnight, and 4am is the realistic floor for "yesterday is over."</p>
+            <p>At 4am ET, completed items roll off Today into history; items still open carry forward. Specifically:</p>
+            <ul class="cd-help-list">
+              <li><strong>Tasks:</strong> cleared when <code>status = 'completed'</code> AND <code>completed_date</code> is before today's 4am ET.</li>
+              <li><strong>Checklist items:</strong> cleared when <code>checked = 1</code> AND <code>checked_at</code> is before today's 4am ET. Items checked AFTER 4am stay until the next 4am.</li>
+              <li><strong>Blocks:</strong> cleared when every active item is checked AND every check is before the cutoff. Empty starred blocks persist (no surprise removal).</li>
+              <li><strong>Tickets:</strong> cleared when <code>status = 'closed'</code> AND <code>closed_date</code> is before the cutoff.</li>
+            </ul>
+
+            <h3 class="cd-help-h3">When does the rollover actually run?</h3>
+            <p>The autoclear pass runs on any authenticated page load, throttled to once per 60 seconds per worker. So as long as you visit any Command Deck page after 4am, it fires. (Pre-2026-05-12: it only fired on <code>/today/</code> hits, which sometimes left yesterday's items stuck. That's fixed.)</p>
+
+            <h3 class="cd-help-h3">Due dates</h3>
+            <p>Tasks and checklist items have an optional ISO due date. Click the dashed <kbd>+ due</kbd> chip to set one (a native date picker opens). Right-click to clear. Badges color amber as the date approaches and red+uppercase once overdue. Today views sort due-dated rows first chronologically; undated rows keep their natural order beneath.</p>
+            <p>On checklist items, the due-date chip and the ★ are hidden until row hover when neither is set — keeps the row clean. Once a date is set or the item is starred, the relevant chip pins visible.</p>
+          </div>
+        </section>
+
+        <section class="cd-panel cd-mb" id="recurring">
+          <div class="cd-panel-header"><span class="cd-panel-title">// Recurring blocks</span></div>
+          <div class="cd-panel-body">
+            <p>Checklist blocks can recur on a daily / weekly / monthly cadence. The block's pill shows the current cadence; the gear icon edits it; <strong>RESET</strong> fires the next cycle immediately.</p>
+
+            <h3 class="cd-help-h3">Daily — fires every day</h3>
+            <p>At 4am ET on each day in the recurrence set (e.g. Mon–Fri), the autoclear archives the active items <em>as-is</em> (checked or not) and spawns fresh unchecked ones for the new cycle. <strong>Skipping is fine.</strong> The skipped item shows as ☐ in that day's history row — accurate record that it wasn't done — and the next cycle proceeds normally.</p>
+
+            <h3 class="cd-help-h3">Weekly / Monthly — only fire when all items are checked</h3>
+            <p>The cycle won't advance on Monday (weekly) or the 1st (monthly) unless <em>every</em> active item is checked. This is deliberate — partial cycles look ugly in history. The trade-off: <strong>if you skip an item, the next cycle won't spawn.</strong> Options:</p>
+            <ul class="cd-help-list">
+              <li>Go back and check it (most honest)</li>
+              <li>Hit <strong>RESET</strong> on the block header — archives the current cycle as-is and spawns a fresh one (use when you've decided the cycle is done despite the skip)</li>
+            </ul>
+
+            <h3 class="cd-help-h3">History</h3>
+            <p>Each block has a <em>show history</em> toggle under its items. Groups archived items by due_date, descending, last 90 days. Read-only — past cycles can't be re-toggled.</p>
+
+            <h3 class="cd-help-h3">Concurrency safety</h3>
+            <p>The cycle-fire uses an atomic "claim" on <code>last_reset_at</code> — only one worker per cycle boundary can spawn, even if multiple page loads fire the autoclear simultaneously. Pre-2026-05-12 there was a race window that could double-spawn a daily cycle; that's fixed.</p>
+          </div>
+        </section>
+
+        <section class="cd-panel cd-mb" id="tickets">
+          <div class="cd-panel-header"><span class="cd-panel-title">// Tickets</span></div>
+          <div class="cd-panel-body">
+
+            <h3 class="cd-help-h3">Status flow</h3>
+            <p><code>open</code> → <code>pending</code> → <code>in_progress</code> → <code>closed</code>. Reopening is allowed and clears the resolution + closed_date. Status pills on the detail page are direct buttons; closing requires a resolution (server-enforced).</p>
+
+            <h3 class="cd-help-h3">Auto-advance on timer</h3>
+            <p>Starting a timer scoped to a ticket auto-advances <code>open</code> or <code>pending</code> to <code>in_progress</code>. Closed tickets are skipped. Pre-existing <code>in_progress</code> stays.</p>
+
+            <h3 class="cd-help-h3">The four dates</h3>
+            <ul class="cd-help-list">
+              <li><strong>Created</strong> — automatic; when the ticket was entered. Display-only on the detail page.</li>
+              <li><strong>Requested</strong> — when the ask actually landed. Optional; useful when you're catching up on a backlog and "Created" doesn't reflect reality.</li>
+              <li><strong>Due</strong> — when it's expected back. Drives the Today sort and the colored "due …" badge on the index + project page.</li>
+              <li><strong>Closed</strong> — automatic when you close; only shows on the detail page if the ticket is currently closed.</li>
+            </ul>
+
+            <h3 class="cd-help-h3">Today integration</h3>
+            <p>Tickets star for Today the same as tasks. Closed tickets drop off Today at 4am ET (same cutoff rule as tasks). Closed-today stays in the Today list until the next 4am rollover so you can review what landed.</p>
+
+            <h3 class="cd-help-h3">Customer group default project</h3>
+            <p>Customer groups can carry a <em>default project</em>. Picking a group on a new ticket auto-fills the project (one fewer tap on the common case). Override the auto-fill anytime.</p>
+          </div>
+        </section>
+
+        <section class="cd-panel cd-mb" id="gotchas">
+          <div class="cd-panel-header"><span class="cd-panel-title">// Gotchas &amp; FAQ</span></div>
+          <div class="cd-panel-body">
+
+            <h3 class="cd-help-h3">"I checked it yesterday but history shows it unchecked"</h3>
+            <p>If yesterday was before the 2026-05-12 fix, there was a duplicate-spawn race that left orphan unchecked items in history (see KT-command-deck.md). The fix is in; recent history is accurate. Pre-fix orphans can be deleted manually via SQL (see the original fix commit).</p>
+
+            <h3 class="cd-help-h3">"My weekly block didn't roll over Monday"</h3>
+            <p>Weekly + monthly only advance when <em>all</em> items are checked. Either circle back and check the skipped one, or hit the block's <strong>RESET</strong> button to force the next cycle.</p>
+
+            <h3 class="cd-help-h3">"I starred an empty checklist block and it stayed"</h3>
+            <p>Intentional. Empty starred blocks persist through the 4am rollover — the rationale is "the block IS the task, adding items to it is the work." If you want it gone, unstar manually.</p>
+
+            <h3 class="cd-help-h3">"I see a ticket on /today/ even though I closed it"</h3>
+            <p>Closed tickets stay on Today until the next 4am rollover — gives you a window to review what closed today. Same pattern as completed tasks.</p>
+
+            <h3 class="cd-help-h3">"My Today list didn't reset overnight"</h3>
+            <p>The 4am rollover runs on any authenticated page load (throttled to once per 60s per worker). If you haven't loaded a page since 4am, it'll fire the moment you do. There's no separate cron — your visit IS the trigger.</p>
+
+            <h3 class="cd-help-h3">"Two PA workers — does the rollover run twice?"</h3>
+            <p>It tries to. The first worker's <code>UPDATE blocks SET last_reset_at = ? WHERE ... AND last_reset_at &lt; ?</code> wins; the second sees <code>rowcount = 0</code> and bails. Net result: one spawn per cycle, even under load.</p>
+
+            <h3 class="cd-help-h3">"Editing a recurring block's items — does that affect history?"</h3>
+            <p>No. History is built from <em>archived</em> rows, which keep their original text snapshot. Editing live items only affects future cycles.</p>
+
+            <h3 class="cd-help-h3">"Why doesn't the Today count refresh after I star something?"</h3>
+            <p>It should — the star action returns a new count and updates the bar. If it stays stale, refresh the page. Star clicks on the project page and the /today/ master view both refresh the count optimistically.</p>
+
+            <h3 class="cd-help-h3">"Private projects — what's the PIN?"</h3>
+            <p>Set via the <code>PRIVATE_PROJECTS_PIN</code> env var. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> opens the modal; the PIN unlocks for the session.</p>
+
+            <h3 class="cd-help-h3">"Where do I file bugs or feature ideas?"</h3>
+            <p>For now: scratch pad or Below Deck — it's a single-user system. If this ever productizes, that'll change.</p>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="cd-footer">
+    <div class="cd-footer-links">
+      <a href="/command-deck/" class="cd-footer-link">Bridge</a>
+      <a href="/publish" class="cd-footer-link">Cockpit</a>
+      <a href="/below-deck" class="cd-footer-link">Below Deck</a>
+    </div>
+    <span class="cd-footer-ident">YT-1300F · COMMAND DECK · SECURE</span>
+  </footer>
+
+</div>
+</body>
+</html>
