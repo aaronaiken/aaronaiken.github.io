@@ -5185,7 +5185,7 @@ textarea.cd-ticket-input { min-height: auto; }
 }
 .cd-ticket-time-row {
   display: grid;
-  grid-template-columns: 7em 8em 1fr 5em;
+  grid-template-columns: 7em 11em 1fr 5em;
   gap: 0.5rem;
   padding: 0.35rem 0.2rem;
   border-bottom: 1px solid var(--cd-border);
@@ -5203,16 +5203,20 @@ textarea.cd-ticket-input { min-height: auto; }
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
   font-family: var(--cd-font-ui);
   font-size: 0.55rem;
   letter-spacing: 0.1em;
   color: var(--cd-text-dim);
   text-transform: uppercase;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .cd-cat-dot {
   width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
 }
-.cd-ticket-time-desc { color: var(--cd-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-ticket-time-desc { color: var(--cd-text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cd-ticket-time-dur {
   font-variant-numeric: tabular-nums;
   text-align: right;
