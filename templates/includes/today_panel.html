@@ -187,6 +187,29 @@ a.today-row-link:hover { color: var(--cd-amber-hi); }
   color: rgba(212, 136, 10, 0.3);
   white-space: nowrap;
 }
+.today-due-badge {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  color: rgba(212, 136, 10, 0.55);
+  border: 1px solid rgba(212, 136, 10, 0.3);
+  padding: 1px 5px;
+  border-radius: 2px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-transform: lowercase;
+}
+.today-due-badge.due-today {
+  color: #f5b332;
+  border-color: rgba(245, 179, 50, 0.55);
+  background: rgba(245, 179, 50, 0.08);
+}
+.today-due-badge.overdue {
+  color: #cc4040;
+  border-color: rgba(204, 64, 64, 0.55);
+  background: rgba(204, 64, 64, 0.08);
+  text-transform: uppercase;
+}
 /* Phase 2.1 — block-title prefix on item rows in the Today panel */
 .today-task-block-context {
   font-family: 'Share Tech Mono', 'Courier New', monospace;
@@ -394,6 +417,15 @@ a.today-row-link:hover { color: var(--cd-amber-hi); }
     return d.innerHTML;
   }
 
+  function dueBadgeHtml(dueIso) {
+    if (!dueIso) return '';
+    var todayIso = new Date().toISOString().slice(0, 10);
+    var cls = 'today-due-badge';
+    if (dueIso < todayIso) cls += ' overdue';
+    else if (dueIso === todayIso) cls += ' due-today';
+    return '<span class="' + cls + '">due ' + escHtml(dueIso) + '</span>';
+  }
+
   function updateBarCount(n) {
     currentCount = n;
     barCount.textContent = n > 0 ? n : '·';
@@ -495,6 +527,7 @@ a.today-row-link:hover { color: var(--cd-amber-hi); }
       return '<a class="today-task-row today-ticket-row' + (isDone ? ' is-done' : '') + '" data-id="' + entry.id + '" data-kind="ticket" href="/command-deck/tickets/' + entry.id + '/">' +
         btnHtml +
         '<span class="today-task-title">' + titleHtml + '</span>' +
+        dueBadgeHtml(entry.due_date) +
         '<span class="today-task-source">' + escHtml(ticketSource) + '</span>' +
         '</a>';
     }
@@ -555,6 +588,7 @@ a.today-row-link:hover { color: var(--cd-amber-hi); }
     return '<a class="today-task-row today-row-link' + (isDone ? ' is-done' : '') + '" data-id="' + entry.id + '" data-kind="' + kind + '" href="' + rowHref + '">' +
       btnHtml +
       '<span class="today-task-title">' + titleHtml + '</span>' +
+      dueBadgeHtml(entry.due_date) +
       '<span class="today-task-source">' + escHtml(source) + '</span>' +
       '</a>';
   }

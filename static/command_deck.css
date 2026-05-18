@@ -4919,6 +4919,16 @@ button.cd-pill:hover:not(.active) { filter: brightness(1.15); }
 }
 .cd-tickets-title-link:hover { color: var(--cd-amber-hi); }
 
+.cd-tickets-due {
+  font-family: var(--cd-font-ui);
+  font-size: 0.65rem;
+  color: var(--cd-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cd-tickets-due.due-today { color: var(--cd-amber-hi, #f5b332); font-weight: 600; }
+.cd-tickets-due.overdue { color: var(--cd-red, #cc4040); font-weight: 600; }
+
 .cd-tickets-cust { display: inline-flex; flex-direction: column; }
 .cd-tickets-cust em { color: var(--cd-text-dim); font-style: italic; font-size: 0.65rem; }
 .cd-tickets-cust-group {
@@ -5084,6 +5094,23 @@ textarea.cd-ticket-input { min-height: auto; }
   padding: 0.2rem 0.4rem;
   border-radius: 2px;
 }
+.cd-ticket-meta-date {
+  background: transparent;
+  border: 1px solid var(--cd-border);
+  color: var(--cd-text);
+  font: inherit;
+  font-size: 0.7rem;
+  padding: 0.18rem 0.4rem;
+  border-radius: 2px;
+  font-variant-numeric: tabular-nums;
+  color-scheme: dark;
+}
+.cd-ticket-meta-value {
+  font-family: var(--cd-font-ui);
+  font-size: 0.7rem;
+  color: var(--cd-text);
+  font-variant-numeric: tabular-nums;
+}
 .cd-ticket-project-link {
   font-size: 0.6rem;
   color: var(--cd-amber);
@@ -5223,8 +5250,15 @@ textarea.cd-ticket-input { min-height: auto; }
 }
 .cd-project-ticket-row {
   border-bottom: 1px solid var(--cd-border);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 .cd-project-ticket-row:last-child { border-bottom: none; }
+.cd-project-ticket-row > .cd-today-star { flex-shrink: 0; }
+.cd-project-ticket-row > .cd-project-ticket-link { flex: 1; min-width: 0; }
+.cd-due-readonly { cursor: default; }
+.cd-due-readonly .cd-due-badge { cursor: default; }
 
 .cd-project-ticket-link {
   display: flex;

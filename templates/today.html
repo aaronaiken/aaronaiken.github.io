@@ -197,6 +197,30 @@
   border-bottom: 1px dotted rgba(212, 136, 10, 0.08);
   margin-bottom: 2px;
 }
+.today-due-badge {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  color: rgba(212, 136, 10, 0.6);
+  border: 1px solid rgba(212, 136, 10, 0.3);
+  padding: 1px 5px;
+  border-radius: 2px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-transform: lowercase;
+  flex-shrink: 0;
+}
+.today-due-badge.due-today {
+  color: var(--cd-amber-hi, #f5b332);
+  border-color: rgba(245, 179, 50, 0.6);
+  background: rgba(245, 179, 50, 0.08);
+}
+.today-due-badge.overdue {
+  color: var(--cd-red, #cc4040);
+  border-color: rgba(204, 64, 64, 0.6);
+  background: rgba(204, 64, 64, 0.08);
+  text-transform: uppercase;
+}
 </style>
 
 <script>
@@ -209,6 +233,15 @@
     var d = document.createElement('div');
     d.appendChild(document.createTextNode(str || ''));
     return d.innerHTML;
+  }
+
+  function dueBadgeHtml(dueIso) {
+    if (!dueIso) return '';
+    var todayIso = new Date().toISOString().slice(0, 10);
+    var cls = 'today-due-badge';
+    if (dueIso < todayIso) cls += ' overdue';
+    else if (dueIso === todayIso) cls += ' due-today';
+    return '<span class="' + cls + '">due ' + escHtml(dueIso) + '</span>';
   }
 
   function updateCountLabel(n) {
@@ -289,7 +322,7 @@
       html += '<div class="cd-panel-body" style="padding:4px 0;">';
       belowDeck.forEach(function(t) {
         var starred = todayTaskIds[t.id] || t.today == 1;
-        html += masterRow('task', t.id, t.title, starred, false);
+        html += masterRow('task', t.id, t.title, starred, false, t.due_date);
       });
       html += '</div></div>';
     }
@@ -355,7 +388,7 @@
     html += '<div class="today-project-header">' + escHtml(proj.title) + '</div>';
     (proj.tasks || []).forEach(function(t) {
       var starred = todayTaskIds[t.id] || t.today == 1;
-      html += masterRow('task', t.id, t.title, starred, false);
+      html += masterRow('task', t.id, t.title, starred, false, t.due_date);
     });
     (proj.blocks || []).forEach(function(b) {
       var bStarred = todayBlockIds[b.id] || b.today == 1;
@@ -366,14 +399,14 @@
       html += masterRow('block', b.id, '▣ ' + blockTitle + progress, bStarred, false);
       (b.open_items || []).forEach(function(item) {
         var iStarred = todayItemIds[item.id] || item.today == 1;
-        html += masterRow('item', item.id, item.text, iStarred, true);
+        html += masterRow('item', item.id, item.text, iStarred, true, item.due_date);
       });
     });
     html += '</div>';
     return html;
   }
 
-  function masterRow(kind, id, label, starred, indent) {
+  function masterRow(kind, id, label, starred, indent, dueDate) {
     var rowCls = 'today-master-row' + (indent ? ' is-item-indent' : '');
     var titleCls = 'today-master-title' + (starred ? ' is-starred' : '');
     return '<div class="' + rowCls + '" data-id="' + id + '" data-kind="' + kind + '">' +
@@ -383,6 +416,7 @@
         (starred ? '★' : '☆') +
       '</button>' +
       '<span class="' + titleCls + '">' + escHtml(label) + '</span>' +
+      dueBadgeHtml(dueDate) +
       '</div>';
   }
 
@@ -413,6 +447,7 @@
         '<span class="today-master-ticket-num">' + escHtml(num) + '</span> ' +
         escHtml(t.title) +
       '</a>' +
+      dueBadgeHtml(t.due_date) +
       '<span class="' + statusCls + '">' + escHtml(status) + '</span>' +
       urgentBadge + typeBadge + custBadge +
       '</div>';

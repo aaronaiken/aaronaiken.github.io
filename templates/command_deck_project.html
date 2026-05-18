@@ -182,14 +182,14 @@
                         data-item-id="{{ item.id }}"
                         data-slug="{{ project.slug }}">
                       <label>{{ item.text }}</label>
-                      <span class="cd-due-wrapper cd-tt-tag-item"
+                      <span class="cd-due-wrapper{% if not item.due_date %} cd-tt-tag-item{% endif %}"
                             data-due-url="/command-deck/projects/{{ project.slug }}/checklist/{{ item.id }}/due-date"
                             data-due-date="{{ item.due_date or '' }}">
                         <button class="cd-due-badge{% if not item.due_date %} unset{% endif %}" type="button"
                                 title="Set / change due date">{% if item.due_date %}due {{ item.due_date }}{% else %}+ due{% endif %}</button>
                         <input type="date" class="cd-due-input" value="{{ item.due_date or '' }}" tabindex="-1" aria-hidden="true">
                       </span>
-                      <button class="cd-today-star cd-tt-tag-item{% if item.today %} starred{% endif %}"
+                      <button class="cd-today-star{% if not item.today %} cd-tt-tag-item{% endif %}{% if item.today %} starred{% endif %}"
                               data-kind="item" data-id="{{ item.id }}"
                               title="{% if item.today %}Remove from Today{% else %}Add to Today{% endif %}"
                               type="button">{{ '★' if item.today else '☆' }}</button>
@@ -319,9 +319,18 @@
             <ul class="cd-project-tickets-list">
               {% for t in tickets_recent %}
                 <li class="cd-project-ticket-row">
+                  <button class="cd-today-star{% if t.today %} starred{% endif %}"
+                          data-kind="ticket" data-id="{{ t.id }}"
+                          title="{% if t.today %}Remove from Today{% else %}Add to Today{% endif %}"
+                          type="button">{{ '★' if t.today else '☆' }}</button>
                   <a class="cd-project-ticket-link" href="/command-deck/tickets/{{ t.id }}/">
                     <span class="cd-project-ticket-num">{{ t.ticket_number }}</span>
                     <span class="cd-project-ticket-title">{{ t.title }}</span>
+                    {% if t.due_date %}
+                      <span class="cd-due-wrapper cd-due-readonly" data-due-date="{{ t.due_date }}">
+                        <span class="cd-due-badge">due {{ t.due_date }}</span>
+                      </span>
+                    {% endif %}
                     {% if t.type_name %}
                       <span class="cd-pill type" {% if t.type_color %}style="--type-color: {{ t.type_color }};"{% endif %}>{{ t.type_name }}</span>
                     {% endif %}
@@ -2722,10 +2731,11 @@ function cdEditTask(id) {
     btn.textContent = !wasStarred ? '★' : '☆';
     btn.title = !wasStarred ? 'Remove from Today' : 'Add to Today';
     const fd = new FormData();
-    // Phase 2.2 — dispatch by kind: task_id / item_id / block_id
+    // Phase 2.2 — dispatch by kind: task_id / item_id / block_id / ticket_id
     var fieldName = 'task_id';
     if (kind === 'item') fieldName = 'item_id';
     else if (kind === 'block') fieldName = 'block_id';
+    else if (kind === 'ticket') fieldName = 'ticket_id';
     fd.append(fieldName, id);
     fetch('/today/star', { method: 'POST', body: fd, credentials: 'same-origin' })
       .then(function (r) { return r.json(); })

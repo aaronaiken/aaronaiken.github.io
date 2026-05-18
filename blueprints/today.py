@@ -373,8 +373,11 @@ def today_data():
 	# All today queries JOIN through to the parent area (when the project
 	# is a work_subproject) so the rendering surfaces can show area context
 	# alongside project context.
+	# Sort: due-dated rows first chronologically (earliest first), then undated
+	# rows in their original order beneath. NULL-handling: `due_date IS NULL`
+	# sorts FALSE (0) before TRUE (1), putting dated rows on top.
 	today_tasks_open = conn.execute('''
-		SELECT t.id, t.title, t.status, t.today, t.project_id,
+		SELECT t.id, t.title, t.status, t.today, t.project_id, t.due_date,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
 		       parent.area_color AS area_color
@@ -382,10 +385,10 @@ def today_data():
 		LEFT JOIN projects p      ON t.project_id = p.id
 		LEFT JOIN projects parent ON p.parent_project_id = parent.id
 		WHERE t.today = 1 AND t.status = 'open'
-		ORDER BY t.id ASC
+		ORDER BY t.due_date IS NULL ASC, t.due_date ASC, t.id ASC
 	''').fetchall()
 	today_items_open = conn.execute('''
-		SELECT ci.id, ci.text, ci.checked, ci.today, ci.block_id,
+		SELECT ci.id, ci.text, ci.checked, ci.today, ci.block_id, ci.due_date,
 		       b.title AS block_title, b.project_id,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
@@ -395,7 +398,7 @@ def today_data():
 		JOIN projects p           ON b.project_id = p.id
 		LEFT JOIN projects parent ON p.parent_project_id = parent.id
 		WHERE ci.today = 1 AND ci.checked = 0 AND ci.archived_at IS NULL
-		ORDER BY ci.id ASC
+		ORDER BY ci.due_date IS NULL ASC, ci.due_date ASC, ci.id ASC
 	''').fetchall()
 
 	# Today section — done: completed tasks + checked items still flagged
@@ -460,7 +463,7 @@ def today_data():
 	# closing requires a resolution prompt).
 	today_tickets_open = conn.execute('''
 		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today,
-		       t.project_id,
+		       t.project_id, t.due_date, t.requested_date,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
 		       parent.area_color AS area_color,
@@ -474,7 +477,8 @@ def today_data():
 		LEFT JOIN customers c            ON t.customer_id = c.id
 		LEFT JOIN ticket_types tt        ON t.type_id = tt.id
 		WHERE t.today = 1 AND t.status != 'closed'
-		ORDER BY (t.priority = 'urgent') DESC, t.updated DESC
+		ORDER BY t.due_date IS NULL ASC, t.due_date ASC,
+		         (t.priority = 'urgent') DESC, t.updated DESC
 	''').fetchall()
 	today_tickets_done = conn.execute('''
 		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today,
@@ -499,7 +503,7 @@ def today_data():
 	# — top-level group like Below Deck, sorted urgent-first then recency.
 	tickets_browse = conn.execute('''
 		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today,
-		       t.project_id,
+		       t.project_id, t.due_date, t.requested_date,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.title AS area_title,
 		       parent.area_color AS area_color,
@@ -513,17 +517,18 @@ def today_data():
 		LEFT JOIN customers c            ON t.customer_id = c.id
 		LEFT JOIN ticket_types tt        ON t.type_id = tt.id
 		WHERE t.status != 'closed'
-		ORDER BY (t.priority = 'urgent') DESC, t.updated DESC
+		ORDER BY t.due_date IS NULL ASC, t.due_date ASC,
+		         (t.priority = 'urgent') DESC, t.updated DESC
 	''').fetchall()
 
 	# Master browse — Below Deck (project_id NULL) +
 	# per-area groups for work sub-projects + Personal group.
 	# Each project carries tasks + checklist blocks (with open items).
 	below_deck_tasks = conn.execute('''
-		SELECT id, title, status, today, project_id
+		SELECT id, title, status, today, project_id, due_date
 		FROM tasks
 		WHERE project_id IS NULL AND status = 'open'
-		ORDER BY "order" ASC, id ASC
+		ORDER BY due_date IS NULL ASC, due_date ASC, "order" ASC, id ASC
 	''').fetchall()
 	all_projects = conn.execute('''
 		SELECT p.id, p.title, p.slug, p.project_type, p.parent_project_id,
@@ -537,10 +542,10 @@ def today_data():
 
 	def _project_payload(proj):
 		tasks = conn.execute('''
-			SELECT id, title, status, today, project_id
+			SELECT id, title, status, today, project_id, due_date
 			FROM tasks
 			WHERE project_id = ? AND status = 'open'
-			ORDER BY "order" ASC, id ASC
+			ORDER BY due_date IS NULL ASC, due_date ASC, "order" ASC, id ASC
 		''', (proj['id'],)).fetchall()
 		blocks_raw = conn.execute('''
 			SELECT b.id, b.title, b.today,
@@ -558,7 +563,7 @@ def today_data():
 				SELECT id, text, checked, today, block_id, due_date
 				FROM checklist_items
 				WHERE block_id = ? AND checked = 0 AND archived_at IS NULL
-				ORDER BY id ASC
+				ORDER BY due_date IS NULL ASC, due_date ASC, id ASC
 			''', (b_dict['id'],)).fetchall()
 			b_dict['open_items'] = [dict(i) for i in open_items]
 			# Empty unstarred blocks excluded; starred blocks always shown
