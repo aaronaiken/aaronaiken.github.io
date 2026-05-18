@@ -373,6 +373,17 @@ def cd_dashboard():
 	)
 
 
+# --- Help ---
+
+@command_deck_bp.route('/command-deck/help/')
+@command_deck_bp.route('/command-deck/help')
+@cd_auth_required
+def cd_help():
+	"""In-app help page — keyboard shortcuts, task/today rules, gotchas.
+	Content lives in the template; this route just renders it."""
+	return render_template('command_deck_help.html')
+
+
 # --- Projects list ---
 
 @command_deck_bp.route('/command-deck/projects/')
