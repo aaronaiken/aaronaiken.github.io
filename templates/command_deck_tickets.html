@@ -120,6 +120,7 @@
             <th>Project</th>
             <th>Type</th>
             <th>Status</th>
+            <th>Due</th>
             <th>Updated</th>
             <th></th>
           </tr>
@@ -346,6 +347,17 @@
           '</button></td>';
       }
 
+      var dueCell;
+      if (t.due_date) {
+        var todayIso = new Date().toISOString().slice(0, 10);
+        var dueCls = 'cd-tickets-due';
+        if (t.due_date < todayIso) dueCls += ' overdue';
+        else if (t.due_date === todayIso) dueCls += ' due-today';
+        dueCell = '<span class="' + dueCls + '">' + escHtml(t.due_date) + '</span>';
+      } else {
+        dueCell = '<span class="cd-text-dim">—</span>';
+      }
+
       return '<tr data-id="' + t.id + '"' +
         (t.status === 'closed' ? ' class="is-closed"' : '') + '>' +
         starCell +
@@ -355,6 +367,7 @@
         '<td>' + projectCell + '</td>' +
         '<td>' + typeCell + '</td>' +
         '<td>' + statusCell + '</td>' +
+        '<td>' + dueCell + '</td>' +
         '<td>' + fmtUpdated(t.updated) + '</td>' +
         '<td><a class="cd-btn ghost sm" href="/command-deck/tickets/' + t.id + '/">OPEN</a></td>' +
         '</tr>';

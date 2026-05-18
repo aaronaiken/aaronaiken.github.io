@@ -119,6 +119,28 @@
             <button type="button" class="cd-pill urgent {% if ticket.priority == 'urgent' %}active{% endif %}" data-priority="urgent">Urgent</button>
           </div>
         </div>
+        <div class="cd-ticket-meta-row">
+          <span class="cd-ticket-meta-label">Created</span>
+          <span class="cd-ticket-meta-value">{{ ticket.created[:10] if ticket.created else '—' }}</span>
+        </div>
+        <div class="cd-ticket-meta-row">
+          <span class="cd-ticket-meta-label">Requested</span>
+          <input type="date" id="requestedDateField" class="cd-ticket-meta-date"
+                 value="{{ ticket.requested_date or '' }}">
+          <span class="cd-text-dim" style="font-size:0.6rem;">— when the ask landed</span>
+        </div>
+        <div class="cd-ticket-meta-row">
+          <span class="cd-ticket-meta-label">Due</span>
+          <input type="date" id="dueDateField" class="cd-ticket-meta-date"
+                 value="{{ ticket.due_date or '' }}">
+          <span class="cd-text-dim" style="font-size:0.6rem;">— when it's expected back</span>
+        </div>
+        {% if ticket.closed_date %}
+        <div class="cd-ticket-meta-row">
+          <span class="cd-ticket-meta-label">Closed</span>
+          <span class="cd-ticket-meta-value">{{ ticket.closed_date[:10] }}</span>
+        </div>
+        {% endif %}
       </div>
     </section>
 
@@ -334,6 +356,12 @@ const TICKET_LIFETIME_SECONDS = {{ lifetime_seconds | tojson }};
   });
   document.getElementById('timeCategoryField').addEventListener('change', function (e) {
     patch('time_category_id', e.target.value || null);
+  });
+  document.getElementById('requestedDateField').addEventListener('change', function (e) {
+    patch('requested_date', e.target.value || null);
+  });
+  document.getElementById('dueDateField').addEventListener('change', function (e) {
+    patch('due_date', e.target.value || null);
   });
   document.querySelectorAll('#priorityToggle .cd-pill').forEach(function (b) {
     b.addEventListener('click', function () {

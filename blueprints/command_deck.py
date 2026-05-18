@@ -643,6 +643,7 @@ def cd_project(slug):
 	# the rest of the lifecycle; project page just summarizes.
 	tickets_recent = conn.execute('''
 		SELECT t.id, t.ticket_number, t.title, t.priority, t.status, t.updated,
+		       t.today, t.due_date,
 		       tt.name AS type_name, tt.color AS type_color,
 		       cg.name AS customer_group_name,
 		       c.name AS customer_name
@@ -651,7 +652,8 @@ def cd_project(slug):
 		LEFT JOIN customer_groups cg ON t.customer_group_id = cg.id
 		LEFT JOIN customers c        ON t.customer_id = c.id
 		WHERE t.project_id = ? AND t.status != 'closed'
-		ORDER BY (t.priority = 'urgent') DESC, t.updated DESC, t.id DESC
+		ORDER BY t.due_date IS NULL ASC, t.due_date ASC,
+		         (t.priority = 'urgent') DESC, t.updated DESC, t.id DESC
 		LIMIT 5
 	''', (project['id'],)).fetchall()
 	tickets_open_count = conn.execute(

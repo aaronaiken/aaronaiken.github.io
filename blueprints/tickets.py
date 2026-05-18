@@ -52,6 +52,19 @@ def _to_int(v, default=None):
 		return default
 
 
+def _to_iso_date(v):
+	"""Coerce an inbound date value to ISO YYYY-MM-DD or None. Raises ValueError
+	for non-empty strings that don't parse — caller should turn that into a 400."""
+	if v in (None, '', 'null'):
+		return None
+	v = str(v).strip()
+	if not v:
+		return None
+	import datetime as _dt
+	_dt.date.fromisoformat(v)  # ValueError if malformed
+	return v
+
+
 def _serialize_ticket(row):
 	return dict(row)
 
@@ -332,6 +345,12 @@ def ticket_new():
 	time_category_id = _to_int(data.get('time_category_id'))
 	description = (data.get('description') or '').strip() or None
 
+	try:
+		requested_date = _to_iso_date(data.get('requested_date'))
+		due_date       = _to_iso_date(data.get('due_date'))
+	except ValueError:
+		return jsonify({'error': 'invalid_date'}), 400
+
 	conn = get_db()
 
 	# If customer is set but customer_group isn't, infer from the customer
@@ -352,10 +371,12 @@ def ticket_new():
 	cur = conn.execute('''
 		INSERT INTO tickets
 			(ticket_number, project_id, customer_group_id, customer_id, type_id,
-			 time_category_id, title, description, priority, status, created, updated)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			 time_category_id, title, description, priority, status,
+			 requested_date, due_date, created, updated)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	''', (placeholder, project_id, customer_group_id, customer_id, type_id,
-	      time_category_id, title, description, priority, status, now, now))
+	      time_category_id, title, description, priority, status,
+	      requested_date, due_date, now, now))
 	new_id = cur.lastrowid
 	ticket_number = f'TKT-{new_id:04d}'
 	conn.execute(
@@ -433,6 +454,14 @@ def ticket_update(ticket_id):
 
 	if 'time_category_id' in data:
 		updates['time_category_id'] = _to_int(data.get('time_category_id'))
+
+	for date_field in ('requested_date', 'due_date'):
+		if date_field in data:
+			try:
+				updates[date_field] = _to_iso_date(data.get(date_field))
+			except ValueError:
+				conn.close()
+				return jsonify({'error': f'invalid_{date_field}'}), 400
 
 	if not updates:
 		conn.close()
