@@ -202,7 +202,9 @@ def tickets_data():
 		LEFT JOIN customers c            ON t.customer_id = c.id
 		LEFT JOIN ticket_types tt        ON t.type_id = tt.id
 		{where_sql}
-		ORDER BY (t.status = 'closed') ASC, t.priority = 'urgent' DESC,
+		ORDER BY (t.status = 'closed') ASC,
+		         t.due_date IS NULL ASC, t.due_date ASC,
+		         (t.priority = 'urgent') DESC,
 		         t.updated DESC, t.id DESC
 	''', params).fetchall()
 

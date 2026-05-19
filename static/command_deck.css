@@ -5661,3 +5661,23 @@ kbd {
   color: var(--cd-amber-hi);
   margin: 0 1px;
 }
+.cd-help-reviewed {
+  margin-top: 1.5rem;
+  padding: 0.75rem 0;
+  border-top: 1px dotted rgba(212, 136, 10, 0.18);
+  font-family: var(--cd-font-ui);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  color: var(--cd-text-dim);
+  text-transform: uppercase;
+}
+.cd-help-reviewed strong {
+  color: var(--cd-amber);
+  font-weight: normal;
+  font-variant-numeric: tabular-nums;
+}
+.cd-help-reviewed code {
+  font-size: 0.7em;
+  letter-spacing: 0;
+  text-transform: none;
+}

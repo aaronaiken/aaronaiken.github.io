@@ -171,6 +171,11 @@
           </div>
         </section>
 
+        {# Update HELP_LAST_REVIEWED when you sweep the page for accuracy.
+           Surfaced in the footer as a forcing function — if it's stale,
+           someone reading help knows to be skeptical. #}
+        {% set HELP_LAST_REVIEWED = '2026-05-18' %}
+
         <section class="cd-panel cd-mb" id="gotchas">
           <div class="cd-panel-header"><span class="cd-panel-title">// Gotchas &amp; FAQ</span></div>
           <div class="cd-panel-body">
@@ -206,6 +211,11 @@
             <p>For now: scratch pad or Below Deck — it's a single-user system. If this ever productizes, that'll change.</p>
           </div>
         </section>
+
+        <div class="cd-help-reviewed">
+          Help last reviewed: <strong>{{ HELP_LAST_REVIEWED }}</strong> ·
+          edits live in <code>templates/command_deck_help.html</code>
+        </div>
 
       </main>
     </div>
