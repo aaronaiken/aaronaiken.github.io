@@ -3023,6 +3023,15 @@ button.cd-tt-entry-context.unassigned {
 	font-variant-numeric: tabular-nums;
 }
 
+/* Once an item is checked, hide the due badge + today-star + per-item
+   time tags — they're noise at that point. Strikethrough text + green
+   check already say "done." */
+.cd-checklist-item.checked .cd-due-wrapper,
+.cd-checklist-item.checked .cd-today-star,
+.cd-checklist-item.checked .cd-tt-tag-item {
+	display: none;
+}
+
 /* Checklist-item time tags — hidden until row hover (desktop), low-opacity
    always (mobile). Same pattern as cd-tt-item-btn. */
 .cd-checklist-item .cd-tt-tag-item {
