@@ -3032,6 +3032,33 @@ button.cd-tt-entry-context.unassigned {
 	display: none;
 }
 
+/* Drag handle on checklist items — hover-only on desktop (uses the
+   shared .cd-tt-tag-item density rule below), touch-friendly grip. */
+.cd-checklist-drag-handle {
+	display: inline-block;
+	cursor: grab;
+	color: rgba(212, 136, 10, 0.35);
+	font-size: 0.85rem;
+	line-height: 1;
+	padding: 0 4px;
+	user-select: none;
+	flex-shrink: 0;
+}
+.cd-checklist-drag-handle:hover { color: var(--cd-amber); }
+.cd-checklist-drag-handle:active { cursor: grabbing; }
+.cd-checklist-item-dragging {
+	opacity: 0.55;
+	background: rgba(212, 136, 10, 0.08);
+}
+.cd-checklist-drop-indicator {
+	list-style: none;
+	height: 2px;
+	background: var(--cd-amber-hi, #f5b332);
+	margin: 0;
+	pointer-events: none;
+	box-shadow: 0 0 6px rgba(245, 179, 50, 0.6);
+}
+
 /* Checklist-item time tags — hidden until row hover (desktop), low-opacity
    always (mobile). Same pattern as cd-tt-item-btn. */
 .cd-checklist-item .cd-tt-tag-item {

@@ -484,13 +484,13 @@ def _apply_project_template(conn, project_id, template_id, now):
 		))
 		block_id = block_cur.lastrowid
 		if btype == 'checklist':
-			for item in (b.get('items', []) or []):
+			for item_order, item in enumerate(b.get('items', []) or []):
 				text = (item.get('text') or '').strip()
 				if not text:
 					continue
 				conn.execute(
-					"INSERT INTO checklist_items (block_id, text, checked) VALUES (?, ?, 0)",
-					(block_id, text),
+					'INSERT INTO checklist_items (block_id, text, checked, "order") VALUES (?, ?, 0, ?)',
+					(block_id, text, item_order),
 				)
 
 	# Tasks
@@ -517,13 +517,13 @@ def _apply_checklist_template(conn, block_id, template_id):
 	except (ValueError, TypeError):
 		return 0
 	count = 0
-	for item in (body.get('items', []) or []):
+	for item_order, item in enumerate(body.get('items', []) or []):
 		text = (item.get('text') or '').strip()
 		if not text:
 			continue
 		conn.execute(
-			"INSERT INTO checklist_items (block_id, text, checked) VALUES (?, ?, 0)",
-			(block_id, text),
+			'INSERT INTO checklist_items (block_id, text, checked, "order") VALUES (?, ?, 0, ?)',
+			(block_id, text, item_order),
 		)
 		count += 1
 	# If the template has a title and the block doesn't yet, adopt it.
@@ -606,7 +606,8 @@ def cd_project(slug):
 		block = dict(b)
 		if block['type'] == 'checklist':
 			items = conn.execute(
-				'SELECT * FROM checklist_items WHERE block_id = ? AND archived_at IS NULL ORDER BY id ASC',
+				'SELECT * FROM checklist_items WHERE block_id = ? AND archived_at IS NULL '
+				'ORDER BY "order" ASC, id ASC',
 				(block['id'],)
 			).fetchall()
 			items_with_lifetime = []
@@ -1237,6 +1238,42 @@ def cd_blocks_reorder(slug):
 	return jsonify({'success': True})
 
 
+@command_deck_bp.route(
+	'/command-deck/projects/<slug>/blocks/<int:block_id>/checklist/reorder',
+	methods=['POST']
+)
+@cd_auth_required
+def cd_checklist_reorder(slug, block_id):
+	"""Persist a new drag order for checklist items within a block.
+	Body: {order: [item_id, ...]} — index in the array becomes `"order"`.
+	Items must belong to the named block (mismatches silently ignored)."""
+	data = request.get_json(silent=True) or {}
+	order = data.get('order', []) or []
+
+	conn = get_db()
+	# Validate block + project
+	block = conn.execute(
+		'SELECT b.id FROM blocks b JOIN projects p ON b.project_id = p.id '
+		'WHERE b.id = ? AND p.slug = ?',
+		(block_id, slug)
+	).fetchone()
+	if not block:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+
+	for i, item_id in enumerate(order):
+		conn.execute(
+			'UPDATE checklist_items SET "order" = ? WHERE id = ? AND block_id = ?',
+			(i, item_id, block_id)
+		)
+	project = conn.execute('SELECT id FROM projects WHERE slug = ?', (slug,)).fetchone()
+	if project:
+		conn.execute('UPDATE projects SET updated = ? WHERE id = ?', (et_now(), project['id']))
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True})
+
+
 # --- Checklist items ---
 
 @command_deck_bp.route('/command-deck/projects/<slug>/checklist/<int:item_id>/toggle', methods=['POST'])
@@ -1313,9 +1350,13 @@ def cd_checklist_add(slug):
 		return jsonify({'error': 'block_id and text required'}), 400
 
 	conn = get_db()
+	next_order = conn.execute(
+		'SELECT COALESCE(MAX("order"), -1) + 1 FROM checklist_items WHERE block_id = ?',
+		(block_id,)
+	).fetchone()[0]
 	cursor = conn.execute(
-		'INSERT INTO checklist_items (block_id, text, checked) VALUES (?, ?, 0)',
-		(block_id, text)
+		'INSERT INTO checklist_items (block_id, text, checked, "order") VALUES (?, ?, 0, ?)',
+		(block_id, text, next_order)
 	)
 	item_id = cursor.lastrowid
 
