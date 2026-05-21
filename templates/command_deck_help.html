@@ -118,7 +118,10 @@
 
             <h3 class="cd-help-h3">Due dates</h3>
             <p>Tasks and checklist items have an optional ISO due date. Click the dashed <kbd>+ due</kbd> chip to set one (a native date picker opens). Right-click to clear. Badges color amber as the date approaches and red+uppercase once overdue. Today views sort due-dated rows first chronologically; undated rows keep their natural order beneath.</p>
-            <p>On checklist items, the due-date chip and the ★ are hidden until row hover when neither is set — keeps the row clean. Once a date is set or the item is starred, the relevant chip pins visible.</p>
+            <p>On checklist items, the due-date chip and the ★ are hidden until row hover when neither is set — keeps the row clean. Once a date is set or the item is starred, the relevant chip pins visible. <strong>Checking an item hides the chip + ★ entirely</strong> — the strikethrough and green check already carry the "done" signal.</p>
+
+            <h3 class="cd-help-h3">Reordering items</h3>
+            <p>Hover any checklist item to reveal the <kbd>⠿</kbd> handle on its left. Drag (desktop) or long-press 300ms + drag (touch) to move it within its block. A glowing amber line shows where it'll land. The new order persists per-block — including across recurring-block cycle spawns, so reordering a daily checklist sticks for every future day.</p>
           </div>
         </section>
 
@@ -166,6 +169,9 @@
             <h3 class="cd-help-h3">Today integration</h3>
             <p>Tickets star for Today the same as tasks. Closed tickets drop off Today at 4am ET (same cutoff rule as tasks). Closed-today stays in the Today list until the next 4am rollover so you can review what landed.</p>
 
+            <h3 class="cd-help-h3">Index sort</h3>
+            <p>The tickets queue at <code>/command-deck/tickets/</code> sorts: closed last → due-dated rows chronologically (earliest first, so overdues bubble up) → urgent above normal → recency. Net effect: an overdue urgent always lands at the top of the queue.</p>
+
             <h3 class="cd-help-h3">Customer group default project</h3>
             <p>Customer groups can carry a <em>default project</em>. Picking a group on a new ticket auto-fills the project (one fewer tap on the common case). Override the auto-fill anytime.</p>
           </div>
@@ -174,7 +180,7 @@
         {# Update HELP_LAST_REVIEWED when you sweep the page for accuracy.
            Surfaced in the footer as a forcing function — if it's stale,
            someone reading help knows to be skeptical. #}
-        {% set HELP_LAST_REVIEWED = '2026-05-18' %}
+        {% set HELP_LAST_REVIEWED = '2026-05-21' %}
 
         <section class="cd-panel cd-mb" id="gotchas">
           <div class="cd-panel-header"><span class="cd-panel-title">// Gotchas &amp; FAQ</span></div>
