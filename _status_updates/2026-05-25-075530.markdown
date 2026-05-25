@@ -1,0 +1,11 @@
+---
+title: Status
+date: 2026-05-25 07:55:30 -0400
+layout: status_update
+author: aaron
+source: web
+---
+**Grateful log for Monday, May 25, 2026**
+1. A good family gathering last night in honor of mom-mom
+2. Significant progress on *Endpaper*
+3. Finally finished [BestCigarMatches.com](https://bestcigarmatches.com) - handmade e-comm running on Jekyll/GutHub Pages/Flask app
