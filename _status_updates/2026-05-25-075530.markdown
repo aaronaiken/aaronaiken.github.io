@@ -8,4 +8,4 @@ source: web
 **Grateful log for Monday, May 25, 2026**
 1. A good family gathering last night in honor of mom-mom
 2. Significant progress on *Endpaper*
-3. Finally finished [BestCigarMatches.com](https://bestcigarmatches.com) - handmade e-comm running on Jekyll/GutHub Pages/Flask app
+3. Finally finished [BestCigarMatches.com](https://bestcigarmatches.com) - handmade e-comm running on Jekyll/GitHub Pages/Flask app
