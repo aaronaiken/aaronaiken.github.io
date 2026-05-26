@@ -11,6 +11,11 @@ DB_FILE = os.path.join(
 	'assets/data/command_deck.db'
 )
 
+LEDGER_DB_FILE = os.path.join(
+	os.environ.get('COCKPIT_REPO_ROOT', '/home/aaronaiken/status_update'),
+	'assets/data/ledger.db'
+)
+
 
 def get_db():
 	"""Open a SQLite connection with NFS-safe rollback journal + foreign keys on.
@@ -24,6 +29,15 @@ def get_db():
 	which we don't have anyway — single user, low write rate).
 	"""
 	conn = sqlite3.connect(DB_FILE)
+	conn.row_factory = sqlite3.Row
+	conn.execute("PRAGMA foreign_keys = ON")
+	conn.execute("PRAGMA journal_mode = DELETE")
+	return conn
+
+
+def get_ledger_db():
+	"""Open the Ledger DB. Same NFS-safe rollback-journal config as get_db()."""
+	conn = sqlite3.connect(LEDGER_DB_FILE)
 	conn.row_factory = sqlite3.Row
 	conn.execute("PRAGMA foreign_keys = ON")
 	conn.execute("PRAGMA journal_mode = DELETE")

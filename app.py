@@ -114,6 +114,10 @@ from helpers.db import get_db, slugify, unique_slug, et_now
 from helpers.backup_status import get_last_backup_status
 app.jinja_env.globals['last_backup_status'] = get_last_backup_status
 
+# Cross-app footer pill — lazy: only invoked when the include actually renders.
+from helpers.ledger import footer_summary as ledger_footer_summary
+app.jinja_env.globals['ledger_footer_summary'] = ledger_footer_summary
+
 # ---- EXISTING ROUTES ----
 
 # ---- COCKPIT ROUTES ---- (moved to blueprints/cockpit.py)
@@ -147,6 +151,7 @@ from blueprints.mileage import mileage_bp
 from blueprints.settings import settings_bp
 from blueprints.tickets import tickets_bp
 from blueprints.lookups import lookups_bp
+from blueprints.ledger import ledger_bp
 app.register_blueprint(tasks_bp)
 app.register_blueprint(today_bp)
 app.register_blueprint(below_deck_bp)
@@ -162,6 +167,7 @@ app.register_blueprint(mileage_bp)
 app.register_blueprint(settings_bp)
 app.register_blueprint(tickets_bp)
 app.register_blueprint(lookups_bp)
+app.register_blueprint(ledger_bp)
 
 
 # Global recurrence-cycle trigger. Originally only /today/data fired the

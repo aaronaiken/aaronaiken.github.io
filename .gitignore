@@ -26,6 +26,10 @@ assets/data/below_deck.json
 assets/data/command_deck.db
 assets/data/command_deck.db-shm
 assets/data/command_deck.db-wal
+assets/data/ledger.db
+assets/data/ledger.db-shm
+assets/data/ledger.db-wal
+assets/data/ledger.db-journal
 static/after_dark_comms.txt
 assets/data/scratch_work.json
 mozzie_games.json

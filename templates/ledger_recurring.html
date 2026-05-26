@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Recurring expenses · The Ledger</title>
+  <link rel="stylesheet" href="/static/ledger.css">
+</head>
+<body class="ledger">
+<div class="lg-shell">
+
+  <header class="lg-header">
+    <div>
+      <a href="/ledger/" class="lg-wordmark">The Ledger</a>
+      <div class="lg-ident">Recurring expenses</div>
+    </div>
+    {% include 'includes/ledger_nav.html' %}
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="lg-flash {% if category == 'error' %}error{% endif %}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="lg-card">
+    <h2 class="lg-card-title">Add a recurring expense</h2>
+    <form method="POST" action="/ledger/recurring/new" class="lg-form-grid">
+      <div class="lg-form-group">
+        <label class="lg-label">Name</label>
+        <input type="text" name="name" class="lg-input" required placeholder="e.g. Rent">
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Amount</label>
+        <div class="lg-currency-wrap">
+          <input type="number" step="0.01" name="amount" class="lg-input lg-num lg-currency" required>
+        </div>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Day of month</label>
+        <input type="number" min="0" max="31" name="day_of_month" class="lg-input lg-num" value="1" required>
+        <span class="lg-note" style="font-size:0.78rem;">(0 = end of month)</span>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Category</label>
+        <select name="category" class="lg-select">
+          <option value="">—</option>
+          {% for c in ['housing','utilities','subscription','insurance','transportation','other'] %}
+            <option value="{{ c }}">{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="lg-form-group" style="grid-column: 1 / -1;">
+        <label class="lg-label">Notes</label>
+        <input type="text" name="notes" class="lg-input">
+      </div>
+      <div style="grid-column: 1 / -1;">
+        <button type="submit" class="lg-btn primary">Add</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="lg-section-label">// Current recurring</div>
+  <div class="lg-card" style="padding:0;">
+    {% if expenses %}
+      <div class="lg-table-wrap">
+        <table class="lg-table">
+          <thead><tr>
+            <th>Name</th><th class="num">Amount</th><th class="num col-hide-sm">Day</th>
+            <th class="col-hide-sm">Category</th><th>Active</th><th></th>
+          </tr></thead>
+          <tbody>
+          {% for e in expenses %}
+            <tr {% if not e.active %}class="kill-row"{% endif %}>
+              <form method="POST" action="/ledger/recurring/{{ e.id }}/edit" style="display:contents;">
+              <td><input type="text" name="name" class="lg-input" value="{{ e.name }}" style="background:transparent; border-color:transparent;"></td>
+              <td class="num">
+                <div class="lg-currency-wrap" style="display:inline-block; width:120px;">
+                  <input type="number" step="0.01" name="amount" class="lg-input lg-num lg-currency" value="{{ e.amount }}" style="background:transparent; border-color:transparent;">
+                </div>
+              </td>
+              <td class="num col-hide-sm">
+                <input type="number" name="day_of_month" min="0" max="31" value="{{ e.day_of_month }}" class="lg-input lg-num" style="width:60px; background:transparent; border-color:transparent;">
+              </td>
+              <td class="col-hide-sm lg-dim">
+                <select name="category" class="lg-select" style="background:transparent; border-color:transparent;">
+                  <option value="">—</option>
+                  {% for c in ['housing','utilities','subscription','insurance','transportation','other'] %}
+                    <option value="{{ c }}" {% if e.category == c %}selected{% endif %}>{{ c }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td>
+                <div class="lg-checkbox-row">
+                  <input type="checkbox" name="active" value="1" {% if e.active %}checked{% endif %}>
+                </div>
+              </td>
+              <td>
+                <button type="submit" class="lg-btn ghost sm">save</button>
+              </form>
+              <form method="POST" action="/ledger/recurring/{{ e.id }}/delete" style="display:inline;"
+                    onsubmit="return confirm('Deactivate {{ e.name }}?');">
+                <button type="submit" class="lg-btn danger sm">×</button>
+              </form>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="lg-empty">
+        The recurring sheet is blank. Add your rent, subscriptions, utilities — anything that hits checking between paydays.
+      </div>
+    {% endif %}
+  </div>
+
+  <footer class="lg-footer">
+    <span class="lg-footer-ident">YT-1300F · CHART ROOM</span>
+    <div class="lg-footer-links">
+      <a href="/ledger/">Glance</a>
+    </div>
+  </footer>
+</div>
+{% include 'includes/today_panel.html' ignore missing %}
+{% include 'includes/active_timer_strip.html' ignore missing %}
+<script src="/static/ledger.js"></script>
+</body>
+</html>

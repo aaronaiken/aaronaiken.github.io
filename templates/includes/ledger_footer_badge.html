@@ -1,0 +1,30 @@
+{# Cross-app footer pill for The Ledger total-debt nag.
+
+   Self-contained — works on the Cockpit, Command Deck, Below Deck without
+   requiring ledger.css to be loaded. Inline styles use the existing CSS
+   vars where defined (CD pages have --muted etc.) and brass fallbacks
+   otherwise.
+
+   Reads from ledger.db via the Jinja global ledger_footer_summary,
+   which opens its own connection and never raises. #}
+{%- set ls = ledger_footer_summary() -%}
+{%- set _color_down = '#6c9d9d' -%}
+{%- set _color_up   = '#b85d50' -%}
+{%- set _color_flat = '#8e7e69' -%}
+<a href="/ledger/" class="lg-footer-pill"
+   style="display:inline-flex; align-items:baseline; gap:6px;
+          padding:4px 12px; border-radius:999px;
+          background:rgba(176, 141, 87, 0.08);
+          border:1px solid rgba(176, 141, 87, 0.55);
+          font-family:'JetBrains Mono', ui-monospace, Menlo, monospace;
+          font-size:0.72rem; letter-spacing:0.05em;
+          color:#d2ac75; text-decoration:none;
+          font-variant-numeric: tabular-nums;"
+   title="The Ledger — total active debt (arrow = 30-day Δ). Click for the chart room.">
+  LEDGER ·
+  {%- if ls.has_data %} ${{ '{:,.0f}'.format(ls.total) }}
+    <span style="color:{% if ls.arrow == 'down' %}{{ _color_down }}{% elif ls.arrow == 'up' %}{{ _color_up }}{% else %}{{ _color_flat }}{% endif %};">
+      {%- if ls.arrow == 'down' %}↓{% elif ls.arrow == 'up' %}↑{% else %}—{% endif -%}
+    </span>
+  {%- else %} —{% endif %}
+</a>

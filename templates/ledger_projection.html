@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Projection · The Ledger</title>
+  <link rel="stylesheet" href="/static/ledger.css">
+</head>
+<body class="ledger">
+<div class="lg-shell">
+
+  <header class="lg-header">
+    <div>
+      <a href="/ledger/" class="lg-wordmark">The Ledger</a>
+      <div class="lg-ident">Projection</div>
+    </div>
+    {% include 'includes/ledger_nav.html' %}
+  </header>
+
+  <div class="lg-card">
+    <h2 class="lg-card-title">Avalanche + snowball projection</h2>
+    <div class="lg-mid-number">
+      Debt-free: <strong>{{ projection.debt_free_date or '—' }}</strong>
+    </div>
+    <div class="lg-meta-row">
+      <span class="item"><span class="label">Months simulated</span>
+        <span class="lg-num">{{ projection.monthly_rows | length }}</span></span>
+      <span class="item"><span class="label">Total interest paid</span>
+        <span class="lg-num">${{ '{:,.2f}'.format(projection.total_interest_paid) }}</span></span>
+    </div>
+    <p class="lg-card-subtitle">Interest is accrued on remaining balances each month. Kills cascade allocation onto the next-highest-APR target.</p>
+  </div>
+
+  <div class="lg-section-label">// Month by month</div>
+  <div class="lg-card" style="padding:0;">
+    {% if projection.monthly_rows %}
+      <div class="lg-table-wrap">
+        <table class="lg-table">
+          <thead><tr>
+            <th>Month</th><th class="num">Start</th><th class="num col-hide-sm">Min</th>
+            <th class="num col-hide-sm">Attack</th><th class="num col-hide-sm">Interest</th>
+            <th class="num">End</th><th>Target</th><th>Kill</th>
+          </tr></thead>
+          <tbody>
+          {% for r in projection.monthly_rows %}
+            <tr {% if r.kill_account_name %}class="target-row"{% endif %}>
+              <td class="lg-mono" style="font-size:0.85rem;">{{ r.month }}</td>
+              <td class="num">${{ '{:,.0f}'.format(r.starting_total) }}</td>
+              <td class="num col-hide-sm">${{ '{:,.0f}'.format(r.minimums_applied) }}</td>
+              <td class="num col-hide-sm">${{ '{:,.0f}'.format(r.attack_applied) }}</td>
+              <td class="num col-hide-sm lg-neg">${{ '{:,.0f}'.format(r.interest_accrued) }}</td>
+              <td class="num">${{ '{:,.0f}'.format(r.ending_total) }}</td>
+              <td class="lg-dim">{{ r.current_target_name or '—' }}</td>
+              <td>{% if r.kill_account_name %}<strong class="lg-pos">{{ r.kill_account_name }} ✓</strong>{% endif %}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="lg-empty">No projection — no active debts to simulate.</div>
+    {% endif %}
+  </div>
+
+  <footer class="lg-footer">
+    <span class="lg-footer-ident">YT-1300F · CHART ROOM</span>
+    <div class="lg-footer-links">
+      <a href="/ledger/">Glance</a>
+    </div>
+  </footer>
+</div>
+{% include 'includes/today_panel.html' ignore missing %}
+{% include 'includes/active_timer_strip.html' ignore missing %}
+<script src="/static/ledger.js"></script>
+</body>
+</html>

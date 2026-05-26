@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{{ account.name }} · The Ledger</title>
+  <link rel="stylesheet" href="/static/ledger.css">
+</head>
+<body class="ledger">
+<div class="lg-shell">
+
+  <header class="lg-header">
+    <div>
+      <a href="/ledger/" class="lg-wordmark">The Ledger</a>
+      <div class="lg-ident">{{ account.name }} · {{ account.account_type | replace('_',' ') }}</div>
+    </div>
+    {% include 'includes/ledger_nav.html' %}
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="lg-flash {% if category == 'error' %}error{% endif %}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {# ===== Top summary card with sparkline ===== #}
+  <div class="lg-card">
+    <div style="display:flex; justify-content:space-between; align-items:baseline; gap:18px; flex-wrap:wrap;">
+      <div>
+        <div class="lg-big-number">{% if account.current_balance is not none %}${{ '{:,.2f}'.format(account.current_balance) }}{% else %}—{% endif %}</div>
+        <div class="lg-meta-row">
+          <span class="item"><span class="label">APR</span>
+            <span class="lg-num">{% if account.apr %}{{ '{:.2f}'.format(account.apr) }}%{% else %}—{% endif %}</span></span>
+          <span class="item"><span class="label">Min</span>
+            <span class="lg-num">{% if account.minimum_payment %}${{ '{:,.2f}'.format(account.minimum_payment) }}{% else %}—{% endif %}</span></span>
+          <span class="item"><span class="label">Alloc</span>
+            <span class="lg-num">{% if account.attack_allocation %}${{ '{:,.0f}'.format(account.attack_allocation) }}{% else %}—{% endif %}</span></span>
+          <span class="item"><span class="label">Status</span>
+            <span>{{ account.status }}</span></span>
+          {% if account.autopay_enabled %}
+          <span class="item"><span class="label">Next autopay</span>
+            <span class="lg-mono">{{ account.autopay_next_date or '—' }}</span></span>
+          {% endif %}
+        </div>
+      </div>
+      {% if spark and spark|length > 1 %}
+        <svg class="lg-spark" viewBox="0 0 600 60" preserveAspectRatio="none"
+             data-sparkline='{{ spark | map(attribute="balance") | list | tojson }}'></svg>
+      {% endif %}
+    </div>
+    {% if account.notes %}
+      <p class="lg-note" style="margin-top:14px;">{{ account.notes }}</p>
+    {% endif %}
+    <div class="lg-btn-row" style="margin-top:14px;">
+      {% if account.current_balance is not none and account.current_balance <= 5 and account.status == 'active' %}
+        <form method="POST" action="/ledger/accounts/{{ account.slug }}/mark-paid-off">
+          <button type="submit" class="lg-btn primary">Mark paid off ✓</button>
+        </form>
+      {% endif %}
+      <form method="POST" action="/ledger/accounts/{{ account.slug }}/delete"
+            onsubmit="return confirm('Close this account? History stays.');">
+        <button type="submit" class="lg-btn danger sm">Close account</button>
+      </form>
+    </div>
+  </div>
+
+  {# ===== Snapshot quick-add ===== #}
+  <div class="lg-section-label">// Snapshot balance</div>
+  <div class="lg-card">
+    <form method="POST" action="/ledger/snapshot" class="lg-form-grid">
+      <input type="hidden" name="account_slug" value="{{ account.slug }}">
+      <input type="hidden" name="next" value="/ledger/accounts/{{ account.slug }}/">
+      <div class="lg-form-group">
+        <label class="lg-label">New balance</label>
+        <div class="lg-currency-wrap">
+          <input type="number" step="0.01" name="balance" class="lg-input lg-num lg-currency" required>
+        </div>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Notes</label>
+        <input type="text" name="notes" class="lg-input">
+      </div>
+      <div style="grid-column: 1 / -1;">
+        <button type="submit" class="lg-btn outline">Save snapshot</button>
+      </div>
+    </form>
+  </div>
+
+  {# ===== Edit form ===== #}
+  <div class="lg-section-label">// Edit account</div>
+  <div class="lg-card">
+    <form method="POST" action="/ledger/accounts/{{ account.slug }}/edit" class="lg-form-grid">
+      <div class="lg-form-group">
+        <label class="lg-label">Name</label>
+        <input type="text" name="name" class="lg-input" value="{{ account.name }}">
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Type</label>
+        <select name="account_type" class="lg-select">
+          {% for t in ['credit_card','loan','student_loan','bnpl','checking','savings'] %}
+            <option value="{{ t }}" {% if account.account_type == t %}selected{% endif %}>{{ t | replace('_',' ') }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Status</label>
+        <select name="status" class="lg-select">
+          {% for s in ['active','unknown','paid_off','closed'] %}
+            <option value="{{ s }}" {% if account.status == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">APR (%)</label>
+        <input type="number" step="0.01" name="apr" class="lg-input lg-num" value="{{ account.apr if account.apr is not none else '' }}">
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Minimum payment</label>
+        <div class="lg-currency-wrap">
+          <input type="number" step="0.01" name="minimum_payment" class="lg-input lg-num lg-currency" value="{{ account.minimum_payment if account.minimum_payment is not none else '' }}">
+        </div>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Attack allocation</label>
+        <div class="lg-currency-wrap">
+          <input type="number" step="0.01" name="attack_allocation" class="lg-input lg-num lg-currency" value="{{ account.attack_allocation }}">
+        </div>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Autopay enabled</label>
+        <div class="lg-checkbox-row">
+          <input type="checkbox" name="autopay_enabled" value="1" {% if account.autopay_enabled %}checked{% endif %}>
+        </div>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Autopay amount</label>
+        <div class="lg-currency-wrap">
+          <input type="number" step="0.01" name="autopay_amount" class="lg-input lg-num lg-currency" value="{{ account.autopay_amount if account.autopay_amount is not none else '' }}">
+        </div>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Cadence</label>
+        <select name="autopay_cadence" class="lg-select">
+          <option value="">—</option>
+          {% for c in ['monthly','monthly_eom','biweekly'] %}
+            <option value="{{ c }}" {% if account.autopay_cadence == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Day of month</label>
+        <input type="number" min="1" max="31" name="autopay_day" class="lg-input lg-num" value="{{ account.autopay_day if account.autopay_day is not none else '' }}">
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Next autopay date</label>
+        <input type="date" name="autopay_next_date" class="lg-input" value="{{ account.autopay_next_date or '' }}">
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Opened date</label>
+        <input type="date" name="opened_date" class="lg-input" value="{{ account.opened_date or '' }}">
+      </div>
+      <div class="lg-form-group" style="grid-column: 1 / -1;">
+        <label class="lg-label">Notes</label>
+        <textarea name="notes" class="lg-textarea">{{ account.notes or '' }}</textarea>
+      </div>
+      <div style="grid-column: 1 / -1;">
+        <button type="submit" class="lg-btn primary">Save changes</button>
+      </div>
+    </form>
+  </div>
+
+  {# ===== Recent transactions ===== #}
+  <div class="lg-section-label">// Recent transactions</div>
+  <div class="lg-card" style="padding:0;">
+    {% if transactions %}
+      <div class="lg-table-wrap">
+        <table class="lg-table">
+          <thead><tr>
+            <th>Date</th><th>Type</th><th>Description</th>
+            <th class="num">Amount</th><th class="col-hide-sm">Source</th><th>Conf?</th>
+          </tr></thead>
+          <tbody>
+          {% for t in transactions %}
+            <tr>
+              <td class="lg-mono" style="font-size:0.85rem;">{{ t.tx_date }}</td>
+              <td>{{ t.tx_type }}</td>
+              <td>{{ t.description or '—' }}</td>
+              <td class="num">${{ '{:,.2f}'.format(t.amount) }}</td>
+              <td class="col-hide-sm lg-dim">{{ t.source }}</td>
+              <td>{{ '✓' if t.confirmed else '·' }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="lg-empty">No transactions yet.</div>
+    {% endif %}
+  </div>
+
+  {# ===== Snapshot history ===== #}
+  <div class="lg-section-label">// Snapshot history</div>
+  <div class="lg-card" style="padding:0;">
+    {% if snapshots %}
+      <div class="lg-table-wrap">
+        <table class="lg-table">
+          <thead><tr>
+            <th>When</th><th class="num">Balance</th><th class="col-hide-sm">Source</th><th class="col-hide-sm">Notes</th>
+          </tr></thead>
+          <tbody>
+          {% for s in snapshots %}
+            <tr>
+              <td class="lg-mono" style="font-size:0.82rem;">{{ s.snapshot_at[:19] | replace('T',' ') }}</td>
+              <td class="num">${{ '{:,.2f}'.format(s.balance) }}</td>
+              <td class="col-hide-sm lg-dim">{{ s.source }}</td>
+              <td class="col-hide-sm lg-dim">{{ s.notes or '' }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="lg-empty">No snapshots yet.</div>
+    {% endif %}
+  </div>
+
+  <footer class="lg-footer">
+    <span class="lg-footer-ident">YT-1300F · CHART ROOM · {{ account.name | upper }}</span>
+    <div class="lg-footer-links">
+      <a href="/ledger/">Glance</a>
+      <a href="/ledger/accounts/">Accounts</a>
+    </div>
+  </footer>
+</div>
+{% include 'includes/today_panel.html' ignore missing %}
+{% include 'includes/active_timer_strip.html' ignore missing %}
+<script src="/static/ledger.js"></script>
+</body>
+</html>

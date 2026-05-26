@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Payday Session · The Ledger</title>
+  <link rel="stylesheet" href="/static/ledger.css">
+</head>
+<body class="ledger">
+
+<div class="lg-shell">
+
+  <header class="lg-header">
+    <div>
+      <a href="/ledger/" class="lg-wordmark">The Ledger</a>
+      <div class="lg-ident">Payday Session · {{ today }}</div>
+    </div>
+    {% include 'includes/ledger_nav.html' %}
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="lg-flash {% if category == 'error' %}error{% endif %}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="POST" action="/ledger/payday/session" id="payday-form">
+
+    {# ===== 1. CHECKING NOW ===== #}
+    <div class="lg-card">
+      <h2 class="lg-card-title">1 · Checking now</h2>
+      <div class="lg-form-group">
+        <label class="lg-label" for="lg-checking-input">What's in checking right now?</label>
+        <div class="lg-currency-wrap">
+          <input type="number" step="0.01" name="checking_balance" id="lg-checking-input"
+                 class="lg-input lg-num lg-currency"
+                 placeholder="0.00"
+                 {% if expected_checking is not none %}value=""{% endif %}>
+        </div>
+        <div class="lg-spacer-sm"></div>
+        {% if expected_checking is not none %}
+          <div class="lg-runway-strip">
+            <span><span class="lg-dim">Expected</span>
+              <strong id="lg-checking-expected"
+                      data-expected="{{ '{:.2f}'.format(expected_checking) }}">${{ '{:,.2f}'.format(expected_checking) }}</strong>
+            </span>
+            <span id="lg-checking-delta" class="lg-mono lg-dim"></span>
+          </div>
+        {% else %}
+          <div class="lg-note">No prior snapshot yet — this is your first.</div>
+        {% endif %}
+        <div class="lg-spacer-sm"></div>
+        <input type="text" name="checking_notes" class="lg-input" placeholder="Notes (optional)">
+      </div>
+    </div>
+
+    {# ===== 2. PENDING AUTOPAYS ===== #}
+    {% if pending %}
+      <div class="lg-card">
+        <h2 class="lg-card-title">2 · Pending autopay confirmations</h2>
+        <p class="lg-note">Check that what you expected to clear, cleared. This is confirmation, not logging.</p>
+        {% for p in pending %}
+          <div class="lg-pending-item" data-pending-row style="flex-direction:column; align-items:stretch; gap:8px; padding:14px 0; border-bottom:1px solid var(--lg-rule);">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px;">
+              <span>
+                <strong>{{ p.account_name }}</strong>
+                <span class="date">· {{ p.tx_date }}</span>
+              </span>
+              <span class="lg-num">${{ '{:,.2f}'.format(p.amount) }}</span>
+            </div>
+            <div class="lg-btn-row" style="margin-top:4px;">
+              <label class="lg-checkbox-row">
+                <input type="radio" name="confirm[{{ p.id }}]" value="as_expected" checked>
+                <span>Cleared as expected</span>
+              </label>
+              <label class="lg-checkbox-row">
+                <input type="radio" name="confirm[{{ p.id }}]" value="different">
+                <span>Different amount</span>
+              </label>
+              <label class="lg-checkbox-row">
+                <input type="radio" name="confirm[{{ p.id }}]" value="skip">
+                <span>Didn't clear</span>
+              </label>
+            </div>
+            <div data-alt-block style="display:none;">
+              <div class="lg-currency-wrap">
+                <input type="number" step="0.01" name="actual_amount[{{ p.id }}]"
+                       class="lg-input lg-num lg-currency" placeholder="actual amount">
+              </div>
+              <input type="text" name="actual_notes[{{ p.id }}]" class="lg-input" placeholder="What happened?" style="margin-top:6px;">
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {# ===== 3. WHAT CAME IN ===== #}
+    <div class="lg-card">
+      <h2 class="lg-card-title">3 · What came in</h2>
+      <div id="lg-income-rows">
+        <div data-row class="lg-form-grid" style="margin-bottom:14px;">
+          <div class="lg-form-group">
+            <label class="lg-label">Amount</label>
+            <div class="lg-currency-wrap">
+              <input type="number" step="0.01" name="income_amount[0]" class="lg-input lg-num lg-currency"
+                     value="{% if last_paycheck %}{{ last_paycheck.amount }}{% endif %}">
+            </div>
+          </div>
+          <div class="lg-form-group">
+            <label class="lg-label">Type</label>
+            <select name="income_type[0]" class="lg-select">
+              <option value="paycheck" {% if last_paycheck and last_paycheck.income_type == 'paycheck' %}selected{% endif %}>Paycheck</option>
+              <option value="bonus" {% if last_paycheck and last_paycheck.income_type == 'bonus' %}selected{% endif %}>Bonus</option>
+              <option value="side_income">Side income</option>
+              <option value="reimbursement">Reimbursement</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="lg-form-group">
+            <label class="lg-label">Source</label>
+            <input type="text" name="income_source[0]" class="lg-input"
+                   value="{% if last_paycheck %}{{ last_paycheck.source or '' }}{% endif %}">
+          </div>
+          <div class="lg-form-group">
+            <label class="lg-label">Date</label>
+            <input type="date" name="income_date[0]" class="lg-input" value="{{ today }}">
+          </div>
+          <div class="lg-form-group">
+            <label class="lg-label">Recurring?</label>
+            <div class="lg-checkbox-row">
+              <input type="checkbox" name="income_recurring[0]" value="1"
+                     {% if last_paycheck and last_paycheck.recurring %}checked{% endif %}>
+              <select name="income_pattern[0]" class="lg-select" style="max-width:140px;">
+                <option value="">—</option>
+                <option value="biweekly" {% if last_paycheck and last_paycheck.recurrence_pattern == 'biweekly' %}selected{% endif %}>Biweekly</option>
+                <option value="monthly" {% if last_paycheck and last_paycheck.recurrence_pattern == 'monthly' %}selected{% endif %}>Monthly</option>
+                <option value="quarterly" {% if last_paycheck and last_paycheck.recurrence_pattern == 'quarterly' %}selected{% endif %}>Quarterly</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {# template row for + add #}
+        <div data-row-template class="lg-form-grid" style="margin-bottom:14px; display:none;">
+          <div class="lg-form-group">
+            <label class="lg-label">Amount</label>
+            <div class="lg-currency-wrap">
+              <input type="number" step="0.01" name="income_amount[0]" class="lg-input lg-num lg-currency">
+            </div>
+          </div>
+          <div class="lg-form-group">
+            <label class="lg-label">Type</label>
+            <select name="income_type[0]" class="lg-select">
+              <option value="paycheck">Paycheck</option>
+              <option value="bonus">Bonus</option>
+              <option value="side_income">Side income</option>
+              <option value="reimbursement">Reimbursement</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="lg-form-group">
+            <label class="lg-label">Source</label>
+            <input type="text" name="income_source[0]" class="lg-input">
+          </div>
+          <div class="lg-form-group">
+            <label class="lg-label">Date</label>
+            <input type="date" name="income_date[0]" class="lg-input" value="{{ today }}">
+          </div>
+        </div>
+      </div>
+      <button type="button" class="lg-btn ghost sm" data-add-row data-target="lg-income-rows">+ income row</button>
+    </div>
+
+    {# ===== 4. MANUAL DEBT PAYMENTS ===== #}
+    <div class="lg-card">
+      <h2 class="lg-card-title">4 · Manual debt payments</h2>
+      <p class="lg-note">Anything you're paying on top of autopay this payday — typically the attack on the primary target.</p>
+      <div id="lg-manual-rows">
+        <div data-row class="lg-form-grid" style="margin-bottom:14px;">
+          <div class="lg-form-group">
+            <label class="lg-label">Account</label>
+            <select name="manual_account_slug[0]" class="lg-select">
+              <option value="">— pick —</option>
+              {% for d in debts %}
+                <option value="{{ d.slug }}"
+                  {% if budget.current_target and d.id == budget.current_target.id %}selected{% endif %}>
+                  {{ d.name }} (${{ '{:,.2f}'.format(d.current_balance or 0) }})
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="lg-form-group">
+            <label class="lg-label">Amount</label>
+            <div class="lg-currency-wrap">
+              <input type="number" step="0.01" name="manual_amount[0]" class="lg-input lg-num lg-currency">
+            </div>
+          </div>
+          <div class="lg-form-group">
+            <label class="lg-label">Date</label>
+            <input type="date" name="manual_date[0]" class="lg-input" value="{{ today }}">
+          </div>
+          <div class="lg-form-group">
+            <label class="lg-label">Note</label>
+            <input type="text" name="manual_notes[0]" class="lg-input" placeholder="(optional)">
+          </div>
+        </div>
+        <div data-row-template class="lg-form-grid" style="margin-bottom:14px; display:none;">
+          <div class="lg-form-group">
+            <label class="lg-label">Account</label>
+            <select name="manual_account_slug[0]" class="lg-select">
+              <option value="">— pick —</option>
+              {% for d in debts %}
+                <option value="{{ d.slug }}">{{ d.name }} (${{ '{:,.2f}'.format(d.current_balance or 0) }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="lg-form-group">
+            <label class="lg-label">Amount</label>
+            <div class="lg-currency-wrap">
+              <input type="number" step="0.01" name="manual_amount[0]" class="lg-input lg-num lg-currency">
+            </div>
+          </div>
+          <div class="lg-form-group">
+            <label class="lg-label">Date</label>
+            <input type="date" name="manual_date[0]" class="lg-input" value="{{ today }}">
+          </div>
+          <div class="lg-form-group">
+            <label class="lg-label">Note</label>
+            <input type="text" name="manual_notes[0]" class="lg-input">
+          </div>
+        </div>
+      </div>
+      <button type="button" class="lg-btn ghost sm" data-add-row data-target="lg-manual-rows">+ payment row</button>
+    </div>
+
+    {# ===== 5. OTHER BALANCE CHANGES ===== #}
+    <div class="lg-card">
+      <h2 class="lg-card-title">5 · Other balance changes <span class="lg-note">(optional)</span></h2>
+      <p class="lg-note">Snapshot any account whose balance moved unexpectedly — new charge, interest hit, dispute resolved.</p>
+      <div id="lg-balance-rows">
+        <div data-row-template class="lg-form-grid" style="margin-bottom:14px; display:none;">
+          <div class="lg-form-group">
+            <label class="lg-label">Account</label>
+            <select name="balance_account_slug[0]" class="lg-select">
+              <option value="">— pick —</option>
+              {% for d in debts %}
+                <option value="{{ d.slug }}">{{ d.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="lg-form-group">
+            <label class="lg-label">New balance</label>
+            <div class="lg-currency-wrap">
+              <input type="number" step="0.01" name="balance_value[0]" class="lg-input lg-num lg-currency">
+            </div>
+          </div>
+          <div class="lg-form-group">
+            <label class="lg-label">Note</label>
+            <input type="text" name="balance_notes[0]" class="lg-input">
+          </div>
+        </div>
+      </div>
+      <button type="button" class="lg-btn ghost sm" data-add-row data-target="lg-balance-rows">+ balance row</button>
+    </div>
+
+    {# ===== 6. EXTRA TO ALLOCATE / RECOMMENDATION ===== #}
+    <div class="lg-card">
+      <h2 class="lg-card-title">6 · Extra to allocate</h2>
+      {% if budget.current_target and runway.free_to_attack and runway.free_to_attack > 0 %}
+        <div class="lg-mid-number">
+          ${{ '{:,.2f}'.format(runway.free_to_attack) }} <span class="lg-note" style="font-size:0.85rem;">free to attack →</span>
+          <strong>{{ budget.current_target.name }}</strong>
+        </div>
+        <p class="lg-card-subtitle">
+          Avalanche default. Cuts {{ budget.current_target.name }} from
+          ${{ '{:,.2f}'.format(budget.current_target.current_balance or 0) }}
+          to ${{ '{:,.2f}'.format([0, (budget.current_target.current_balance or 0) - runway.free_to_attack]|max) }}.
+        </p>
+      {% else %}
+        <p class="lg-note">Awaiting checking snapshot and confirmed autopays before the recommendation lands.</p>
+      {% endif %}
+      <p class="lg-note">When ready, add the recommended amount as a manual payment row above and save.</p>
+    </div>
+
+    {# ===== 7. AI ASSISTANT ===== #}
+    <div class="lg-card">
+      <h2 class="lg-card-title">7 · Payday assistant <span class="lg-note">(optional)</span></h2>
+      <p class="lg-note">Single-shot recommendations with cited math. Advice, not action — nothing reaches a bank.</p>
+      <button type="button" id="lg-ai-btn" class="lg-btn outline" data-endpoint="/ledger/payday/assistant">
+        Ask Claude what to do
+      </button>
+      <div class="lg-spacer"></div>
+      <div id="lg-ai-panel"></div>
+    </div>
+
+    {# ===== 8. CLOSE SESSION ===== #}
+    <div class="lg-btn-row" style="margin-top:18px;">
+      <button type="submit" class="lg-btn primary">Save and close session</button>
+      <a href="/ledger/" class="lg-btn ghost">Cancel</a>
+    </div>
+
+  </form>
+
+  <footer class="lg-footer">
+    <span class="lg-footer-ident">YT-1300F · CHART ROOM · {{ today }}</span>
+    <div class="lg-footer-links">
+      <a href="/ledger/">Glance</a>
+      <a href="/publish">Cockpit</a>
+    </div>
+  </footer>
+</div>
+
+{% include 'includes/today_panel.html' ignore missing %}
+{% include 'includes/active_timer_strip.html' ignore missing %}
+<script src="/static/ledger.js"></script>
+</body>
+</html>

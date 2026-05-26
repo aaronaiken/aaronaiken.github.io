@@ -16,7 +16,7 @@ import sqlite3
 
 from flask import Blueprint, jsonify
 
-from helpers.db import get_db
+from helpers.db import get_db, get_ledger_db
 
 
 healthz_bp = Blueprint('healthz', __name__)
@@ -33,5 +33,20 @@ def healthz():
 			conn.close()
 	except (sqlite3.Error, OSError) as e:
 		logger.warning('healthz DB check failed: %s', e)
+		return jsonify(status='fail'), 500
+	return jsonify(status='ok'), 200
+
+
+@healthz_bp.route('/healthz/ledger')
+def healthz_ledger():
+	"""The Ledger's separate DB has its own health check — same shape, no auth."""
+	try:
+		conn = get_ledger_db()
+		try:
+			conn.execute('SELECT COUNT(*) FROM accounts').fetchone()
+		finally:
+			conn.close()
+	except (sqlite3.Error, OSError) as e:
+		logger.warning('healthz ledger DB check failed: %s', e)
 		return jsonify(status='fail'), 500
 	return jsonify(status='ok'), 200

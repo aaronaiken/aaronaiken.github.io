@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Leak hunt · The Ledger</title>
+  <link rel="stylesheet" href="/static/ledger.css">
+</head>
+<body class="ledger">
+<div class="lg-shell">
+
+  <header class="lg-header">
+    <div>
+      <a href="/ledger/" class="lg-wordmark">The Ledger</a>
+      <div class="lg-ident">Leak hunt</div>
+    </div>
+    {% include 'includes/ledger_nav.html' %}
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="lg-flash {% if category == 'error' %}error{% endif %}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {# ===== Past leak hunt detail ===== #}
+  {% if detail %}
+    <div class="lg-card">
+      <h2 class="lg-card-title">Leak hunt · {{ detail.imported_at[:10] }}</h2>
+      <div class="lg-mid-number">${{ '{:,.2f}'.format(detail.total_amount) }}</div>
+      <div class="lg-note">{{ detail.period_start }} → {{ detail.period_end }} · source: {{ detail.source }}</div>
+      <div class="lg-spacer"></div>
+      {% if detail_breakdown %}
+        {% set top_amount = detail_breakdown.values()|list|max %}
+        {% for cat, amt in detail_breakdown.items()|sort(attribute=1, reverse=True) %}
+          <div style="margin:8px 0;">
+            <div style="display:flex; justify-content:space-between; gap:12px; font-size:0.92rem;">
+              <span>{{ cat }}</span>
+              <span class="lg-num">${{ '{:,.2f}'.format(amt) }}</span>
+            </div>
+            <div style="height:6px; background:var(--lg-bg-elev-2); border-radius:3px; overflow:hidden;">
+              <div style="height:100%; width:{{ (amt/top_amount*100)|round(1) if top_amount > 0 else 0 }}%; background:var(--lg-brass);"></div>
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {# ===== Preview after upload ===== #}
+  {% if preview %}
+    <div class="lg-card">
+      <h2 class="lg-card-title">Categorize · {{ source_filename or 'uploaded CSV' }}</h2>
+      <p class="lg-note">{{ preview|length }} rows parsed. Edit categories below, then commit.</p>
+      <form method="POST" action="/ledger/leak-hunt/commit">
+        <input type="hidden" name="source" value="{{ source_filename or 'manual' }}">
+        <div class="lg-table-wrap">
+          <table class="lg-table">
+            <thead><tr>
+              <th>Date</th><th>Description</th><th class="num">Amount</th><th>Category</th>
+            </tr></thead>
+            <tbody>
+            {% for r in preview %}
+              <tr>
+                <td class="lg-mono" style="font-size:0.82rem;">{{ r.date }}
+                  <input type="hidden" name="date[{{ loop.index0 }}]" value="{{ r.date }}">
+                </td>
+                <td>{{ r.description }}
+                  <input type="hidden" name="desc[{{ loop.index0 }}]" value="{{ r.description }}">
+                </td>
+                <td class="num">${{ '{:,.2f}'.format(r.amount) }}
+                  <input type="hidden" name="amount[{{ loop.index0 }}]" value="{{ r.amount }}">
+                </td>
+                <td>
+                  <select name="category[{{ loop.index0 }}]" class="lg-select">
+                    {% for c in categories %}
+                      <option value="{{ c }}" {% if r.category == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="lg-spacer"></div>
+        <textarea name="notes" class="lg-textarea" placeholder="Optional notes about this hunt"></textarea>
+        <div class="lg-spacer-sm"></div>
+        <button type="submit" class="lg-btn primary">Commit leak hunt</button>
+        <a href="/ledger/leak-hunt/" class="lg-btn ghost">Cancel</a>
+      </form>
+    </div>
+  {% else %}
+    {# ===== Upload form ===== #}
+    {% if not detail %}
+    <div class="lg-card">
+      <h2 class="lg-card-title">Upload CSV</h2>
+      <p class="lg-note">Drop a checking export. Best-effort parser — looks for date / description / amount columns.</p>
+      <form method="POST" action="/ledger/leak-hunt/upload" enctype="multipart/form-data">
+        <input type="file" name="csv" accept=".csv" class="lg-input" required>
+        <div class="lg-spacer-sm"></div>
+        <button type="submit" class="lg-btn primary">Upload + preview</button>
+      </form>
+    </div>
+    {% endif %}
+  {% endif %}
+
+  {# ===== Past leak hunts ===== #}
+  {% if past %}
+    <div class="lg-section-label">// Past hunts</div>
+    <div class="lg-card" style="padding:0;">
+      <table class="lg-table">
+        <thead><tr>
+          <th>When</th><th>Period</th><th class="num">Total</th><th>Source</th>
+        </tr></thead>
+        <tbody>
+        {% for p in past %}
+          <tr>
+            <td class="lg-mono" style="font-size:0.85rem;"><a href="/ledger/leak-hunt/{{ p.id }}/">{{ p.imported_at[:10] }}</a></td>
+            <td class="lg-dim">{{ p.period_start }} → {{ p.period_end }}</td>
+            <td class="num">${{ '{:,.2f}'.format(p.total_amount) }}</td>
+            <td class="lg-dim">{{ p.source }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  <footer class="lg-footer">
+    <span class="lg-footer-ident">YT-1300F · CHART ROOM</span>
+    <div class="lg-footer-links">
+      <a href="/ledger/">Glance</a>
+    </div>
+  </footer>
+</div>
+{% include 'includes/today_panel.html' ignore missing %}
+{% include 'includes/active_timer_strip.html' ignore missing %}
+<script src="/static/ledger.js"></script>
+</body>
+</html>

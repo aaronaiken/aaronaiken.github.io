@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>The Ledger</title>
+  <link rel="stylesheet" href="/static/ledger.css">
+</head>
+<body class="ledger">
+
+<div class="lg-shell">
+
+  {# ============= header ============= #}
+  <header class="lg-header">
+    <div>
+      <a href="/ledger/" class="lg-wordmark">The Ledger</a>
+      <div class="lg-ident">Chart Room · YT-1300F</div>
+    </div>
+    {% include 'includes/ledger_nav.html' %}
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="lg-flash {% if category == 'error' %}error{% endif %}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {# ============= total debt + cash runway side by side ============= #}
+  <div class="lg-card-row">
+
+    {# total debt card #}
+    <div class="lg-card">
+      <h2 class="lg-card-title">Total Debt</h2>
+      <div class="lg-big-number">${{ '{:,.2f}'.format(total_debt) }}</div>
+      <div class="lg-meta-row">
+        <span class="item">
+          <span class="label">30-day Δ</span>
+          {% if delta_30 is none %}
+            <span class="lg-num lg-delta-flat">—</span>
+          {% elif delta_30 < -1 %}
+            <span class="lg-num lg-delta-down">↓ ${{ '{:,.2f}'.format(-delta_30) }}</span>
+          {% elif delta_30 > 1 %}
+            <span class="lg-num lg-delta-up">↑ ${{ '{:,.2f}'.format(delta_30) }}</span>
+          {% else %}
+            <span class="lg-num lg-delta-flat">— $0</span>
+          {% endif %}
+        </span>
+        <span class="item">
+          <span class="label">Interest / mo</span>
+          <span class="lg-num">${{ '{:,.2f}'.format(interest_burn) }}</span>
+        </span>
+        <span class="item">
+          <span class="label">Debt-free est.</span>
+          <span class="lg-num">{{ projection.debt_free_date or '—' }}</span>
+        </span>
+      </div>
+    </div>
+
+    {# cash runway card #}
+    <div class="lg-card">
+      <h2 class="lg-card-title">Cash Runway</h2>
+      {% if runway.checking_balance is none %}
+        <div class="lg-empty" style="padding:18px 0; text-align:left;">
+          <div class="lg-mid-number lg-dim">— · — </div>
+          <div class="lg-note">Checking not yet snapshotted. <a href="/ledger/payday/">Start a payday session</a> to begin.</div>
+        </div>
+      {% else %}
+        <div class="lg-mid-number">${{ '{:,.2f}'.format(runway.checking_balance) }}
+          <span class="lg-note" style="font-style:normal; font-size:0.85rem;">checking</span>
+        </div>
+        <div class="lg-runway-strip">
+          <span><span class="lg-dim">Next payday</span> <strong>{{ runway.next_payday }}</strong> ({{ runway.days_to_next_payday }}d)</span>
+          <span><span class="lg-dim">Obligations</span> <strong>${{ '{:,.2f}'.format(runway.total_obligations) }}</strong></span>
+          <span>
+            <span class="lg-dim">Free to attack</span>
+            <strong class="lg-status-{{ runway.runway_status }}">
+              ${{ '{:,.2f}'.format(runway.free_to_attack) }}
+            </strong>
+          </span>
+        </div>
+        {% if runway.obligations %}
+          <div class="lg-spacer"></div>
+          <details>
+            <summary class="lg-note" style="cursor:pointer;">{{ runway.obligations|length }} obligation{{ 's' if runway.obligations|length != 1 else '' }} between now and payday →</summary>
+            <div class="lg-spacer-sm"></div>
+            {% for o in runway.obligations %}
+              <div class="lg-pending-item">
+                <span>{{ o.description }} <span class="date">· {{ o.date }}</span></span>
+                <span class="lg-num">${{ '{:,.2f}'.format(o.amount) }}</span>
+              </div>
+            {% endfor %}
+          </details>
+        {% endif %}
+      {% endif %}
+    </div>
+
+  </div>
+
+  {# ============= attack budget card (full width) ============= #}
+  <div class="lg-card">
+    <h2 class="lg-card-title">Attack Budget</h2>
+    {% if budget.current_target %}
+      <div class="lg-mid-number">
+        ${{ '{:,.2f}'.format(budget.current_monthly) }}<span class="lg-note" style="font-style:normal; font-size:0.85rem;"> / mo →</span>
+        <strong>{{ budget.current_target.name }}</strong>
+        <span class="lg-note" style="font-style:normal; font-size:0.85rem;">@ {{ '{:.2f}'.format(budget.current_target.apr or 0) }}%</span>
+      </div>
+      <p class="lg-card-subtitle">Watch the attack budget grow with each kill.</p>
+      {% if budget.kill_sequence %}
+        <ol class="lg-ladder">
+          {% for k in budget.kill_sequence %}
+            <li {% if k.account.id == budget.current_target.id %}class="current"{% endif %}>
+              <span class="label-row">
+                <strong>{{ k.account.name }}</strong>
+                <span class="ladder-meta">est. kill: {{ k.projected_kill_month }} · then ${{ '{:,.0f}'.format(k.monthly_budget_after_kill) }}/mo to next target</span>
+              </span>
+              <span class="lg-num">${{ '{:,.2f}'.format(k.account.current_balance) }}</span>
+            </li>
+          {% endfor %}
+        </ol>
+      {% endif %}
+    {% else %}
+      <div class="lg-empty">All debts retired. The chart is clean.</div>
+    {% endif %}
+  </div>
+
+  {# ============= pending confirmations ============= #}
+  {% if pending %}
+    <div class="lg-pending-strip">
+      <h3>Pending autopay confirmations ({{ pending|length }})</h3>
+      {% for p in pending %}
+        <div class="lg-pending-item">
+          <span>
+            <strong>{{ p.account_name }}</strong>
+            <span class="date">· {{ p.tx_date }}</span>
+          </span>
+          <span class="lg-num">${{ '{:,.2f}'.format(p.amount) }}</span>
+        </div>
+      {% endfor %}
+      <div class="lg-spacer-sm"></div>
+      <a href="/ledger/payday/" class="lg-btn outline sm">Confirm in payday session →</a>
+    </div>
+  {% endif %}
+
+  {# ============= avalanche debts table ============= #}
+  <div class="lg-section-label">
+    <span>// Debts (avalanche order)</span>
+    <a href="/ledger/accounts/" class="lg-nav-link">All accounts →</a>
+  </div>
+  <div class="lg-card" style="padding:0;">
+    <div class="lg-table-wrap">
+      <table class="lg-table">
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th class="num">Balance</th>
+            <th class="num col-hide-sm">APR</th>
+            <th class="num col-hide-sm">Minimum</th>
+            <th class="num col-hide-sm">Allocation</th>
+            <th class="col-hide-sm">Next</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in avalanche %}
+            <tr {% if budget.current_target and d.id == budget.current_target.id %}class="target-row"{% endif %}>
+              <td>
+                <a href="/ledger/accounts/{{ d.slug }}/">{{ d.name }}</a>
+                {% if d.status == 'unknown' %}<span class="warn-glyph" title="Status unknown">⚠</span>{% endif %}
+                {% if d.stale_snapshot %}<span class="warn-glyph" title="Snapshot older than 14 days">·</span>{% endif %}
+              </td>
+              <td class="num">${{ '{:,.2f}'.format(d.current_balance) }}</td>
+              <td class="num col-hide-sm">{% if d.apr %}{{ '{:.2f}'.format(d.apr) }}%{% else %}—{% endif %}</td>
+              <td class="num col-hide-sm">${{ '{:,.2f}'.format(d.minimum_payment or 0) }}</td>
+              <td class="num col-hide-sm">{% if d.attack_allocation %}${{ '{:,.0f}'.format(d.attack_allocation) }}{% else %}—{% endif %}</td>
+              <td class="col-hide-sm lg-mono" style="font-size:0.85rem; color:var(--lg-text-dim);">{{ d.autopay_next_date or '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ============= coming up (next 30) ============= #}
+  {% if coming_up %}
+    <div class="lg-section-label">// Coming up (next 30 days)</div>
+    <div class="lg-card" style="padding:0;">
+      <table class="lg-table">
+        <tbody>
+          {% for e in coming_up %}
+            <tr>
+              <td class="lg-mono" style="font-size:0.85rem; width:110px;">{{ e.event_date }}</td>
+              <td>{{ e.description }}</td>
+              <td class="num">
+                {% if e.direction == 'inflow' %}<span class="lg-pos">+${{ '{:,.2f}'.format(e.amount) }}</span>
+                {% else %}<span class="lg-neg">−${{ '{:,.2f}'.format(e.amount) }}</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  {# ============= this-month activity ============= #}
+  <div class="lg-section-label">// This month's activity</div>
+  <div class="lg-card">
+    {% if this_month.n %}
+      <div class="lg-note" style="font-style:normal;">
+        Logged: <strong class="lg-num">${{ '{:,.2f}'.format(this_month.s) }}</strong>
+        in debt payments across {{ this_month.n }} transaction{{ 's' if this_month.n != 1 else '' }}.
+        {% if last_payment %}
+          Last: <strong class="lg-num">${{ '{:,.2f}'.format(last_payment.amount) }}</strong>
+          to <strong>{{ last_payment.account_name }}</strong> on {{ last_payment.tx_date }}.
+        {% endif %}
+      </div>
+      <div class="lg-spacer-sm"></div>
+      <a href="/ledger/history/" class="lg-nav-link">Full history →</a>
+    {% else %}
+      <div class="lg-note">Nothing logged this month yet.</div>
+    {% endif %}
+  </div>
+
+  {# ============= page footer ============= #}
+  <footer class="lg-footer">
+    <span class="lg-footer-ident">YT-1300F · CHART ROOM · {{ today }}</span>
+    <div class="lg-footer-links">
+      <a href="/publish">Cockpit</a>
+      <a href="/command-deck/">Command Deck</a>
+      <a href="/below-deck">Below Deck</a>
+    </div>
+  </footer>
+
+</div>
+
+{# Today panel + active timer strip — ship continuity #}
+{% include 'includes/today_panel.html' ignore missing %}
+{% include 'includes/active_timer_strip.html' ignore missing %}
+
+<script src="/static/ledger.js"></script>
+</body>
+</html>

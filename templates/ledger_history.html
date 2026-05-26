@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>History · The Ledger</title>
+  <link rel="stylesheet" href="/static/ledger.css">
+</head>
+<body class="ledger">
+<div class="lg-shell">
+
+  <header class="lg-header">
+    <div>
+      <a href="/ledger/" class="lg-wordmark">The Ledger</a>
+      <div class="lg-ident">History</div>
+    </div>
+    {% include 'includes/ledger_nav.html' %}
+  </header>
+
+  <div class="lg-section-label">// Kill log</div>
+  <div class="lg-card" style="padding:0;">
+    {% if kill_log %}
+      <div class="lg-table-wrap">
+        <table class="lg-table">
+          <thead><tr>
+            <th>Account</th><th>Killed</th>
+          </tr></thead>
+          <tbody>
+          {% for k in kill_log %}
+            <tr>
+              <td><a href="/ledger/accounts/{{ k.slug }}/">{{ k.name }}</a></td>
+              <td class="lg-mono" style="font-size:0.85rem;">{{ k.killed_at[:10] if k.killed_at else '—' }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="lg-empty">No kills yet. Add them one at a time.</div>
+    {% endif %}
+  </div>
+
+  <div class="lg-section-label">// Payment history</div>
+  <div class="lg-card" style="padding:0;">
+    {% if tx_history %}
+      <div class="lg-table-wrap">
+        <table class="lg-table">
+          <thead><tr>
+            <th>Date</th><th>Account</th><th>Description</th>
+            <th class="num">Amount</th><th class="col-hide-sm">Source</th>
+          </tr></thead>
+          <tbody>
+          {% for t in tx_history %}
+            <tr>
+              <td class="lg-mono" style="font-size:0.85rem;">{{ t.tx_date }}</td>
+              <td><a href="/ledger/accounts/{{ t.account_slug }}/">{{ t.account_name }}</a></td>
+              <td>{{ t.description or '—' }}</td>
+              <td class="num">${{ '{:,.2f}'.format(t.amount) }}</td>
+              <td class="col-hide-sm lg-dim">{{ t.source }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="lg-empty">No payments logged yet.</div>
+    {% endif %}
+  </div>
+
+  <footer class="lg-footer">
+    <span class="lg-footer-ident">YT-1300F · CHART ROOM</span>
+    <div class="lg-footer-links">
+      <a href="/ledger/">Glance</a>
+    </div>
+  </footer>
+</div>
+{% include 'includes/today_panel.html' ignore missing %}
+{% include 'includes/active_timer_strip.html' ignore missing %}
+<script src="/static/ledger.js"></script>
+</body>
+</html>

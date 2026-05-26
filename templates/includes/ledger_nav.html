@@ -1,0 +1,24 @@
+{# Single source of truth for the Ledger top nav.
+   Active state is determined from request.path — no per-template wiring. #}
+{%- set p = request.path -%}
+<nav class="lg-nav">
+  <a href="/ledger/" class="lg-nav-link{% if p == '/ledger/' %} active{% endif %}">Glance</a>
+  <span class="lg-nav-sep">·</span>
+  <a href="/ledger/payday/" class="lg-nav-link{% if p.startswith('/ledger/payday') %} active{% endif %}">Payday</a>
+  <span class="lg-nav-sep">·</span>
+  <a href="/ledger/accounts/" class="lg-nav-link{% if p.startswith('/ledger/accounts') %} active{% endif %}">Accounts</a>
+  <span class="lg-nav-sep">·</span>
+  <a href="/ledger/recurring/" class="lg-nav-link{% if p.startswith('/ledger/recurring') %} active{% endif %}">Recurring</a>
+  <span class="lg-nav-sep">·</span>
+  <a href="/ledger/one-time/" class="lg-nav-link{% if p.startswith('/ledger/one-time') %} active{% endif %}">One-time</a>
+  <span class="lg-nav-sep">·</span>
+  <a href="/ledger/income/" class="lg-nav-link{% if p.startswith('/ledger/income') %} active{% endif %}">Income</a>
+  <span class="lg-nav-sep">·</span>
+  <a href="/ledger/projection/" class="lg-nav-link{% if p.startswith('/ledger/projection') %} active{% endif %}">Projection</a>
+  <span class="lg-nav-sep">·</span>
+  <a href="/ledger/history/" class="lg-nav-link{% if p.startswith('/ledger/history') %} active{% endif %}">History</a>
+  <span class="lg-nav-sep">·</span>
+  <a href="/ledger/leak-hunt/" class="lg-nav-link{% if p.startswith('/ledger/leak-hunt') %} active{% endif %}">Leak Hunt</a>
+  <span class="lg-nav-sep">·</span>
+  <a href="/publish" class="lg-nav-link">Cockpit</a>
+</nav>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Income · The Ledger</title>
+  <link rel="stylesheet" href="/static/ledger.css">
+</head>
+<body class="ledger">
+<div class="lg-shell">
+
+  <header class="lg-header">
+    <div>
+      <a href="/ledger/" class="lg-wordmark">The Ledger</a>
+      <div class="lg-ident">Income events</div>
+    </div>
+    {% include 'includes/ledger_nav.html' %}
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="lg-flash {% if category == 'error' %}error{% endif %}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="lg-card">
+    <h2 class="lg-card-title">Log an income event</h2>
+    <form method="POST" action="/ledger/income/new" class="lg-form-grid">
+      <input type="hidden" name="next" value="/ledger/income/">
+      <div class="lg-form-group">
+        <label class="lg-label">Date</label>
+        <input type="date" name="event_date" class="lg-input" required>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Amount</label>
+        <div class="lg-currency-wrap">
+          <input type="number" step="0.01" name="amount" class="lg-input lg-num lg-currency" required>
+        </div>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Type</label>
+        <select name="income_type" class="lg-select">
+          <option value="paycheck">Paycheck</option>
+          <option value="bonus">Bonus</option>
+          <option value="side_income">Side income</option>
+          <option value="reimbursement">Reimbursement</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Source</label>
+        <input type="text" name="source" class="lg-input" placeholder="Day job, Q1 bonus, etc.">
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Recurring?</label>
+        <div class="lg-checkbox-row">
+          <input type="checkbox" name="recurring" value="1">
+          <select name="recurrence_pattern" class="lg-select" style="max-width:160px;">
+            <option value="">—</option>
+            <option value="biweekly">Biweekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+          </select>
+        </div>
+      </div>
+      <div class="lg-form-group" style="grid-column: 1 / -1;">
+        <label class="lg-label">Notes</label>
+        <input type="text" name="notes" class="lg-input">
+      </div>
+      <div style="grid-column: 1 / -1;">
+        <button type="submit" class="lg-btn primary">Log income</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="lg-section-label">// All income events</div>
+  <div class="lg-card" style="padding:0;">
+    {% if events %}
+      <div class="lg-table-wrap">
+        <table class="lg-table">
+          <thead><tr>
+            <th>Date</th><th>Type</th><th>Source</th>
+            <th class="num">Amount</th><th class="col-hide-sm">Recurring</th><th></th>
+          </tr></thead>
+          <tbody>
+          {% for e in events %}
+            <tr>
+              <form method="POST" action="/ledger/income/{{ e.id }}/edit" style="display:contents;">
+              <input type="hidden" name="next" value="/ledger/income/">
+              <td>
+                <input type="date" name="event_date" value="{{ e.event_date }}"
+                       class="lg-input lg-mono" style="background:transparent; border-color:transparent; font-size:0.85rem; width:140px;">
+              </td>
+              <td>
+                <select name="income_type" class="lg-select" style="background:transparent; border-color:transparent;">
+                  {% for t in ['paycheck','bonus','side_income','reimbursement','other'] %}
+                    <option value="{{ t }}" {% if e.income_type == t %}selected{% endif %}>{{ t | replace('_',' ') }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td>
+                <input type="text" name="source" value="{{ e.source or '' }}"
+                       class="lg-input" style="background:transparent; border-color:transparent;">
+              </td>
+              <td class="num">
+                <div class="lg-currency-wrap" style="display:inline-block; width:130px;">
+                  <input type="number" step="0.01" name="amount" value="{{ e.amount }}"
+                         class="lg-input lg-num lg-currency" style="background:transparent; border-color:transparent;">
+                </div>
+              </td>
+              <td class="col-hide-sm">
+                <div class="lg-checkbox-row">
+                  <input type="checkbox" name="recurring" value="1" {% if e.recurring %}checked{% endif %}>
+                  <select name="recurrence_pattern" class="lg-select" style="background:transparent; border-color:transparent; max-width:120px;">
+                    <option value="">—</option>
+                    {% for p in ['biweekly','monthly','quarterly'] %}
+                      <option value="{{ p }}" {% if e.recurrence_pattern == p %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </td>
+              <td>
+                <button type="submit" class="lg-btn ghost sm">save</button>
+              </form>
+              <form method="POST" action="/ledger/income/{{ e.id }}/delete" style="display:inline;"
+                    onsubmit="return confirm('Delete this income event?');">
+                <input type="hidden" name="next" value="/ledger/income/">
+                <button type="submit" class="lg-btn danger sm">×</button>
+              </form>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="lg-empty">No income events logged yet. They populate automatically as you save payday sessions.</div>
+    {% endif %}
+  </div>
+
+  <footer class="lg-footer">
+    <span class="lg-footer-ident">YT-1300F · CHART ROOM</span>
+    <div class="lg-footer-links">
+      <a href="/ledger/">Glance</a>
+    </div>
+  </footer>
+</div>
+{% include 'includes/today_panel.html' ignore missing %}
+{% include 'includes/active_timer_strip.html' ignore missing %}
+<script src="/static/ledger.js"></script>
+</body>
+</html>

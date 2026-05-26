@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Accounts · The Ledger</title>
+  <link rel="stylesheet" href="/static/ledger.css">
+</head>
+<body class="ledger">
+<div class="lg-shell">
+
+  <header class="lg-header">
+    <div>
+      <a href="/ledger/" class="lg-wordmark">The Ledger</a>
+      <div class="lg-ident">Accounts</div>
+    </div>
+    {% include 'includes/ledger_nav.html' %}
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="lg-flash {% if category == 'error' %}error{% endif %}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="lg-card" style="padding:0;">
+    <div class="lg-table-wrap">
+      <table class="lg-table">
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th class="num">Balance</th>
+            <th class="num col-hide-sm">APR</th>
+            <th class="num col-hide-sm">Min</th>
+            <th class="num col-hide-sm">Allocation</th>
+            <th class="col-hide-sm">Last snap</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for a in accounts %}
+          <tr {% if a.status == 'paid_off' %}class="kill-row"{% endif %}>
+            <td><a href="/ledger/accounts/{{ a.slug }}/">{{ a.name }}</a>
+              {% if a.status == 'unknown' %}<span class="warn-glyph" title="Unknown status">⚠</span>{% endif %}
+              {% if a.stale_snapshot and a.status not in ('closed','paid_off') %}<span class="warn-glyph" title="Snapshot >14d old">·</span>{% endif %}
+            </td>
+            <td class="lg-dim">{{ a.account_type | replace('_',' ') }}</td>
+            <td class="lg-dim">{{ a.status }}</td>
+            <td class="num">{% if a.current_balance is not none %}${{ '{:,.2f}'.format(a.current_balance) }}{% else %}—{% endif %}</td>
+            <td class="num col-hide-sm">{% if a.apr %}{{ '{:.2f}'.format(a.apr) }}%{% else %}—{% endif %}</td>
+            <td class="num col-hide-sm">{% if a.minimum_payment %}${{ '{:,.2f}'.format(a.minimum_payment) }}{% else %}—{% endif %}</td>
+            <td class="num col-hide-sm">{% if a.attack_allocation %}${{ '{:,.0f}'.format(a.attack_allocation) }}{% else %}—{% endif %}</td>
+            <td class="col-hide-sm lg-mono lg-dim" style="font-size:0.78rem;">{{ a.snapshot_at[:10] if a.snapshot_at else '—' }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="lg-section-label">// Add a new account</div>
+  <div class="lg-card">
+    <form method="POST" action="/ledger/accounts/new" class="lg-form-grid">
+      <div class="lg-form-group">
+        <label class="lg-label">Name</label>
+        <input type="text" name="name" class="lg-input" required>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Type</label>
+        <select name="account_type" class="lg-select">
+          <option value="credit_card">Credit card</option>
+          <option value="loan">Loan</option>
+          <option value="student_loan">Student loan</option>
+          <option value="bnpl">BNPL</option>
+          <option value="checking">Checking</option>
+          <option value="savings">Savings</option>
+        </select>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">APR (%)</label>
+        <input type="number" step="0.01" name="apr" class="lg-input lg-num">
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Minimum payment</label>
+        <div class="lg-currency-wrap">
+          <input type="number" step="0.01" name="minimum_payment" class="lg-input lg-num lg-currency">
+        </div>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Attack allocation</label>
+        <div class="lg-currency-wrap">
+          <input type="number" step="0.01" name="attack_allocation" class="lg-input lg-num lg-currency" value="0">
+        </div>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Opening balance</label>
+        <div class="lg-currency-wrap">
+          <input type="number" step="0.01" name="opening_balance" class="lg-input lg-num lg-currency">
+        </div>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Autopay</label>
+        <div class="lg-checkbox-row">
+          <input type="checkbox" name="autopay_enabled" value="1"> enabled
+        </div>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Autopay amount</label>
+        <div class="lg-currency-wrap">
+          <input type="number" step="0.01" name="autopay_amount" class="lg-input lg-num lg-currency">
+        </div>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Cadence</label>
+        <select name="autopay_cadence" class="lg-select">
+          <option value="">—</option>
+          <option value="monthly">Monthly</option>
+          <option value="monthly_eom">Monthly (EOM)</option>
+          <option value="biweekly">Biweekly</option>
+        </select>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Day of month</label>
+        <input type="number" min="1" max="31" name="autopay_day" class="lg-input lg-num">
+      </div>
+      <div class="lg-form-group" style="grid-column: 1 / -1;">
+        <label class="lg-label">Notes</label>
+        <textarea name="notes" class="lg-textarea"></textarea>
+      </div>
+      <div style="grid-column: 1 / -1;">
+        <button type="submit" class="lg-btn primary">Add account</button>
+      </div>
+    </form>
+  </div>
+
+  <footer class="lg-footer">
+    <span class="lg-footer-ident">YT-1300F · CHART ROOM</span>
+    <div class="lg-footer-links">
+      <a href="/ledger/">Glance</a>
+      <a href="/publish">Cockpit</a>
+    </div>
+  </footer>
+</div>
+{% include 'includes/today_panel.html' ignore missing %}
+{% include 'includes/active_timer_strip.html' ignore missing %}
+<script src="/static/ledger.js"></script>
+</body>
+</html>
