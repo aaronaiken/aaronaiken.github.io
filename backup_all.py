@@ -56,6 +56,7 @@ MOZZIE_FILE = os.environ.get('MOZZIE_FILE', os.path.join(REPO_ROOT, 'mozzie_game
 # Add new at-risk files here. Order doesn't matter — sweep is per-file.
 TARGETS = [
 	(os.path.join(REPO_ROOT, 'assets/data/command_deck.db'), 'sqlite'),
+	(os.path.join(REPO_ROOT, 'assets/data/ledger.db'),       'sqlite'),
 	(os.path.join(REPO_ROOT, 'assets/data/scratch.json'),    'json'),
 	(os.path.join(REPO_ROOT, 'assets/data/scratch_work.json'),'json'),
 	(os.path.join(REPO_ROOT, 'assets/data/below_deck.json'), 'json'),  # retired stub
