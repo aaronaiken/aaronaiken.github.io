@@ -563,39 +563,91 @@ def expected_checking_balance(conn):
 
 # ---- projection (month by month) ----
 
-def project_payoff(conn, max_months=240):
+def project_payoff(conn, max_months=240, overrides=None):
 	"""
 	Run the interest-aware avalanche-snowball simulation month by month
 	from today until every debt is at zero (or max_months reached).
+
+	overrides (optional dict for the Phase 2 sandbox — None = pure baseline):
+	  redirect_bonuses                  bool — add bonus income_events to
+	                                          attack budget in their month
+	  extra_monthly_attack              float — add to attack pool every
+	                                            month, on top of allocation
+	  side_income_by_month              dict {month_idx: amount} — add to
+	                                          attack pool in those months
+	  windfalls                         list of {month_idx, amount} — one-shot
+	                                          adds in specific months
+	  fedloan_minimum                   float — override FedLoan minimum
+	  fedloan_minimum_starts_month_idx  int — first month_idx where the
+	                                          override applies (0 = now)
+
+	month_idx is zero-based from today's month (0 = current month).
+
+	Each extra contributor (bonus / extra-attack / side-income / windfall)
+	stacks onto whatever the current primary target is getting that month
+	— same imminent-kill / allocation / fallback priority order.
 
 	Returns Projection(monthly_rows, debt_free_date, total_interest_paid).
 
 	Each monthly_row is a dict:
 	  month                 'YYYY-MM'
 	  starting_total        sum of debt balances at month start
-	  income                income applied this month (placeholder; not yet used in the math)
 	  minimums_applied      sum of minimums applied to debts
 	  attack_applied        attack allocation applied
+	  bonus_applied         redirected-bonus amount this month (sandbox)
+	  extra_applied         extra-monthly-attack amount applied (sandbox)
+	  side_income_applied   side-income amount applied (sandbox)
+	  windfall_applied      windfall amount applied (sandbox)
 	  interest_accrued      interest added this month
 	  ending_total          sum of debt balances after the month
 	  current_target_id     primary target at month start
 	  current_target_name
 	  kill_account_id       id of debt killed this month (if any)
 	  kill_account_name
+	  sandbox_touched       True if any sandbox contributor fired in this month
 	"""
+	o = overrides or {}
+	redirect_bonuses          = bool(o.get('redirect_bonuses'))
+	extra_monthly_attack      = float(o.get('extra_monthly_attack') or 0)
+	side_income_by_month      = o.get('side_income_by_month') or {}
+	windfalls                 = o.get('windfalls') or []
+	fedloan_min_override      = o.get('fedloan_minimum')
+	fedloan_min_starts_at     = int(o.get('fedloan_minimum_starts_month_idx') or 0)
+
+	# Resolve windfalls into {month_idx: total_amount}
+	windfalls_by_idx = {}
+	for w in windfalls:
+		try:
+			mi = int(w.get('month_idx'))
+			amt = float(w.get('amount') or 0)
+		except (TypeError, ValueError):
+			continue
+		if amt > 0:
+			windfalls_by_idx[mi] = windfalls_by_idx.get(mi, 0) + amt
+
+	# Resolve bonus events into {month_idx: amount} for the sim window.
+	bonus_by_idx = {}
+	if redirect_bonuses:
+		bonus_by_idx = _project_bonus_amounts_by_month_idx(conn, max_months)
+
 	debts = avalanche_order(conn)
 	# Local mutable state: balances + allocations per account.
 	state = []
+	fedloan_idx = None
 	for d in debts:
-		state.append({
+		s = {
 			'id':       d['id'],
 			'name':     d['name'],
+			'slug':     d.get('slug'),
 			'balance':  d['current_balance'],
 			'apr':      d.get('apr') or 0,
 			'minimum':  d.get('minimum_payment') or 0,
 			'alloc':    d.get('attack_allocation') or 0,
 			'killed_month': None,
-		})
+		}
+		state.append(s)
+		if s.get('slug') == 'fedloan-student':
+			fedloan_idx = len(state) - 1
 
 	# Default attack from settings — applied to whichever debt is primary
 	# (i.e., the head of state list with allocation > 0; if none, head).
@@ -629,9 +681,19 @@ def project_payoff(conn, max_months=240):
 		if not alive:
 			break
 
+		# Apply FedLoan minimum override at its activation month (idempotent —
+		# we'll re-set every loop but that's cheap).
+		if fedloan_idx is not None and fedloan_min_override is not None:
+			if month_num >= fedloan_min_starts_at and state[fedloan_idx]['balance'] > 0:
+				state[fedloan_idx]['minimum'] = float(fedloan_min_override)
+
 		starting_total = sum(s['balance'] for s in state)
 		minimums_applied = 0.0
 		attack_applied   = 0.0
+		bonus_applied    = 0.0
+		extra_applied    = 0.0
+		side_applied     = 0.0
+		windfall_applied = 0.0
 		interest_accrued = 0.0
 		killed_id        = None
 		killed_name      = None
@@ -646,7 +708,8 @@ def project_payoff(conn, max_months=240):
 			s['balance'] -= pay
 			minimums_applied += pay
 
-		# 2. apply attack to primary
+		# 2. apply normal attack to primary (single-shot, no spill — preserves
+		# the Phase 1 baseline behavior exactly).
 		if target and target['balance'] > 0:
 			attack_pool = target['alloc']
 			# If no per-account allocation set, fall back to default_attack
@@ -656,6 +719,36 @@ def project_payoff(conn, max_months=240):
 			pay = min(attack_pool, target['balance'])
 			target['balance'] -= pay
 			attack_applied += pay
+
+		# 2b. Sandbox contributors stack on top AND spill: if the current
+		# primary dies mid-payment, the remainder cascades to the next alive
+		# avalanche-ordered debt. Otherwise a windfall on a dying target
+		# would be silently absorbed and the user's "what if?" wouldn't
+		# reflect the actual extra firepower they'd have.
+		def _stack(amount):
+			if amount <= 0:
+				return 0
+			remaining = amount
+			applied = 0
+			safety = len(state) + 2
+			while remaining > 0.005 and safety > 0:
+				safety -= 1
+				pi = primary_idx()
+				if pi is None:
+					break
+				t = state[pi]
+				if t['balance'] <= 0:
+					break
+				p = min(remaining, t['balance'])
+				t['balance'] -= p
+				applied += p
+				remaining -= p
+			return applied
+
+		extra_applied    += _stack(extra_monthly_attack)
+		bonus_applied    += _stack(bonus_by_idx.get(month_num, 0))
+		side_applied     += _stack(float(side_income_by_month.get(month_num, 0) or 0))
+		windfall_applied += _stack(windfalls_by_idx.get(month_num, 0))
 
 		# 3. interest on remaining balances (month-end)
 		for s in state:
@@ -688,12 +781,18 @@ def project_payoff(conn, max_months=240):
 			'starting_total':     starting_total,
 			'minimums_applied':   minimums_applied,
 			'attack_applied':     attack_applied,
+			'bonus_applied':      bonus_applied,
+			'extra_applied':      extra_applied,
+			'side_income_applied': side_applied,
+			'windfall_applied':   windfall_applied,
 			'interest_accrued':   interest_accrued,
 			'ending_total':       ending_total,
 			'current_target_id':  target['id'] if target else None,
 			'current_target_name': target['name'] if target else None,
 			'kill_account_id':    killed_id,
 			'kill_account_name':  killed_name,
+			'sandbox_touched':    (bonus_applied + extra_applied +
+			                       side_applied + windfall_applied) > 0,
 		})
 
 		# advance month
@@ -715,6 +814,130 @@ def project_payoff(conn, max_months=240):
 		debt_free_date=debt_free_date,
 		total_interest_paid=total_interest,
 	)
+
+
+def _project_bonus_amounts_by_month_idx(conn, max_months):
+	"""Project future bonus income into the simulation window.
+
+	For each income_events row with income_type='bonus':
+	  - If event_date is in the future, take it at face value (one shot).
+	  - If recurring=1 with a recognized recurrence_pattern, extrapolate
+	    forward through the sim window.
+
+	Returns {month_idx: total_amount}. month_idx is zero-based from
+	today's month boundary (matches project_payoff's month indexing).
+	"""
+	today = et_today()
+	month_anchor = date(today.year, today.month, 1)
+	end_anchor = month_anchor
+	for _ in range(max_months):
+		nm = end_anchor.month % 12 + 1
+		ny = end_anchor.year + (1 if end_anchor.month == 12 else 0)
+		end_anchor = date(ny, nm, 1)
+	# end_anchor is exclusive upper bound
+
+	out = {}
+
+	def month_idx_for(d):
+		# zero-based months from month_anchor
+		return (d.year - month_anchor.year) * 12 + (d.month - month_anchor.month)
+
+	rows = conn.execute("""
+		SELECT * FROM income_events WHERE income_type = 'bonus'
+	""").fetchall()
+	for r in rows:
+		try:
+			d = date.fromisoformat(r['event_date'])
+		except (TypeError, ValueError):
+			continue
+		amt = float(r['amount'] or 0)
+		if amt <= 0:
+			continue
+		pattern = (r['recurrence_pattern'] or '').lower()
+
+		if r['recurring']:
+			# Extrapolate forward through the sim window starting from the
+			# first occurrence at or after month_anchor.
+			cursor = d
+			# Roll cursor forward to >= month_anchor.
+			step_safety = 200
+			while cursor < month_anchor and step_safety > 0:
+				step_safety -= 1
+				cursor = _advance_by_pattern(cursor, pattern)
+				if cursor is None:
+					break
+			while cursor and cursor < end_anchor and step_safety > 0:
+				step_safety -= 1
+				mi = month_idx_for(cursor)
+				if 0 <= mi < max_months:
+					out[mi] = out.get(mi, 0) + amt
+				cursor = _advance_by_pattern(cursor, pattern)
+		else:
+			# One-shot bonus — only counts if it's still in the future.
+			if d >= month_anchor and d < end_anchor:
+				out[month_idx_for(d)] = out.get(month_idx_for(d), 0) + amt
+
+	return out
+
+
+def _advance_by_pattern(d, pattern):
+	"""Move a date forward by one recurrence cycle. Returns None on unknown."""
+	if not d:
+		return None
+	if pattern == 'biweekly':
+		return d + timedelta(days=14)
+	if pattern == 'monthly':
+		nm = d.month % 12 + 1
+		ny = d.year + (1 if d.month == 12 else 0)
+		last_day = calendar.monthrange(ny, nm)[1]
+		return date(ny, nm, min(d.day, last_day))
+	if pattern == 'quarterly':
+		# add 3 months
+		m = d.month + 3
+		ny = d.year + (m - 1) // 12
+		nm = (m - 1) % 12 + 1
+		last_day = calendar.monthrange(ny, nm)[1]
+		return date(ny, nm, min(d.day, last_day))
+	return None
+
+
+def next_future_bonus(conn):
+	"""Return the next future bonus income_event as a dict, or None.
+
+	Used by the sandbox UI to render "Your next bonus lands [Jul 2026, $X]"
+	hint text under the Redirect Bonuses toggle.
+	"""
+	today_iso = et_today().isoformat()
+	row = conn.execute("""
+		SELECT * FROM income_events
+		WHERE income_type = 'bonus' AND event_date >= ?
+		ORDER BY event_date ASC LIMIT 1
+	""", (today_iso,)).fetchone()
+	if row:
+		return dict(row)
+	# No future one-shot — look for a recurring bonus and extrapolate next date.
+	row = conn.execute("""
+		SELECT * FROM income_events
+		WHERE income_type = 'bonus' AND recurring = 1
+		ORDER BY event_date DESC LIMIT 1
+	""").fetchone()
+	if not row:
+		return None
+	try:
+		d = date.fromisoformat(row['event_date'])
+	except (TypeError, ValueError):
+		return None
+	pattern = (row['recurrence_pattern'] or '').lower()
+	today = et_today()
+	safety = 200
+	while d <= today and safety > 0:
+		safety -= 1
+		d = _advance_by_pattern(d, pattern)
+		if d is None:
+			return None
+	r = dict(row)
+	r['projected_next_date'] = d.isoformat()
+	return r
 
 
 # ---- cascade on manual kill ----

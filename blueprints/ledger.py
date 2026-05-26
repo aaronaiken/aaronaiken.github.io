@@ -967,13 +967,285 @@ def history():
 	)
 
 
+# ---- projection + sandbox (Phase 2) ----
+
+# Side-income ramp presets from the spec. Plateau at the last value.
+_SIDE_INCOME_RAMPS = {
+	'slow':      [0, 50, 100, 200, 350, 500, 650, 800, 950, 1100, 1250, 1500],
+	'realistic': [0, 100, 250, 500, 800, 1200, 1600, 2000],
+}
+
+
+def _resolve_side_income(spec, max_months):
+	"""Resolve a side-income spec dict from the sandbox form into a
+	{month_idx: amount} dict for project_payoff overrides.
+
+	spec shape: {preset: 'none'|'slow'|'realistic'|'custom',
+	             start_month_idx: int,
+	             custom_amount: float,        # for preset='custom' flat start
+	             custom_ramp: float}          # for preset='custom' monthly bump
+	"""
+	if not spec:
+		return {}
+	preset = (spec.get('preset') or 'none').lower()
+	if preset == 'none':
+		return {}
+	try:
+		start = int(spec.get('start_month_idx', 3))
+	except (TypeError, ValueError):
+		start = 3
+	start = max(0, start)
+
+	if preset in _SIDE_INCOME_RAMPS:
+		amounts = _SIDE_INCOME_RAMPS[preset]
+		plateau = amounts[-1]
+		out = {}
+		for i in range(max_months - start):
+			amt = amounts[i] if i < len(amounts) else plateau
+			if amt > 0:
+				out[start + i] = float(amt)
+		return out
+
+	if preset == 'custom':
+		try:
+			base = float(spec.get('custom_amount') or 0)
+			ramp = float(spec.get('custom_ramp') or 0)
+		except (TypeError, ValueError):
+			base = ramp = 0
+		out = {}
+		for i in range(max_months - start):
+			amt = base + i * ramp
+			if amt > 0:
+				out[start + i] = amt
+		return out
+
+	return {}
+
+
+def _build_overrides_from_request(body, max_months=240):
+	"""Build the project_payoff overrides dict from the sandbox JSON body."""
+	if not body:
+		return None
+	wins = []
+	for w in (body.get('windfalls') or []):
+		try:
+			mi = int(w.get('month_idx'))
+			amt = float(w.get('amount') or 0)
+		except (TypeError, ValueError):
+			continue
+		if amt > 0:
+			wins.append({'month_idx': mi, 'amount': amt})
+
+	fedloan_amount = body.get('fedloan_override', {}).get('amount') if isinstance(body.get('fedloan_override'), dict) else body.get('fedloan_minimum')
+	fedloan_starts = 0
+	if isinstance(body.get('fedloan_override'), dict):
+		try:
+			fedloan_starts = int(body['fedloan_override'].get('starts_month_idx') or 0)
+		except (TypeError, ValueError):
+			fedloan_starts = 0
+	if fedloan_amount in ('', None):
+		fedloan_amount = None
+	else:
+		try:
+			fedloan_amount = float(fedloan_amount)
+			if fedloan_amount < 0:
+				fedloan_amount = None
+		except (TypeError, ValueError):
+			fedloan_amount = None
+
+	overrides = {
+		'redirect_bonuses':     bool(body.get('redirect_bonuses')),
+		'extra_monthly_attack': float(body.get('extra_monthly_attack') or 0),
+		'side_income_by_month': _resolve_side_income(body.get('side_income') or {}, max_months),
+		'windfalls':            wins,
+	}
+	if fedloan_amount is not None:
+		overrides['fedloan_minimum'] = fedloan_amount
+		overrides['fedloan_minimum_starts_month_idx'] = fedloan_starts
+	return overrides
+
+
+def _bonus_count(conn):
+	row = conn.execute(
+		"SELECT COUNT(*) AS n FROM income_events WHERE income_type = 'bonus'"
+	).fetchone()
+	return row['n'] if row else 0
+
+
 @ledger_bp.route('/projection/')
 @cd_auth_required
 def projection_view():
 	conn = get_ledger_db()
 	projection = L.project_payoff(conn)
+	target = L.current_primary_target(conn)
+	next_bonus = L.next_future_bonus(conn)
+	bonus_count = _bonus_count(conn)
+	fedloan_row = conn.execute(
+		"SELECT minimum_payment FROM accounts WHERE slug = 'fedloan-student'"
+	).fetchone()
+	current_fedloan_min = fedloan_row['minimum_payment'] if fedloan_row else None
 	conn.close()
-	return render_template('ledger_projection.html', projection=projection)
+	return render_template(
+		'ledger_projection.html',
+		projection=projection,
+		current_target=target,
+		next_bonus=next_bonus,
+		bonus_count=bonus_count,
+		current_fedloan_min=current_fedloan_min,
+	)
+
+
+@ledger_bp.route('/projection/sandbox', methods=['POST'])
+@cd_auth_required
+def projection_sandbox():
+	"""Re-run the projection with sandbox overrides and return both
+	baseline and sandbox projections + the delta strip data as JSON."""
+	body = request.get_json(silent=True) or {}
+	conn = get_ledger_db()
+	overrides = _build_overrides_from_request(body)
+	baseline = L.project_payoff(conn)
+	sandbox  = L.project_payoff(conn, overrides=overrides)
+	conn.close()
+
+	def _serialize(p):
+		return {
+			'debt_free_date':      p.debt_free_date,
+			'total_interest_paid': round(p.total_interest_paid, 2),
+			'monthly_rows':        [{
+				'month':             r['month'],
+				'starting_total':    round(r['starting_total'], 2),
+				'minimums_applied':  round(r['minimums_applied'], 2),
+				'attack_applied':    round(r['attack_applied'], 2),
+				'bonus_applied':     round(r.get('bonus_applied') or 0, 2),
+				'extra_applied':     round(r.get('extra_applied') or 0, 2),
+				'side_income_applied': round(r.get('side_income_applied') or 0, 2),
+				'windfall_applied':  round(r.get('windfall_applied') or 0, 2),
+				'interest_accrued':  round(r['interest_accrued'], 2),
+				'ending_total':      round(r['ending_total'], 2),
+				'current_target_name': r.get('current_target_name'),
+				'kill_account_name': r.get('kill_account_name'),
+				'sandbox_touched':   bool(r.get('sandbox_touched')),
+			} for r in p.monthly_rows],
+		}
+
+	# Months delta — negative number = sandbox finishes earlier.
+	def _months_between(a, b):
+		if not a or not b:
+			return None
+		try:
+			ay, am = map(int, a.split('-'))
+			by, bm = map(int, b.split('-'))
+		except ValueError:
+			return None
+		return (by - ay) * 12 + (bm - am)
+
+	months_delta = _months_between(baseline.debt_free_date, sandbox.debt_free_date)
+	interest_saved = round(baseline.total_interest_paid - sandbox.total_interest_paid, 2)
+
+	return jsonify({
+		'baseline': _serialize(baseline),
+		'sandbox':  _serialize(sandbox),
+		'delta': {
+			'months':          months_delta,
+			'interest_saved':  interest_saved,
+		},
+	})
+
+
+@ledger_bp.route('/projection/sandbox/apply', methods=['POST'])
+@cd_auth_required
+def projection_sandbox_apply():
+	"""Apply the user-confirmed subset of sandbox changes to live config.
+
+	Accepts JSON:
+	  {
+	    "apply_extra_attack":  500,        # bump current primary's alloc by this
+	    "apply_windfalls":     [{month_idx, amount, description}, ...],
+	    "apply_fedloan_min":   366
+	  }
+
+	Each field is optional. Returns the list of changes actually made.
+	"""
+	body = request.get_json(silent=True) or {}
+	conn = get_ledger_db()
+	now = L.et_now_iso()
+	changes = []
+
+	# 1. Bump current primary target's allocation
+	try:
+		extra = float(body.get('apply_extra_attack') or 0)
+	except (TypeError, ValueError):
+		extra = 0
+	if extra > 0:
+		target = L.current_primary_target(conn)
+		if target:
+			new_alloc = (target.get('attack_allocation') or 0) + extra
+			conn.execute(
+				"UPDATE accounts SET attack_allocation = ?, updated = ? WHERE id = ?",
+				(new_alloc, now, target['id']))
+			changes.append({
+				'kind':    'allocation_bump',
+				'account': target['name'],
+				'from':    round(target.get('attack_allocation') or 0, 2),
+				'to':      round(new_alloc, 2),
+			})
+
+	# 2. Windfalls → one_time_events rows
+	today = L.et_today()
+	month_anchor = date(today.year, today.month, 1)
+	for w in (body.get('apply_windfalls') or []):
+		try:
+			mi = int(w.get('month_idx'))
+			amt = float(w.get('amount') or 0)
+		except (TypeError, ValueError):
+			continue
+		if amt <= 0:
+			continue
+		# Resolve month_idx → ISO date (15th of that month, arbitrary midpoint).
+		nm = month_anchor.month + mi
+		ny = month_anchor.year + (nm - 1) // 12
+		nm = (nm - 1) % 12 + 1
+		from calendar import monthrange
+		last = monthrange(ny, nm)[1]
+		ev_date = date(ny, nm, min(15, last)).isoformat()
+		desc = (w.get('description') or 'Sandbox windfall').strip() or 'Sandbox windfall'
+		conn.execute("""
+			INSERT INTO one_time_events (
+				event_date, amount, direction, description, status,
+				affects_attack, notes, created
+			) VALUES (?, ?, 'inflow', ?, 'planned', 1, ?, ?)
+		""", (ev_date, amt, desc, 'Applied from projection sandbox', now))
+		changes.append({
+			'kind':        'windfall',
+			'date':        ev_date,
+			'amount':      round(amt, 2),
+			'description': desc,
+		})
+
+	# 3. FedLoan minimum override
+	fl = body.get('apply_fedloan_min')
+	if fl not in (None, ''):
+		try:
+			fl_amount = float(fl)
+		except (TypeError, ValueError):
+			fl_amount = None
+		if fl_amount is not None and fl_amount >= 0:
+			row = conn.execute(
+				"SELECT id, minimum_payment FROM accounts WHERE slug = 'fedloan-student'"
+			).fetchone()
+			if row:
+				conn.execute(
+					"UPDATE accounts SET minimum_payment = ?, updated = ? WHERE id = ?",
+					(fl_amount, now, row['id']))
+				changes.append({
+					'kind': 'fedloan_minimum',
+					'from': round(row['minimum_payment'] or 0, 2),
+					'to':   round(fl_amount, 2),
+				})
+
+	conn.commit()
+	conn.close()
+	return jsonify({'ok': True, 'changes': changes})
 
 
 # ---- JSON feeds ----

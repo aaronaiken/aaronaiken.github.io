@@ -584,3 +584,72 @@ body.ledger a:hover { color: var(--lg-brass); }
   width: 36px; height: 36px;
   display: inline-block;
 }
+
+/* -------- projection sandbox (Phase 2) -------- */
+.lg-tables-wrap {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+.lg-tables-wrap.has-sandbox {
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 880px) {
+  .lg-tables-wrap.has-sandbox { grid-template-columns: 1fr; }
+}
+.lg-table-col-label {
+  font-family: var(--lg-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--lg-brass);
+  margin-bottom: 6px;
+  padding-left: 4px;
+}
+
+.lg-compare-strip { background: rgba(176, 141, 87, 0.05); border-color: var(--lg-brass-dim); }
+.lg-compare-strip .lg-num { color: var(--lg-text); }
+
+#lg-strip-months-delta.lg-pos { color: var(--lg-teal); }
+#lg-strip-months-delta.lg-neg { color: var(--lg-brick); }
+
+.lg-sandbox-panel summary::-webkit-details-marker { display: none; }
+.lg-sandbox-panel[open] #lg-sandbox-toggle-hint::after { content: ' (collapse ▴)'; }
+
+/* sandbox-touched row tint */
+.lg-table tbody tr.sandbox-row { background: rgba(176, 141, 87, 0.06); }
+
+/* modal */
+.lg-modal {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.lg-modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+.lg-modal-content {
+  position: relative; z-index: 1;
+  max-width: 540px; width: 100%;
+  max-height: 80vh; overflow-y: auto;
+  margin: 0;
+}
+.lg-modal-change {
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--lg-rule);
+  font-size: 0.92rem;
+}
+.lg-modal-change:last-child { border-bottom: 0; }
+.lg-modal-change .kind {
+  font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--lg-text-dim); display: block; margin-bottom: 2px;
+}
+.lg-modal-empty { padding: 20px; text-align: center; color: var(--lg-text-muted); font-style: italic; }
+
+/* windfall row */
+.lg-windfall-row {
+  display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;
+  padding: 6px 0; border-bottom: 1px dashed var(--lg-rule);
+}
+.lg-windfall-row:last-child { border-bottom: 0; }

@@ -17,49 +17,228 @@
     {% include 'includes/ledger_nav.html' %}
   </header>
 
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="lg-flash {% if category == 'error' %}error{% endif %}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {# Baseline summary header #}
   <div class="lg-card">
     <h2 class="lg-card-title">Avalanche + snowball projection</h2>
     <div class="lg-mid-number">
-      Debt-free: <strong>{{ projection.debt_free_date or '—' }}</strong>
+      Debt-free: <strong id="lg-baseline-debt-free">{{ projection.debt_free_date or '—' }}</strong>
     </div>
     <div class="lg-meta-row">
       <span class="item"><span class="label">Months simulated</span>
         <span class="lg-num">{{ projection.monthly_rows | length }}</span></span>
       <span class="item"><span class="label">Total interest paid</span>
-        <span class="lg-num">${{ '{:,.2f}'.format(projection.total_interest_paid) }}</span></span>
+        <span class="lg-num" id="lg-baseline-interest">${{ '{:,.2f}'.format(projection.total_interest_paid) }}</span></span>
     </div>
     <p class="lg-card-subtitle">Interest is accrued on remaining balances each month. Kills cascade allocation onto the next-highest-APR target.</p>
   </div>
 
-  <div class="lg-section-label">// Month by month</div>
-  <div class="lg-card" style="padding:0;">
-    {% if projection.monthly_rows %}
-      <div class="lg-table-wrap">
-        <table class="lg-table">
-          <thead><tr>
-            <th>Month</th><th class="num">Start</th><th class="num col-hide-sm">Min</th>
-            <th class="num col-hide-sm">Attack</th><th class="num col-hide-sm">Interest</th>
-            <th class="num">End</th><th>Target</th><th>Kill</th>
-          </tr></thead>
-          <tbody>
-          {% for r in projection.monthly_rows %}
-            <tr {% if r.kill_account_name %}class="target-row"{% endif %}>
-              <td class="lg-mono" style="font-size:0.85rem;">{{ r.month }}</td>
-              <td class="num">${{ '{:,.0f}'.format(r.starting_total) }}</td>
-              <td class="num col-hide-sm">${{ '{:,.0f}'.format(r.minimums_applied) }}</td>
-              <td class="num col-hide-sm">${{ '{:,.0f}'.format(r.attack_applied) }}</td>
-              <td class="num col-hide-sm lg-neg">${{ '{:,.0f}'.format(r.interest_accrued) }}</td>
-              <td class="num">${{ '{:,.0f}'.format(r.ending_total) }}</td>
-              <td class="lg-dim">{{ r.current_target_name or '—' }}</td>
-              <td>{% if r.kill_account_name %}<strong class="lg-pos">{{ r.kill_account_name }} ✓</strong>{% endif %}</td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
+  {# Comparison strip — initially hidden, shown by JS when sandbox is active #}
+  <div class="lg-card lg-compare-strip" id="lg-compare-strip" style="display:none;">
+    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; text-align:center;">
+      <div>
+        <div class="lg-label" style="margin-bottom:4px;">Baseline</div>
+        <div class="lg-num" style="font-size:1.1rem;" id="lg-strip-baseline-date">—</div>
+        <div class="lg-note" style="font-size:0.8rem;">interest <span id="lg-strip-baseline-interest">—</span></div>
       </div>
-    {% else %}
-      <div class="lg-empty">No projection — no active debts to simulate.</div>
-    {% endif %}
+      <div>
+        <div class="lg-label" style="margin-bottom:4px;">Sandbox</div>
+        <div class="lg-num" style="font-size:1.1rem;" id="lg-strip-sandbox-date">—</div>
+        <div class="lg-note" style="font-size:0.8rem;">interest <span id="lg-strip-sandbox-interest">—</span></div>
+      </div>
+      <div>
+        <div class="lg-label" style="margin-bottom:4px;">Δ</div>
+        <div class="lg-mid-number" style="margin:0;">
+          <span id="lg-strip-months-delta" class="lg-num">—</span>
+        </div>
+        <div class="lg-note" style="font-size:0.85rem;">
+          saved <span class="lg-num" id="lg-strip-interest-delta">—</span> in interest
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Tables — baseline always renders server-side; sandbox table is JS-rendered #}
+  <div class="lg-section-label">// Month by month</div>
+  <div id="lg-tables-wrap" class="lg-tables-wrap">
+
+    <div class="lg-table-col">
+      <div class="lg-table-col-label" id="lg-baseline-label" style="display:none;">BASELINE</div>
+      <div class="lg-card" style="padding:0;">
+        {% if projection.monthly_rows %}
+          <div class="lg-table-wrap">
+            <table class="lg-table">
+              <thead><tr>
+                <th>Month</th><th class="num">Start</th>
+                <th class="num col-hide-sm">Min</th>
+                <th class="num col-hide-sm">Attack</th>
+                <th class="num col-hide-sm">Interest</th>
+                <th class="num">End</th><th>Target</th><th>Kill</th>
+              </tr></thead>
+              <tbody>
+              {% for r in projection.monthly_rows %}
+                <tr {% if r.kill_account_name %}class="target-row"{% endif %}>
+                  <td class="lg-mono" style="font-size:0.85rem;">{{ r.month }}</td>
+                  <td class="num">${{ '{:,.0f}'.format(r.starting_total) }}</td>
+                  <td class="num col-hide-sm">${{ '{:,.0f}'.format(r.minimums_applied) }}</td>
+                  <td class="num col-hide-sm">${{ '{:,.0f}'.format(r.attack_applied) }}</td>
+                  <td class="num col-hide-sm lg-neg">${{ '{:,.0f}'.format(r.interest_accrued) }}</td>
+                  <td class="num">${{ '{:,.0f}'.format(r.ending_total) }}</td>
+                  <td class="lg-dim">{{ r.current_target_name or '—' }}</td>
+                  <td>{% if r.kill_account_name %}<strong class="lg-pos">{{ r.kill_account_name }} ✓</strong>{% endif %}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="lg-empty">No projection — no active debts to simulate.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Sandbox table — JS populates and shows when active #}
+    <div class="lg-table-col" id="lg-sandbox-table-col" style="display:none;">
+      <div class="lg-table-col-label">SANDBOX</div>
+      <div class="lg-card" style="padding:0;">
+        <div class="lg-table-wrap">
+          <table class="lg-table">
+            <thead><tr>
+              <th>Month</th><th class="num">Start</th>
+              <th class="num col-hide-sm">Min</th>
+              <th class="num col-hide-sm">Attack</th>
+              <th class="num col-hide-sm">Extra</th>
+              <th class="num col-hide-sm">Interest</th>
+              <th class="num">End</th><th>Kill</th>
+            </tr></thead>
+            <tbody id="lg-sandbox-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ============= // SANDBOX panel ============= #}
+  <details class="lg-card lg-sandbox-panel" id="lg-sandbox-panel">
+    <summary style="cursor:pointer; outline:none; list-style:none;">
+      <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px;">
+        <span class="lg-card-title" style="margin:0;">// Sandbox — explore what-if scenarios without changing config</span>
+        <span class="lg-note" id="lg-sandbox-toggle-hint">▾</span>
+      </div>
+    </summary>
+
+    <div class="lg-spacer"></div>
+
+    {# Control 1: Redirect bonuses #}
+    <div class="lg-form-group">
+      <div class="lg-checkbox-row">
+        <input type="checkbox" id="lg-sb-redirect-bonuses" {% if bonus_count == 0 %}disabled{% endif %}>
+        <strong>Redirect bonuses to debt</strong>
+      </div>
+      {% if bonus_count == 0 %}
+        <p class="lg-note">No bonus income configured. Add bonuses on the <a href="/ledger/income/">Income page</a> to enable this control.</p>
+      {% elif next_bonus %}
+        <p class="lg-note" id="lg-sb-bonus-hint">
+          Your next bonus lands {{ next_bonus.projected_next_date or next_bonus.event_date }}, ${{ '{:,.0f}'.format(next_bonus.amount) }} —
+          <span id="lg-sb-bonus-impact">toggle on to see the impact.</span>
+        </p>
+      {% else %}
+        <p class="lg-note">No future bonuses found. Add or update bonuses on the Income page.</p>
+      {% endif %}
+    </div>
+
+    {# Control 2: Extra monthly attack #}
+    <div class="lg-form-group">
+      <label class="lg-label" for="lg-sb-extra-attack">Extra monthly attack</label>
+      <div class="lg-currency-wrap" style="max-width:200px;">
+        <input type="number" step="50" min="0" max="10000" value="0" id="lg-sb-extra-attack" class="lg-input lg-num lg-currency">
+      </div>
+      <p class="lg-note" id="lg-sb-extra-impact"></p>
+    </div>
+
+    {# Control 3: Side income ramp #}
+    <div class="lg-form-group">
+      <label class="lg-label">Side income ramp</label>
+      <div style="display:flex; gap:12px; align-items:baseline; flex-wrap:wrap;">
+        <select id="lg-sb-side-preset" class="lg-select" style="max-width:160px;">
+          <option value="none" selected>None</option>
+          <option value="slow">Slow ($0 → $1,500 over 12mo)</option>
+          <option value="realistic">Realistic ($0 → $2,000 over 8mo)</option>
+          <option value="custom">Custom</option>
+        </select>
+        <span style="display:inline-flex; align-items:baseline; gap:6px;">
+          <span class="lg-note">starts</span>
+          <input type="number" min="0" max="48" value="3" id="lg-sb-side-start" class="lg-input lg-num" style="width:70px;">
+          <span class="lg-note">months from now</span>
+        </span>
+      </div>
+      <div id="lg-sb-custom-row" style="display:none; margin-top:8px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <span style="display:inline-flex; align-items:baseline; gap:6px;">
+            <span class="lg-note">flat start</span>
+            <div class="lg-currency-wrap" style="width:120px;">
+              <input type="number" step="50" min="0" value="0" id="lg-sb-side-custom-amount" class="lg-input lg-num lg-currency">
+            </div>
+          </span>
+          <span style="display:inline-flex; align-items:baseline; gap:6px;">
+            <span class="lg-note">+/mo</span>
+            <div class="lg-currency-wrap" style="width:100px;">
+              <input type="number" step="25" value="0" id="lg-sb-side-custom-ramp" class="lg-input lg-num lg-currency">
+            </div>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    {# Control 4: Windfalls #}
+    <div class="lg-form-group">
+      <label class="lg-label">One-time windfalls</label>
+      <div id="lg-sb-windfalls">
+        {# JS appends rows here #}
+      </div>
+      <button type="button" class="lg-btn ghost sm" id="lg-sb-add-windfall">+ windfall</button>
+    </div>
+
+    {# Control 5: FedLoan override #}
+    <div class="lg-form-group">
+      <label class="lg-label" for="lg-sb-fedloan-min">FedLoan minimum override</label>
+      <div style="display:flex; gap:12px; align-items:baseline; flex-wrap:wrap;">
+        <div class="lg-currency-wrap" style="width:140px;">
+          <input type="number" step="1" min="0" placeholder="0" id="lg-sb-fedloan-min" class="lg-input lg-num lg-currency">
+        </div>
+        <span style="display:inline-flex; align-items:baseline; gap:6px;">
+          <span class="lg-note">starting in</span>
+          <input type="number" min="0" max="48" value="0" id="lg-sb-fedloan-start" class="lg-input lg-num" style="width:60px;">
+          <span class="lg-note">months</span>
+        </span>
+      </div>
+      <p class="lg-note">FedLoan currently configured at ${{ '{:.2f}'.format(current_fedloan_min or 0) }}/mo. Sandbox a different number to see the impact when forbearance ends.</p>
+    </div>
+
+    <div class="lg-spacer"></div>
+    <div class="lg-btn-row">
+      <button type="button" class="lg-btn primary" id="lg-sb-apply" disabled>Apply sandbox to live configuration</button>
+      <button type="button" class="lg-btn ghost" id="lg-sb-reset">Reset sandbox</button>
+    </div>
+  </details>
+
+  {# ============= Apply modal ============= #}
+  <div id="lg-apply-modal" class="lg-modal" style="display:none;">
+    <div class="lg-modal-backdrop" onclick="lgCloseApplyModal()"></div>
+    <div class="lg-modal-content lg-card">
+      <h3 class="lg-card-title">Apply sandbox to live configuration</h3>
+      <p class="lg-note">This will make the following changes to your actual account configuration. Bonus redirect and side-income ramp are projection-only and aren't included.</p>
+      <div id="lg-modal-changes"></div>
+      <div class="lg-btn-row" style="margin-top:16px;">
+        <button type="button" class="lg-btn primary" id="lg-modal-confirm">Apply changes</button>
+        <button type="button" class="lg-btn ghost" onclick="lgCloseApplyModal()">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <footer class="lg-footer">
@@ -69,8 +248,20 @@
     </div>
   </footer>
 </div>
+
+{# Server-rendered current-target context for the apply modal #}
+<script>
+  window.LG_CURRENT_TARGET = {{ {'name': current_target.name, 'slug': current_target.slug, 'alloc': current_target.attack_allocation or 0} | tojson if current_target else 'null' }};
+  window.LG_CURRENT_FEDLOAN_MIN = {{ (current_fedloan_min or 0) | tojson }};
+  window.LG_BASELINE = {
+    debt_free_date: {{ projection.debt_free_date | tojson }},
+    total_interest: {{ projection.total_interest_paid }}
+  };
+</script>
+
 {% include 'includes/today_panel.html' ignore missing %}
 {% include 'includes/active_timer_strip.html' ignore missing %}
 <script src="/static/ledger.js"></script>
+<script src="/static/ledger_sandbox.js"></script>
 </body>
 </html>
