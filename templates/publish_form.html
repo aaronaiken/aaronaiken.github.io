@@ -204,6 +204,7 @@
 					</div>
 					<span id="weather-display" style="color:var(--muted); font-size:0.55rem; letter-spacing:0.1em;"></span>
 				</div>
+				{% include 'includes/ledger_footer_badge.html' %}
 			</div>
 			<div class="cockpit__controls">
 				<button class="cockpit__ctrl-btn" onclick="window.location.reload()">REFRESH</button>
@@ -417,11 +418,6 @@
 <!-- ============================================================ -->
 <!-- END ANI PANEL                                                 -->
 <!-- ============================================================ -->
-
-{# Quiet always-visible debt-total nag — Aaron asked for this in the ledger spec. #}
-<div style="text-align:center; padding:16px 0 24px; opacity:0.85;">
-  {% include 'includes/ledger_footer_badge.html' %}
-</div>
 
 {% include 'includes/today_panel.html' %}
 {% include 'includes/time_tracker_panel.html' %}
