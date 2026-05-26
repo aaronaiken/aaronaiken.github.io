@@ -22,7 +22,7 @@ import time
 import logging
 from datetime import datetime
 import pytz
-from PIL import Image
+from PIL import Image, ImageOps
 import requests as req_lib
 from flask import Blueprint, request, redirect, url_for, jsonify, render_template
 
@@ -107,6 +107,9 @@ def build_mozzie_status_text(game):
 def process_status_image(image_file):
 	"""Resize + JPEG-encode an uploaded image at 1200px max / 85% quality. Returns bytes."""
 	with Image.open(image_file) as img:
+		# Honor EXIF orientation BEFORE save so landscape iPhone shots
+		# don't arrive rotated 90° (JPEG save strips EXIF tags).
+		img = ImageOps.exif_transpose(img)
 		if img.mode in ("RGBA", "P"):
 			img = img.convert("RGB")
 		if img.size[0] > 1200:
@@ -285,6 +288,8 @@ def mozzie_upload_photo(game_id):
 		return jsonify({'error': 'no file'}), 400
 
 	with Image.open(file) as img:
+		# Honor EXIF orientation BEFORE save (see process_status_image).
+		img = ImageOps.exif_transpose(img)
 		if img.mode in ("RGBA", "P"):
 			img = img.convert("RGB")
 		img.thumbnail((1200, 1200), Image.Resampling.LANCZOS)

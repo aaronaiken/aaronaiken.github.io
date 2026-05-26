@@ -1533,9 +1533,12 @@ def cd_file_upload(slug):
 
 	try:
 		if is_image:
-			from PIL import Image
+			from PIL import Image, ImageOps
 			import io
 			img = Image.open(file)
+			# Honor EXIF orientation BEFORE save so landscape iPhone
+			# uploads don't arrive rotated 90°.
+			img = ImageOps.exif_transpose(img)
 			img.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
 			buf = io.BytesIO()
 			save_format = 'JPEG' if ext in ('jpg', 'jpeg') else ext.upper()

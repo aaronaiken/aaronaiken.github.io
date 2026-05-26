@@ -2,7 +2,7 @@
 import os
 import logging
 import requests as req_lib
-from PIL import Image
+from PIL import Image, ImageOps
 
 
 logger = logging.getLogger(__name__)
@@ -67,6 +67,11 @@ def list_bunny_ad_folder(subfolder):
 
 def optimize_image(input_path, max_width=1200):
 	with Image.open(input_path) as img:
+		# Apply EXIF rotation BEFORE any other ops. iPhones store landscape
+		# shots with the pixels in physical/portrait orientation + an
+		# Orientation tag telling renderers to rotate. PIL strips EXIF on
+		# save by default, so without this the saved JPEG comes out 90° off.
+		img = ImageOps.exif_transpose(img)
 		if img.mode in ("RGBA", "P"):
 			img = img.convert("RGB")
 		w_percent = (max_width / float(img.size[0]))

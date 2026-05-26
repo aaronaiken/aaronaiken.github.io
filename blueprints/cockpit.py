@@ -6,7 +6,7 @@ import json
 import logging
 from datetime import datetime
 import pytz
-from PIL import Image
+from PIL import Image, ImageOps
 import requests as req_lib
 from flask import (
 	Blueprint, request, redirect, url_for, jsonify, render_template, make_response,
@@ -56,6 +56,11 @@ def publish_status():
 			has_image = True
 			img_filename = f"{now.strftime('%Y%m%d%H%M%S')}.jpg"
 			with Image.open(image_file) as img:
+				# Apply EXIF rotation first — iPhone landscape shots arrive
+				# with the pixels physically portrait + an Orientation tag.
+				# JPEG save strips EXIF, so without this the landscape
+				# photo would render as portrait after upload.
+				img = ImageOps.exif_transpose(img)
 				if img.mode in ("RGBA", "P"):
 					img = img.convert("RGB")
 				if img.size[0] > 1200:
