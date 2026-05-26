@@ -209,6 +209,7 @@
 				<button class="cockpit__ctrl-btn" onclick="window.location.reload()">REFRESH</button>
 				<a class="cockpit__ctrl-btn" href="/below-deck" style="text-decoration:none;">BELOW DECK</a>
 				<a href="/command-deck/" class="cockpit__ctrl-btn">COMMAND DECK</a>
+				<a href="/ledger/" class="cockpit__ctrl-btn" style="text-decoration:none;">LEDGER</a>
 			</div>
 		</div>
 
@@ -416,6 +417,11 @@
 <!-- ============================================================ -->
 <!-- END ANI PANEL                                                 -->
 <!-- ============================================================ -->
+
+{# Quiet always-visible debt-total nag — Aaron asked for this in the ledger spec. #}
+<div style="text-align:center; padding:16px 0 24px; opacity:0.85;">
+  {% include 'includes/ledger_footer_badge.html' %}
+</div>
 
 {% include 'includes/today_panel.html' %}
 {% include 'includes/time_tracker_panel.html' %}
