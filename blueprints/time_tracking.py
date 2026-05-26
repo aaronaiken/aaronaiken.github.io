@@ -275,7 +275,7 @@ def time_start():
 	# Phase 1.5 — checklist_item_id must reach this project via blocks
 	if checklist_item_id:
 		item = conn.execute('''
-			SELECT ci.id, b.project_id
+			SELECT ci.id, b.project_id, ci.time_category_id
 			FROM checklist_items ci
 			JOIN blocks b ON ci.block_id = b.id
 			WHERE ci.id = ? AND ci.archived_at IS NULL
@@ -289,6 +289,15 @@ def time_start():
 				'error': 'item_project_mismatch',
 				'item_project_id': item['project_id'],
 			}), 400
+		# Category propagation: same as the task branch — inherit if the
+		# caller didn't pick one AND the item's category is still active.
+		if not time_category_id and item['time_category_id']:
+			cat = conn.execute(
+				'SELECT id, is_active FROM time_categories WHERE id = ?',
+				(item['time_category_id'],)
+			).fetchone()
+			if cat and cat['is_active']:
+				time_category_id = item['time_category_id']
 
 	# Phase 5 — meeting_id must point to a meeting on this project
 	if meeting_id:

@@ -3028,6 +3028,7 @@ button.cd-tt-entry-context.unassigned {
    check already say "done." */
 .cd-checklist-item.checked .cd-due-wrapper,
 .cd-checklist-item.checked .cd-today-star,
+.cd-checklist-item.checked .cd-task-cat-badge,
 .cd-checklist-item.checked .cd-tt-tag-item {
 	display: none;
 }

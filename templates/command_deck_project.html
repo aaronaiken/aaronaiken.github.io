@@ -191,6 +191,11 @@
                                 title="Set / change due date">{% if item.due_date %}due {{ item.due_date }}{% else %}+ due{% endif %}</button>
                         <input type="date" class="cd-due-input" value="{{ item.due_date or '' }}" tabindex="-1" aria-hidden="true">
                       </span>
+                      <button class="cd-task-cat-badge{% if not item.time_category_id %} unset cd-tt-tag-item{% endif %}"
+                              type="button"
+                              data-cat-url="/command-deck/projects/{{ project.slug }}/checklist/{{ item.id }}/category"
+                              data-cat-id="{{ item.time_category_id or '' }}"
+                              title="Set / change time category">{% if item.time_category_id %}<span class="cd-cat-dot" style="background: {{ item.time_category_color or 'rgba(212,136,10,0.55)' }};"></span>{{ item.time_category_name }}{% else %}+ cat{% endif %}</button>
                       <button class="cd-today-star{% if not item.today %} cd-tt-tag-item{% endif %}{% if item.today %} starred{% endif %}"
                               data-kind="item" data-id="{{ item.id }}"
                               title="{% if item.today %}Remove from Today{% else %}Add to Today{% endif %}"
@@ -256,7 +261,7 @@
                   </span>
                   <button class="cd-task-cat-badge{% if not task.time_category_id %} unset{% endif %}"
                           type="button"
-                          data-task-id="{{ task.id }}"
+                          data-cat-url="/tasks/{{ task.id }}/category"
                           data-cat-id="{{ task.time_category_id or '' }}"
                           title="Set / change time category">{% if task.time_category_id %}<span class="cd-cat-dot" style="background: {{ task.time_category_color or 'rgba(212,136,10,0.55)' }};"></span>{{ task.time_category_name }}{% else %}+ cat{% endif %}</button>
                   <button class="cd-today-star{% if task.today %} starred{% endif %}"
@@ -972,6 +977,7 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
       // Phase 1.5: emit the same ⏱ markup Jinja would render, so newly-added
       // items are tracker-aware without a page reload.
       const dueMarkup = `<span class="cd-due-wrapper cd-tt-tag-item" data-due-url="/command-deck/projects/${PROJECT_SLUG}/checklist/${data.item.id}/due-date" data-due-date=""><button class="cd-due-badge unset" type="button" title="Set / change due date">+ due</button><input type="date" class="cd-due-input" tabindex="-1" aria-hidden="true"></span>`;
+      const catMarkup = `<button class="cd-task-cat-badge unset cd-tt-tag-item" type="button" data-cat-url="/command-deck/projects/${PROJECT_SLUG}/checklist/${data.item.id}/category" data-cat-id="" title="Set / change time category">+ cat</button>`;
       const starMarkup = `<button class="cd-today-star cd-tt-tag-item" data-kind="item" data-id="${data.item.id}" title="Add to Today" type="button">☆</button>`;
       const ttMarkup = (typeof PROJECT_TRACKING !== 'undefined' && PROJECT_TRACKING)
         ? `<span class="cd-tt-today-tag cd-tt-tag-item" data-item-today-tag="${data.item.id}" hidden></span>
@@ -983,6 +989,7 @@ document.getElementById('blocksContainer').addEventListener('click', function(e)
         <input type="checkbox" data-item-id="${data.item.id}" data-slug="${PROJECT_SLUG}">
         <label>${escapeHtml(data.item.text)}</label>
         ${dueMarkup}
+        ${catMarkup}
         ${starMarkup}
         ${ttMarkup}
         <button class="cd-btn ghost sm checklist-item-delete" data-id="${data.item.id}" data-slug="${PROJECT_SLUG}">✕</button>`;
@@ -1698,9 +1705,14 @@ document.addEventListener('click', function (ev) {
     return d.innerHTML;
   }
 
+  // Shared by task + checklist-item chips. Each chip carries its own
+  // data-cat-url so the handler doesn't need to know which kind it is.
+  // Item rows are hover-only when unset (cd-tt-tag-item) — preserve that
+  // class so the chip stays tidy after a cancel.
   async function openCatEditor(btn) {
-    const taskId = btn.getAttribute('data-task-id');
+    const catUrl = btn.getAttribute('data-cat-url');
     const currentId = btn.getAttribute('data-cat-id') || '';
+    const wasHoverOnly = btn.classList.contains('cd-tt-tag-item');
     const cats = await getCategories();
 
     const wrap = document.createElement('span');
@@ -1720,8 +1732,9 @@ document.addEventListener('click', function (ev) {
     function restoreBtn(newId, newName, newColor) {
       const replacement = document.createElement('button');
       replacement.type = 'button';
-      replacement.className = 'cd-task-cat-badge' + (newId ? '' : ' unset');
-      replacement.setAttribute('data-task-id', taskId);
+      replacement.className = 'cd-task-cat-badge' +
+        (newId ? '' : ' unset' + (wasHoverOnly ? ' cd-tt-tag-item' : ''));
+      replacement.setAttribute('data-cat-url', catUrl);
       replacement.setAttribute('data-cat-id', newId || '');
       replacement.title = 'Set / change time category';
       if (newId) {
@@ -1738,7 +1751,7 @@ document.addEventListener('click', function (ev) {
       sel.disabled = true;
       const newId = sel.value || null;
       try {
-        const r = await fetch('/tasks/' + taskId + '/category', {
+        const r = await fetch(catUrl, {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },

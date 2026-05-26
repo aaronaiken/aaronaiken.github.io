@@ -134,7 +134,7 @@ def _spawn_cycle(conn, block_id, cycle_due_date, et_now, expected_boundary=None)
 		if cur.rowcount == 0:
 			return 0
 	structure = conn.execute('''
-		SELECT text, "order" FROM checklist_items
+		SELECT text, "order", time_category_id FROM checklist_items
 		WHERE block_id = ? AND archived_at IS NULL
 		ORDER BY "order" ASC, id ASC
 	''', (block_id,)).fetchall()
@@ -149,9 +149,9 @@ def _spawn_cycle(conn, block_id, cycle_due_date, et_now, expected_boundary=None)
 	''', (now_iso, block_id))
 	for row in structure:
 		conn.execute('''
-			INSERT INTO checklist_items (block_id, text, due_date, checked, today, "order")
-			VALUES (?, ?, ?, 0, 0, ?)
-		''', (block_id, row['text'], cycle_due_date, row['order']))
+			INSERT INTO checklist_items (block_id, text, due_date, checked, today, "order", time_category_id)
+			VALUES (?, ?, ?, 0, 0, ?, ?)
+		''', (block_id, row['text'], cycle_due_date, row['order'], row['time_category_id']))
 	if expected_boundary is None:
 		conn.execute(
 			'UPDATE blocks SET today = 0, last_reset_at = ? WHERE id = ?',

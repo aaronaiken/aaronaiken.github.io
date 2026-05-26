@@ -606,8 +606,13 @@ def cd_project(slug):
 		block = dict(b)
 		if block['type'] == 'checklist':
 			items = conn.execute(
-				'SELECT * FROM checklist_items WHERE block_id = ? AND archived_at IS NULL '
-				'ORDER BY "order" ASC, id ASC',
+				'SELECT ci.*, '
+				'       tc.name  AS time_category_name, '
+				'       tc.color AS time_category_color '
+				'FROM checklist_items ci '
+				'LEFT JOIN time_categories tc ON ci.time_category_id = tc.id '
+				'WHERE ci.block_id = ? AND ci.archived_at IS NULL '
+				'ORDER BY ci."order" ASC, ci.id ASC',
 				(block['id'],)
 			).fetchall()
 			items_with_lifetime = []
@@ -1342,6 +1347,48 @@ def cd_checklist_item_due_date(slug, item_id):
 	conn.commit()
 	conn.close()
 	return jsonify({'success': True, 'due_date': due})
+
+
+@command_deck_bp.route(
+	'/command-deck/projects/<slug>/checklist/<int:item_id>/category',
+	methods=['POST']
+)
+@cd_auth_required
+def cd_checklist_item_category(slug, item_id):
+	"""Set or clear default time category on a checklist item. Mirrors the
+	task category route; timers scoped to this item inherit the category
+	when the caller doesn't pass one explicitly."""
+	data = request.get_json(silent=True) or request.form
+	val = data.get('time_category_id')
+	if val in (None, '', 'null'):
+		cat_id = None
+	else:
+		try:
+			cat_id = int(val)
+		except (ValueError, TypeError):
+			return jsonify({'error': 'invalid_time_category_id'}), 400
+	conn = get_db()
+	row = conn.execute('''
+		SELECT ci.id FROM checklist_items ci
+		JOIN blocks b ON ci.block_id = b.id
+		JOIN projects p ON b.project_id = p.id
+		WHERE ci.id = ? AND p.slug = ?
+	''', (item_id, slug)).fetchone()
+	if not row:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+	if cat_id is not None:
+		cat = conn.execute(
+			'SELECT id FROM time_categories WHERE id = ? AND is_active = 1',
+			(cat_id,)
+		).fetchone()
+		if not cat:
+			conn.close()
+			return jsonify({'error': 'time_category_not_found'}), 404
+	conn.execute('UPDATE checklist_items SET time_category_id = ? WHERE id = ?', (cat_id, item_id))
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True, 'time_category_id': cat_id})
 
 
 @command_deck_bp.route('/command-deck/projects/<slug>/checklist/add', methods=['POST'])
