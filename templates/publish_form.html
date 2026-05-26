@@ -204,7 +204,6 @@
 					</div>
 					<span id="weather-display" style="color:var(--muted); font-size:0.55rem; letter-spacing:0.1em;"></span>
 				</div>
-				{% include 'includes/ledger_footer_badge.html' %}
 			</div>
 			<div class="cockpit__controls">
 				<button class="cockpit__ctrl-btn" onclick="window.location.reload()">REFRESH</button>
@@ -212,6 +211,14 @@
 				<a href="/command-deck/" class="cockpit__ctrl-btn">COMMAND DECK</a>
 				<a href="/ledger/" class="cockpit__ctrl-btn" style="text-decoration:none;">LEDGER</a>
 			</div>
+		</div>
+
+		{# LEDGER total nag — own row, right-aligned, breathing room.
+		   Quiet always-visible reminder per Aaron's spec; sits between
+		   the status-bar and the Quick Insert section so it never
+		   collides with the floating today panel or wraps the controls row. #}
+		<div style="display:flex; justify-content:flex-end; padding:10px 4px 4px;">
+			{% include 'includes/ledger_footer_badge.html' %}
 		</div>
 
 		<div class="section-label">// Quick Insert</div>
