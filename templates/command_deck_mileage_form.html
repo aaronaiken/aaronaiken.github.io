@@ -33,7 +33,11 @@
       <span class="cd-breadcrumb-tail">{% if mode == 'edit' %}Edit trip{% else %}New trip{% endif %}</span>
     </div>
 
-    <h1 class="cd-page-title">// {% if mode == 'edit' %}Edit trip{% else %}Log miles{% endif %}</h1>
+    {% set is_active_trip = (mode == 'edit' and entry and entry.odometer_start is not none and entry.odometer_end is none and not entry.is_submitted) %}
+    <h1 class="cd-page-title">// {% if is_active_trip %}Finish trip{% elif mode == 'edit' %}Edit trip{% else %}Log miles{% endif %}</h1>
+    {% if is_active_trip %}
+      <p class="cd-mileage-active-hint">⌖ Trip in progress — enter your end odometer and SAVE to finish. Miles will auto-calculate.</p>
+    {% endif %}
 
     <form id="mileageForm" class="cd-mileage-form" method="POST"
           action="{% if mode == 'edit' %}/command-deck/mileage/{{ entry.id }}/update{% else %}/command-deck/mileage/new{% endif %}">
@@ -115,8 +119,8 @@
         <span class="cd-mileage-field-label">Miles</span>
         <input type="number" name="miles" inputmode="decimal" step="0.1" min="0"
                class="cd-input cd-mileage-input cd-mileage-input-miles" id="milesField"
-               value="{% if mode == 'edit' %}{{ entry.miles }}{% endif %}" required>
-        <span class="cd-mileage-hint" id="milesHint">— autocalculates from odometer; tap to override</span>
+               value="{% if mode == 'edit' %}{{ entry.miles }}{% endif %}">
+        <span class="cd-mileage-hint" id="milesHint">— autocalculates from odometer; tap to override · optional when starting a trip</span>
       </label>
 
       <!-- RATE + VEHICLE -->
@@ -154,14 +158,26 @@
         <a class="cd-btn ghost" href="/command-deck/mileage/">CANCEL</a>
         {% if mode == 'edit' %}
           <button type="button" class="cd-btn ghost cd-mileage-delete-btn" id="deleteBtn">DELETE</button>
-          <button type="submit" class="cd-btn primary">SAVE</button>
+          <button type="submit" class="cd-btn primary">{% if is_active_trip %}FINISH TRIP{% else %}SAVE{% endif %}</button>
         {% else %}
-          <button type="submit" class="cd-btn primary">LOG TRIP</button>
+          <button type="submit" class="cd-btn primary" id="startTripBtn"
+                  data-mode="start">⏱ START TRIP</button>
+          <button type="submit" class="cd-btn" id="logTripBtn"
+                  data-mode="full">LOG FULL TRIP</button>
         {% endif %}
       </div>
+      {% if mode == 'new' %}
+        <p class="cd-mileage-mode-hint" id="modeHint">
+          <strong>START TRIP:</strong> just project + start odometer · finish later from the index.
+          <strong>LOG FULL TRIP:</strong> all fields including end odometer.
+        </p>
+      {% endif %}
 
-      <!-- Hidden flag so the new-entry POST redirects to the index -->
-      {% if mode == 'new' %}<input type="hidden" name="return" value="redirect">{% endif %}
+      <!-- Hidden flags driven by which submit was clicked -->
+      {% if mode == 'new' %}
+        <input type="hidden" name="return" value="redirect">
+        <input type="hidden" name="start_only" id="startOnlyFlag" value="0">
+      {% endif %}
     </form>
 
     {% if mode == 'edit' and entry.is_submitted %}
@@ -193,7 +209,13 @@ const ENTRY_ID = {{ (entry.id if entry else 0) | tojson }};
   var odoEnd = document.getElementById('odoEndField');
   var miles = document.getElementById('milesField');
   var roundTrip = document.getElementById('roundTripField');
-  var milesEdited = (FORM_MODE === 'edit');  // edit mode = trust the stored miles; new mode = autocalculate
+  // edit mode normally trusts stored miles, EXCEPT when finishing an
+  // active trip (active = stored miles is 0 + no end odo yet) — then we
+  // want the calculator to fire when the user types the end odometer.
+  var IS_ACTIVE_TRIP = (FORM_MODE === 'edit' && ENTRY &&
+                       ENTRY.odometer_start !== null &&
+                       ENTRY.odometer_end === null);
+  var milesEdited = (FORM_MODE === 'edit' && !IS_ACTIVE_TRIP);
 
   function recalcMiles() {
     if (milesEdited) return;
@@ -221,7 +243,36 @@ const ENTRY_ID = {{ (entry.id if entry else 0) | tojson }};
   // ---- Convert rate from $/mi (form) to cents (server) on submit ----
   var form = document.getElementById('mileageForm');
   var rateField = document.getElementById('rateField');
+
+  // Track which submit button initiated the submit so we can flip
+  // start_only=1 for the "START TRIP" path. Buttons share the same form,
+  // and `submitter` isn't reliable on all browsers, so track explicitly.
+  var pendingMode = null;
+  var startBtn = document.getElementById('startTripBtn');
+  var logBtn = document.getElementById('logTripBtn');
+  if (startBtn) startBtn.addEventListener('click', function () { pendingMode = 'start'; });
+  if (logBtn)   logBtn.addEventListener('click',   function () { pendingMode = 'full';  });
+
   form.addEventListener('submit', function (ev) {
+    var startOnlyFlag = document.getElementById('startOnlyFlag');
+    if (startOnlyFlag) startOnlyFlag.value = (pendingMode === 'start') ? '1' : '0';
+
+    // START-TRIP path: only project + start odometer matter. Bypass the
+    // rate/miles validations entirely (server fills miles=0 and uses the
+    // stored rate).
+    if (FORM_MODE === 'new' && pendingMode === 'start') {
+      var odoS = parseFloat(document.getElementById('odoStartField').value);
+      if (isNaN(odoS) || odoS < 0) {
+        ev.preventDefault();
+        alert('Enter a starting odometer reading to begin a trip.');
+        return;
+      }
+      // Rate still needs to convert (server expects cents)
+      var startRate = parseFloat(rateField.value);
+      if (!isNaN(startRate)) rateField.value = Math.round(startRate * 100);
+      return;  // let the form submit
+    }
+
     var dollars = parseFloat(rateField.value);
     if (isNaN(dollars) || dollars < 0) {
       ev.preventDefault();

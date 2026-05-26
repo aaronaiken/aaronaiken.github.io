@@ -58,6 +58,28 @@
       </div>
     </section>
 
+    {% if active_trips %}
+    <section class="cd-mileage-active-panel">
+      <div class="cd-mileage-active-header">
+        <span class="cd-mileage-active-title">⌖ ACTIVE TRIP{{ 'S' if active_trips|length > 1 else '' }}</span>
+        <span class="cd-mileage-active-count">{{ active_trips|length }}</span>
+      </div>
+      <ul class="cd-mileage-active-list">
+        {% for t in active_trips %}
+          <li class="cd-mileage-active-row">
+            <div class="cd-mileage-active-meta">
+              <span class="cd-mileage-active-project">{{ t.project_title or '(no project)' }}</span>
+              {% if t.description %}<span class="cd-mileage-active-desc">{{ t.description }}</span>{% endif %}
+              <span class="cd-mileage-active-odo">started @ {{ '%.1f' % t.odometer_start }} mi</span>
+              <span class="cd-mileage-active-since" data-started="{{ t.created }}"></span>
+            </div>
+            <a href="/command-deck/mileage/{{ t.id }}/edit" class="cd-btn primary sm">FINISH →</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
     <!-- FILTERS -->
     <section class="cd-mileage-filters">
       <label class="cd-mileage-filter">
@@ -336,6 +358,28 @@
   });
 
   load();
+
+  // ---- Active trip "since" labels ----
+  // Render an "(running 1h 23m)" suffix on each active trip; refresh
+  // once a minute so the number doesn't go stale on long lingers.
+  function fmtSince(iso) {
+    if (!iso) return '';
+    var t = Date.parse(iso);
+    if (isNaN(t)) return '';
+    var secs = Math.max(0, Math.floor((Date.now() - t) / 1000));
+    var h = Math.floor(secs / 3600);
+    var m = Math.floor((secs % 3600) / 60);
+    if (h > 0) return '· running ' + h + 'h ' + m + 'm';
+    if (m > 0) return '· running ' + m + 'm';
+    return '· just started';
+  }
+  function paintSinceLabels() {
+    document.querySelectorAll('.cd-mileage-active-since').forEach(function (el) {
+      el.textContent = fmtSince(el.getAttribute('data-started'));
+    });
+  }
+  paintSinceLabels();
+  setInterval(paintSinceLabels, 60000);
 })();
 </script>
 <script src="/static/command_deck_nav.js"></script>

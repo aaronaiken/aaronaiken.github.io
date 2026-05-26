@@ -172,11 +172,25 @@ def mileage_index():
 	settings_row = conn.execute('SELECT * FROM settings WHERE id = 1').fetchone()
 	settings = dict(settings_row) if settings_row else {}
 
+	# Active trips — started (odometer_start set) but not finished
+	# (odometer_end NULL) and not yet submitted. Surfaced at the top of the
+	# index so finishing a trip is one tap.
+	active_trips = conn.execute('''
+		SELECT me.*, p.title AS project_title, p.slug AS project_slug
+		FROM mileage_entries me
+		LEFT JOIN projects p ON me.project_id = p.id
+		WHERE me.odometer_end IS NULL
+		  AND me.odometer_start IS NOT NULL
+		  AND me.submitted_at IS NULL
+		ORDER BY me.created DESC
+	''').fetchall()
+
 	conn.close()
 	return render_template(
 		'command_deck_mileage.html',
 		projects=[dict(p) for p in projects],
 		settings=settings,
+		active_trips=[dict(t) for t in active_trips],
 		private_projects_enabled=bool(PRIVATE_PROJECTS_PIN),
 	)
 
@@ -294,9 +308,23 @@ def mileage_new():
 	if not date_iso:
 		return jsonify({'error': 'invalid_date'}), 400
 
-	miles = _to_float(data.get('miles'))
-	if miles is None or miles < 0:
-		return jsonify({'error': 'invalid_miles'}), 400
+	# Start-only flow: a "TRIP STARTED" entry with no end odometer + no miles
+	# yet. Aaron uses this on the phone before pulling out of the driveway.
+	# He'll finish the trip later via the edit form, which auto-recalcs
+	# miles when odometer_end gets filled in.
+	start_only = _to_bool(data.get('start_only'))
+	odometer_start = _to_float(data.get('odometer_start'))
+	odometer_end = _to_float(data.get('odometer_end'))
+
+	if start_only:
+		if odometer_start is None or odometer_start < 0:
+			return jsonify({'error': 'odometer_start_required'}), 400
+		odometer_end = None  # force unset even if the form sent something
+		miles = 0.0
+	else:
+		miles = _to_float(data.get('miles'))
+		if miles is None or miles < 0:
+			return jsonify({'error': 'invalid_miles'}), 400
 
 	conn = get_db()
 
@@ -310,8 +338,6 @@ def mileage_new():
 
 	project_id = _to_int(data.get('project_id'))
 	round_trip = _to_bool(data.get('round_trip'))
-	odometer_start = _to_float(data.get('odometer_start'))
-	odometer_end = _to_float(data.get('odometer_end'))
 	vehicle = (data.get('vehicle') or 'a').strip().lower()
 	if vehicle not in ('a', 'b'):
 		vehicle = 'a'
@@ -433,6 +459,18 @@ def mileage_update(entry_id):
 	if not updates:
 		conn.close()
 		return jsonify({'error': 'no_fields'}), 400
+
+	# If odometer_end is being set and miles wasn't explicitly passed,
+	# auto-recalc from start + end + round_trip. Covers the "finish
+	# trip" path: user opens an active entry, types the end odometer,
+	# saves — miles fills itself in.
+	if 'odometer_end' in updates and 'miles' not in updates:
+		final_end = updates.get('odometer_end')
+		final_start = updates.get('odometer_start', row['odometer_start'])
+		final_round = updates.get('round_trip', row['round_trip'])
+		if final_end is not None and final_start is not None and final_end >= final_start:
+			diff = final_end - final_start
+			updates['miles'] = round((diff * 2 if final_round else diff), 1)
 
 	updates['updated'] = et_now()
 	set_sql = ', '.join(f'{k} = ?' for k in updates)
