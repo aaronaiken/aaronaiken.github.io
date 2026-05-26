@@ -254,6 +254,11 @@
                             title="Set / change due date">{% if task.due_date %}due {{ task.due_date }}{% else %}+ due{% endif %}</button>
                     <input type="date" class="cd-due-input" value="{{ task.due_date or '' }}" tabindex="-1" aria-hidden="true">
                   </span>
+                  <button class="cd-task-cat-badge{% if not task.time_category_id %} unset{% endif %}"
+                          type="button"
+                          data-task-id="{{ task.id }}"
+                          data-cat-id="{{ task.time_category_id or '' }}"
+                          title="Set / change time category">{% if task.time_category_id %}<span class="cd-cat-dot" style="background: {{ task.time_category_color or 'rgba(212,136,10,0.55)' }};"></span>{{ task.time_category_name }}{% else %}+ cat{% endif %}</button>
                   <button class="cd-today-star{% if task.today %} starred{% endif %}"
                           data-kind="task" data-id="{{ task.id }}"
                           title="{% if task.today %}Remove from Today{% else %}Add to Today{% endif %}"
@@ -1663,6 +1668,115 @@ document.addEventListener('click', function (ev) {
   document.addEventListener('DOMContentLoaded', refreshAllBadges);
   // Also re-run after a small delay to catch any deferred renders
   setTimeout(refreshAllBadges, 100);
+})();
+
+// ============================================================
+// TASK TIME-CATEGORY chip — inline picker on project-page task rows.
+// Mirrors the reports-table retroactive-category UI. POSTs to
+// /tasks/<id>/category and propagates to future timer starts via
+// blueprints/time_tracking.py (see task_id branch).
+// ============================================================
+(function () {
+  'use strict';
+
+  let categoriesCache = null;
+  async function getCategories() {
+    if (categoriesCache) return categoriesCache;
+    try {
+      const r = await fetch('/command-deck/lookups/time_categories', { credentials: 'same-origin' });
+      const data = await r.json();
+      categoriesCache = data.rows || [];
+    } catch (_e) {
+      categoriesCache = [];
+    }
+    return categoriesCache;
+  }
+
+  function escHtml(s) {
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(s || ''));
+    return d.innerHTML;
+  }
+
+  async function openCatEditor(btn) {
+    const taskId = btn.getAttribute('data-task-id');
+    const currentId = btn.getAttribute('data-cat-id') || '';
+    const cats = await getCategories();
+
+    const wrap = document.createElement('span');
+    wrap.className = 'cd-task-cat-editor';
+    const opts = ['<option value="">— none —</option>']
+      .concat(cats.map(function (c) {
+        return '<option value="' + c.id + '"' +
+               (String(c.id) === currentId ? ' selected' : '') + '>' +
+               escHtml(c.name) + '</option>';
+      }));
+    wrap.innerHTML = '<select class="cd-task-cat-select">' + opts.join('') + '</select>';
+    btn.replaceWith(wrap);
+
+    const sel = wrap.querySelector('select');
+    sel.focus();
+
+    function restoreBtn(newId, newName, newColor) {
+      const replacement = document.createElement('button');
+      replacement.type = 'button';
+      replacement.className = 'cd-task-cat-badge' + (newId ? '' : ' unset');
+      replacement.setAttribute('data-task-id', taskId);
+      replacement.setAttribute('data-cat-id', newId || '');
+      replacement.title = 'Set / change time category';
+      if (newId) {
+        replacement.innerHTML =
+          '<span class="cd-cat-dot" style="background: ' + (newColor || 'rgba(212,136,10,0.55)') + ';"></span>' +
+          escHtml(newName);
+      } else {
+        replacement.textContent = '+ cat';
+      }
+      wrap.replaceWith(replacement);
+    }
+
+    async function save() {
+      sel.disabled = true;
+      const newId = sel.value || null;
+      try {
+        const r = await fetch('/tasks/' + taskId + '/category', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ time_category_id: newId }),
+        });
+        const d = await r.json();
+        if (d && d.success) {
+          const picked = newId ? cats.find(function (c) { return String(c.id) === String(newId); }) : null;
+          restoreBtn(newId, picked && picked.name, picked && picked.color);
+        } else {
+          restoreBtn(currentId,
+            currentId ? (cats.find(function (c) { return String(c.id) === currentId; }) || {}).name : null,
+            currentId ? (cats.find(function (c) { return String(c.id) === currentId; }) || {}).color : null);
+          alert('Could not save.');
+        }
+      } catch (_e) {
+        restoreBtn(currentId);
+      }
+    }
+
+    function cancel() {
+      const picked = currentId ? cats.find(function (c) { return String(c.id) === currentId; }) : null;
+      restoreBtn(currentId, picked && picked.name, picked && picked.color);
+    }
+
+    sel.addEventListener('change', save);
+    sel.addEventListener('blur', function () { setTimeout(cancel, 50); });
+    sel.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+    });
+  }
+
+  document.addEventListener('click', function (ev) {
+    const btn = ev.target.closest('.cd-task-cat-badge');
+    if (!btn) return;
+    ev.preventDefault();
+    openCatEditor(btn);
+  });
 })();
 
 // Phase 2.4 — RECURRENCE setter modal + RESET button

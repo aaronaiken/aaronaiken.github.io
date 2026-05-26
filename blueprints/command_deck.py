@@ -620,9 +620,13 @@ def cd_project(slug):
 		blocks.append(block)
 
 	project_tasks_raw = conn.execute('''
-		SELECT * FROM tasks
-		WHERE project_id = ? AND status = 'open'
-		ORDER BY "order" ASC, id ASC
+		SELECT t.*,
+		       tc.name  AS time_category_name,
+		       tc.color AS time_category_color
+		FROM tasks t
+		LEFT JOIN time_categories tc ON t.time_category_id = tc.id
+		WHERE t.project_id = ? AND t.status = 'open'
+		ORDER BY t."order" ASC, t.id ASC
 	''', (project['id'],)).fetchall()
 	project_tasks = []
 	for t in project_tasks_raw:

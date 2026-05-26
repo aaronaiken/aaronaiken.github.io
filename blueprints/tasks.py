@@ -150,6 +150,42 @@ def task_due_date(task_id):
 	return jsonify({'success': True, 'due_date': due})
 
 
+@tasks_bp.route('/tasks/<int:task_id>/category', methods=['POST'])
+def task_category(task_id):
+	"""Set or clear default time category on a task. Timers started against
+	this task inherit the category unless the caller passes one explicitly
+	(see blueprints/time_tracking.py, mirror of the ticket flow).
+	Accepts JSON or form: time_category_id = int | null | ''."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 403
+	data = request.get_json(silent=True) or request.form
+	val = data.get('time_category_id')
+	if val in (None, '', 'null'):
+		cat_id = None
+	else:
+		try:
+			cat_id = int(val)
+		except (ValueError, TypeError):
+			return jsonify({'error': 'invalid_time_category_id'}), 400
+	conn = get_db()
+	row = conn.execute('SELECT id FROM tasks WHERE id = ?', (task_id,)).fetchone()
+	if not row:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+	if cat_id is not None:
+		cat = conn.execute(
+			'SELECT id FROM time_categories WHERE id = ? AND is_active = 1',
+			(cat_id,)
+		).fetchone()
+		if not cat:
+			conn.close()
+			return jsonify({'error': 'time_category_not_found'}), 404
+	conn.execute('UPDATE tasks SET time_category_id = ? WHERE id = ?', (cat_id, task_id))
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True, 'time_category_id': cat_id})
+
+
 @tasks_bp.route('/tasks/<int:task_id>/assign', methods=['POST'])
 def task_assign(task_id):
 	"""Assign a Below Deck task to a project."""

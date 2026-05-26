@@ -249,7 +249,7 @@ def time_start():
 	# Phase 1.5 — task_id must point to a task on this project
 	if task_id:
 		task = conn.execute(
-			'SELECT id, project_id FROM tasks WHERE id = ?', (task_id,)
+			'SELECT id, project_id, time_category_id FROM tasks WHERE id = ?', (task_id,)
 		).fetchone()
 		if not task:
 			conn.close()
@@ -260,6 +260,17 @@ def time_start():
 				'error': 'task_project_mismatch',
 				'task_project_id': task['project_id'],
 			}), 400
+		# Category propagation: inherit the task's default category if the
+		# caller didn't pick one AND the task's category is still active.
+		# Mirrors the ticket flow — keeps the Category column on reports
+		# populated automatically.
+		if not time_category_id and task['time_category_id']:
+			cat = conn.execute(
+				'SELECT id, is_active FROM time_categories WHERE id = ?',
+				(task['time_category_id'],)
+			).fetchone()
+			if cat and cat['is_active']:
+				time_category_id = task['time_category_id']
 
 	# Phase 1.5 — checklist_item_id must reach this project via blocks
 	if checklist_item_id:

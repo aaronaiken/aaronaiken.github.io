@@ -493,6 +493,16 @@ const CD_PROJECTS = [
     var addEmail = section.querySelector('.cd-lookup-add-email');
     var addGroup = section.querySelector('.cd-lookup-add-group');
 
+    // Random-color suggestion for the add-new color input — keeps each new
+    // lookup row from defaulting to the same amber. Channels clamped to a
+    // 50–220 band so the result isn't black-on-black or white-on-cream.
+    function randomHex() {
+      var ch = function () { return Math.floor(50 + Math.random() * 170); };
+      var h = function (n) { return n.toString(16).padStart(2, '0'); };
+      return '#' + h(ch()) + h(ch()) + h(ch());
+    }
+    if (addColor) addColor.value = randomHex();
+
     function doAdd() {
       var name = (addName.value || '').trim();
       if (!name) { addName.focus(); return; }
@@ -507,6 +517,7 @@ const CD_PROJECTS = [
           addName.value = '';
           if (addEmail) addEmail.value = '';
           if (addGroup) addGroup.value = '';
+          if (addColor) addColor.value = randomHex();  // fresh suggestion for the next row
           flashSaved();
           renderSection(section);
         } else {
