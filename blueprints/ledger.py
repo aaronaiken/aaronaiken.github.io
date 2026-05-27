@@ -1705,6 +1705,55 @@ def leak_hunt_detail(leak_id):
 	)
 
 
+@ledger_bp.route('/leak-hunt/<int:leak_id>/recurring/add', methods=['POST'])
+@cd_auth_required
+def leak_hunt_add_recurring(leak_id):
+	"""Add a detected recurring charge to recurring_expenses as a bill.
+
+	Idempotent by name (case-insensitive). Form fields:
+	  name, amount, day_of_month, category
+	"""
+	name   = (request.form.get('name', '') or '').strip()
+	amount = _form_float('amount', 0) or 0
+	day    = _form_int('day_of_month', 1) or 1
+	cat    = (request.form.get('category', '') or '').strip() or None
+
+	if not name or amount <= 0:
+		flash('Need a name and a positive amount.', 'error')
+		return redirect(url_for('ledger.leak_hunt_detail', leak_id=leak_id))
+
+	conn = get_ledger_db()
+	# Idempotent: skip if a recurring row with the same name (case-insensitive)
+	# already exists and is active. If it exists but inactive, reactivate.
+	existing = conn.execute(
+		"SELECT id, active FROM recurring_expenses WHERE lower(name) = lower(?)",
+		(name,)
+	).fetchone()
+	now = L.et_now_iso()
+	if existing:
+		if not existing['active']:
+			conn.execute(
+				"UPDATE recurring_expenses SET active = 1, updated = ? WHERE id = ?",
+				(now, existing['id']))
+			conn.commit()
+			conn.close()
+			flash(f'{name} reactivated in recurring bills.', 'ok')
+		else:
+			conn.close()
+			flash(f'{name} is already in your recurring bills.', 'error')
+		return redirect(url_for('ledger.leak_hunt_detail', leak_id=leak_id))
+
+	conn.execute("""
+		INSERT INTO recurring_expenses (
+			name, amount, day_of_month, category, active, notes, created, updated
+		) VALUES (?, ?, ?, ?, 1, ?, ?, ?)
+	""", (name, amount, day, cat, 'Added from leak hunt', now, now))
+	conn.commit()
+	conn.close()
+	flash(f'Added {name} (${amount:,.2f}/mo) to recurring bills.', 'ok')
+	return redirect(url_for('ledger.leak_hunt_detail', leak_id=leak_id) + '#recurring')
+
+
 @ledger_bp.route('/leak-hunt/rules')
 @cd_auth_required
 def leak_hunt_rules():

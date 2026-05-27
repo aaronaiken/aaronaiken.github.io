@@ -399,9 +399,25 @@ def biggest_transactions(transactions, n=10):
 
 def recurring_charges_summary(transactions):
 	"""Group recurring-flagged transactions by description for the
-	"Recurring charges detected" callout. Returns list of
-	{description, count, avg_amount, total} sorted by avg_amount desc."""
-	groups = defaultdict(lambda: {'count': 0, 'total': 0.0})
+	"Recurring charges detected" callout.
+
+	Returns list of dicts sorted by avg_amount desc, each with:
+	  description           original-case description from first match
+	  cleaned_name          conservative cleanup (strip CARD### suffix,
+	                         phone numbers, etc.) for prefilling a
+	                         recurring_expenses row
+	  count                 number of occurrences in this hunt
+	  total                 sum of amounts
+	  avg_amount            total / count
+	  last_day_of_month     day-of-month from most recent occurrence
+	                         (best guess at "monthly billing day")
+	  suggested_category    most-common non-Uncategorized category
+	                         among matching transactions, or None
+	"""
+	groups = defaultdict(lambda: {
+		'count': 0, 'total': 0.0,
+		'latest_date': '', 'cat_votes': defaultdict(int),
+	})
 	for t in transactions:
 		is_rec = (t.get('is_recurring') if isinstance(t, dict) else t['is_recurring']) or 0
 		if not is_rec:
@@ -410,13 +426,79 @@ def recurring_charges_summary(transactions):
 		if amt <= 0:
 			continue
 		desc = (t.get('description') if isinstance(t, dict) else t['description']) or ''
+		date = (t.get('tx_date') if isinstance(t, dict) else t['tx_date']) or ''
+		cat  = (t.get('category') if isinstance(t, dict) else t['category']) or 'Uncategorized'
 		key = desc.strip().upper()
-		groups[key]['count'] += 1
-		groups[key]['total'] += amt
-		groups[key]['description'] = desc  # preserve original case from first match
+		g = groups[key]
+		g['count'] += 1
+		g['total'] += amt
+		g['description'] = desc
+		if date and date > g.get('latest_date', ''):
+			g['latest_date'] = date
+		if cat and cat != 'Uncategorized':
+			g['cat_votes'][cat] += 1
+
 	out = []
 	for key, g in groups.items():
 		g['avg_amount'] = g['total'] / g['count'] if g['count'] else 0
+		# Pick the most-voted non-Uncategorized category.
+		if g['cat_votes']:
+			g['suggested_category'] = max(g['cat_votes'].items(), key=lambda kv: kv[1])[0]
+		else:
+			g['suggested_category'] = None
+		# Day-of-month from the latest occurrence — best guess at billing day.
+		try:
+			g['last_day_of_month'] = int(g['latest_date'].split('-')[2])
+		except (ValueError, IndexError):
+			g['last_day_of_month'] = 1
+		g['cleaned_name'] = clean_merchant_name(g['description'])
+		# Drop internal scratch fields before returning.
+		g.pop('cat_votes', None)
 		out.append(g)
 	out.sort(key=lambda g: g['avg_amount'], reverse=True)
 	return out
+
+
+# Common bank-statement suffixes / noise to strip from merchant
+# descriptions when prefilling a recurring_expenses name. Conservative —
+# user can still edit on the form. Goal: turn 'NETFLIX.COM' into
+# 'Netflix', 'APPLE.COM/BILL CARD6845' into 'Apple', 'STARBUCKS #1234'
+# into 'Starbucks'.
+_MERCHANT_TRAILING = [
+	re.compile(r'\s+CARD\d+\b.*$', re.IGNORECASE),
+	re.compile(r'\s+xxx+\d+\b.*$', re.IGNORECASE),
+	re.compile(r'\s+POS\s+PURCHASE.*$', re.IGNORECASE),
+	re.compile(r'\s+DEBIT CARD PURCHASE.*$', re.IGNORECASE),
+	re.compile(r'\s+ACH (CREDIT|DEBIT).*$', re.IGNORECASE),
+	re.compile(r'\s+\d{3}-\d{3}-\d{4}.*$'),
+	re.compile(r'\s+#\d+.*$'),
+]
+_MERCHANT_REPLACE = [
+	(re.compile(r'\.COM\b', re.IGNORECASE), ''),
+	(re.compile(r'\.NET\b', re.IGNORECASE), ''),
+	(re.compile(r'/BILL\b', re.IGNORECASE), ''),
+	(re.compile(r'\bUSA\b', re.IGNORECASE), ''),
+	(re.compile(r'\bINC\b\.?', re.IGNORECASE), ''),
+	(re.compile(r'\bLLC\b\.?', re.IGNORECASE), ''),
+]
+
+
+def clean_merchant_name(desc):
+	"""Conservative cleanup of a bank-statement merchant string for use
+	as a recurring_expenses name. Strips card/phone/POS suffixes, common
+	trailing tokens (.COM, INC, USA), and Title-cases if the input is
+	all-caps. Always leaves the user with something editable.
+	"""
+	s = (desc or '').strip()
+	if not s:
+		return s
+	for pat in _MERCHANT_TRAILING:
+		s = pat.sub('', s)
+	for pat, replacement in _MERCHANT_REPLACE:
+		s = pat.sub(replacement, s)
+	s = re.sub(r'\s+', ' ', s).strip()
+	# Title-case if the input is screaming-caps; otherwise leave alone
+	# (preserves names like "Micro.blog" or "PythonAnywhere").
+	if s and s == s.upper():
+		s = s.title()
+	return s

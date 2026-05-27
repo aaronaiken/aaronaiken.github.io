@@ -147,24 +147,40 @@
 
   {# ===== Recurring callout ===== #}
   {% if recurring %}
-    <div class="lg-section-label">// Recurring charges detected</div>
+    <div class="lg-section-label" id="recurring">// Recurring charges detected</div>
     <div class="lg-card" style="border-left: 3px solid var(--lg-teal);">
-      <p class="lg-note">Highest-leverage section — each one canceled is monthly savings forever.</p>
+      <p class="lg-note">
+        Highest-leverage section — each one canceled is monthly savings forever.
+        Use <strong>+ Add to bills</strong> to drop a charge into <a href="/ledger/recurring/">Recurring expenses</a>
+        so the cash-runway card stops missing it. Add now → cancel later if you decide to.
+      </p>
       <div class="lg-table-wrap">
         <table class="lg-table">
           <thead><tr>
             <th>Merchant</th>
             <th class="num">Avg / charge</th>
-            <th class="num">Total in period</th>
-            <th class="num">Count</th>
+            <th class="num col-hide-sm">Total in period</th>
+            <th class="num col-hide-sm">Count</th>
+            <th></th>
           </tr></thead>
           <tbody>
           {% for r in recurring %}
             <tr>
-              <td>{{ r.description }}</td>
+              <td>{{ r.description }}
+                <div class="lg-note" style="font-size:0.75rem;">→ <span class="lg-mono">{{ r.cleaned_name }}</span></div>
+              </td>
               <td class="num"><span class="lg-pos">${{ '{:,.2f}'.format(r.avg_amount) }}</span></td>
-              <td class="num">${{ '{:,.2f}'.format(r.total) }}</td>
-              <td class="num lg-dim">{{ r.count }}</td>
+              <td class="num col-hide-sm">${{ '{:,.2f}'.format(r.total) }}</td>
+              <td class="num col-hide-sm lg-dim">{{ r.count }}</td>
+              <td style="white-space:nowrap;">
+                <form method="POST" action="/ledger/leak-hunt/{{ imp.id }}/recurring/add" style="display:inline;">
+                  <input type="hidden" name="name" value="{{ r.cleaned_name }}">
+                  <input type="hidden" name="amount" value="{{ '%.2f' % r.avg_amount }}">
+                  <input type="hidden" name="day_of_month" value="{{ r.last_day_of_month }}">
+                  <input type="hidden" name="category" value="{{ r.suggested_category or '' }}">
+                  <button type="submit" class="lg-btn outline sm">+ Add to bills</button>
+                </form>
+              </td>
             </tr>
           {% endfor %}
           </tbody>
