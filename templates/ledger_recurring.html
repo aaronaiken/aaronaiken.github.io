@@ -99,8 +99,9 @@
                 <button type="submit" class="lg-btn ghost sm">save</button>
               </form>
               <form method="POST" action="/ledger/recurring/{{ e.id }}/delete" style="display:inline;"
-                    onsubmit="return confirm('Deactivate {{ e.name }}?');">
-                <button type="submit" class="lg-btn danger sm">×</button>
+                    onsubmit="return confirm({% if e.active %}'Deactivate {{ e.name }}? It will stop counting toward cash runway but stay here so you can reactivate it.'{% else %}'Permanently delete {{ e.name }}? This cannot be undone.'{% endif %});">
+                <button type="submit" class="lg-btn danger sm"
+                        title="{% if e.active %}Deactivate (soft delete){% else %}Delete permanently{% endif %}">×</button>
               </form>
               </td>
             </tr>

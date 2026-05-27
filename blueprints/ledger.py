@@ -840,10 +840,26 @@ def recurring_edit(eid):
 @ledger_bp.route('/recurring/<int:eid>/delete', methods=['POST'])
 @cd_auth_required
 def recurring_delete(eid):
+	"""Smart delete: if the row is still active, soft-delete it (active = 0)
+	— preserves the safety net of restoring later. If it's already
+	inactive, hard-delete it from the table entirely. Two clicks to
+	fully remove; the confirm text in the template tells the user
+	which action they're about to take."""
 	conn = get_ledger_db()
-	conn.execute(
-		"UPDATE recurring_expenses SET active = 0, updated = ? WHERE id = ?",
-		(L.et_now_iso(), eid))
+	row = conn.execute(
+		"SELECT name, active FROM recurring_expenses WHERE id = ?", (eid,)
+	).fetchone()
+	if not row:
+		conn.close()
+		return redirect(url_for('ledger.recurring_list'))
+	if row['active']:
+		conn.execute(
+			"UPDATE recurring_expenses SET active = 0, updated = ? WHERE id = ?",
+			(L.et_now_iso(), eid))
+		flash(f'{row["name"]} deactivated. Click × again to delete permanently.', 'ok')
+	else:
+		conn.execute("DELETE FROM recurring_expenses WHERE id = ?", (eid,))
+		flash(f'{row["name"]} deleted.', 'ok')
 	conn.commit()
 	conn.close()
 	return redirect(url_for('ledger.recurring_list'))
