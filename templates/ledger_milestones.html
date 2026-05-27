@@ -73,7 +73,63 @@
                 </div>
                 <div class="lg-note" style="font-size:0.78rem; text-align:right;">{{ '{:.1f}'.format(m.progress.percent) }}% to goal</div>
               {% endif %}
+              {% if m.condition_type in ('account_balance_ge', 'liquid_savings_months') and m.params %}
+                <div class="lg-note" style="font-size:0.78rem; margin-top:6px;">
+                  Tracking
+                  {% if m.condition_type == 'account_balance_ge' %}
+                    account <strong class="lg-mono">{{ m.params.account_slug or m.params.account_id }}</strong>
+                  {% else %}
+                    accounts <strong class="lg-mono">{{ (m.params.account_slugs or ['checking','savings']) | join(', ') }}</strong>
+                  {% endif %}
+                </div>
+              {% endif %}
             </div>
+
+            {# Contribute widget — only when target is a savings account
+               (i.e., not 'checking'). Money in checking is operating
+               capital; the goal should be funded from a deliberate
+               transfer into a separate savings account. #}
+            {% set target_slug = m.params.account_slug if m.condition_type == 'account_balance_ge' else None %}
+            {% if target_slug and target_slug != 'checking' %}
+              {% set target_acct = liquid_accounts | selectattr('slug', 'equalto', target_slug) | list %}
+              {% if target_acct %}
+                <div class="lg-card" style="margin-top:14px; padding:14px 16px; background:rgba(108,157,157,0.06); border-color:var(--lg-teal);">
+                  <form method="POST" action="/ledger/transfer" style="display:flex; gap:10px; align-items:baseline; flex-wrap:wrap;">
+                    <input type="hidden" name="to_slug" value="{{ target_slug }}">
+                    <input type="hidden" name="next" value="/ledger/milestones/">
+                    <span class="lg-label" style="margin:0;">Contribute</span>
+                    <div class="lg-currency-wrap" style="width:120px;">
+                      <input type="number" step="0.01" min="0" name="amount" class="lg-input lg-num lg-currency" required>
+                    </div>
+                    <span class="lg-note">from</span>
+                    <select name="from_slug" class="lg-select" style="max-width:160px;">
+                      {% for a in liquid_accounts if a.slug != target_slug %}
+                        <option value="{{ a.slug }}">{{ a.name }}</option>
+                      {% endfor %}
+                    </select>
+                    <span class="lg-note">→ <strong class="lg-mono">{{ target_slug }}</strong></span>
+                    <input type="text" name="note" class="lg-input" placeholder="(optional note)" style="flex:1; min-width:120px;">
+                    <button type="submit" class="lg-btn primary sm">Move</button>
+                  </form>
+                  <p class="lg-note" style="font-size:0.78rem; margin:8px 0 0;">
+                    This will record a real account transfer (two snapshots — source down, destination up). Do the actual bank transfer too, then this and your bank stay in sync.
+                  </p>
+                </div>
+              {% endif %}
+            {% elif target_slug == 'checking' %}
+              <div class="lg-card" style="margin-top:14px; padding:12px 14px; background:rgba(176,141,87,0.04); border-color:var(--lg-brass-dim);">
+                <p class="lg-note" style="margin:0; font-style:normal;">
+                  <strong>Heads-up:</strong> this milestone is tracking your <span class="lg-mono">checking</span> balance,
+                  but checking is operating capital — every dollar there is earmarked for upcoming bills, not goal savings.
+                  To make this a real "set money aside" milestone:
+                </p>
+                <ol class="lg-note" style="margin:8px 0 0; padding-left:20px; font-style:normal; font-size:0.85rem;">
+                  <li>Create a savings account in <a href="/ledger/accounts/">Accounts</a> (e.g., name "Buffer", account type savings)</li>
+                  <li>Edit this milestone (Edit button below) → change <span class="lg-mono">account_slug</span> from <span class="lg-mono">checking</span> to your new savings slug</li>
+                  <li>A Contribute widget will appear here so you can deliberately move money toward the goal</li>
+                </ol>
+              </div>
+            {% endif %}
 
             {# Sub-progress chips for the Debt-free milestone #}
             {% if m.condition_type == 'total_debt_zero' %}

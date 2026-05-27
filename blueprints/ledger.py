@@ -718,6 +718,69 @@ def snapshot_one():
 	return redirect(next_url)
 
 
+# ---- account-to-account transfer ----
+
+@ledger_bp.route('/transfer', methods=['POST'])
+@cd_auth_required
+def transfer():
+	"""Atomic move of money between two accounts.
+
+	Writes two balance snapshots: source -= amount, dest += amount.
+	Linked via shared notes so the audit trail shows the pair. Form
+	fields: from_slug, to_slug, amount, note (optional), next (optional
+	redirect target).
+
+	Use case: setting money aside for a savings goal (Starter buffer
+	milestone, emergency fund, etc.) — the Ledger reflects what you've
+	actually moved in your bank, not what was always there."""
+	from_slug = (request.form.get('from_slug') or '').strip()
+	to_slug   = (request.form.get('to_slug') or '').strip()
+	amount    = _form_float('amount')
+	note      = (request.form.get('note') or '').strip()
+	nxt       = request.form.get('next') or url_for('ledger.glance')
+
+	if not from_slug or not to_slug or not amount or amount <= 0:
+		flash('Transfer needs from, to, and a positive amount.', 'error')
+		return redirect(nxt)
+	if from_slug == to_slug:
+		flash('Source and destination must differ.', 'error')
+		return redirect(nxt)
+
+	conn = get_ledger_db()
+	from_row = conn.execute(
+		"SELECT id, name FROM accounts WHERE slug = ?", (from_slug,)
+	).fetchone()
+	to_row = conn.execute(
+		"SELECT id, name FROM accounts WHERE slug = ?", (to_slug,)
+	).fetchone()
+	if not from_row or not to_row:
+		conn.close()
+		flash('Account not found.', 'error')
+		return redirect(nxt)
+
+	from_bal = L.latest_balance(conn, from_row['id']) or 0
+	to_bal   = L.latest_balance(conn, to_row['id']) or 0
+
+	now     = L.et_now_iso()
+	snap_at = L.utc_now_iso()
+	tail    = f' — {note}' if note else ''
+	out_note = f'Transfer to {to_row["name"]} (${amount:,.2f}){tail}'
+	in_note  = f'Transfer from {from_row["name"]} (${amount:,.2f}){tail}'
+
+	conn.execute("""
+		INSERT INTO balance_snapshots (account_id, balance, snapshot_at, source, notes, created)
+		VALUES (?, ?, ?, 'manual', ?, ?)
+	""", (from_row['id'], from_bal - amount, snap_at, out_note, now))
+	conn.execute("""
+		INSERT INTO balance_snapshots (account_id, balance, snapshot_at, source, notes, created)
+		VALUES (?, ?, ?, 'manual', ?, ?)
+	""", (to_row['id'], to_bal + amount, snap_at, in_note, now))
+	conn.commit()
+	conn.close()
+	flash(f'Transferred ${amount:,.2f} from {from_row["name"]} to {to_row["name"]}.', 'ok')
+	return redirect(nxt)
+
+
 # ---- transactions ----
 
 @ledger_bp.route('/transactions/new', methods=['POST'])
@@ -2067,13 +2130,25 @@ def milestones_view():
 	# Run auto-advancement on every load — cheap, idempotent.
 	just_advanced = L.advance_current_milestone(conn)
 	milestones = L.list_milestones(conn)
-	# Enrich with progress + computed condition_met
+	# Enrich with progress + computed condition_met + parsed params (so
+	# the template can show "currently targeting: X" + render a
+	# Contribute widget when the milestone targets a non-checking account).
 	for m in milestones:
 		m['progress'] = L.milestone_progress(conn, m)
 		m['condition_met'] = L.evaluate_milestone_condition(conn, m)
-	# For the Debt-free milestone, also surface the avalanche kill sequence
-	# from the live projection.
+		try:
+			m['params'] = json.loads(m.get('condition_params') or '{}')
+		except (ValueError, TypeError):
+			m['params'] = {}
+	# For the Debt-free milestone, also surface the avalanche kill sequence.
 	avalanche = L.avalanche_order(conn)
+	# Liquid accounts (for the Contribute widget's from-account dropdown).
+	liquid_accounts = conn.execute("""
+		SELECT id, slug, name, account_type FROM accounts
+		WHERE status IN ('active', 'unknown')
+		  AND account_type IN ('checking', 'savings')
+		ORDER BY (account_type = 'checking') DESC, name
+	""").fetchall()
 	# Recent events (for the small history footer)
 	recent_events = conn.execute("""
 		SELECT me.*, m.title AS milestone_title
@@ -2088,6 +2163,7 @@ def milestones_view():
 		avalanche=avalanche,
 		just_advanced=just_advanced,
 		recent_events=recent_events,
+		liquid_accounts=liquid_accounts,
 	)
 
 
