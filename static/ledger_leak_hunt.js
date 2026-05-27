@@ -36,17 +36,50 @@
 
   // ---- inline category change ----
   tbody.addEventListener('change', async (e) => {
+    // (a) "rule?" checkbox toggled — create a rule for this row's
+    // current description + current category. Checking after the fact
+    // works exactly like checking it before the category change.
+    if (e.target.classList && e.target.classList.contains('lh-make-rule')) {
+      if (!e.target.checked) return;  // unchecking doesn't delete the rule
+      const tr = e.target.closest('tr');
+      const sel = tr.querySelector('.lh-cat-select');
+      const id  = e.target.dataset.id;
+      if (!sel || sel.value === 'Uncategorized') {
+        flash('Pick a real category first — rule needs something to assign.');
+        e.target.checked = false;
+        return;
+      }
+      const fd = new FormData();
+      fd.set('category', sel.value);
+      fd.set('make_rule', '1');
+      try {
+        const res = await fetch(`/ledger/leak-hunt/${LEAK_ID}/transactions/${id}/update`, {
+          method: 'POST',
+          body: fd,
+          headers: {'X-Requested-With': 'fetch'},
+        });
+        const data = await res.json();
+        if (data.rule_created) {
+          flash(`Rule created: future "${data.rule_created}" → ${sel.value}`);
+        } else {
+          flash(`Rule already exists for that description.`);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+      return;
+    }
+
+    // (b) category dropdown changed — update the transaction, show the
+    // "rule?" affordance, and (if the user pre-checked it) create the rule.
     const sel = e.target.closest('.lh-cat-select');
     if (!sel) return;
     const id = sel.dataset.id;
     const newCat = sel.value;
-    const originalCat = sel.dataset.original;
 
-    // Show the "rule?" checkbox inline.
     const ruleLabel = sel.closest('tr').querySelector('.lh-rule-label');
     if (ruleLabel) ruleLabel.style.display = 'inline-flex';
 
-    // Send the update.
     const fd = new FormData();
     fd.set('category', newCat);
     const makeRule = sel.closest('tr').querySelector('.lh-make-rule');
