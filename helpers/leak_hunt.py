@@ -139,19 +139,29 @@ def _find_col(header_norm, *names):
 
 
 def _to_float(s):
+	"""Parse a money string to float, handling the common bank-CSV oddities:
+
+	  $238.60        → 238.6
+	  ($500)         → -500       (parens-negative — Excel-style)
+	  + $238.6       → 238.6      (PNC's explicit-sign format, space between)
+	  - $500         → -500       (PNC's explicit-sign format, space between)
+	  $2,194.24      → 2194.24
+	  '   '          → 0.0
+	"""
 	if s is None:
 		return 0.0
 	s = str(s).strip()
 	if not s:
 		return 0.0
-	# Strip $ and commas; handle parens for negatives.
-	neg = s.startswith('(') and s.endswith(')')
-	s = s.replace('$', '').replace(',', '').replace('(', '').replace(')', '')
+	neg_parens = s.startswith('(') and s.endswith(')')
+	# Strip currency, grouping, parens, and inner whitespace so '+ 238.6'
+	# becomes '+238.6' which float() handles natively.
+	cleaned = re.sub(r'[\$,\(\)\s]', '', s)
 	try:
-		v = float(s)
+		v = float(cleaned)
 	except ValueError:
 		return 0.0
-	return -v if neg else v
+	return -v if neg_parens else v
 
 
 def _normalize_date(s):
@@ -210,17 +220,16 @@ def _parse_pnc_activity(header, body):
 
 	Headers: Transaction Date, Transaction Description, Amount, Category, Balance.
 
-	Sign convention (confirmed from real Aaron data 2026-05-26):
-	  POSTED row, parens   ($500)  → outflow (debit)
-	  POSTED row, positive  $2,194.24 → inflow (credit / deposit)
-	  PENDING row, positive $238.60 → outflow (pending charge — will
-	                                  become parens when it posts)
-	  PENDING row, parens   ($500)  → outflow (already-debited pending)
+	Sign conventions (PNC uses both forms across exports):
+	  ($500)          parens-negative          (Excel-style)
+	  - $500          explicit-sign with space (PNC accountActivityExport)
+	  $2,194.24       posted positive          (credit / deposit / paycheck)
+	  + $238.60       explicit positive        (pending charge)
 
-	We always store positive = outflow downstream. Translate accordingly:
-	  - Parens-negative anywhere  → outflow (flip to positive)
-	  - Positive on PENDING       → outflow (keep positive)
-	  - Positive on POSTED        → inflow  (negate to negative)
+	Translation to "positive = outflow" schema:
+	  - Explicit negative marker (parens OR leading minus) → OUTFLOW
+	  - Positive on PENDING                                 → OUTFLOW
+	  - Positive on POSTED                                  → INFLOW
 	"""
 	header_norm = [(c or '').strip().lower() for c in header]
 	i_date = _find_col(header_norm, 'transaction date', 'date', 'posted date')
@@ -230,17 +239,20 @@ def _parse_pnc_activity(header, body):
 	for r in body:
 		if not r or all(not (c or '').strip() for c in r):
 			continue
-		raw_date = r[i_date] if i_date is not None and i_date < len(r) else ''
-		desc     = r[i_desc] if i_desc is not None and i_desc < len(r) else ''
-		raw_amt  = r[i_amt]  if i_amt  is not None and i_amt  < len(r) else ''
+		raw_date  = r[i_date] if i_date is not None and i_date < len(r) else ''
+		desc      = r[i_desc] if i_desc is not None and i_desc < len(r) else ''
+		raw_amt   = r[i_amt]  if i_amt  is not None and i_amt  < len(r) else ''
 		raw_amt_s = (raw_amt or '').strip()
 		parsed    = _to_float(raw_amt_s)
-		is_parens = raw_amt_s.startswith('(') and raw_amt_s.endswith(')')
-		pending   = _is_pending_date(raw_date)
-		if is_parens:
-			amount = abs(parsed)              # parens → outflow
+		is_neg    = (
+			(raw_amt_s.startswith('(') and raw_amt_s.endswith(')'))
+			or bool(re.match(r'^\s*-', raw_amt_s))
+		)
+		pending = _is_pending_date(raw_date)
+		if is_neg:
+			amount = abs(parsed)              # negative marker → outflow
 		elif pending:
-			amount = abs(parsed)              # pending charge → outflow
+			amount = abs(parsed)              # pending positive → outflow
 		else:
 			amount = -abs(parsed)             # posted positive → inflow
 		out.append({
