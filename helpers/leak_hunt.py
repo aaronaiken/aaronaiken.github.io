@@ -220,16 +220,16 @@ def _parse_pnc_activity(header, body):
 
 	Headers: Transaction Date, Transaction Description, Amount, Category, Balance.
 
-	Sign conventions (PNC uses both forms across exports):
-	  ($500)          parens-negative          (Excel-style)
-	  - $500          explicit-sign with space (PNC accountActivityExport)
-	  $2,194.24       posted positive          (credit / deposit / paycheck)
-	  + $238.60       explicit positive        (pending charge)
+	PNC uses standard bank sign convention. PENDING vs posted is
+	irrelevant for direction — only the explicit sign matters:
+	  + $238.60       INFLOW   (deposit, refund, credit, transfer-in)
+	  $2,194.24       INFLOW   (same — bare positive)
+	  - $500          OUTFLOW  (debit, charge, transfer-out, autopay)
+	  ($500)          OUTFLOW  (legacy Excel-style parens-negative)
 
 	Translation to "positive = outflow" schema:
-	  - Explicit negative marker (parens OR leading minus) → OUTFLOW
-	  - Positive on PENDING                                 → OUTFLOW
-	  - Positive on POSTED                                  → INFLOW
+	  explicit negative marker (parens OR leading minus) → OUTFLOW
+	  positive                                            → INFLOW
 	"""
 	header_norm = [(c or '').strip().lower() for c in header]
 	i_date = _find_col(header_norm, 'transaction date', 'date', 'posted date')
@@ -248,13 +248,7 @@ def _parse_pnc_activity(header, body):
 			(raw_amt_s.startswith('(') and raw_amt_s.endswith(')'))
 			or bool(re.match(r'^\s*-', raw_amt_s))
 		)
-		pending = _is_pending_date(raw_date)
-		if is_neg:
-			amount = abs(parsed)              # negative marker → outflow
-		elif pending:
-			amount = abs(parsed)              # pending positive → outflow
-		else:
-			amount = -abs(parsed)             # posted positive → inflow
+		amount = abs(parsed) if is_neg else -abs(parsed)
 		out.append({
 			'date':        _normalize_date(raw_date),
 			'description': (desc or '').strip(),
