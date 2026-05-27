@@ -375,6 +375,82 @@ def payday_session():
 
 # ---- account list + detail ----
 
+@ledger_bp.route('/snapshot-all/', methods=['GET'])
+@cd_auth_required
+def snapshot_all_form():
+	"""Single-page sweep of every active account's balance.
+
+	Pre-fills each row with the current (latest-snapshot) balance so
+	leaving a row untouched is the no-op default. Only rows whose new
+	value differs from the current balance generate a new snapshot on
+	POST. Per-row notes are optional. Login URL (if set on the account)
+	renders as a one-click 'Open →' button next to each row so the user
+	doesn't have to re-find creditor logins each payday."""
+	conn = get_ledger_db()
+	rows = conn.execute("""
+		SELECT * FROM accounts
+		WHERE status IN ('active', 'unknown')
+		  AND account_type IN ('credit_card', 'loan', 'student_loan', 'bnpl', 'checking', 'savings')
+		ORDER BY
+		  CASE account_type WHEN 'checking' THEN 0 WHEN 'savings' THEN 1 ELSE 2 END,
+		  COALESCE(apr, 0) DESC,
+		  name ASC
+	""").fetchall()
+	accounts = []
+	for r in rows:
+		a = dict(r)
+		a['current_balance'] = L.latest_balance(conn, a['id'])
+		a['snapshot_at']     = L.latest_snapshot_at(conn, a['id'])
+		accounts.append(a)
+	conn.close()
+	return render_template('ledger_snapshot_all.html', accounts=accounts)
+
+
+@ledger_bp.route('/snapshot-all/', methods=['POST'])
+@cd_auth_required
+def snapshot_all_submit():
+	"""Atomic write of every account's balance that changed.
+
+	Form fields per account (keyed by id):
+	  balance_<id>   new balance (skip if blank or unchanged)
+	  notes_<id>     optional note attached to the snapshot
+	"""
+	conn = get_ledger_db()
+	now = L.et_now_iso()
+	snap_at = L.utc_now_iso()
+	rows = conn.execute(
+		"SELECT id, name FROM accounts WHERE status IN ('active', 'unknown')"
+	).fetchall()
+	updates = 0
+	for r in rows:
+		acc_id = r['id']
+		raw = request.form.get(f'balance_{acc_id}', '').strip()
+		if raw == '':
+			continue
+		try:
+			new_bal = float(raw.replace('$', '').replace(',', ''))
+		except ValueError:
+			continue
+		current = L.latest_balance(conn, acc_id)
+		# Skip no-op rows so we don't pollute snapshot history.
+		if current is not None and abs(new_bal - current) < 0.005:
+			continue
+		notes = request.form.get(f'notes_{acc_id}', '').strip() or 'Payday sweep'
+		conn.execute("""
+			INSERT INTO balance_snapshots (
+				account_id, balance, snapshot_at, source, notes, created
+			) VALUES (?, ?, ?, 'manual', ?, ?)
+		""", (acc_id, new_bal, snap_at, notes, now))
+		updates += 1
+	conn.commit()
+	conn.close()
+	if updates:
+		flash(f'Snapshotted {updates} account{"s" if updates != 1 else ""}.', 'ok')
+	else:
+		flash('No balance changes — nothing to snapshot.', 'ok')
+	return redirect(url_for('ledger.glance'))
+
+
 @ledger_bp.route('/accounts/')
 @cd_auth_required
 def accounts_list():
@@ -424,6 +500,21 @@ def account_detail(slug):
 	)
 
 
+def _clean_url(s):
+	"""Return a sanitized http(s) URL string, or None if empty / invalid.
+	Refuses anything that doesn't begin with http:// or https:// — keeps
+	javascript: and other shenanigans out of clickable buttons."""
+	if not s:
+		return None
+	s = s.strip()
+	if not s:
+		return None
+	low = s.lower()
+	if not (low.startswith('http://') or low.startswith('https://')):
+		return None
+	return s
+
+
 @ledger_bp.route('/accounts/new', methods=['POST'])
 @cd_auth_required
 def account_new():
@@ -440,8 +531,8 @@ def account_new():
 			name, slug, account_type, status, apr, minimum_payment,
 			attack_allocation, autopay_enabled, autopay_amount,
 			autopay_cadence, autopay_day, opened_date, notes,
-			created, updated
-		) VALUES (?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			login_url, created, updated
+		) VALUES (?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	""", (
 		name, slug,
 		request.form.get('account_type', 'credit_card'),
@@ -454,6 +545,7 @@ def account_new():
 		_form_int('autopay_day'),
 		request.form.get('opened_date', '').strip() or None,
 		request.form.get('notes', '').strip() or None,
+		_clean_url(request.form.get('login_url')),
 		now, now,
 	))
 
@@ -488,6 +580,14 @@ def account_edit(slug):
 
 	now = L.et_now_iso()
 	new_name = request.form.get('name', row['name']).strip() or row['name']
+	# login_url: only update if a value was posted (empty string clears it).
+	existing_login = row['login_url'] if 'login_url' in row.keys() else None
+	posted_login = request.form.get('login_url')
+	if posted_login is None:
+		new_login = existing_login
+	else:
+		new_login = _clean_url(posted_login)  # None on blank / invalid
+
 	conn.execute("""
 		UPDATE accounts
 		SET name = ?,
@@ -503,6 +603,7 @@ def account_edit(slug):
 		    autopay_next_date = ?,
 		    opened_date = ?,
 		    notes = ?,
+		    login_url = ?,
 		    updated = ?
 		WHERE id = ?
 	""", (
@@ -519,6 +620,7 @@ def account_edit(slug):
 		request.form.get('autopay_next_date', row['autopay_next_date'] or '') or None,
 		request.form.get('opened_date', row['opened_date'] or '') or None,
 		request.form.get('notes', row['notes'] or '') or None,
+		new_login,
 		now, row['id']
 	))
 	conn.commit()

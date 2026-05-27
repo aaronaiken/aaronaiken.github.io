@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Snapshot all balances · The Ledger</title>
+  <link rel="stylesheet" href="/static/ledger.css">
+</head>
+<body class="ledger">
+<div class="lg-shell">
+
+  <header class="lg-header">
+    <div>
+      <a href="/ledger/" class="lg-wordmark">The Ledger</a>
+      <div class="lg-ident">Snapshot all balances · payday sweep</div>
+    </div>
+    {% include 'includes/ledger_nav.html' %}
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="lg-flash {% if category == 'error' %}error{% endif %}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="lg-card">
+    <p class="lg-note" style="margin:0;">
+      Walk through each account in your bank/creditor login, copy the real balance, paste here.
+      Leave any row blank or unchanged — only differences get snapshotted. <strong>Open →</strong>
+      buttons link to each account's site (set the URL via the account's edit page if missing).
+    </p>
+  </div>
+
+  <form method="POST" action="/ledger/snapshot-all/">
+    <div class="lg-card" style="padding:0;">
+      <div class="lg-table-wrap">
+        <table class="lg-table">
+          <thead><tr>
+            <th>Account</th>
+            <th class="col-hide-sm"></th>
+            <th class="num">Current balance</th>
+            <th class="num">New balance</th>
+            <th class="col-hide-sm">Notes (optional)</th>
+          </tr></thead>
+          <tbody>
+          {% for a in accounts %}
+            <tr>
+              <td>
+                <a href="/ledger/accounts/{{ a.slug }}/">{{ a.name }}</a>
+                <div class="lg-note" style="font-size:0.72rem;">
+                  {{ a.account_type | replace('_',' ') }}
+                  {% if a.apr %}· {{ '{:.2f}'.format(a.apr) }}% APR{% endif %}
+                  {% if a.snapshot_at %} · last snap {{ a.snapshot_at[:10] }}{% endif %}
+                </div>
+              </td>
+              <td class="col-hide-sm">
+                {% if a.login_url %}
+                  <a href="{{ a.login_url }}" target="_blank" rel="noopener" class="lg-btn outline sm">Open →</a>
+                {% else %}
+                  <a href="/ledger/accounts/{{ a.slug }}/" class="lg-btn ghost sm" title="Set a login URL on this account">+ link</a>
+                {% endif %}
+              </td>
+              <td class="num lg-dim">
+                {% if a.current_balance is not none %}${{ '{:,.2f}'.format(a.current_balance) }}{% else %}—{% endif %}
+              </td>
+              <td class="num">
+                <div class="lg-currency-wrap" style="width:140px; display:inline-block;">
+                  <input type="number" step="0.01" name="balance_{{ a.id }}"
+                         class="lg-input lg-num lg-currency"
+                         placeholder="{% if a.current_balance is not none %}{{ '%.2f' % a.current_balance }}{% else %}0.00{% endif %}">
+                </div>
+              </td>
+              <td class="col-hide-sm">
+                <input type="text" name="notes_{{ a.id }}" class="lg-input" placeholder="(optional)" style="max-width:240px;">
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="lg-btn-row" style="margin-top:18px;">
+      <button type="submit" class="lg-btn primary">Save all snapshots</button>
+      <a href="/ledger/" class="lg-btn ghost">Cancel</a>
+    </div>
+  </form>
+
+  <footer class="lg-footer">
+    <span class="lg-footer-ident">YT-1300F · CHART ROOM · PAYDAY SWEEP</span>
+    <div class="lg-footer-links">
+      <a href="/ledger/">Glance</a>
+      <a href="/ledger/accounts/">Accounts</a>
+    </div>
+  </footer>
+</div>
+{% include 'includes/today_panel.html' ignore missing %}
+{% include 'includes/active_timer_strip.html' ignore missing %}
+<script src="/static/ledger.js"></script>
+</body>
+</html>

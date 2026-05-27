@@ -160,6 +160,12 @@
         <input type="date" name="opened_date" class="lg-input" value="{{ account.opened_date or '' }}">
       </div>
       <div class="lg-form-group" style="grid-column: 1 / -1;">
+        <label class="lg-label">Login URL</label>
+        <input type="url" name="login_url" class="lg-input"
+               value="{{ account.login_url or '' }}"
+               placeholder="https://nordstromcard.com/  (used by the payday snapshot sweep)">
+      </div>
+      <div class="lg-form-group" style="grid-column: 1 / -1;">
         <label class="lg-label">Notes</label>
         <textarea name="notes" class="lg-textarea">{{ account.notes or '' }}</textarea>
       </div>

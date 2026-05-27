@@ -23,6 +23,10 @@
     {% endfor %}
   {% endwith %}
 
+  <div style="display:flex; justify-content:flex-end; gap:10px; margin-bottom:10px;">
+    <a href="/ledger/snapshot-all/" class="lg-btn outline sm">Snapshot all balances →</a>
+  </div>
+
   <div class="lg-card" style="padding:0;">
     <div class="lg-table-wrap">
       <table class="lg-table">
@@ -123,6 +127,11 @@
       <div class="lg-form-group">
         <label class="lg-label">Day of month</label>
         <input type="number" min="1" max="31" name="autopay_day" class="lg-input lg-num">
+      </div>
+      <div class="lg-form-group" style="grid-column: 1 / -1;">
+        <label class="lg-label">Login URL</label>
+        <input type="url" name="login_url" class="lg-input"
+               placeholder="https://creditor.com/login (used by payday snapshot sweep)">
       </div>
       <div class="lg-form-group" style="grid-column: 1 / -1;">
         <label class="lg-label">Notes</label>
