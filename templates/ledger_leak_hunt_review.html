@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Review · Leak Hunt · The Ledger</title>
+  <link rel="stylesheet" href="/static/ledger.css">
+</head>
+<body class="ledger">
+<div class="lg-shell">
+
+  <header class="lg-header">
+    <div>
+      <a href="/ledger/" class="lg-wordmark">The Ledger</a>
+      <div class="lg-ident">Reviewing · {{ imp.period_start }} → {{ imp.period_end }}</div>
+    </div>
+    {% include 'includes/ledger_nav.html' %}
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="lg-flash {% if category == 'error' %}error{% endif %}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="lg-card" style="display:flex; justify-content:space-between; align-items:baseline; gap:18px; flex-wrap:wrap;">
+    <div>
+      <div class="lg-meta-row">
+        <span class="item"><span class="label">Transactions</span>
+          <span class="lg-num">{{ transactions|length }}</span></span>
+        <span class="item"><span class="label">Total outflow</span>
+          <span class="lg-num">${{ '{:,.2f}'.format(total_outflow) }}</span></span>
+        <span class="item"><span class="label">Total inflow</span>
+          <span class="lg-num">${{ '{:,.2f}'.format(total_inflow) }}</span></span>
+        <span class="item"><span class="label">Uncategorized</span>
+          <span class="lg-num {% if uncategorized_count > 0 %}lg-neg{% else %}lg-pos{% endif %}">{{ uncategorized_count }}</span></span>
+        <span class="item"><span class="label">Source</span>
+          <span class="lg-mono lg-dim" style="font-size:0.85rem;">{{ imp.csv_filename or '—' }} ({{ imp.csv_format or '—' }})</span></span>
+      </div>
+    </div>
+    <div class="lg-btn-row">
+      <form method="POST" action="/ledger/leak-hunt/{{ imp.id }}/save" style="display:inline;">
+        <button type="submit" class="lg-btn primary">Save hunt → results</button>
+      </form>
+      <form method="POST" action="/ledger/leak-hunt/{{ imp.id }}/delete" style="display:inline;"
+            onsubmit="return confirm('Delete this hunt?');">
+        <button type="submit" class="lg-btn danger sm">Delete</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="lg-section-label" style="display:flex; justify-content:space-between; align-items:baseline;">
+    <span>// Transactions</span>
+    <span class="lg-btn-row">
+      <button type="button" class="lg-btn ghost sm" id="lh-filter-uncategorized">Uncategorized only</button>
+      <button type="button" class="lg-btn ghost sm" id="lh-filter-recurring">Recurring only</button>
+      <button type="button" class="lg-btn ghost sm" id="lh-filter-all">Show all</button>
+      <button type="button" class="lg-btn outline sm" id="lh-keyboard-mode">Keyboard mode →</button>
+    </span>
+  </div>
+
+  <div class="lg-card" style="padding:0;">
+    {# Bulk action strip — appears when rows are selected #}
+    <div id="lh-bulk-strip" style="display:none; padding:10px 14px; background:rgba(176,141,87,0.08); border-bottom:1px solid var(--lg-rule); display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;">
+      <span class="lg-note" id="lh-bulk-count">0 selected</span>
+      <select id="lh-bulk-category" class="lg-select" style="max-width:200px;">
+        <option value="">— set category —</option>
+        {% for c in categories %}
+          <option value="{{ c }}">{{ c }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" id="lh-bulk-apply" class="lg-btn primary sm">Apply</button>
+      <button type="button" id="lh-bulk-recurring" class="lg-btn ghost sm">Toggle recurring</button>
+      <button type="button" id="lh-bulk-clear" class="lg-btn ghost sm">Clear selection</button>
+    </div>
+
+    <div class="lg-table-wrap">
+      <table class="lg-table lh-review-table">
+        <thead><tr>
+          <th style="width:24px;"><input type="checkbox" id="lh-select-all"></th>
+          <th>Date</th>
+          <th style="width:40%;">Description</th>
+          <th class="num">Amount</th>
+          <th>Category</th>
+          <th>★</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="lh-tbody">
+        {% for t in transactions %}
+          <tr class="lh-row" data-id="{{ t.id }}"
+              data-category="{{ t.category }}"
+              data-recurring="{{ t.is_recurring }}">
+            <td><input type="checkbox" class="lh-row-check" data-id="{{ t.id }}"></td>
+            <td class="lg-mono" style="font-size:0.82rem;">{{ t.tx_date }}</td>
+            <td>{{ t.description }}</td>
+            <td class="num">
+              {% if t.amount > 0 %}<span>${{ '{:,.2f}'.format(t.amount) }}</span>
+              {% else %}<span class="lg-dim">−${{ '{:,.2f}'.format(-t.amount) }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <select class="lg-select lh-cat-select" data-id="{{ t.id }}" data-original="{{ t.category }}" style="max-width:200px; padding:6px 8px;">
+                {% for c in categories %}
+                  <option value="{{ c }}" {% if t.category == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td>
+              <button type="button" class="lh-recurring-toggle" data-id="{{ t.id }}" title="Toggle recurring"
+                      style="background:none; border:0; cursor:pointer; font-size:1rem; padding:4px; color:{% if t.is_recurring %}var(--lg-brass){% else %}var(--lg-text-dim){% endif %};">
+                {% if t.is_recurring %}★{% else %}☆{% endif %}
+              </button>
+            </td>
+            <td>
+              <label class="lh-rule-label" style="font-size:0.74rem; color:var(--lg-text-dim); cursor:pointer; display:none;">
+                <input type="checkbox" class="lh-make-rule" data-id="{{ t.id }}"> rule?
+              </label>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="lg-note" style="margin-top:14px;">
+    <strong>Keyboard mode:</strong> press the button above to enter focus mode on uncategorized transactions.
+    Use number keys to assign categories: <span class="lg-mono">1=Groceries 2=Dining 3=Coffee 4=Streaming 5=Transportation 6=Shopping 7=Bills 8=Health 9=Other</span>. Arrow keys to navigate. <kbd>Esc</kbd> to exit.
+  </p>
+
+  <footer class="lg-footer">
+    <span class="lg-footer-ident">YT-1300F · CHART ROOM · REVIEW</span>
+    <div class="lg-footer-links">
+      <a href="/ledger/leak-hunt/">All hunts</a>
+    </div>
+  </footer>
+</div>
+
+<script>
+  window.LH_LEAK_ID = {{ imp.id }};
+  window.LH_CATEGORIES = {{ categories | tojson }};
+</script>
+{% include 'includes/today_panel.html' ignore missing %}
+{% include 'includes/active_timer_strip.html' ignore missing %}
+<script src="/static/ledger.js"></script>
+<script src="/static/ledger_leak_hunt.js"></script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>New Leak Hunt · The Ledger</title>
+  <link rel="stylesheet" href="/static/ledger.css">
+</head>
+<body class="ledger">
+<div class="lg-shell">
+
+  <header class="lg-header">
+    <div>
+      <a href="/ledger/" class="lg-wordmark">The Ledger</a>
+      <div class="lg-ident">New leak hunt</div>
+    </div>
+    {% include 'includes/ledger_nav.html' %}
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="lg-flash {% if category == 'error' %}error{% endif %}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="lg-card">
+    <h2 class="lg-card-title">Upload CSV</h2>
+    <p class="lg-note">
+      v1 supports PNC personal-checking CSVs natively and a generic 4-column format (date, description, amount).
+      Parsing is best-effort; if rows don't show up correctly, fall back to a generic CSV with those columns.
+      Amounts will be normalized so <strong>positive = money leaving checking</strong>.
+    </p>
+
+    <form method="POST" action="/ledger/leak-hunt/upload" enctype="multipart/form-data">
+      <div class="lg-form-group">
+        <label class="lg-label">CSV file</label>
+        <input type="file" name="csv" accept=".csv" required class="lg-input">
+      </div>
+
+      {% if accounts %}
+        <div class="lg-form-group">
+          <label class="lg-label">Source account (optional)</label>
+          <select name="account_id" class="lg-select">
+            <option value="">—</option>
+            {% for a in accounts %}
+              <option value="{{ a.id }}">{{ a.name }}</option>
+            {% endfor %}
+          </select>
+          <p class="lg-note">Lets the hunt remember which account this CSV came from.</p>
+        </div>
+      {% endif %}
+
+      <div class="lg-btn-row" style="margin-top:14px;">
+        <button type="submit" class="lg-btn primary">Upload + auto-categorize</button>
+        <a href="/ledger/leak-hunt/" class="lg-btn ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+
+  <p class="lg-note">
+    What happens next: the system parses the CSV, runs your saved rules to auto-categorize what it can,
+    flags repeat-merchant transactions as recurring, then drops you on the review screen where you
+    fix anything wrong and create rules for future imports.
+  </p>
+
+  <footer class="lg-footer">
+    <span class="lg-footer-ident">YT-1300F · CHART ROOM</span>
+    <div class="lg-footer-links">
+      <a href="/ledger/leak-hunt/">All hunts</a>
+    </div>
+  </footer>
+</div>
+{% include 'includes/today_panel.html' ignore missing %}
+{% include 'includes/active_timer_strip.html' ignore missing %}
+<script src="/static/ledger.js"></script>
+</body>
+</html>

@@ -653,3 +653,75 @@ body.ledger a:hover { color: var(--lg-brass); }
   padding: 6px 0; border-bottom: 1px dashed var(--lg-rule);
 }
 .lg-windfall-row:last-child { border-bottom: 0; }
+
+/* -------- leak hunt (Phase 3) -------- */
+
+/* Stacked-bar segment row — single brass bar segmented by category,
+   tints get lighter for smaller categories (rank-driven, set inline). */
+.lh-stacked-bar {
+  display: flex;
+  width: 100%;
+  height: 32px;
+  border-radius: var(--lg-radius);
+  overflow: hidden;
+  border: 1px solid var(--lg-rule-strong);
+}
+.lh-bar-segment {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-right: 1px solid rgba(0,0,0,0.15);
+}
+.lh-bar-segment:last-child { border-right: 0; }
+.lh-bar-label {
+  font-family: var(--lg-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lg-bg);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  padding: 0 6px;
+}
+.lh-bar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: var(--lg-text-muted);
+}
+.lh-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.lh-legend-swatch {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--lg-rule-strong);
+}
+
+/* Dense review table */
+.lh-review-table tbody tr { line-height: 1.3; }
+.lh-review-table tbody tr.lh-row.lh-keyboard-focus { background: rgba(176,141,87,0.14); }
+.lh-review-table tbody tr.lh-row.lh-uncategorized td:nth-child(5) select {
+  border-color: var(--lg-brick-soft);
+}
+.lh-review-table .lg-select { font-size: 0.88rem; }
+
+.lh-row.lh-hidden { display: none; }
+
+kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  font-family: var(--lg-mono);
+  font-size: 0.78rem;
+  border: 1px solid var(--lg-rule-strong);
+  border-radius: 3px;
+  background: var(--lg-bg-elev-2);
+}

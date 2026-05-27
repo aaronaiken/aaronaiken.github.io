@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Rules · Leak Hunt · The Ledger</title>
+  <link rel="stylesheet" href="/static/ledger.css">
+</head>
+<body class="ledger">
+<div class="lg-shell">
+
+  <header class="lg-header">
+    <div>
+      <a href="/ledger/" class="lg-wordmark">The Ledger</a>
+      <div class="lg-ident">Leak hunt · Rules</div>
+    </div>
+    {% include 'includes/ledger_nav.html' %}
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="lg-flash {% if category == 'error' %}error{% endif %}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <p class="lg-note">
+    Rules auto-categorize transactions on future imports. First match wins (sorted by priority — lower number wins first).
+    Rules accumulate naturally as you categorize transactions in review.
+  </p>
+
+  <div class="lg-card">
+    <h2 class="lg-card-title">+ New rule</h2>
+    <form method="POST" action="/ledger/leak-hunt/rules/new" class="lg-form-grid">
+      <div class="lg-form-group">
+        <label class="lg-label">Match type</label>
+        <select name="match_type" class="lg-select">
+          <option value="contains">contains</option>
+          <option value="starts_with">starts with</option>
+          <option value="equals">equals</option>
+          <option value="regex">regex</option>
+        </select>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Match value</label>
+        <input type="text" name="match_value" class="lg-input" required placeholder="e.g. NETFLIX.COM">
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Category</label>
+        <input type="text" name="category" class="lg-input" required list="lh-cat-list">
+        <datalist id="lh-cat-list">
+          {% for c in categories %}
+            <option value="{{ c }}">
+          {% endfor %}
+        </datalist>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Subcategory</label>
+        <input type="text" name="subcategory" class="lg-input">
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Priority</label>
+        <input type="number" name="priority" class="lg-input lg-num" value="100">
+      </div>
+      <div class="lg-form-group" style="grid-column: 1 / -1;">
+        <label class="lg-label">Note</label>
+        <input type="text" name="note" class="lg-input" placeholder="(optional — for your own reference)">
+      </div>
+      <div style="grid-column: 1 / -1;">
+        <button type="submit" class="lg-btn primary">Add rule</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="lg-section-label">// All rules</div>
+  <div class="lg-card" style="padding:0;">
+    {% if rules %}
+      <div class="lg-table-wrap">
+        <table class="lg-table">
+          <thead><tr>
+            <th class="num">Pri</th>
+            <th>Type</th><th>Match</th><th>Category</th><th>Subcategory</th>
+            <th>Active</th><th></th>
+          </tr></thead>
+          <tbody>
+          {% for r in rules %}
+            <form method="POST" action="/ledger/leak-hunt/rules/{{ r.id }}/edit" style="display:contents;">
+              <tr {% if not r.active %}class="kill-row"{% endif %}>
+                <td class="num">
+                  <input type="number" name="priority" value="{{ r.priority }}" class="lg-input lg-num" style="width:60px; background:transparent; border-color:transparent;">
+                </td>
+                <td>
+                  <select name="match_type" class="lg-select" style="background:transparent; border-color:transparent;">
+                    {% for t in ['contains','starts_with','equals','regex'] %}
+                      <option value="{{ t }}" {% if r.match_type == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <input type="text" name="match_value" value="{{ r.match_value }}" class="lg-input lg-mono" style="background:transparent; border-color:transparent; font-size:0.85rem;">
+                </td>
+                <td>
+                  <input type="text" name="category" value="{{ r.category }}" class="lg-input" list="lh-cat-list" style="background:transparent; border-color:transparent;">
+                </td>
+                <td>
+                  <input type="text" name="subcategory" value="{{ r.subcategory or '' }}" class="lg-input" style="background:transparent; border-color:transparent;">
+                </td>
+                <td>
+                  <div class="lg-checkbox-row">
+                    <input type="checkbox" name="active" value="1" {% if r.active %}checked{% endif %}>
+                  </div>
+                </td>
+                <td>
+                  <button type="submit" class="lg-btn ghost sm">save</button>
+              </tr>
+            </form>
+              <tr style="border-top:0;">
+                <td colspan="6" style="padding-top:0;">
+                  {% if r.note %}<span class="lg-note">{{ r.note }}</span>{% endif %}
+                </td>
+                <td>
+                  <form method="POST" action="/ledger/leak-hunt/rules/{{ r.id }}/delete" style="display:inline;"
+                        onsubmit="return confirm('Delete rule {{ r.match_value }}?');">
+                    <button type="submit" class="lg-btn danger sm">×</button>
+                  </form>
+                </td>
+              </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="lg-empty">No rules yet. They'll accumulate as you categorize transactions in review.</div>
+    {% endif %}
+  </div>
+
+  <footer class="lg-footer">
+    <span class="lg-footer-ident">YT-1300F · CHART ROOM · RULES</span>
+    <div class="lg-footer-links">
+      <a href="/ledger/leak-hunt/">All hunts</a>
+    </div>
+  </footer>
+</div>
+{% include 'includes/today_panel.html' ignore missing %}
+{% include 'includes/active_timer_strip.html' ignore missing %}
+<script src="/static/ledger.js"></script>
+</body>
+</html>

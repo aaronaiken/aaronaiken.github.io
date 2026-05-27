@@ -1292,205 +1292,488 @@ def ledger_runway_feed():
 	})
 
 
-# ---- leak hunt ----
+# ---- leak hunt (Phase 3) ----
+# Spec: .kt/spec-ledger-phase-3-leak-hunt.md.
 
-DEFAULT_LEAK_CATEGORIES = [
-	'groceries', 'dining', 'gas', 'shopping', 'subscription',
-	'home', 'health', 'transportation', 'entertainment', 'transfer',
-	'income', 'other',
-]
+from helpers import leak_hunt as LH
 
 
-LEAK_HEURISTICS = [
-	(re.compile(r'\b(uber|lyft|gas|exxon|shell|bp |bp$|sheetz|wawa)\b', re.I), 'transportation'),
-	(re.compile(r'\b(amzn|amazon|target|walmart|costco)\b', re.I), 'shopping'),
-	(re.compile(r'\b(starbucks|dunkin|chick|chipotle|panera|sweetgreen|domino|pizza|grubhub|doordash|seamless|ubereat)\b', re.I), 'dining'),
-	(re.compile(r'\b(kroger|whole foods|trader joe|aldi|safeway|publix|wegmans|giant|harris teeter|food lion)\b', re.I), 'groceries'),
-	(re.compile(r'\b(netflix|spotify|hulu|disney|apple\.com|icloud|adobe|github)\b', re.I), 'subscription'),
-	(re.compile(r'\b(cvs|walgreens|rite aid|doctor|dental|pharmacy)\b', re.I), 'health'),
-	(re.compile(r'\b(home depot|lowes|ikea|wayfair)\b', re.I), 'home'),
-	(re.compile(r'\b(payroll|deposit|direct dep|paycheck|salary)\b', re.I), 'income'),
-	(re.compile(r'\b(transfer|xfer|venmo|zelle|paypal)\b', re.I), 'transfer'),
-]
+def _active_rules(conn):
+	"""Active rules ordered by priority ASC (lower number = wins first)."""
+	return conn.execute(
+		"SELECT * FROM leak_rules WHERE active = 1 ORDER BY priority ASC, id ASC"
+	).fetchall()
 
 
-def _categorize_desc(desc):
-	for pat, cat in LEAK_HEURISTICS:
-		if pat.search(desc or ''):
-			return cat
-	return 'other'
+def _available_categories(conn):
+	"""Union of default categories + any user-created categories already
+	present in leak_transactions. Sorted, default-list-first."""
+	defaults = list(LH.DEFAULT_CATEGORIES)
+	used = conn.execute(
+		"SELECT DISTINCT category FROM leak_transactions ORDER BY category"
+	).fetchall()
+	for r in used:
+		if r['category'] and r['category'] not in defaults:
+			defaults.append(r['category'])
+	return defaults
 
 
 @ledger_bp.route('/leak-hunt/')
 @cd_auth_required
 def leak_hunt():
 	conn = get_ledger_db()
-	past = conn.execute(
-		"SELECT * FROM leak_imports ORDER BY imported_at DESC LIMIT 20"
-	).fetchall()
+	past = conn.execute("""
+		SELECT li.*, COUNT(lt.id) AS tx_count
+		FROM leak_imports li
+		LEFT JOIN leak_transactions lt ON lt.leak_import_id = li.id
+		WHERE li.deleted_at IS NULL
+		GROUP BY li.id
+		ORDER BY li.imported_at DESC LIMIT 30
+	""").fetchall()
 	conn.close()
-	return render_template('ledger_leak_hunt.html', past=past, preview=None, categories=DEFAULT_LEAK_CATEGORIES)
+	return render_template('ledger_leak_hunt.html', past=past)
+
+
+@ledger_bp.route('/leak-hunt/new')
+@cd_auth_required
+def leak_hunt_new():
+	conn = get_ledger_db()
+	# Offer the checking-style accounts as the source dropdown.
+	accts = conn.execute("""
+		SELECT id, name, slug FROM accounts
+		WHERE account_type IN ('checking', 'savings') AND status != 'closed'
+		ORDER BY (account_type = 'checking') DESC, name
+	""").fetchall()
+	conn.close()
+	return render_template('ledger_leak_hunt_new.html', accounts=accts)
 
 
 @ledger_bp.route('/leak-hunt/upload', methods=['POST'])
 @cd_auth_required
 def leak_hunt_upload():
-	"""Parse an uploaded CSV and return a categorized preview.
-
-	Best-effort parser: looks for columns named (case-insensitive) 'date',
-	'description' (or 'memo' / 'name'), 'amount' (or 'debit'/'credit'). If
-	debit + credit are split, debits are positive outflows, credits are
-	negative. The preview is rendered for the user to review/edit, then
-	committed via /leak-hunt/commit.
-	"""
+	"""Parse CSV → create leak_imports + leak_transactions rows →
+	auto-categorize each → flag recurring → redirect to /review."""
 	file = request.files.get('csv')
 	if not file or not file.filename:
 		flash('Pick a CSV to upload.', 'error')
-		return redirect(url_for('ledger.leak_hunt'))
+		return redirect(url_for('ledger.leak_hunt_new'))
 
 	try:
 		content = file.read().decode('utf-8', errors='ignore')
 	except Exception as e:
 		flash(f'Could not read file: {e}', 'error')
-		return redirect(url_for('ledger.leak_hunt'))
+		return redirect(url_for('ledger.leak_hunt_new'))
 
-	reader = csv.DictReader(io.StringIO(content))
-	cols = {(c or '').strip().lower(): c for c in (reader.fieldnames or [])}
+	records, fmt = LH.parse_csv(content)
+	if not records:
+		flash(f'No rows parsed from CSV (format detected: {fmt}). Try a different file or format.', 'error')
+		return redirect(url_for('ledger.leak_hunt_new'))
 
-	def find_col(*names):
-		for n in names:
-			if n in cols:
-				return cols[n]
-		return None
+	# Period bounds from the parsed dates (sorted, valid ISO).
+	dates = sorted([r['date'] for r in records if r['date'] and re.match(r'^\d{4}-\d{2}-\d{2}$', r['date'])])
+	period_start = dates[0]  if dates else L.et_today().isoformat()
+	period_end   = dates[-1] if dates else L.et_today().isoformat()
 
-	date_col   = find_col('date', 'posted', 'posted date', 'transaction date')
-	desc_col   = find_col('description', 'memo', 'name', 'payee', 'merchant')
-	amount_col = find_col('amount', 'transaction amount')
-	debit_col  = find_col('debit', 'withdrawal')
-	credit_col = find_col('credit', 'deposit')
-
-	preview = []
-	for r in reader:
-		desc = (r.get(desc_col) or '').strip() if desc_col else ''
-		raw_date = (r.get(date_col) or '').strip() if date_col else ''
-		try:
-			amount = float((r.get(amount_col) or '0').replace(',', '').replace('$',''))
-		except (ValueError, TypeError):
-			amount = 0.0
-		if amount_col is None and (debit_col or credit_col):
-			try:
-				deb = float((r.get(debit_col) or '0').replace(',','').replace('$','') or 0) if debit_col else 0
-			except (ValueError, TypeError):
-				deb = 0
-			try:
-				cre = float((r.get(credit_col) or '0').replace(',','').replace('$','') or 0) if credit_col else 0
-			except (ValueError, TypeError):
-				cre = 0
-			amount = deb - cre
-		preview.append({
-			'date': raw_date,
-			'description': desc,
-			'amount': amount,
-			'category': _categorize_desc(desc),
-		})
-
-	if not preview:
-		flash('No rows parsed from CSV.', 'error')
-		return redirect(url_for('ledger.leak_hunt'))
+	# Detect recurring before insert (returns list-index set).
+	recurring_indices = LH.detect_recurring(records)
 
 	conn = get_ledger_db()
-	past = conn.execute(
-		"SELECT * FROM leak_imports ORDER BY imported_at DESC LIMIT 20"
-	).fetchall()
+	rules = _active_rules(conn)
+	now = L.et_now_iso()
+
+	# Account hint (optional from form — POST may include 'account_id').
+	try:
+		account_id = int(request.form.get('account_id') or 0) or None
+	except (TypeError, ValueError):
+		account_id = None
+
+	# Total outflow (positive amounts only, excluding internal transfers — but
+	# we don't know categories yet, so compute simple "sum positives" here.
+	# Will be refined when category_breakdown_json is populated on save.)
+	total_outflow = sum(r['amount'] for r in records if r['amount'] > 0)
+
+	conn.execute("""
+		INSERT INTO leak_imports (
+			imported_at, source, period_start, period_end, total_amount,
+			category_breakdown_json, notes, csv_filename, csv_format,
+			transaction_count, checking_account_id
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	""", (
+		L.utc_now_iso(),
+		fmt,
+		period_start, period_end, total_outflow,
+		json.dumps({}),  # populated on save
+		None,
+		file.filename,
+		fmt,
+		len(records),
+		account_id,
+	))
+	leak_id = conn.execute("SELECT last_insert_rowid() AS id").fetchone()['id']
+
+	for i, rec in enumerate(records):
+		cat, subcat, rule_id = LH.categorize_with_rules(rec['description'], rules)
+		conn.execute("""
+			INSERT INTO leak_transactions (
+				leak_import_id, tx_date, description, amount, category,
+				subcategory, is_recurring, rule_id, manually_set, created
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+		""", (
+			leak_id, rec['date'], rec['description'], rec['amount'],
+			cat, subcat, 1 if i in recurring_indices else 0, rule_id, now,
+		))
+
+	conn.commit()
 	conn.close()
+	flash(f'{len(records)} transactions imported from {file.filename} ({fmt}). Review and categorize.', 'ok')
+	return redirect(url_for('ledger.leak_hunt_review', leak_id=leak_id))
+
+
+@ledger_bp.route('/leak-hunt/<int:leak_id>/review')
+@cd_auth_required
+def leak_hunt_review(leak_id):
+	conn = get_ledger_db()
+	imp = conn.execute(
+		"SELECT * FROM leak_imports WHERE id = ? AND deleted_at IS NULL",
+		(leak_id,)
+	).fetchone()
+	if not imp:
+		conn.close()
+		return redirect(url_for('ledger.leak_hunt'))
+
+	txs = conn.execute("""
+		SELECT * FROM leak_transactions
+		WHERE leak_import_id = ?
+		ORDER BY tx_date DESC, id DESC
+	""", (leak_id,)).fetchall()
+	categories = _available_categories(conn)
+	conn.close()
+
+	# Useful counts for the header.
+	total_outflow = sum(t['amount'] for t in txs if t['amount'] > 0)
+	total_inflow  = -sum(t['amount'] for t in txs if t['amount'] < 0)
+	uncategorized_count = sum(1 for t in txs if (t['category'] or '') == 'Uncategorized')
+
 	return render_template(
-		'ledger_leak_hunt.html',
-		past=past,
-		preview=preview,
-		categories=DEFAULT_LEAK_CATEGORIES,
-		source_filename=file.filename,
+		'ledger_leak_hunt_review.html',
+		imp=imp,
+		transactions=txs,
+		categories=categories,
+		total_outflow=total_outflow,
+		total_inflow=total_inflow,
+		uncategorized_count=uncategorized_count,
 	)
 
 
-@ledger_bp.route('/leak-hunt/commit', methods=['POST'])
+@ledger_bp.route('/leak-hunt/<int:leak_id>/transactions/<int:tx_id>/update', methods=['POST'])
 @cd_auth_required
-def leak_hunt_commit():
-	"""Persist a categorized leak-hunt session as a single leak_imports row."""
-	rows = []
-	i = 0
-	while True:
-		desc = request.form.get(f'desc[{i}]')
-		if desc is None:
-			break
-		try:
-			amt = float(request.form.get(f'amount[{i}]', '0') or 0)
-		except ValueError:
-			amt = 0.0
-		rows.append({
-			'date':        request.form.get(f'date[{i}]', '').strip(),
-			'description': desc,
-			'amount':      amt,
-			'category':    request.form.get(f'category[{i}]', 'other'),
-		})
-		i += 1
-	if not rows:
-		flash('Nothing to commit.', 'error')
-		return redirect(url_for('ledger.leak_hunt'))
+def leak_hunt_tx_update(leak_id, tx_id):
+	"""Update a single transaction's category / subcategory / notes / recurring flag.
 
-	# Category totals (outflows only — positive amounts).
-	breakdown = {}
-	for r in rows:
-		if r['amount'] > 0:
-			breakdown[r['category']] = breakdown.get(r['category'], 0) + r['amount']
-
-	total = sum(b for b in breakdown.values())
-	dates = sorted([r['date'] for r in rows if r['date']])
-	period_start = dates[0] if dates else L.et_today().isoformat()
-	period_end   = dates[-1] if dates else L.et_today().isoformat()
-
+	Form fields (all optional; only present ones get updated):
+	  category, subcategory, notes, is_recurring,
+	  make_rule (1 to also create a rule for this description)
+	"""
 	conn = get_ledger_db()
+	row = conn.execute(
+		"SELECT * FROM leak_transactions WHERE id = ? AND leak_import_id = ?",
+		(tx_id, leak_id)
+	).fetchone()
+	if not row:
+		conn.close()
+		return jsonify({'error': 'not found'}), 404
+
+	now = L.et_now_iso()
+	cat = request.form.get('category')
+	subcat = request.form.get('subcategory')
+	notes = request.form.get('notes')
+	is_rec = request.form.get('is_recurring')
+
+	new_cat = cat if cat is not None else row['category']
+	new_subcat = subcat if subcat is not None else row['subcategory']
+	new_notes = notes if notes is not None else row['notes']
+	if is_rec is not None:
+		new_recurring = 1 if is_rec in ('1', 'true', 'on') else 0
+	else:
+		new_recurring = row['is_recurring']
+
+	# manually_set flips to 1 whenever the user touches the category.
+	manually = 1 if (cat is not None and cat != row['category']) else row['manually_set']
+
 	conn.execute("""
-		INSERT INTO leak_imports (
-			imported_at, source, period_start, period_end,
-			total_amount, category_breakdown_json, notes
-		) VALUES (?, ?, ?, ?, ?, ?, ?)
-	""", (
-		L.utc_now_iso(),
-		request.form.get('source', 'manual'),
-		period_start, period_end, total,
-		json.dumps(breakdown),
-		request.form.get('notes', '').strip() or None,
-	))
-	leak_id = conn.execute("SELECT last_insert_rowid() AS id").fetchone()['id']
+		UPDATE leak_transactions
+		SET category = ?, subcategory = ?, notes = ?, is_recurring = ?,
+		    manually_set = ?
+		WHERE id = ?
+	""", (new_cat, new_subcat or None, new_notes or None, new_recurring,
+	      manually, tx_id))
+
+	# Optionally also create a rule from this transaction.
+	make_rule = request.form.get('make_rule') in ('1', 'true', 'on')
+	rule_created = None
+	if make_rule and new_cat and new_cat != 'Uncategorized':
+		desc = (row['description'] or '').strip()
+		if desc:
+			# Use the full description as a `contains` rule (case-insensitive).
+			existing = conn.execute("""
+				SELECT id FROM leak_rules
+				WHERE match_type = 'contains' AND lower(match_value) = lower(?)
+			""", (desc,)).fetchone()
+			if not existing:
+				conn.execute("""
+					INSERT INTO leak_rules (
+						match_type, match_value, category, subcategory,
+						priority, active, note, created, updated
+					) VALUES ('contains', ?, ?, ?, 100, 1, 'Created from review', ?, ?)
+				""", (desc, new_cat, new_subcat or None, now, now))
+				rule_created = desc
+
 	conn.commit()
 	conn.close()
-	flash(f'Leak hunt saved. ${total:,.2f} across {len([r for r in rows if r["amount"] > 0])} outflows.', 'ok')
+	if request.headers.get('X-Requested-With') == 'fetch':
+		return jsonify({'ok': True, 'rule_created': rule_created})
+	return redirect(url_for('ledger.leak_hunt_review', leak_id=leak_id))
+
+
+@ledger_bp.route('/leak-hunt/<int:leak_id>/transactions/bulk', methods=['POST'])
+@cd_auth_required
+def leak_hunt_tx_bulk(leak_id):
+	"""Bulk-update category for selected transaction IDs.
+
+	Body (JSON or form): {ids: [...], category: '...', is_recurring: 0|1}
+	"""
+	data = request.get_json(silent=True) or request.form.to_dict(flat=False)
+	# Handle either JSON or form-array
+	if isinstance(data.get('ids'), list):
+		ids = data['ids']
+	else:
+		ids = request.form.getlist('ids')
+	ids = [int(x) for x in ids if str(x).isdigit()]
+	if not ids:
+		return jsonify({'ok': False, 'error': 'no ids'}), 400
+
+	cat = data.get('category') if isinstance(data, dict) else request.form.get('category')
+	if isinstance(cat, list):
+		cat = cat[0] if cat else None
+	is_rec = data.get('is_recurring') if isinstance(data, dict) else request.form.get('is_recurring')
+	if isinstance(is_rec, list):
+		is_rec = is_rec[0] if is_rec else None
+
+	conn = get_ledger_db()
+	placeholders = ','.join('?' for _ in ids)
+	if cat is not None and cat != '':
+		conn.execute(f"""
+			UPDATE leak_transactions
+			SET category = ?, manually_set = 1
+			WHERE leak_import_id = ? AND id IN ({placeholders})
+		""", [cat, leak_id] + ids)
+	if is_rec is not None and str(is_rec) != '':
+		val = 1 if str(is_rec) in ('1', 'true', 'on') else 0
+		conn.execute(f"""
+			UPDATE leak_transactions
+			SET is_recurring = ?
+			WHERE leak_import_id = ? AND id IN ({placeholders})
+		""", [val, leak_id] + ids)
+	conn.commit()
+	conn.close()
+	return jsonify({'ok': True, 'updated': len(ids)})
+
+
+@ledger_bp.route('/leak-hunt/<int:leak_id>/save', methods=['POST'])
+@cd_auth_required
+def leak_hunt_save(leak_id):
+	"""Finalize: populate category_breakdown_json cache + redirect to results."""
+	conn = get_ledger_db()
+	txs = conn.execute(
+		"SELECT category, amount FROM leak_transactions WHERE leak_import_id = ?",
+		(leak_id,)
+	).fetchall()
+	breakdown = {}
+	total_outflow = 0.0
+	for t in txs:
+		cat = t['category'] or 'Uncategorized'
+		amt = t['amount'] or 0
+		if amt > 0 and cat not in LH.EXCLUDED_FROM_LEAK:
+			breakdown[cat] = breakdown.get(cat, 0) + amt
+			total_outflow += amt
+	conn.execute("""
+		UPDATE leak_imports
+		SET category_breakdown_json = ?, total_amount = ?
+		WHERE id = ?
+	""", (json.dumps(breakdown), total_outflow, leak_id))
+	conn.commit()
+	conn.close()
+	flash('Leak hunt saved.', 'ok')
 	return redirect(url_for('ledger.leak_hunt_detail', leak_id=leak_id))
+
+
+@ledger_bp.route('/leak-hunt/<int:leak_id>/notes', methods=['POST'])
+@cd_auth_required
+def leak_hunt_notes(leak_id):
+	conn = get_ledger_db()
+	conn.execute(
+		"UPDATE leak_imports SET notes = ? WHERE id = ?",
+		(request.form.get('notes', '').strip() or None, leak_id))
+	conn.commit()
+	conn.close()
+	return redirect(url_for('ledger.leak_hunt_detail', leak_id=leak_id))
+
+
+@ledger_bp.route('/leak-hunt/<int:leak_id>/delete', methods=['POST'])
+@cd_auth_required
+def leak_hunt_delete(leak_id):
+	conn = get_ledger_db()
+	conn.execute(
+		"UPDATE leak_imports SET deleted_at = ? WHERE id = ?",
+		(L.utc_now_iso(), leak_id))
+	conn.commit()
+	conn.close()
+	flash('Hunt deleted.', 'ok')
+	return redirect(url_for('ledger.leak_hunt'))
 
 
 @ledger_bp.route('/leak-hunt/<int:leak_id>/')
 @cd_auth_required
 def leak_hunt_detail(leak_id):
 	conn = get_ledger_db()
-	row = conn.execute(
-		"SELECT * FROM leak_imports WHERE id = ?", (leak_id,)
+	imp = conn.execute(
+		"SELECT * FROM leak_imports WHERE id = ? AND deleted_at IS NULL",
+		(leak_id,)
 	).fetchone()
-	conn.close()
-	if not row:
+	if not imp:
+		conn.close()
 		return redirect(url_for('ledger.leak_hunt'))
-	breakdown = {}
-	try:
-		breakdown = json.loads(row['category_breakdown_json'])
-	except (ValueError, TypeError):
-		breakdown = {}
+
+	txs = conn.execute("""
+		SELECT * FROM leak_transactions
+		WHERE leak_import_id = ?
+		ORDER BY tx_date DESC, id DESC
+	""", (leak_id,)).fetchall()
+
+	# Convert Rows to dicts for the helpers (which use .get).
+	tx_dicts = [dict(t) for t in txs]
+	breakdown, total_outflow = LH.category_breakdown(tx_dicts)
+	biggest = LH.biggest_transactions(tx_dicts, n=10)
+	recurring = LH.recurring_charges_summary(tx_dicts)
+
+	total_inflow = -sum(t['amount'] for t in txs if t['amount'] < 0)
+
+	# Prior hunt (most recent before this one, alive only)
+	prior = conn.execute("""
+		SELECT * FROM leak_imports
+		WHERE id != ? AND deleted_at IS NULL
+		  AND imported_at < (SELECT imported_at FROM leak_imports WHERE id = ?)
+		ORDER BY imported_at DESC LIMIT 1
+	""", (leak_id, leak_id)).fetchone()
+	prior_breakdown = None
+	prior_breakdown_map = {}
+	if prior:
+		try:
+			prior_breakdown_map = json.loads(prior['category_breakdown_json'] or '{}')
+		except (ValueError, TypeError):
+			prior_breakdown_map = {}
+		prior_breakdown = [{'category': k, 'total': v} for k, v in prior_breakdown_map.items()]
+
+	# Per-category delta vs prior (only categories that appear in either side).
+	delta_rows = []
+	if prior:
+		this_map = {r['category']: r['total'] for r in breakdown if not r['is_excluded']}
+		cats = sorted(set(list(this_map.keys()) + list(prior_breakdown_map.keys())))
+		for cat in cats:
+			t_now = this_map.get(cat, 0)
+			t_prior = prior_breakdown_map.get(cat, 0)
+			delta_rows.append({
+				'category': cat,
+				'now':      t_now,
+				'prior':    t_prior,
+				'delta':    t_now - t_prior,
+			})
+		delta_rows.sort(key=lambda r: abs(r['delta']), reverse=True)
+
+	conn.close()
+
 	return render_template(
-		'ledger_leak_hunt.html',
-		past=[],
-		preview=None,
-		categories=DEFAULT_LEAK_CATEGORIES,
-		detail=row,
-		detail_breakdown=breakdown,
+		'ledger_leak_hunt_results.html',
+		imp=imp,
+		breakdown=breakdown,
+		total_outflow=total_outflow,
+		total_inflow=total_inflow,
+		biggest=biggest,
+		recurring=recurring,
+		prior=prior,
+		delta_rows=delta_rows,
 	)
+
+
+@ledger_bp.route('/leak-hunt/rules')
+@cd_auth_required
+def leak_hunt_rules():
+	conn = get_ledger_db()
+	rules = conn.execute(
+		"SELECT * FROM leak_rules ORDER BY active DESC, priority ASC, id ASC"
+	).fetchall()
+	categories = _available_categories(conn)
+	conn.close()
+	return render_template('ledger_leak_hunt_rules.html', rules=rules, categories=categories)
+
+
+@ledger_bp.route('/leak-hunt/rules/new', methods=['POST'])
+@cd_auth_required
+def leak_hunt_rules_new():
+	conn = get_ledger_db()
+	now = L.et_now_iso()
+	conn.execute("""
+		INSERT INTO leak_rules (
+			match_type, match_value, category, subcategory, priority,
+			active, note, created, updated
+		) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
+	""", (
+		request.form.get('match_type', 'contains'),
+		(request.form.get('match_value', '') or '').strip(),
+		(request.form.get('category', '') or 'Other').strip() or 'Other',
+		(request.form.get('subcategory', '') or '').strip() or None,
+		_form_int('priority', 100) or 100,
+		(request.form.get('note', '') or '').strip() or None,
+		now, now,
+	))
+	conn.commit()
+	conn.close()
+	return redirect(url_for('ledger.leak_hunt_rules'))
+
+
+@ledger_bp.route('/leak-hunt/rules/<int:rule_id>/edit', methods=['POST'])
+@cd_auth_required
+def leak_hunt_rules_edit(rule_id):
+	conn = get_ledger_db()
+	now = L.et_now_iso()
+	conn.execute("""
+		UPDATE leak_rules
+		SET match_type = ?, match_value = ?, category = ?, subcategory = ?,
+		    priority = ?, active = ?, note = ?, updated = ?
+		WHERE id = ?
+	""", (
+		request.form.get('match_type', 'contains'),
+		(request.form.get('match_value', '') or '').strip(),
+		(request.form.get('category', '') or 'Other').strip() or 'Other',
+		(request.form.get('subcategory', '') or '').strip() or None,
+		_form_int('priority', 100) or 100,
+		1 if request.form.get('active') else 0,
+		(request.form.get('note', '') or '').strip() or None,
+		now, rule_id,
+	))
+	conn.commit()
+	conn.close()
+	return redirect(url_for('ledger.leak_hunt_rules'))
+
+
+@ledger_bp.route('/leak-hunt/rules/<int:rule_id>/delete', methods=['POST'])
+@cd_auth_required
+def leak_hunt_rules_delete(rule_id):
+	conn = get_ledger_db()
+	conn.execute("DELETE FROM leak_rules WHERE id = ?", (rule_id,))
+	conn.commit()
+	conn.close()
+	return redirect(url_for('ledger.leak_hunt_rules'))
 
 
 # ---- AI payday assistant ----

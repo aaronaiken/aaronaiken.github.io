@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Results · Leak Hunt · The Ledger</title>
+  <link rel="stylesheet" href="/static/ledger.css">
+</head>
+<body class="ledger">
+<div class="lg-shell">
+
+  <header class="lg-header">
+    <div>
+      <a href="/ledger/" class="lg-wordmark">The Ledger</a>
+      <div class="lg-ident">Leak Hunt · {{ imp.period_start }} → {{ imp.period_end }}</div>
+    </div>
+    {% include 'includes/ledger_nav.html' %}
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="lg-flash {% if category == 'error' %}error{% endif %}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {# ===== Headline numbers ===== #}
+  <div class="lg-card-row">
+    <div class="lg-card">
+      <h2 class="lg-card-title">Total outflow</h2>
+      <div class="lg-big-number">${{ '{:,.2f}'.format(total_outflow) }}</div>
+      <div class="lg-meta-row">
+        <span class="item"><span class="label">Inflow</span>
+          <span class="lg-num">${{ '{:,.2f}'.format(total_inflow) }}</span></span>
+        <span class="item"><span class="label">Net</span>
+          <span class="lg-num">${{ '{:,.2f}'.format(total_outflow - total_inflow) }}</span></span>
+      </div>
+    </div>
+    <div class="lg-card">
+      <h2 class="lg-card-title">Period</h2>
+      <div class="lg-mid-number">{{ imp.period_start }} → {{ imp.period_end }}</div>
+      <div class="lg-meta-row">
+        <span class="item"><span class="label">Transactions</span>
+          <span class="lg-num">{{ imp.transaction_count or 0 }}</span></span>
+        <span class="item"><span class="label">Source</span>
+          <span class="lg-dim lg-mono" style="font-size:0.78rem;">{{ imp.csv_filename or imp.source or '—' }}</span></span>
+      </div>
+      <div class="lg-spacer-sm"></div>
+      <a href="/ledger/leak-hunt/{{ imp.id }}/review" class="lg-btn outline sm">← Back to review</a>
+    </div>
+  </div>
+
+  {# ===== Comparison to prior hunt ===== #}
+  {% if prior %}
+    <div class="lg-card">
+      <h2 class="lg-card-title">vs. most recent prior hunt ({{ prior.period_start }} → {{ prior.period_end }})</h2>
+      {% set delta_total = total_outflow - (prior.total_amount or 0) %}
+      <div class="lg-mid-number">
+        Δ
+        {% if delta_total < 0 %}<span class="lg-pos">−${{ '{:,.2f}'.format(-delta_total) }}</span>
+        {% elif delta_total > 0 %}<span class="lg-neg">+${{ '{:,.2f}'.format(delta_total) }}</span>
+        {% else %}<span class="lg-dim">$0</span>
+        {% endif %}
+        <span class="lg-note" style="font-size:0.85rem;">in total spending</span>
+      </div>
+      {% if delta_rows %}
+        <table class="lg-table" style="margin-top:14px;">
+          <thead><tr>
+            <th>Category</th>
+            <th class="num">This hunt</th>
+            <th class="num">Prior</th>
+            <th class="num">Δ</th>
+          </tr></thead>
+          <tbody>
+          {% for d in delta_rows[:10] %}
+            <tr>
+              <td>{{ d.category }}</td>
+              <td class="num">${{ '{:,.2f}'.format(d.now) }}</td>
+              <td class="num lg-dim">${{ '{:,.2f}'.format(d.prior) }}</td>
+              <td class="num">
+                {% if d.delta < 0 %}<span class="lg-pos">−${{ '{:,.2f}'.format(-d.delta) }}</span>
+                {% elif d.delta > 0 %}<span class="lg-neg">+${{ '{:,.2f}'.format(d.delta) }}</span>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {# ===== Category breakdown ===== #}
+  <div class="lg-section-label">// Category breakdown</div>
+  <div class="lg-card">
+    {# Stacked bar — segments of brass at varying tints (opacity by rank). #}
+    {% set spend_cats = breakdown | rejectattr('is_excluded') | list %}
+    {% if total_outflow > 0 and spend_cats %}
+      <div class="lh-stacked-bar" title="Where the money went this period">
+        {% for r in spend_cats %}
+          {% if r.total > 0 %}
+            {% set pct = (r.total / total_outflow * 100) %}
+            {% set tint = [0.95, 0.78, 0.62, 0.50, 0.40, 0.32, 0.26, 0.22, 0.18, 0.15][loop.index0] if loop.index0 < 10 else 0.12 %}
+            <div class="lh-bar-segment"
+                 style="width: {{ pct }}%; background-color: rgba(176, 141, 87, {{ tint }});"
+                 title="{{ r.category }}: ${{ '{:,.2f}'.format(r.total) }} ({{ '{:.1f}'.format(pct) }}%)">
+              {% if pct > 8 %}<span class="lh-bar-label">{{ r.category }}</span>{% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      <div class="lh-bar-legend">
+        {% for r in spend_cats %}
+          {% if r.total > 0 %}
+            {% set tint = [0.95, 0.78, 0.62, 0.50, 0.40, 0.32, 0.26, 0.22, 0.18, 0.15][loop.index0] if loop.index0 < 10 else 0.12 %}
+            <span class="lh-legend-item">
+              <span class="lh-legend-swatch" style="background-color: rgba(176, 141, 87, {{ tint }});"></span>
+              {{ r.category }} <span class="lg-mono lg-dim">${{ '{:,.0f}'.format(r.total) }}</span>
+            </span>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="lg-table-wrap" style="margin-top:18px;">
+      <table class="lg-table">
+        <thead><tr>
+          <th>Category</th>
+          <th class="num">Total</th>
+          <th class="num col-hide-sm">% outflow</th>
+          <th class="num col-hide-sm">#</th>
+          <th class="num col-hide-sm">Avg</th>
+        </tr></thead>
+        <tbody>
+        {% for r in breakdown %}
+          <tr {% if r.is_excluded %}class="kill-row"{% endif %}>
+            <td>{{ r.category }}{% if r.is_excluded %} <span class="lg-dim" style="font-size:0.74rem;">(excluded from leak)</span>{% endif %}</td>
+            <td class="num">${{ '{:,.2f}'.format(r.total) }}</td>
+            <td class="num col-hide-sm lg-dim">{% if r.is_excluded %}—{% else %}{{ '{:.1f}'.format(r.percent_of_outflow) }}%{% endif %}</td>
+            <td class="num col-hide-sm">{{ r.count }}</td>
+            <td class="num col-hide-sm">${{ '{:,.2f}'.format(r.avg) }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ===== Recurring callout ===== #}
+  {% if recurring %}
+    <div class="lg-section-label">// Recurring charges detected</div>
+    <div class="lg-card" style="border-left: 3px solid var(--lg-teal);">
+      <p class="lg-note">Highest-leverage section — each one canceled is monthly savings forever.</p>
+      <div class="lg-table-wrap">
+        <table class="lg-table">
+          <thead><tr>
+            <th>Merchant</th>
+            <th class="num">Avg / charge</th>
+            <th class="num">Total in period</th>
+            <th class="num">Count</th>
+          </tr></thead>
+          <tbody>
+          {% for r in recurring %}
+            <tr>
+              <td>{{ r.description }}</td>
+              <td class="num"><span class="lg-pos">${{ '{:,.2f}'.format(r.avg_amount) }}</span></td>
+              <td class="num">${{ '{:,.2f}'.format(r.total) }}</td>
+              <td class="num lg-dim">{{ r.count }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% set recurring_total = recurring | sum(attribute='avg_amount') %}
+      {% if recurring_total > 50 %}
+        <p class="lg-note" style="margin-top:14px;">
+          Recurring charges total ~${{ '{:,.0f}'.format(recurring_total) }}/mo (avg). Each one canceled is ${{ '{:,.0f}'.format(recurring_total) }} freed monthly toward debt.
+        </p>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {# ===== Biggest surprises ===== #}
+  {% if biggest %}
+    <div class="lg-section-label">// Biggest individual transactions</div>
+    <div class="lg-card" style="padding:0;">
+      <div class="lg-table-wrap">
+        <table class="lg-table">
+          <thead><tr>
+            <th>Date</th><th>Description</th><th>Category</th>
+            <th class="num">Amount</th>
+          </tr></thead>
+          <tbody>
+          {% for t in biggest %}
+            <tr>
+              <td class="lg-mono" style="font-size:0.82rem;">{{ t.tx_date }}</td>
+              <td>{{ t.description }}</td>
+              <td class="lg-dim">{{ t.category }}</td>
+              <td class="num">${{ '{:,.2f}'.format(t.amount) }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
+
+  {# ===== Notes ===== #}
+  <div class="lg-section-label">// What did you learn?</div>
+  <div class="lg-card">
+    <form method="POST" action="/ledger/leak-hunt/{{ imp.id }}/notes">
+      <textarea name="notes" class="lg-textarea" rows="4" placeholder="What stood out? What are you going to do about it? (Saved for future-you.)">{{ imp.notes or '' }}</textarea>
+      <div class="lg-spacer-sm"></div>
+      <button type="submit" class="lg-btn outline sm">Save notes</button>
+    </form>
+  </div>
+
+  <div class="lg-btn-row" style="margin-top:18px;">
+    <a href="/ledger/leak-hunt/" class="lg-btn ghost">← All hunts</a>
+    <a href="/ledger/leak-hunt/{{ imp.id }}/review" class="lg-btn outline">Re-categorize</a>
+    <form method="POST" action="/ledger/leak-hunt/{{ imp.id }}/delete" style="display:inline;"
+          onsubmit="return confirm('Delete this hunt?');">
+      <button type="submit" class="lg-btn danger sm">Delete hunt</button>
+    </form>
+  </div>
+
+  <footer class="lg-footer">
+    <span class="lg-footer-ident">YT-1300F · CHART ROOM</span>
+    <div class="lg-footer-links">
+      <a href="/ledger/leak-hunt/">All hunts</a>
+    </div>
+  </footer>
+</div>
+{% include 'includes/today_panel.html' ignore missing %}
+{% include 'includes/active_timer_strip.html' ignore missing %}
+<script src="/static/ledger.js"></script>
+</body>
+</html>
