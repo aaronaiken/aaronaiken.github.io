@@ -178,6 +178,7 @@
           <thead><tr>
             <th>Date</th><th>Type</th><th>Description</th>
             <th class="num">Amount</th><th class="col-hide-sm">Source</th><th>Conf?</th>
+            <th></th>
           </tr></thead>
           <tbody>
           {% for t in transactions %}
@@ -188,6 +189,13 @@
               <td class="num">${{ '{:,.2f}'.format(t.amount) }}</td>
               <td class="col-hide-sm lg-dim">{{ t.source }}</td>
               <td>{{ '✓' if t.confirmed else '·' }}</td>
+              <td>
+                <form method="POST" action="/ledger/transactions/{{ t.id }}/delete" style="display:inline;"
+                      onsubmit="return confirm('Delete this {{ t.tx_type }} (${{ '{:,.2f}'.format(t.amount) }}) on {{ t.tx_date }}? This cannot be undone — the balance snapshot will not change.');">
+                  <input type="hidden" name="next" value="/ledger/accounts/{{ account.slug }}/">
+                  <button type="submit" class="lg-btn danger sm" title="Delete transaction">×</button>
+                </form>
+              </td>
             </tr>
           {% endfor %}
           </tbody>
