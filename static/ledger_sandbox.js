@@ -175,6 +175,10 @@
     els.sandboxCol.style.display = 'none';
     els.baselineLabel.style.display = 'none';
     els.tablesWrap.classList.remove('has-sandbox');
+    const mtl = document.getElementById('lg-milestone-timeline-card');
+    const mll = document.getElementById('lg-milestone-timeline-label');
+    if (mtl) mtl.style.display = 'none';
+    if (mll) mll.style.display = 'none';
     if (els.bonusImpact) els.bonusImpact.textContent = 'toggle on to see the impact.';
     if (els.extraImpact) els.extraImpact.textContent = '';
   }
@@ -232,6 +236,39 @@
     } else {
       els.stripInterest.textContent = '$0';
       els.stripInterest.className = 'lg-num lg-dim';
+    }
+
+    // Render milestone timeline (only when sandbox results include it)
+    if (data.milestones && data.milestones.length) {
+      const card = document.getElementById('lg-milestone-timeline-card');
+      const label = document.getElementById('lg-milestone-timeline-label');
+      const tbody = document.getElementById('lg-milestone-timeline-tbody');
+      if (card && label && tbody) {
+        card.style.display = '';
+        label.style.display = '';
+        tbody.innerHTML = data.milestones.map(m => {
+          const dm = m.delta_months;
+          let deltaStr = '—';
+          let deltaClass = 'lg-dim';
+          if (dm != null) {
+            if (dm < 0) { deltaStr = `${dm} months`; deltaClass = 'lg-pos'; }
+            else if (dm > 0) { deltaStr = `+${dm} months`; deltaClass = 'lg-neg'; }
+            else { deltaStr = '0'; deltaClass = 'lg-dim'; }
+          }
+          const statusStr = m.status === 'complete' ? '✓ done'
+                          : m.status === 'current'  ? '● current'
+                          : 'locked';
+          return `
+            <tr>
+              <td>${esc(m.title)}</td>
+              <td class="lg-dim">${statusStr}</td>
+              <td class="lg-mono">${esc(m.baseline || '(manual)')}</td>
+              <td class="lg-mono">${esc(m.sandbox || '(manual)')}</td>
+              <td class="num lg-num ${deltaClass}">${deltaStr}</td>
+            </tr>
+          `;
+        }).join('');
+      }
     }
 
     // Render sandbox table

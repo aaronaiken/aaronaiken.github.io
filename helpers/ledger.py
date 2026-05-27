@@ -1099,3 +1099,505 @@ def stale_autopay(conn, account_id, days=3):
 	except ValueError:
 		return False
 	return (et_today() - d).days > days
+
+
+# ============================================================================
+# ============= Milestones (Phase 4) =========================================
+# ============================================================================
+# Spec: .kt/spec-ledger-phase-4-milestones.md. Each milestone has a
+# `condition_type` from the enum below; evaluation reads from existing
+# Ledger data (balances, transactions, income). Conditions are cheap
+# enough to evaluate on every page load — no scheduler.
+
+import json as _json
+
+
+# Dispatch tables filled in below — kept here so the rest of the module
+# is easy to scan.
+_CONDITION_EVALUATORS = {}
+_CONDITION_PROJECTORS = {}
+
+
+def _register_condition(name):
+	"""Decorator: register an evaluator under a condition_type name."""
+	def wrap(fn):
+		_CONDITION_EVALUATORS[name] = fn
+		return fn
+	return wrap
+
+
+def _register_projector(name):
+	def wrap(fn):
+		_CONDITION_PROJECTORS[name] = fn
+		return fn
+	return wrap
+
+
+def _milestone_params(m):
+	"""Parse condition_params JSON; tolerant of bad data."""
+	raw = m.get('condition_params') if isinstance(m, dict) else m['condition_params']
+	if not raw:
+		return {}
+	try:
+		return _json.loads(raw)
+	except (TypeError, ValueError):
+		return {}
+
+
+def _resolve_account_id(conn, slug_or_id):
+	"""Accept either an int id or a slug; return the integer id or None."""
+	if slug_or_id is None:
+		return None
+	if isinstance(slug_or_id, int):
+		return slug_or_id
+	try:
+		return int(slug_or_id)
+	except (TypeError, ValueError):
+		pass
+	row = conn.execute(
+		"SELECT id FROM accounts WHERE slug = ?", (str(slug_or_id),)
+	).fetchone()
+	return row['id'] if row else None
+
+
+# ---- condition evaluators ----
+
+@_register_condition('account_balance_ge')
+def _eval_balance_ge(conn, params):
+	acc = _resolve_account_id(conn, params.get('account_slug') or params.get('account_id'))
+	thr = float(params.get('threshold') or 0)
+	if not acc:
+		return False
+	bal = latest_balance(conn, acc) or 0
+	return bal >= thr
+
+
+@_register_condition('account_balance_le')
+def _eval_balance_le(conn, params):
+	acc = _resolve_account_id(conn, params.get('account_slug') or params.get('account_id'))
+	thr = float(params.get('threshold') or 0)
+	if not acc:
+		return False
+	bal = latest_balance(conn, acc) or 0
+	return bal <= thr
+
+
+@_register_condition('account_status_known')
+def _eval_status_known(conn, params):
+	acc = _resolve_account_id(conn, params.get('account_slug') or params.get('account_id'))
+	if not acc:
+		return False
+	row = conn.execute(
+		"SELECT status, minimum_payment FROM accounts WHERE id = ?", (acc,)
+	).fetchone()
+	if not row:
+		return False
+	# Known = status not 'unknown' AND minimum_payment explicitly set
+	# (NULL means we never set it — even a $0 minimum requires an
+	# explicit "I checked, it's $0" entry).
+	return row['status'] != 'unknown' and row['minimum_payment'] is not None
+
+
+@_register_condition('account_paid_off')
+def _eval_paid_off(conn, params):
+	acc = _resolve_account_id(conn, params.get('account_slug') or params.get('account_id'))
+	if not acc:
+		return False
+	row = conn.execute("SELECT status FROM accounts WHERE id = ?", (acc,)).fetchone()
+	return bool(row and row['status'] == 'paid_off')
+
+
+@_register_condition('total_debt_zero')
+def _eval_total_debt_zero(conn, params):
+	return total_debt(conn) <= 5
+
+
+@_register_condition('total_debt_le')
+def _eval_total_debt_le(conn, params):
+	thr = float(params.get('threshold') or 0)
+	return total_debt(conn) <= thr
+
+
+@_register_condition('liquid_savings_months')
+def _eval_liquid_savings_months(conn, params):
+	months = float(params.get('months') or 3)
+	slugs  = params.get('account_slugs') or ['checking', 'savings']
+	monthly_recurring = conn.execute("""
+		SELECT COALESCE(SUM(amount), 0) AS s FROM recurring_expenses
+		WHERE active = 1
+	""").fetchone()['s']
+	target = months * (monthly_recurring or 0)
+	liquid = 0.0
+	for s in slugs:
+		acc = _resolve_account_id(conn, s)
+		if not acc:
+			continue
+		liquid += (latest_balance(conn, acc) or 0)
+	# If recurring expenses table is empty, the target is 0 → trivially
+	# met. We don't want to auto-complete in that case; treat as "not
+	# computable yet."
+	if (monthly_recurring or 0) <= 0:
+		return False
+	return liquid >= target
+
+
+@_register_condition('rolling_income_sustained')
+def _eval_rolling_income(conn, params):
+	target = float(params.get('monthly_target') or 0)
+	window = int(params.get('window_months') or 3)
+	types  = params.get('income_types') or ['side_income', 'bonus', 'other']
+	# Rolling sum over the last `window` months, divided by window.
+	from datetime import timedelta as _td
+	today = et_today()
+	cutoff = today - _td(days=window * 30)
+	placeholders = ','.join('?' for _ in types)
+	row = conn.execute(f"""
+		SELECT COALESCE(SUM(amount), 0) AS s FROM income_events
+		WHERE event_date >= ?
+		  AND income_type IN ({placeholders})
+	""", [cutoff.isoformat()] + types).fetchone()
+	avg = (row['s'] or 0) / window
+	return avg >= target
+
+
+@_register_condition('manual_completion')
+def _eval_manual(conn, params):
+	# Never auto-completes; always returns False. The user marks complete
+	# explicitly via /milestones/<id>/mark-complete.
+	return False
+
+
+def evaluate_milestone_condition(conn, milestone):
+	"""Returns True if this milestone's condition is currently met."""
+	ctype = milestone['condition_type'] if not isinstance(milestone, dict) else milestone.get('condition_type')
+	fn = _CONDITION_EVALUATORS.get(ctype)
+	if not fn:
+		return False
+	try:
+		return bool(fn(conn, _milestone_params(milestone)))
+	except Exception:
+		# Never crash auto-advancement on a bad condition — log + return False.
+		import logging
+		logging.getLogger(__name__).warning(
+			'milestone condition eval failed for %s', ctype, exc_info=True)
+		return False
+
+
+def evaluate_all_milestones(conn):
+	"""Dict of milestone_id -> condition_met for all active (non-deleted)
+	milestones."""
+	rows = conn.execute("""
+		SELECT * FROM milestones WHERE deleted_at IS NULL
+		ORDER BY position
+	""").fetchall()
+	return {r['id']: evaluate_milestone_condition(conn, r) for r in rows}
+
+
+def advance_current_milestone(conn):
+	"""If the current milestone's condition is met, mark it complete and
+	advance the next-in-position milestone to 'current'. Returns the
+	newly-current milestone dict, or None if no advancement happened.
+
+	Safe to call on every page load — short-circuits when no current
+	milestone exists or condition isn't met. Writes a milestone_events
+	entry on completion + on the next becoming current.
+	"""
+	now_et  = et_now_iso()
+	now_utc = utc_now_iso()
+	cur_row = conn.execute("""
+		SELECT * FROM milestones
+		WHERE deleted_at IS NULL AND status = 'current'
+		ORDER BY position ASC LIMIT 1
+	""").fetchone()
+	if not cur_row:
+		return None
+	if not evaluate_milestone_condition(conn, cur_row):
+		return None
+
+	# Complete the current one.
+	conn.execute("""
+		UPDATE milestones
+		SET status = 'complete', completed_at = ?, updated = ?
+		WHERE id = ?
+	""", (now_utc, now_et, cur_row['id']))
+	conn.execute("""
+		INSERT INTO milestone_events (milestone_id, event_type, details, created)
+		VALUES (?, 'completed', ?, ?)
+	""", (cur_row['id'], _json.dumps({'auto': True}), now_et))
+
+	# Find the next locked milestone in position order and promote.
+	nxt = conn.execute("""
+		SELECT * FROM milestones
+		WHERE deleted_at IS NULL AND status = 'locked'
+		  AND position > ?
+		ORDER BY position ASC LIMIT 1
+	""", (cur_row['position'],)).fetchone()
+	if nxt:
+		conn.execute("""
+			UPDATE milestones SET status = 'current', updated = ? WHERE id = ?
+		""", (now_et, nxt['id']))
+		conn.execute("""
+			INSERT INTO milestone_events (milestone_id, event_type, details, created)
+			VALUES (?, 'became_current', ?, ?)
+		""", (nxt['id'], _json.dumps({'after_milestone_id': cur_row['id']}), now_et))
+	conn.commit()
+	return dict(nxt) if nxt else None
+
+
+def current_milestone(conn):
+	"""The milestone with status='current', or None if all done / none seeded."""
+	row = conn.execute("""
+		SELECT * FROM milestones
+		WHERE deleted_at IS NULL AND status = 'current'
+		LIMIT 1
+	""").fetchone()
+	return dict(row) if row else None
+
+
+def milestone_progress(conn, milestone):
+	"""Return a dict describing where the user is on this milestone:
+	  {current: float, target: float, percent: float, label: str}
+	For non-numeric milestones (manual / status_known), percent is None
+	and label describes the state.
+	"""
+	ctype  = milestone['condition_type'] if not isinstance(milestone, dict) else milestone.get('condition_type')
+	params = _milestone_params(milestone)
+	if ctype == 'account_balance_ge':
+		acc = _resolve_account_id(conn, params.get('account_slug') or params.get('account_id'))
+		bal = (latest_balance(conn, acc) or 0) if acc else 0
+		target = float(params.get('threshold') or 0)
+		pct = (bal / target * 100) if target > 0 else 0
+		return {'current': bal, 'target': target, 'percent': min(100, pct),
+		        'label': f'${bal:,.2f} of ${target:,.2f}'}
+	if ctype == 'account_balance_le':
+		acc = _resolve_account_id(conn, params.get('account_slug') or params.get('account_id'))
+		bal = (latest_balance(conn, acc) or 0) if acc else 0
+		target = float(params.get('threshold') or 0)
+		# Percent = how far we've come from start to target (capped).
+		# Without a baseline we can't really show %, so just label.
+		return {'current': bal, 'target': target, 'percent': None,
+		        'label': f'${bal:,.2f} (target ≤ ${target:,.2f})'}
+	if ctype == 'total_debt_zero':
+		td = total_debt(conn)
+		return {'current': td, 'target': 0, 'percent': None,
+		        'label': f'${td:,.2f} remaining'}
+	if ctype == 'total_debt_le':
+		td = total_debt(conn)
+		target = float(params.get('threshold') or 0)
+		return {'current': td, 'target': target, 'percent': None,
+		        'label': f'${td:,.2f} (target ≤ ${target:,.2f})'}
+	if ctype == 'account_status_known':
+		acc = _resolve_account_id(conn, params.get('account_slug') or params.get('account_id'))
+		if not acc:
+			return {'current': 0, 'target': 1, 'percent': 0, 'label': 'account not found'}
+		row = conn.execute(
+			"SELECT status, minimum_payment FROM accounts WHERE id = ?", (acc,)
+		).fetchone()
+		met = row and row['status'] != 'unknown' and row['minimum_payment'] is not None
+		return {'current': 1 if met else 0, 'target': 1, 'percent': 100 if met else 0,
+		        'label': 'known' if met else 'still unknown'}
+	if ctype == 'account_paid_off':
+		acc = _resolve_account_id(conn, params.get('account_slug') or params.get('account_id'))
+		bal = (latest_balance(conn, acc) or 0) if acc else 0
+		return {'current': bal, 'target': 0, 'percent': None,
+		        'label': f'${bal:,.2f} remaining'}
+	if ctype == 'liquid_savings_months':
+		months = float(params.get('months') or 3)
+		slugs  = params.get('account_slugs') or ['checking', 'savings']
+		monthly_recurring = conn.execute(
+			"SELECT COALESCE(SUM(amount), 0) AS s FROM recurring_expenses WHERE active = 1"
+		).fetchone()['s'] or 0
+		target = months * monthly_recurring
+		liquid = sum((latest_balance(conn, _resolve_account_id(conn, s)) or 0) for s in slugs)
+		pct = (liquid / target * 100) if target > 0 else 0
+		return {'current': liquid, 'target': target,
+		        'percent': min(100, pct) if target > 0 else None,
+		        'label': f'${liquid:,.0f} of ${target:,.0f}' if target > 0 else 'set up recurring expenses to compute target'}
+	if ctype == 'rolling_income_sustained':
+		target = float(params.get('monthly_target') or 0)
+		window = int(params.get('window_months') or 3)
+		types  = params.get('income_types') or ['side_income', 'bonus', 'other']
+		from datetime import timedelta as _td
+		cutoff = et_today() - _td(days=window * 30)
+		placeholders = ','.join('?' for _ in types)
+		row = conn.execute(f"""
+			SELECT COALESCE(SUM(amount), 0) AS s FROM income_events
+			WHERE event_date >= ? AND income_type IN ({placeholders})
+		""", [cutoff.isoformat()] + types).fetchone()
+		avg = (row['s'] or 0) / window
+		pct = (avg / target * 100) if target > 0 else 0
+		return {'current': avg, 'target': target, 'percent': min(100, pct),
+		        'label': f'${avg:,.0f}/mo avg of ${target:,.0f}/mo target ({window}-mo window)'}
+	# Manual / unknown — no progress meter.
+	return {'current': 0, 'target': 0, 'percent': None, 'label': 'manual completion'}
+
+
+# ---- projection (for sandbox MILESTONE TIMELINE section) ----
+# Each projector returns either an ISO 'YYYY-MM' string OR None when
+# the milestone is manual-only or can't be projected from current data.
+
+@_register_projector('account_balance_ge')
+def _proj_balance_ge(conn, params, overrides=None):
+	# Without a model of when checking will grow, projection is shaky.
+	# Show "(when you decide)" — checking growth is user-driven.
+	return None
+
+
+@_register_projector('account_balance_le')
+def _proj_balance_le(conn, params, overrides=None):
+	return None
+
+
+@_register_projector('account_status_known')
+def _proj_status_known(conn, params, overrides=None):
+	return None  # manual research task
+
+
+@_register_projector('account_paid_off')
+def _proj_account_paid_off(conn, params, overrides=None):
+	# Run project_payoff and find the kill month for this account.
+	acc = _resolve_account_id(conn, params.get('account_slug') or params.get('account_id'))
+	if not acc:
+		return None
+	p = project_payoff(conn, overrides=overrides)
+	for row in p.monthly_rows:
+		if row.get('kill_account_id') == acc:
+			return row['month']
+	return None
+
+
+@_register_projector('total_debt_zero')
+def _proj_total_debt_zero(conn, params, overrides=None):
+	p = project_payoff(conn, overrides=overrides)
+	return p.debt_free_date
+
+
+@_register_projector('total_debt_le')
+def _proj_total_debt_le(conn, params, overrides=None):
+	thr = float(params.get('threshold') or 0)
+	p = project_payoff(conn, overrides=overrides)
+	for row in p.monthly_rows:
+		if row['ending_total'] <= thr:
+			return row['month']
+	return None
+
+
+@_register_projector('liquid_savings_months')
+def _proj_liquid_savings(conn, params, overrides=None):
+	# Approximate: after debt-free, all of project_payoff's attack_applied
+	# converts to savings (no debt to attack). Months until 3×expenses
+	# accumulates = target / monthly_attack. Then "debt_free_date + that
+	# many months."
+	months = float(params.get('months') or 3)
+	monthly_recurring = conn.execute(
+		"SELECT COALESCE(SUM(amount), 0) AS s FROM recurring_expenses WHERE active = 1"
+	).fetchone()['s'] or 0
+	if monthly_recurring <= 0:
+		return None
+	target = months * monthly_recurring
+	# Current liquid balance
+	slugs  = params.get('account_slugs') or ['checking', 'savings']
+	liquid = sum((latest_balance(conn, _resolve_account_id(conn, s)) or 0) for s in slugs)
+	if liquid >= target:
+		return None  # already met
+	# After debt-free, how much per month would we save?
+	# Use the avalanche-top debt's alloc + min as a proxy for "monthly
+	# savings capacity post-debt-free" (the cascade carries everything
+	# forward, so the last living debt has the biggest monthly attack).
+	p = project_payoff(conn, overrides=overrides)
+	if not p.debt_free_date:
+		return None
+	# Get the attack of the final-month row.
+	final = p.monthly_rows[-1] if p.monthly_rows else None
+	monthly_savings_capacity = (final['attack_applied'] + final['minimums_applied']) if final else 0
+	if monthly_savings_capacity <= 0:
+		return None
+	months_to_accumulate = (target - liquid) / monthly_savings_capacity
+	# Advance debt_free_date by months_to_accumulate
+	from datetime import date as _d
+	from calendar import monthrange as _mr
+	try:
+		y, m = map(int, p.debt_free_date.split('-'))
+	except (ValueError, AttributeError):
+		return None
+	d = _d(y, m, 1)
+	for _ in range(int(months_to_accumulate) + 1):
+		nm = d.month % 12 + 1
+		ny = d.year + (1 if d.month == 12 else 0)
+		d = _d(ny, nm, 1)
+	return d.isoformat()[:7]
+
+
+@_register_projector('rolling_income_sustained')
+def _proj_rolling_income(conn, params, overrides=None):
+	# Depends on side_income sandbox override. If overrides include a
+	# side_income_by_month dict, compute the first month_idx where the
+	# 3-month rolling average ≥ target.
+	target = float(params.get('monthly_target') or 0)
+	window = int(params.get('window_months') or 3)
+	if not overrides:
+		return None
+	side = overrides.get('side_income_by_month') or {}
+	if not side:
+		return None
+	# Walk month_idxs in order; for each, compute rolling avg over the
+	# previous `window` months (with side income only — paychecks/bonuses
+	# from configured income_events not modeled here).
+	max_idx = max(side.keys()) if side else 0
+	from datetime import date as _d
+	today = et_today()
+	for mi in range(0, max_idx + window):
+		win_sum = sum(side.get(mi - i, 0) for i in range(window))
+		avg = win_sum / window
+		if avg >= target:
+			# Convert month_idx to YYYY-MM
+			y = today.year + (today.month - 1 + mi) // 12
+			m = (today.month - 1 + mi) % 12 + 1
+			return f'{y:04d}-{m:02d}'
+	return None
+
+
+@_register_projector('manual_completion')
+def _proj_manual(conn, params, overrides=None):
+	return None
+
+
+def project_milestone_completion(conn, milestone, overrides=None):
+	"""For the sandbox MILESTONE TIMELINE. Returns 'YYYY-MM' or None."""
+	ctype = milestone['condition_type'] if not isinstance(milestone, dict) else milestone.get('condition_type')
+	fn = _CONDITION_PROJECTORS.get(ctype)
+	if not fn:
+		return None
+	try:
+		return fn(conn, _milestone_params(milestone), overrides=overrides)
+	except Exception:
+		import logging
+		logging.getLogger(__name__).warning(
+			'milestone projection failed for %s', ctype, exc_info=True)
+		return None
+
+
+def list_milestones(conn, include_deleted=False):
+	"""All milestones in position order."""
+	q = "SELECT * FROM milestones"
+	if not include_deleted:
+		q += " WHERE deleted_at IS NULL"
+	q += " ORDER BY position ASC, id ASC"
+	return [dict(r) for r in conn.execute(q).fetchall()]
+
+
+def renumber_positions(conn):
+	"""After deletes / reorders, normalize position values to be a tight
+	sequence 1..N. Idempotent."""
+	rows = conn.execute("""
+		SELECT id FROM milestones WHERE deleted_at IS NULL
+		ORDER BY position ASC, id ASC
+	""").fetchall()
+	# Two-pass to avoid unique-index collisions during update.
+	for i, r in enumerate(rows, start=1):
+		conn.execute("UPDATE milestones SET position = ? WHERE id = ?",
+		             (-i, r['id']))  # negative scratch values
+	for i, r in enumerate(rows, start=1):
+		conn.execute("UPDATE milestones SET position = ? WHERE id = ?",
+		             (i, r['id']))
+	conn.commit()

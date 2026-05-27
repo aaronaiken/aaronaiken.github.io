@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Milestones · The Ledger</title>
+  <link rel="stylesheet" href="/static/ledger.css">
+</head>
+<body class="ledger">
+<div class="lg-shell">
+
+  <header class="lg-header">
+    <div>
+      <a href="/ledger/" class="lg-wordmark">The Ledger</a>
+      <div class="lg-ident">Progress Map</div>
+    </div>
+    {% include 'includes/ledger_nav.html' %}
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="lg-flash {% if category == 'error' %}error{% endif %}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if just_advanced %}
+    <div class="lg-flash">
+      Milestone advancement → now working on <strong>{{ just_advanced.title }}</strong>.
+    </div>
+  {% endif %}
+
+  <p class="lg-note" style="font-style:normal;">
+    One milestone at a time has focus. Earlier ones are done. Later ones are visible but not pressuring.
+    Edit, reorder, add, or remove anytime — the sequence is yours.
+  </p>
+
+  <div class="lg-spacer"></div>
+
+  <ol class="lg-milestone-list" id="lg-milestone-list">
+    {% for m in milestones %}
+      <li class="lg-milestone lg-milestone-{{ m.status }}" data-id="{{ m.id }}" draggable="true">
+        <div class="lg-milestone-spine"></div>
+        <div class="lg-milestone-card">
+
+          {# Header row: position + title + status glyph + drag handle #}
+          <div class="lg-milestone-head">
+            <span class="lg-milestone-pos lg-mono">
+              {% if m.status == 'complete' %}✓
+              {% elif m.status == 'current' %}●
+              {% else %}{{ m.position }}
+              {% endif %}
+            </span>
+            <h3 class="lg-milestone-title">{{ m.title }}</h3>
+            <span class="lg-milestone-meta">
+              {% if m.status == 'complete' %}
+                <span class="lg-dim" style="font-size:0.78rem;">completed {{ (m.completed_at or '')[:10] }}</span>
+              {% elif m.status == 'current' %}
+                <span class="lg-pos" style="font-size:0.78rem; letter-spacing:0.14em; text-transform:uppercase;">current</span>
+              {% else %}
+                <span class="lg-dim" style="font-size:0.78rem;">locked</span>
+              {% endif %}
+              <button type="button" class="lg-milestone-drag" title="Drag to reorder">⠿</button>
+            </span>
+          </div>
+
+          {# Progress (current milestone only — biggest visual) #}
+          {% if m.status == 'current' %}
+            <div class="lg-milestone-progress">
+              <div class="lg-mid-number">{{ m.progress.label }}</div>
+              {% if m.progress.percent is not none %}
+                <div class="lg-progress-track">
+                  <div class="lg-progress-fill" style="width: {{ m.progress.percent }}%;"></div>
+                </div>
+                <div class="lg-note" style="font-size:0.78rem; text-align:right;">{{ '{:.1f}'.format(m.progress.percent) }}% to goal</div>
+              {% endif %}
+            </div>
+
+            {# Sub-progress chips for the Debt-free milestone #}
+            {% if m.condition_type == 'total_debt_zero' %}
+              <div class="lg-section-label" style="margin: 16px 0 6px;">// Kill sequence</div>
+              <div class="lg-chip-row">
+                {# Completed kills first (from accounts table) #}
+                {% for d in avalanche %}
+                  {% if loop.first %}
+                    <span class="lg-chip lg-chip-current">{{ d.name }}</span>
+                  {% else %}
+                    <span class="lg-chip lg-chip-future">{{ d.name }}</span>
+                  {% endif %}
+                {% endfor %}
+              </div>
+              <p class="lg-note" style="font-size:0.78rem; margin-top:8px;">
+                Current target highlighted teal. Future targets in avalanche order to the right.
+                As each dies the cascade carries forward — see <a href="/ledger/projection/">projection</a>.
+              </p>
+            {% endif %}
+          {% endif %}
+
+          {# Why-paragraph #}
+          {% if m.status == 'current' %}
+            <p class="lg-milestone-why">{{ m.why_text }}</p>
+          {% else %}
+            <details class="lg-milestone-why-collapsed">
+              <summary class="lg-note">why →</summary>
+              <p class="lg-milestone-why">{{ m.why_text }}</p>
+            </details>
+          {% endif %}
+
+          {# Action buttons — confirm prompts use tojson so titles with
+             apostrophes (Lindsay's exit ramp) don't break the JS string. #}
+          {% if m.status == 'current' %}
+            <div class="lg-btn-row" style="margin-top:14px;">
+              <form method="POST" action="/ledger/milestones/{{ m.id }}/mark-complete" style="display:inline;"
+                    onsubmit="return confirm('Mark ' + {{ m.title | tojson }} + ' complete?');">
+                <button type="submit" class="lg-btn primary sm">Mark complete</button>
+              </form>
+              <button type="button" class="lg-btn outline sm" data-edit-toggle="{{ m.id }}">Edit</button>
+            </div>
+          {% elif m.status == 'complete' %}
+            <div class="lg-btn-row" style="margin-top:8px;">
+              <form method="POST" action="/ledger/milestones/{{ m.id }}/un-complete" style="display:inline;"
+                    onsubmit="return confirm('Reopen this milestone as current? The currently-current milestone (if any) will revert to locked.');">
+                <button type="submit" class="lg-btn ghost sm">Reopen</button>
+              </form>
+              <button type="button" class="lg-btn ghost sm" data-edit-toggle="{{ m.id }}">Edit</button>
+            </div>
+          {% else %}
+            <div class="lg-btn-row" style="margin-top:8px;">
+              <button type="button" class="lg-btn ghost sm" data-edit-toggle="{{ m.id }}">Edit</button>
+              <form method="POST" action="/ledger/milestones/{{ m.id }}/delete" style="display:inline;"
+                    onsubmit="return confirm('Remove this milestone? History stays in milestone_events but it disappears from the sequence.');">
+                <button type="submit" class="lg-btn danger sm">×</button>
+              </form>
+            </div>
+          {% endif %}
+
+          {# Inline edit form (hidden by default) #}
+          <form method="POST" action="/ledger/milestones/{{ m.id }}/edit" class="lg-milestone-edit-form" id="lg-edit-{{ m.id }}" style="display:none; margin-top:14px;">
+            <div class="lg-form-group">
+              <label class="lg-label">Title</label>
+              <input type="text" name="title" class="lg-input" value="{{ m.title }}">
+            </div>
+            <div class="lg-form-group">
+              <label class="lg-label">Why-paragraph</label>
+              <textarea name="why_text" class="lg-textarea" rows="3">{{ m.why_text or '' }}</textarea>
+            </div>
+            <div class="lg-form-group">
+              <label class="lg-label">Condition type</label>
+              <select name="condition_type" class="lg-select">
+                {% for ct in ['account_balance_ge','account_balance_le','account_status_known','account_paid_off','total_debt_zero','total_debt_le','liquid_savings_months','rolling_income_sustained','manual_completion'] %}
+                  <option value="{{ ct }}" {% if m.condition_type == ct %}selected{% endif %}>{{ ct }}</option>
+                {% endfor %}
+              </select>
+              <p class="lg-note" style="font-size:0.78rem;">
+                Changing the condition type may require re-entering parameters (account_slug, threshold, etc.) — see
+                <a href=".kt/spec-ledger-phase-4-milestones.md">spec</a>.
+              </p>
+            </div>
+            <div class="lg-form-grid">
+              <div class="lg-form-group">
+                <label class="lg-label">Account slug</label>
+                <input type="text" name="account_slug" class="lg-input"
+                       placeholder="e.g. checking, fedloan-student">
+              </div>
+              <div class="lg-form-group">
+                <label class="lg-label">Threshold ($)</label>
+                <input type="number" step="0.01" name="threshold" class="lg-input lg-num">
+              </div>
+              <div class="lg-form-group">
+                <label class="lg-label">Months (for emergency fund)</label>
+                <input type="number" name="months" class="lg-input lg-num" placeholder="3">
+              </div>
+              <div class="lg-form-group">
+                <label class="lg-label">Monthly target ($)</label>
+                <input type="number" step="0.01" name="monthly_target" class="lg-input lg-num">
+              </div>
+              <div class="lg-form-group">
+                <label class="lg-label">Window months</label>
+                <input type="number" name="window_months" class="lg-input lg-num" placeholder="3">
+              </div>
+              <div class="lg-form-group">
+                <label class="lg-label">Account slugs (comma-separated)</label>
+                <input type="text" name="account_slugs" class="lg-input" placeholder="checking,savings">
+              </div>
+              <div class="lg-form-group">
+                <label class="lg-label">Income types (comma-separated)</label>
+                <input type="text" name="income_types" class="lg-input" placeholder="side_income,bonus,other">
+              </div>
+            </div>
+            <p class="lg-note" style="font-size:0.78rem;">
+              Only fields relevant to the selected condition_type will be used. Blank fields preserve existing params (when condition_type unchanged).
+            </p>
+            <div class="lg-btn-row">
+              <button type="submit" class="lg-btn primary sm">Save changes</button>
+              <button type="button" class="lg-btn ghost sm" data-edit-toggle="{{ m.id }}">Cancel</button>
+            </div>
+          </form>
+
+        </div>
+      </li>
+    {% endfor %}
+  </ol>
+
+  {# ===== Add new milestone ===== #}
+  <details class="lg-card" style="margin-top:24px;">
+    <summary style="cursor:pointer; list-style:none;">
+      <span class="lg-card-title" style="margin:0;">+ Add a milestone</span>
+    </summary>
+    <div class="lg-spacer"></div>
+    <form method="POST" action="/ledger/milestones/new" class="lg-form-grid">
+      <div class="lg-form-group" style="grid-column: 1 / -1;">
+        <label class="lg-label">Title</label>
+        <input type="text" name="title" class="lg-input" required>
+      </div>
+      <div class="lg-form-group" style="grid-column: 1 / -1;">
+        <label class="lg-label">Why-paragraph (the note about why this matters)</label>
+        <textarea name="why_text" class="lg-textarea" rows="3"></textarea>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Condition type</label>
+        <select name="condition_type" class="lg-select">
+          <option value="manual_completion">manual_completion (I'll mark it done)</option>
+          <option value="account_balance_ge">account_balance_ge (balance ≥ threshold)</option>
+          <option value="account_balance_le">account_balance_le (balance ≤ threshold)</option>
+          <option value="account_status_known">account_status_known (account no longer unknown)</option>
+          <option value="account_paid_off">account_paid_off</option>
+          <option value="total_debt_zero">total_debt_zero</option>
+          <option value="total_debt_le">total_debt_le (total ≤ threshold)</option>
+          <option value="liquid_savings_months">liquid_savings_months (N×expenses in cash)</option>
+          <option value="rolling_income_sustained">rolling_income_sustained (N-mo avg ≥ target)</option>
+        </select>
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Account slug</label>
+        <input type="text" name="account_slug" class="lg-input">
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Threshold ($)</label>
+        <input type="number" step="0.01" name="threshold" class="lg-input lg-num">
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Months</label>
+        <input type="number" name="months" class="lg-input lg-num">
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Monthly target ($)</label>
+        <input type="number" step="0.01" name="monthly_target" class="lg-input lg-num">
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Window months</label>
+        <input type="number" name="window_months" class="lg-input lg-num">
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Account slugs (CSV)</label>
+        <input type="text" name="account_slugs" class="lg-input" placeholder="checking,savings">
+      </div>
+      <div class="lg-form-group">
+        <label class="lg-label">Income types (CSV)</label>
+        <input type="text" name="income_types" class="lg-input" placeholder="side_income,bonus,other">
+      </div>
+      <div style="grid-column: 1 / -1;">
+        <p class="lg-note" style="font-size:0.78rem; margin-top:0;">
+          Most people use the default template and customize as they go. You can also build your own from scratch.
+        </p>
+        <button type="submit" class="lg-btn primary">Add milestone</button>
+      </div>
+    </form>
+  </details>
+
+  {# ===== Recent milestone events ===== #}
+  {% if recent_events %}
+    <div class="lg-section-label" style="margin-top:24px;">// Recent milestone events</div>
+    <div class="lg-card" style="padding:0;">
+      <table class="lg-table">
+        <tbody>
+        {% for e in recent_events %}
+          <tr>
+            <td class="lg-mono" style="font-size:0.78rem; color:var(--lg-text-dim); width:140px;">
+              {{ e.created[:10] }}
+            </td>
+            <td>{{ e.milestone_title }}</td>
+            <td class="lg-dim">{{ e.event_type }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  <footer class="lg-footer">
+    <span class="lg-footer-ident">YT-1300F · CHART ROOM · PROGRESS MAP</span>
+    <div class="lg-footer-links">
+      <a href="/ledger/">Glance</a>
+    </div>
+  </footer>
+</div>
+{% include 'includes/today_panel.html' ignore missing %}
+{% include 'includes/active_timer_strip.html' ignore missing %}
+<script src="/static/ledger.js"></script>
+<script src="/static/ledger_milestones.js"></script>
+</body>
+</html>

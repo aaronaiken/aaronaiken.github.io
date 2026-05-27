@@ -96,6 +96,26 @@
 
   </div>
 
+  {# ============= WORKING ON line ============= #}
+  {% if just_advanced %}
+    <div class="lg-flash">
+      Milestone advancement → now working on <strong>{{ just_advanced.title }}</strong>.
+      <a href="/ledger/milestones/" class="lg-nav-link">view map →</a>
+    </div>
+  {% endif %}
+  <a href="/ledger/milestones/" class="lg-working-on">
+    {% if current_milestone %}
+      <span class="lg-working-on-label">WORKING ON:</span>
+      <strong class="lg-working-on-title">{{ current_milestone.title }}</strong>
+      {% if current_milestone_progress and current_milestone_progress.label %}
+        <span class="lg-working-on-progress lg-mono">{{ current_milestone_progress.label }}</span>
+      {% endif %}
+    {% else %}
+      <span class="lg-working-on-label">PROGRESS MAP:</span>
+      <span class="lg-dim">no current milestone — open the map to set one</span>
+    {% endif %}
+  </a>
+
   {# ============= attack budget card (full width) ============= #}
   <div class="lg-card">
     <h2 class="lg-card-title">Attack Budget</h2>

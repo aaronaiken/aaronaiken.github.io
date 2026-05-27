@@ -106,6 +106,13 @@ def glance():
 	conn = get_ledger_db()
 	# Materialize any due autopay expectations before reading state.
 	L.generate_autopay_expectations(conn)
+	# Auto-advance milestone if its condition is now met.
+	just_advanced = L.advance_current_milestone(conn)
+	current_milestone = L.current_milestone(conn)
+	current_milestone_progress = (
+		L.milestone_progress(conn, current_milestone)
+		if current_milestone else None
+	)
 
 	td = L.total_debt(conn)
 	td_30 = L.total_debt_n_days_ago(conn, 30)
@@ -173,6 +180,9 @@ def glance():
 		last_payment=last_payment,
 		all_accounts=all_accounts,
 		today=today.isoformat(),
+		current_milestone=current_milestone,
+		current_milestone_progress=current_milestone_progress,
+		just_advanced=just_advanced,
 	)
 
 
@@ -1260,6 +1270,23 @@ def projection_sandbox():
 	months_delta = _months_between(baseline.debt_free_date, sandbox.debt_free_date)
 	interest_saved = round(baseline.total_interest_paid - sandbox.total_interest_paid, 2)
 
+	# Milestone timeline — projected completion under baseline + sandbox.
+	conn2 = get_ledger_db()
+	milestone_rows = []
+	for m in L.list_milestones(conn2):
+		base_proj = L.project_milestone_completion(conn2, m)
+		sand_proj = L.project_milestone_completion(conn2, m, overrides=overrides)
+		dm = _months_between(base_proj, sand_proj) if (base_proj and sand_proj) else None
+		milestone_rows.append({
+			'id':        m['id'],
+			'title':     m['title'],
+			'status':    m['status'],
+			'baseline':  base_proj,
+			'sandbox':   sand_proj,
+			'delta_months': dm,
+		})
+	conn2.close()
+
 	return jsonify({
 		'baseline': _serialize(baseline),
 		'sandbox':  _serialize(sandbox),
@@ -1267,6 +1294,7 @@ def projection_sandbox():
 			'months':          months_delta,
 			'interest_saved':  interest_saved,
 		},
+		'milestones': milestone_rows,
 	})
 
 
@@ -1985,6 +2013,322 @@ def leak_hunt_rules_delete(rule_id):
 	conn.commit()
 	conn.close()
 	return redirect(url_for('ledger.leak_hunt_rules'))
+
+
+# ---- milestones (Phase 4) ----
+# Spec: .kt/spec-ledger-phase-4-milestones.md.
+
+VALID_CONDITION_TYPES = (
+	'account_balance_ge', 'account_balance_le', 'account_status_known',
+	'account_paid_off', 'total_debt_zero', 'total_debt_le',
+	'liquid_savings_months', 'rolling_income_sustained', 'manual_completion',
+)
+
+
+def _log_milestone_event(conn, milestone_id, event_type, details=None):
+	conn.execute("""
+		INSERT INTO milestone_events (milestone_id, event_type, details, created)
+		VALUES (?, ?, ?, ?)
+	""", (milestone_id, event_type,
+	      json.dumps(details) if details else None, L.et_now_iso()))
+
+
+def _parse_milestone_params_from_form():
+	"""Build a condition_params dict from request.form based on what was
+	posted. Caller is responsible for choosing fields appropriate to the
+	condition_type."""
+	out = {}
+	for k in ('account_slug', 'threshold', 'months', 'monthly_target',
+	          'window_months'):
+		v = request.form.get(k)
+		if v not in (None, ''):
+			out[k] = v
+	# Lists posted as comma-separated values
+	for k in ('account_slugs', 'income_types'):
+		v = request.form.get(k)
+		if v:
+			out[k] = [s.strip() for s in v.split(',') if s.strip()]
+	# Type coercion for numbers
+	for k in ('threshold', 'monthly_target'):
+		if k in out:
+			try: out[k] = float(out[k])
+			except ValueError: out.pop(k, None)
+	for k in ('months', 'window_months'):
+		if k in out:
+			try: out[k] = int(out[k])
+			except ValueError: out.pop(k, None)
+	return out
+
+
+@ledger_bp.route('/milestones/')
+@cd_auth_required
+def milestones_view():
+	conn = get_ledger_db()
+	# Run auto-advancement on every load — cheap, idempotent.
+	just_advanced = L.advance_current_milestone(conn)
+	milestones = L.list_milestones(conn)
+	# Enrich with progress + computed condition_met
+	for m in milestones:
+		m['progress'] = L.milestone_progress(conn, m)
+		m['condition_met'] = L.evaluate_milestone_condition(conn, m)
+	# For the Debt-free milestone, also surface the avalanche kill sequence
+	# from the live projection.
+	avalanche = L.avalanche_order(conn)
+	# Recent events (for the small history footer)
+	recent_events = conn.execute("""
+		SELECT me.*, m.title AS milestone_title
+		FROM milestone_events me
+		JOIN milestones m ON m.id = me.milestone_id
+		WHERE me.event_type IN ('completed', 'became_current', 'uncompleted')
+		ORDER BY me.created DESC LIMIT 8
+	""").fetchall()
+	conn.close()
+	return render_template('ledger_milestones.html',
+		milestones=milestones,
+		avalanche=avalanche,
+		just_advanced=just_advanced,
+		recent_events=recent_events,
+	)
+
+
+@ledger_bp.route('/milestones/new', methods=['POST'])
+@cd_auth_required
+def milestones_new():
+	conn = get_ledger_db()
+	title = (request.form.get('title') or '').strip()
+	if not title:
+		conn.close()
+		flash('Milestone needs a title.', 'error')
+		return redirect(url_for('ledger.milestones_view'))
+	ctype = request.form.get('condition_type', 'manual_completion')
+	if ctype not in VALID_CONDITION_TYPES:
+		ctype = 'manual_completion'
+	# Position: insert at end (highest existing position + 1).
+	max_pos = conn.execute(
+		"SELECT COALESCE(MAX(position), 0) AS p FROM milestones WHERE deleted_at IS NULL"
+	).fetchone()['p']
+	now = L.et_now_iso()
+	cur = conn.execute("""
+		INSERT INTO milestones (
+			position, title, why_text, condition_type, condition_params,
+			status, manual_complete, created, updated
+		) VALUES (?, ?, ?, ?, ?, 'locked', 0, ?, ?)
+	""", (
+		max_pos + 1, title,
+		request.form.get('why_text', '').strip() or None,
+		ctype,
+		json.dumps(_parse_milestone_params_from_form()),
+		now, now,
+	))
+	mid = cur.lastrowid
+	_log_milestone_event(conn, mid, 'created', {'added_at_position': max_pos + 1})
+	conn.commit()
+	conn.close()
+	flash(f'Milestone "{title}" added at end of sequence.', 'ok')
+	return redirect(url_for('ledger.milestones_view'))
+
+
+@ledger_bp.route('/milestones/<int:mid>/edit', methods=['POST'])
+@cd_auth_required
+def milestones_edit(mid):
+	conn = get_ledger_db()
+	row = conn.execute(
+		"SELECT * FROM milestones WHERE id = ? AND deleted_at IS NULL", (mid,)
+	).fetchone()
+	if not row:
+		conn.close()
+		return redirect(url_for('ledger.milestones_view'))
+	now = L.et_now_iso()
+	ctype = request.form.get('condition_type', row['condition_type'])
+	if ctype not in VALID_CONDITION_TYPES:
+		ctype = row['condition_type']
+	# If condition_type unchanged, preserve existing params unless new ones are posted.
+	if ctype == row['condition_type'] and not any(k in request.form for k in (
+		'account_slug', 'threshold', 'months', 'monthly_target',
+		'window_months', 'account_slugs', 'income_types',
+	)):
+		params_json = row['condition_params']
+	else:
+		params_json = json.dumps(_parse_milestone_params_from_form())
+
+	conn.execute("""
+		UPDATE milestones
+		SET title = ?, why_text = ?, condition_type = ?, condition_params = ?, updated = ?
+		WHERE id = ?
+	""", (
+		(request.form.get('title') or row['title']).strip(),
+		(request.form.get('why_text') or '').strip() or None,
+		ctype, params_json, now, mid,
+	))
+	_log_milestone_event(conn, mid, 'edited')
+	conn.commit()
+	conn.close()
+	flash('Milestone updated.', 'ok')
+	return redirect(url_for('ledger.milestones_view'))
+
+
+@ledger_bp.route('/milestones/<int:mid>/delete', methods=['POST'])
+@cd_auth_required
+def milestones_delete(mid):
+	conn = get_ledger_db()
+	row = conn.execute(
+		"SELECT title, status FROM milestones WHERE id = ? AND deleted_at IS NULL", (mid,)
+	).fetchone()
+	if not row:
+		conn.close()
+		return redirect(url_for('ledger.milestones_view'))
+	now = L.et_now_iso()
+	conn.execute(
+		"UPDATE milestones SET deleted_at = ?, updated = ? WHERE id = ?",
+		(L.utc_now_iso(), now, mid))
+	_log_milestone_event(conn, mid, 'removed', {'was_status': row['status']})
+	# If we just removed the current one, promote the next locked.
+	if row['status'] == 'current':
+		nxt = conn.execute("""
+			SELECT id FROM milestones
+			WHERE deleted_at IS NULL AND status = 'locked'
+			ORDER BY position ASC LIMIT 1
+		""").fetchone()
+		if nxt:
+			conn.execute(
+				"UPDATE milestones SET status = 'current', updated = ? WHERE id = ?",
+				(now, nxt['id']))
+			_log_milestone_event(conn, nxt['id'], 'became_current',
+			                     {'because_previous_removed': mid})
+	conn.commit()
+	L.renumber_positions(conn)
+	conn.close()
+	flash(f'Milestone "{row["title"]}" removed.', 'ok')
+	return redirect(url_for('ledger.milestones_view'))
+
+
+@ledger_bp.route('/milestones/<int:mid>/mark-complete', methods=['POST'])
+@cd_auth_required
+def milestones_mark_complete(mid):
+	conn = get_ledger_db()
+	row = conn.execute(
+		"SELECT * FROM milestones WHERE id = ? AND deleted_at IS NULL", (mid,)
+	).fetchone()
+	if not row:
+		conn.close()
+		return redirect(url_for('ledger.milestones_view'))
+	now_et  = L.et_now_iso()
+	now_utc = L.utc_now_iso()
+	conn.execute("""
+		UPDATE milestones
+		SET status = 'complete', completed_at = ?, manual_complete = 1, updated = ?
+		WHERE id = ?
+	""", (now_utc, now_et, mid))
+	_log_milestone_event(conn, mid, 'completed', {'manual': True})
+	# Promote the next locked milestone in position order, if any.
+	nxt = conn.execute("""
+		SELECT id FROM milestones
+		WHERE deleted_at IS NULL AND status = 'locked'
+		  AND position > ?
+		ORDER BY position ASC LIMIT 1
+	""", (row['position'],)).fetchone()
+	if nxt:
+		conn.execute(
+			"UPDATE milestones SET status = 'current', updated = ? WHERE id = ?",
+			(now_et, nxt['id']))
+		_log_milestone_event(conn, nxt['id'], 'became_current',
+		                     {'after_milestone_id': mid})
+	conn.commit()
+	conn.close()
+	flash(f'"{row["title"]}" marked complete.', 'ok')
+	return redirect(url_for('ledger.milestones_view'))
+
+
+@ledger_bp.route('/milestones/<int:mid>/un-complete', methods=['POST'])
+@cd_auth_required
+def milestones_uncomplete(mid):
+	conn = get_ledger_db()
+	row = conn.execute(
+		"SELECT * FROM milestones WHERE id = ? AND deleted_at IS NULL", (mid,)
+	).fetchone()
+	if not row:
+		conn.close()
+		return redirect(url_for('ledger.milestones_view'))
+	now_et = L.et_now_iso()
+	# Demote currently-current (if any) BACK to locked so we don't have two current.
+	conn.execute("""
+		UPDATE milestones SET status = 'locked', updated = ?
+		WHERE deleted_at IS NULL AND status = 'current'
+	""", (now_et,))
+	conn.execute("""
+		UPDATE milestones
+		SET status = 'current', completed_at = NULL, manual_complete = 0, updated = ?
+		WHERE id = ?
+	""", (now_et, mid))
+	_log_milestone_event(conn, mid, 'uncompleted')
+	conn.commit()
+	conn.close()
+	flash(f'"{row["title"]}" reopened as current.', 'ok')
+	return redirect(url_for('ledger.milestones_view'))
+
+
+@ledger_bp.route('/milestones/reorder', methods=['POST'])
+@cd_auth_required
+def milestones_reorder():
+	"""Atomic batch reorder. JSON body: {"order": [id, id, id, ...]}."""
+	data = request.get_json(silent=True) or {}
+	order = data.get('order') or []
+	ids = [int(x) for x in order if str(x).isdigit()]
+	if not ids:
+		return jsonify({'ok': False, 'error': 'empty order'}), 400
+	conn = get_ledger_db()
+	now = L.et_now_iso()
+	# Two-pass to avoid unique-index collisions
+	for i, mid in enumerate(ids, start=1):
+		conn.execute("UPDATE milestones SET position = ?, updated = ? WHERE id = ?",
+		             (-i, now, mid))
+	for i, mid in enumerate(ids, start=1):
+		conn.execute("UPDATE milestones SET position = ? WHERE id = ?", (i, mid))
+		_log_milestone_event(conn, mid, 'reordered', {'new_position': i})
+	conn.commit()
+	conn.close()
+	return jsonify({'ok': True, 'count': len(ids)})
+
+
+@ledger_bp.route('/milestones/current')
+@cd_auth_required
+def milestones_current_json():
+	"""JSON feed of the current milestone — used by Glance to render the
+	WORKING ON line."""
+	conn = get_ledger_db()
+	L.advance_current_milestone(conn)
+	cur = L.current_milestone(conn)
+	if not cur:
+		conn.close()
+		return jsonify({'current': None})
+	prog = L.milestone_progress(conn, cur)
+	conn.close()
+	return jsonify({'current': {
+		'id':      cur['id'],
+		'title':   cur['title'],
+		'label':   prog['label'],
+		'percent': prog['percent'],
+	}})
+
+
+@ledger_bp.route('/milestones/projections')
+@cd_auth_required
+def milestones_projections_json():
+	"""JSON feed of all milestones with projected completion dates under
+	baseline + (optional) sandbox overrides. Sandbox uses POST with
+	overrides body."""
+	conn = get_ledger_db()
+	milestones = L.list_milestones(conn)
+	rows = []
+	for m in milestones:
+		rows.append({
+			'id':       m['id'],
+			'title':    m['title'],
+			'status':   m['status'],
+			'baseline': L.project_milestone_completion(conn, m),
+		})
+	conn.close()
+	return jsonify({'milestones': rows})
 
 
 # ---- AI payday assistant ----

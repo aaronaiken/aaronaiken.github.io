@@ -733,3 +733,205 @@ kbd {
   border-radius: 3px;
   background: var(--lg-bg-elev-2);
 }
+
+/* -------- milestones / progress map (Phase 4) -------- */
+.lg-milestone-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.lg-milestone {
+  position: relative;
+  padding-left: 32px;     /* room for spine + node */
+  margin-bottom: 14px;
+}
+.lg-milestone-spine {
+  position: absolute;
+  left: 13px; top: 0; bottom: -14px;
+  width: 1.5px;
+  background: var(--lg-rule);
+}
+.lg-milestone:last-child .lg-milestone-spine { bottom: 0; }
+/* Spine color reflects status: completed solid brass, current teal,
+   locked dim taupe. Set on the milestone <li>. */
+.lg-milestone-complete .lg-milestone-spine { background: var(--lg-brass-dim); }
+.lg-milestone-current  .lg-milestone-spine { background: var(--lg-teal); }
+.lg-milestone-locked   .lg-milestone-spine { background: var(--lg-rule); }
+
+.lg-milestone-card {
+  background: var(--lg-bg-elev);
+  border: 1px solid var(--lg-rule);
+  border-radius: var(--lg-radius-lg);
+  padding: 16px 20px;
+  box-shadow: var(--lg-shadow);
+  position: relative;
+}
+.lg-milestone-current .lg-milestone-card {
+  border-left: 3px solid var(--lg-teal);
+  padding-left: 22px;
+  background: var(--lg-bg-elev);
+}
+.lg-milestone-complete .lg-milestone-card {
+  border-left: 3px solid var(--lg-brass-dim);
+  padding-left: 22px;
+  background: var(--lg-bg-elev-2);
+  opacity: 0.86;
+}
+.lg-milestone-locked .lg-milestone-card {
+  padding: 12px 18px;
+  opacity: 0.7;
+}
+
+.lg-milestone-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.lg-milestone-pos {
+  position: absolute;
+  left: -32px;
+  top: 12px;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--lg-bg);
+  border: 1.5px solid var(--lg-rule-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--lg-mono);
+  font-size: 0.84rem;
+  color: var(--lg-text-muted);
+}
+.lg-milestone-complete .lg-milestone-pos {
+  background: var(--lg-brass);
+  color: #1a140a;
+  border-color: var(--lg-brass);
+}
+.lg-milestone-current .lg-milestone-pos {
+  background: var(--lg-teal);
+  color: #0d1620;
+  border-color: var(--lg-teal);
+}
+.lg-milestone-title {
+  font-family: var(--lg-display);
+  font-weight: 500;
+  font-size: 1.15rem;
+  margin: 0;
+  flex: 1;
+}
+.lg-milestone-locked .lg-milestone-title { font-size: 0.95rem; color: var(--lg-text-muted); }
+.lg-milestone-complete .lg-milestone-title { font-size: 1.0rem; }
+.lg-milestone-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.lg-milestone-drag {
+  background: none; border: none; cursor: grab;
+  color: var(--lg-text-dim);
+  font-size: 1rem; padding: 2px 6px;
+}
+.lg-milestone-drag:hover { color: var(--lg-brass); }
+
+.lg-milestone-progress { margin: 14px 0 6px; }
+.lg-milestone-why {
+  font-family: var(--lg-body);
+  font-style: italic;
+  color: var(--lg-text-muted);
+  margin: 12px 0 6px;
+  line-height: 1.6;
+}
+.lg-milestone-why-collapsed summary { cursor: pointer; }
+
+/* Hairline progress bar */
+.lg-progress-track {
+  width: 100%;
+  height: 4px;
+  background: var(--lg-bg-elev-2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.lg-progress-fill {
+  height: 100%;
+  background: var(--lg-brass);
+  transition: width 0.3s ease;
+}
+
+/* Chips for Debt-free sub-progress */
+.lg-chip-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.lg-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: var(--lg-mono);
+  font-size: 0.78rem;
+  border: 1px solid var(--lg-rule-strong);
+}
+.lg-chip-killed {
+  color: var(--lg-text-dim);
+  text-decoration: line-through;
+  background: rgba(176,141,87,0.08);
+  border-color: var(--lg-brass-dim);
+}
+.lg-chip-current {
+  background: var(--lg-teal);
+  color: #0d1620;
+  border-color: var(--lg-teal);
+  font-weight: 600;
+}
+.lg-chip-future {
+  color: var(--lg-text-muted);
+  background: transparent;
+}
+
+/* Drag state */
+.lg-milestone.dragging { opacity: 0.4; }
+.lg-milestone.drop-target .lg-milestone-card {
+  outline: 2px dashed var(--lg-brass);
+  outline-offset: 4px;
+}
+
+/* Glance "WORKING ON" line — one-sentence summary of current milestone.
+   Sits between Cash Runway and Attack Budget cards. */
+.lg-working-on {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  margin: 0 0 18px;
+  border-left: 3px solid var(--lg-brass);
+  background: rgba(176, 141, 87, 0.04);
+  border-radius: 0 var(--lg-radius) var(--lg-radius) 0;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s;
+}
+.lg-working-on:hover {
+  background: rgba(176, 141, 87, 0.08);
+  text-decoration: none;
+}
+.lg-working-on-label {
+  font-family: var(--lg-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--lg-text-dim);
+}
+.lg-working-on-title {
+  font-family: var(--lg-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--lg-brass);
+}
+.lg-working-on-progress {
+  margin-left: auto;
+  color: var(--lg-text-muted);
+  font-size: 0.9rem;
+}
