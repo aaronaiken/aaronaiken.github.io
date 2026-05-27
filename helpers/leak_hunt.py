@@ -80,6 +80,10 @@ def parse_csv(content, format_hint=None, column_map=None):
 	records. Amounts normalized so positive = outflow (money leaving
 	checking), negative = inflow (income / refund / transfer-in).
 
+	Dialect (comma / tab / semicolon / pipe) is auto-detected via
+	csv.Sniffer. PNC sometimes ships tab-separated content with a .csv
+	extension; this handles both transparently.
+
 	If format_hint is None, format is auto-detected. If detection fails
 	and column_map is provided, falls back to that mapping.
 
@@ -88,7 +92,19 @@ def parse_csv(content, format_hint=None, column_map=None):
 
 	Returns (records, detected_format).
 	"""
-	reader = csv.reader(io.StringIO(content))
+	# Sniff dialect from a representative chunk; fall back to comma on failure.
+	try:
+		dialect = csv.Sniffer().sniff(content[:8192], delimiters=',\t;|')
+	except csv.Error:
+		class _D(csv.Dialect):
+			delimiter = ','
+			quotechar = '"'
+			doublequote = True
+			skipinitialspace = True
+			lineterminator = '\n'
+			quoting = csv.QUOTE_MINIMAL
+		dialect = _D
+	reader = csv.reader(io.StringIO(content), dialect=dialect)
 	rows = list(reader)
 	if not rows:
 		return [], 'unknown'
@@ -139,16 +155,30 @@ def _to_float(s):
 
 
 def _normalize_date(s):
-	"""Parse a date string and return ISO format YYYY-MM-DD, or '' if unparseable."""
+	"""Parse a date string and return ISO format YYYY-MM-DD, or '' if unparseable.
+
+	Strips the 'PENDING - ' / 'Pending - ' prefix that PNC's
+	accountActivityExport adds to as-yet-unposted transaction dates.
+	The pending status is captured separately by the parser (see
+	_is_pending_date) so the cleaned date reads as ISO."""
 	if not s:
 		return ''
 	s = s.strip()
+	# Strip 'PENDING - ' / 'Pending - ' prefix (PNC accountActivityExport).
+	stripped = re.sub(r'^pending\s*-\s*', '', s, flags=re.IGNORECASE).strip()
 	for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%Y/%m/%d', '%d-%b-%Y'):
 		try:
-			return datetime.strptime(s, fmt).date().isoformat()
+			return datetime.strptime(stripped, fmt).date().isoformat()
 		except ValueError:
 			continue
-	return s  # best-effort: return as-is so user can see what came in
+	return stripped or s
+
+
+def _is_pending_date(s):
+	"""True if the raw date column is a PNC 'PENDING - …' marker."""
+	if not s:
+		return False
+	return bool(re.match(r'^\s*pending\s*-', s, flags=re.IGNORECASE))
 
 
 def _parse_pnc(header, body):
@@ -176,15 +206,21 @@ def _parse_pnc(header, body):
 
 
 def _parse_pnc_activity(header, body):
-	"""PNC 'Account Activity Export' format.
+	"""PNC 'accountActivityExport.csv' format.
 
 	Headers: Transaction Date, Transaction Description, Amount, Category, Balance.
-	Amount column is a single signed value:
-	  - Positive (e.g. $238.60)  → outflow (purchase, debit)
-	  - Parens   (e.g. ($500))   → inflow  (deposit, refund, ACH credit)
 
-	We already normalize to "positive = outflow," so the sign comes through
-	correctly: positive stays positive, parens-negative becomes negative.
+	Sign convention (confirmed from real Aaron data 2026-05-26):
+	  POSTED row, parens   ($500)  → outflow (debit)
+	  POSTED row, positive  $2,194.24 → inflow (credit / deposit)
+	  PENDING row, positive $238.60 → outflow (pending charge — will
+	                                  become parens when it posts)
+	  PENDING row, parens   ($500)  → outflow (already-debited pending)
+
+	We always store positive = outflow downstream. Translate accordingly:
+	  - Parens-negative anywhere  → outflow (flip to positive)
+	  - Positive on PENDING       → outflow (keep positive)
+	  - Positive on POSTED        → inflow  (negate to negative)
 	"""
 	header_norm = [(c or '').strip().lower() for c in header]
 	i_date = _find_col(header_norm, 'transaction date', 'date', 'posted date')
@@ -194,11 +230,21 @@ def _parse_pnc_activity(header, body):
 	for r in body:
 		if not r or all(not (c or '').strip() for c in r):
 			continue
-		date_s = r[i_date] if i_date is not None and i_date < len(r) else ''
-		desc   = r[i_desc] if i_desc is not None and i_desc < len(r) else ''
-		amount = _to_float(r[i_amt]) if i_amt is not None and i_amt < len(r) else 0
+		raw_date = r[i_date] if i_date is not None and i_date < len(r) else ''
+		desc     = r[i_desc] if i_desc is not None and i_desc < len(r) else ''
+		raw_amt  = r[i_amt]  if i_amt  is not None and i_amt  < len(r) else ''
+		raw_amt_s = (raw_amt or '').strip()
+		parsed    = _to_float(raw_amt_s)
+		is_parens = raw_amt_s.startswith('(') and raw_amt_s.endswith(')')
+		pending   = _is_pending_date(raw_date)
+		if is_parens:
+			amount = abs(parsed)              # parens → outflow
+		elif pending:
+			amount = abs(parsed)              # pending charge → outflow
+		else:
+			amount = -abs(parsed)             # posted positive → inflow
 		out.append({
-			'date':        _normalize_date(date_s),
+			'date':        _normalize_date(raw_date),
 			'description': (desc or '').strip(),
 			'amount':      amount,
 		})
