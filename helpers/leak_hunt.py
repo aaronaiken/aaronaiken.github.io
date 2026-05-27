@@ -33,28 +33,42 @@ EXCLUDED_FROM_LEAK = {'Internal transfer', 'Income', 'Debt payments'}
 
 # ---- format detection ----
 
+_DATE_ALIASES   = ('date', 'posted', 'posted date', 'transaction date')
+_DESC_ALIASES   = ('description', 'memo', 'name', 'payee', 'merchant',
+                   'transaction description')
+_AMOUNT_ALIASES = ('amount', 'transaction amount')
+
+
 def detect_format(header_row, sample_rows):
 	"""Inspect the header row (and a few data rows) to guess the format.
 
-	Returns one of: 'pnc' | 'generic_v1' | 'unknown'.
+	Returns one of:
+	  'pnc'           — older PNC export with Withdrawals + Deposits columns
+	  'pnc_activity'  — newer "Account Activity" export, single signed Amount
+	                     column with Transaction Date / Transaction Description
+	  'generic_v1'    — any other CSV with date + description + amount columns
+	  'unknown'       — can't tell
 	"""
 	if not header_row:
 		return 'unknown'
 	header_norm = [(c or '').strip().lower() for c in header_row]
 	header_set  = set(header_norm)
 
-	# PNC: usually has separate Withdrawals + Deposits columns.
-	# Common shapes:
-	#   ['Date', 'Description', 'Withdrawals', 'Deposits', 'Balance']
-	#   ['Date', 'Reference Number', 'Payee', 'Address', 'Amount']  -- credit card export, NOT this parser
-	pnc_signals = {'withdrawals', 'deposits'}
-	if pnc_signals.issubset(header_set):
+	# Older PNC: separate Withdrawals + Deposits columns.
+	if {'withdrawals', 'deposits'}.issubset(header_set):
 		return 'pnc'
 
-	# Generic 4-column with at least date + description + amount.
-	has_date   = any(c in header_set for c in ('date', 'posted', 'posted date', 'transaction date'))
-	has_desc   = any(c in header_set for c in ('description', 'memo', 'name', 'payee', 'merchant'))
-	has_amount = any(c in header_set for c in ('amount', 'transaction amount'))
+	# Newer PNC Account Activity: Transaction Date / Transaction Description /
+	# Amount [/ Category / Balance]. Single signed Amount column.
+	if ('transaction date' in header_set and
+	    'transaction description' in header_set and
+	    'amount' in header_set):
+		return 'pnc_activity'
+
+	# Generic — any CSV with date + description + amount.
+	has_date   = any(c in header_set for c in _DATE_ALIASES)
+	has_desc   = any(c in header_set for c in _DESC_ALIASES)
+	has_amount = any(c in header_set for c in _AMOUNT_ALIASES)
 	if has_date and has_desc and has_amount:
 		return 'generic_v1'
 
@@ -87,6 +101,8 @@ def parse_csv(content, format_hint=None, column_map=None):
 
 	if fmt == 'pnc':
 		records = _parse_pnc(header, body)
+	elif fmt == 'pnc_activity':
+		records = _parse_pnc_activity(header, body)
 	elif fmt == 'generic_v1':
 		records = _parse_generic(header, body)
 	elif column_map:
@@ -151,6 +167,36 @@ def _parse_pnc(header, body):
 		wd     = _to_float(r[i_with]) if i_with is not None and i_with < len(r) else 0
 		dp     = _to_float(r[i_dep])  if i_dep  is not None and i_dep  < len(r) else 0
 		amount = wd - dp  # outflow positive, inflow negative
+		out.append({
+			'date':        _normalize_date(date_s),
+			'description': (desc or '').strip(),
+			'amount':      amount,
+		})
+	return out
+
+
+def _parse_pnc_activity(header, body):
+	"""PNC 'Account Activity Export' format.
+
+	Headers: Transaction Date, Transaction Description, Amount, Category, Balance.
+	Amount column is a single signed value:
+	  - Positive (e.g. $238.60)  → outflow (purchase, debit)
+	  - Parens   (e.g. ($500))   → inflow  (deposit, refund, ACH credit)
+
+	We already normalize to "positive = outflow," so the sign comes through
+	correctly: positive stays positive, parens-negative becomes negative.
+	"""
+	header_norm = [(c or '').strip().lower() for c in header]
+	i_date = _find_col(header_norm, 'transaction date', 'date', 'posted date')
+	i_desc = _find_col(header_norm, 'transaction description', 'description', 'memo')
+	i_amt  = _find_col(header_norm, 'amount')
+	out = []
+	for r in body:
+		if not r or all(not (c or '').strip() for c in r):
+			continue
+		date_s = r[i_date] if i_date is not None and i_date < len(r) else ''
+		desc   = r[i_desc] if i_desc is not None and i_desc < len(r) else ''
+		amount = _to_float(r[i_amt]) if i_amt is not None and i_amt < len(r) else 0
 		out.append({
 			'date':        _normalize_date(date_s),
 			'description': (desc or '').strip(),
