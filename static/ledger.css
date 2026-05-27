@@ -257,6 +257,14 @@ body.ledger a:hover { color: var(--lg-brass); }
   margin-top: 8px;
 }
 
+/* Cash-runway card border accent — signals state at a glance even when
+   the user isn't reading the number. Same hairline-rule motif elsewhere
+   in the chart room; only the color changes. */
+.lg-card.runway-healthy    { border-left: 3px solid var(--lg-teal); }
+.lg-card.runway-tight      { border-left: 3px solid var(--lg-brass); }
+.lg-card.runway-underwater { border-left: 3px solid var(--lg-brick); }
+.lg-card.runway-unknown    { border-left: 3px solid var(--lg-rule-strong); }
+
 /* -------- tables (debts, transactions, history) -------- */
 .lg-table {
   width: 100%;

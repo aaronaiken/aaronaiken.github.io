@@ -56,8 +56,8 @@
       </div>
     </div>
 
-    {# cash runway card #}
-    <div class="lg-card">
+    {# cash runway card — left-border accent reflects runway_status #}
+    <div class="lg-card runway-{{ runway.runway_status }}">
       <h2 class="lg-card-title">Cash Runway</h2>
       {% if runway.checking_balance is none %}
         <div class="lg-empty" style="padding:18px 0; text-align:left;">
