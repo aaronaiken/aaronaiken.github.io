@@ -95,7 +95,8 @@
             <td>{{ t.description }}</td>
             <td class="num">
               {% if t.amount > 0 %}<span>${{ '{:,.2f}'.format(t.amount) }}</span>
-              {% else %}<span class="lg-dim">−${{ '{:,.2f}'.format(-t.amount) }}</span>
+              {% elif t.amount < 0 %}<span class="lg-pos">+${{ '{:,.2f}'.format(-t.amount) }}</span>
+              {% else %}<span class="lg-dim">$0.00</span>
               {% endif %}
             </td>
             <td>
