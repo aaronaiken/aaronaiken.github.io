@@ -245,30 +245,85 @@
     refreshBulkStrip();
   });
 
-  // ---- filter pills ----
+  // ---- unified filter state ----
+  // Filters compose: search + category + pill + (kb-mode-implicit-uncategorized).
+  const state = { search: '', category: '', pill: 'all' };
+
+  function applyAllFilters() {
+    const q = state.search.trim().toLowerCase();
+    $$('.lh-row').forEach(r => {
+      const cells = r.children;
+      const desc = (cells[2]?.textContent || '').toLowerCase();
+      const cat  = r.dataset.category;
+      const rec  = r.dataset.recurring === '1';
+      let show = true;
+      if (q && !desc.includes(q)) show = false;
+      if (state.category && cat !== state.category) show = false;
+      if (state.pill === 'uncategorized' && cat !== 'Uncategorized') show = false;
+      else if (state.pill === 'recurring' && !rec) show = false;
+      r.classList.toggle('lh-hidden', !show);
+    });
+  }
+  // Backwards-compat shim for callers that still use applyFilter(fn).
   function applyFilter(predicate) {
     $$('.lh-row').forEach(r => {
       r.classList.toggle('lh-hidden', !predicate(r));
     });
   }
-  $('#lh-filter-uncategorized').addEventListener('click', () =>
-    applyFilter(r => r.dataset.category === 'Uncategorized')
-  );
-  $('#lh-filter-recurring').addEventListener('click', () =>
-    applyFilter(r => r.dataset.recurring === '1')
-  );
-  $('#lh-filter-all').addEventListener('click', () =>
-    applyFilter(() => true)
-  );
+
+  // Search input
+  const searchInput = $('#lh-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      state.search = searchInput.value;
+      applyAllFilters();
+    });
+  }
+  // Category dropdown
+  const catFilter = $('#lh-category-filter');
+  if (catFilter) {
+    catFilter.addEventListener('change', () => {
+      state.category = catFilter.value;
+      applyAllFilters();
+    });
+  }
+  // Pill buttons
+  $('#lh-filter-uncategorized').addEventListener('click', () => {
+    state.pill = 'uncategorized'; applyAllFilters();
+  });
+  $('#lh-filter-recurring').addEventListener('click', () => {
+    state.pill = 'recurring'; applyAllFilters();
+  });
+  $('#lh-filter-all').addEventListener('click', () => {
+    state.pill = 'all'; state.search = ''; state.category = '';
+    if (searchInput) searchInput.value = '';
+    if (catFilter)   catFilter.value   = '';
+    applyAllFilters();
+  });
+
+  // Hydrate from URL params (deep-link from results page).
+  (function hydrateFromUrl() {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const q = p.get('q'); const c = p.get('cat');
+      if (q && searchInput) { searchInput.value = q; state.search = q; }
+      if (c && catFilter)   { catFilter.value   = c; state.category = c; }
+      if (q || c) applyAllFilters();
+    } catch (e) { /* no-op */ }
+  })();
 
   // ---- keyboard mode ----
   const kbBtn = $('#lh-keyboard-mode');
   let kbActive = false;
   let kbIndex = 0;
 
+  let kbPriorState = null;
   function enterKbMode() {
-    // Filter to uncategorized, sort by amount desc by reordering DOM.
-    applyFilter(r => r.dataset.category === 'Uncategorized');
+    // Snapshot current state so we can restore on exit.
+    kbPriorState = { ...state };
+    state.pill = 'uncategorized';
+    applyAllFilters();
+    // Sort visible (uncategorized) rows by amount desc within the DOM.
     const rows = visibleRows().sort((a, b) => {
       const aAmt = parseFloat(a.children[3].textContent.replace(/[^\d.-]/g, '')) || 0;
       const bAmt = parseFloat(b.children[3].textContent.replace(/[^\d.-]/g, '')) || 0;
@@ -284,7 +339,11 @@
   function exitKbMode() {
     kbActive = false;
     $$('.lh-row').forEach(r => r.classList.remove('lh-keyboard-focus'));
-    applyFilter(() => true);
+    if (kbPriorState) {
+      Object.assign(state, kbPriorState);
+      kbPriorState = null;
+    }
+    applyAllFilters();
     kbBtn.textContent = 'Keyboard mode →';
   }
   function focusRow() {
@@ -340,7 +399,7 @@
       kbIndex += 1;
       // Brief delay then re-filter to drop the just-categorized row
       setTimeout(() => {
-        applyFilter(r => r.dataset.category === 'Uncategorized');
+        applyAllFilters();
         focusRow();
       }, 80);
     }

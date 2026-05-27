@@ -133,7 +133,11 @@
         <tbody>
         {% for r in breakdown %}
           <tr {% if r.is_excluded %}class="kill-row"{% endif %}>
-            <td>{{ r.category }}{% if r.is_excluded %} <span class="lg-dim" style="font-size:0.74rem;">(excluded from leak)</span>{% endif %}</td>
+            <td>
+              <a href="/ledger/leak-hunt/{{ imp.id }}/review?cat={{ r.category | urlencode }}"
+                 title="Drill into {{ r.category }} transactions">{{ r.category }}</a>
+              {% if r.is_excluded %} <span class="lg-dim" style="font-size:0.74rem;">(excluded from leak)</span>{% endif %}
+            </td>
             <td class="num">${{ '{:,.2f}'.format(r.total) }}</td>
             <td class="num col-hide-sm lg-dim">{% if r.is_excluded %}—{% else %}{{ '{:.1f}'.format(r.percent_of_outflow) }}%{% endif %}</td>
             <td class="num col-hide-sm">{{ r.count }}</td>
@@ -261,8 +265,14 @@
           {% for t in biggest %}
             <tr>
               <td class="lg-mono" style="font-size:0.82rem;">{{ t.tx_date }}</td>
-              <td>{{ t.description }}</td>
-              <td class="lg-dim">{{ t.category }}</td>
+              <td>
+                <a href="/ledger/leak-hunt/{{ imp.id }}/review?q={{ t.description | urlencode }}"
+                   title="Find this transaction in review">{{ t.description }}</a>
+              </td>
+              <td class="lg-dim">
+                <a href="/ledger/leak-hunt/{{ imp.id }}/review?cat={{ t.category | urlencode }}"
+                   title="Drill into {{ t.category }}">{{ t.category }}</a>
+              </td>
               <td class="num">${{ '{:,.2f}'.format(t.amount) }}</td>
             </tr>
           {% endfor %}

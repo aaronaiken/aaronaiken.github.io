@@ -49,14 +49,29 @@
     </div>
   </div>
 
-  <div class="lg-section-label" style="display:flex; justify-content:space-between; align-items:baseline;">
+  <div class="lg-section-label" style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:10px;">
     <span>// Transactions</span>
-    <span class="lg-btn-row">
+    <span class="lg-btn-row" style="flex-wrap:wrap;">
       <button type="button" class="lg-btn ghost sm" id="lh-filter-uncategorized">Uncategorized only</button>
       <button type="button" class="lg-btn ghost sm" id="lh-filter-recurring">Recurring only</button>
       <button type="button" class="lg-btn ghost sm" id="lh-filter-all">Show all</button>
       <button type="button" class="lg-btn outline sm" id="lh-keyboard-mode">Keyboard mode →</button>
     </span>
+  </div>
+
+  {# Search + category filter — compose with pills above. #}
+  <div class="lg-card" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:12px 16px;">
+    <span class="lg-label" style="margin:0;">Filter</span>
+    <input type="search" id="lh-search" class="lg-input"
+           placeholder="search description…"
+           style="max-width:300px; flex:1; min-width:180px;">
+    <select id="lh-category-filter" class="lg-select" style="max-width:220px;">
+      <option value="">All categories</option>
+      {% for c in categories %}
+        <option value="{{ c }}">{{ c }}</option>
+      {% endfor %}
+    </select>
+    <span class="lg-note" style="font-size:0.78rem;">filters stack with pills above</span>
   </div>
 
   <div class="lg-card" style="padding:0;">
