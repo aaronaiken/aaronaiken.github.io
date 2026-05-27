@@ -397,9 +397,17 @@ def category_breakdown(transactions):
 
 
 def biggest_transactions(transactions, n=10):
-	"""Top N transactions by absolute outflow amount."""
-	outs = [t for t in transactions if (t.get('amount') if isinstance(t, dict) else t['amount']) > 0]
-	outs.sort(key=lambda t: (t.get('amount') if isinstance(t, dict) else t['amount']) or 0, reverse=True)
+	"""Top N transactions by absolute outflow amount.
+
+	Excludes categories in EXCLUDED_FROM_LEAK (debt payments, income,
+	internal transfers) — those would dominate the list without being
+	actionable "where's my money going" insights.
+	"""
+	def _amt(t): return (t.get('amount') if isinstance(t, dict) else t['amount']) or 0
+	def _cat(t): return (t.get('category') if isinstance(t, dict) else t['category']) or 'Uncategorized'
+	outs = [t for t in transactions
+	        if _amt(t) > 0 and _cat(t) not in EXCLUDED_FROM_LEAK]
+	outs.sort(key=_amt, reverse=True)
 	return outs[:n]
 
 
@@ -431,9 +439,14 @@ def recurring_charges_summary(transactions):
 		amt = (t.get('amount') if isinstance(t, dict) else t['amount']) or 0
 		if amt <= 0:
 			continue
+		cat  = (t.get('category') if isinstance(t, dict) else t['category']) or 'Uncategorized'
+		# Skip debt payments / income / internal transfers — they're
+		# tracked elsewhere in The Ledger and clutter the actionable
+		# "what could I cancel" view.
+		if cat in EXCLUDED_FROM_LEAK:
+			continue
 		desc = (t.get('description') if isinstance(t, dict) else t['description']) or ''
 		date = (t.get('tx_date') if isinstance(t, dict) else t['tx_date']) or ''
-		cat  = (t.get('category') if isinstance(t, dict) else t['category']) or 'Uncategorized'
 		key = desc.strip().upper()
 		g = groups[key]
 		g['count'] += 1

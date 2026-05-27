@@ -1683,6 +1683,21 @@ def leak_hunt_detail(leak_id):
 	biggest = LH.biggest_transactions(tx_dicts, n=10)
 	recurring = LH.recurring_charges_summary(tx_dicts)
 
+	# Mark each recurring item with whether its cleaned_name is already
+	# in recurring_expenses — drives the "✓ In Bills" inline state so the
+	# user can see at a glance what's already covered.
+	existing_bills = {r['name'].strip().lower(): r['active'] for r in conn.execute(
+		"SELECT name, active FROM recurring_expenses"
+	).fetchall()}
+	for r in recurring:
+		key = (r.get('cleaned_name') or '').strip().lower()
+		if not key:
+			r['in_bills'] = False
+			r['in_bills_inactive'] = False
+			continue
+		r['in_bills'] = key in existing_bills and bool(existing_bills[key])
+		r['in_bills_inactive'] = key in existing_bills and not existing_bills[key]
+
 	total_inflow = -sum(t['amount'] for t in txs if t['amount'] < 0)
 
 	# Prior hunt (most recent before this one, alive only)
@@ -1745,13 +1760,18 @@ def leak_hunt_add_recurring(leak_id):
 	day    = _form_int('day_of_month', 1) or 1
 	cat    = (request.form.get('category', '') or '').strip() or None
 
+	is_fetch = request.headers.get('X-Requested-With') == 'fetch'
+
+	def _resp(ok, msg, status='ok'):
+		if is_fetch:
+			return jsonify({'ok': ok, 'message': msg, 'name': name})
+		flash(msg, status)
+		return redirect(url_for('ledger.leak_hunt_detail', leak_id=leak_id) + '#recurring')
+
 	if not name or amount <= 0:
-		flash('Need a name and a positive amount.', 'error')
-		return redirect(url_for('ledger.leak_hunt_detail', leak_id=leak_id))
+		return _resp(False, 'Need a name and a positive amount.', 'error')
 
 	conn = get_ledger_db()
-	# Idempotent: skip if a recurring row with the same name (case-insensitive)
-	# already exists and is active. If it exists but inactive, reactivate.
 	existing = conn.execute(
 		"SELECT id, active FROM recurring_expenses WHERE lower(name) = lower(?)",
 		(name,)
@@ -1764,11 +1784,9 @@ def leak_hunt_add_recurring(leak_id):
 				(now, existing['id']))
 			conn.commit()
 			conn.close()
-			flash(f'{name} reactivated in recurring bills.', 'ok')
-		else:
-			conn.close()
-			flash(f'{name} is already in your recurring bills.', 'error')
-		return redirect(url_for('ledger.leak_hunt_detail', leak_id=leak_id))
+			return _resp(True, f'{name} reactivated in recurring bills.')
+		conn.close()
+		return _resp(True, f'{name} is already in your recurring bills.')
 
 	conn.execute("""
 		INSERT INTO recurring_expenses (
@@ -1777,8 +1795,7 @@ def leak_hunt_add_recurring(leak_id):
 	""", (name, amount, day, cat, 'Added from leak hunt', now, now))
 	conn.commit()
 	conn.close()
-	flash(f'Added {name} (${amount:,.2f}/mo) to recurring bills.', 'ok')
-	return redirect(url_for('ledger.leak_hunt_detail', leak_id=leak_id) + '#recurring')
+	return _resp(True, f'Added {name} (${amount:,.2f}/mo) to recurring bills.')
 
 
 @ledger_bp.route('/leak-hunt/rules')

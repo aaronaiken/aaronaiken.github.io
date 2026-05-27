@@ -151,9 +151,36 @@
     <div class="lg-card" style="border-left: 3px solid var(--lg-teal);">
       <p class="lg-note">
         Highest-leverage section — each one canceled is monthly savings forever.
-        Use <strong>+ Add to bills</strong> to drop a charge into <a href="/ledger/recurring/">Recurring expenses</a>
-        so the cash-runway card stops missing it. Add now → cancel later if you decide to.
+        <strong>+ Add to bills</strong> drops a charge into <a href="/ledger/recurring/">Recurring expenses</a>
+        so the cash-runway card stops missing it. <strong>× Cancel</strong> marks for cancellation
+        and adds to the freed-money tally below.
       </p>
+
+      {# Cancel tally strip — updates as user clicks × Cancel. Hidden until first click. #}
+      <div id="lh-cancel-tally" style="display:none; margin: 10px 0 18px;
+           padding: 12px 16px; border-radius: var(--lg-radius);
+           background: rgba(108, 157, 157, 0.10); border: 1px solid var(--lg-teal);
+           display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; gap:14px; flex-wrap:wrap;">
+          <div>
+            <span class="lg-label" style="margin:0;">Flagged to cancel</span>
+            <span class="lg-mid-number" style="display:inline; margin-left:8px;">
+              <span class="lg-pos" id="lh-cancel-monthly">$0.00</span><span class="lg-note">/mo</span>
+            </span>
+            <span class="lg-note" style="margin-left:8px;">·
+              <span class="lg-pos" id="lh-cancel-yearly">$0.00</span>/yr saved
+            </span>
+            <span class="lg-note" style="margin-left:8px;">·
+              <span id="lh-cancel-count">0</span> item(s)
+            </span>
+          </div>
+          <div class="lg-note" style="max-width:360px; text-align:right;">
+            Apply this to your debt attack by bumping the primary target's
+            <a href="/ledger/accounts/">attack_allocation</a> by the monthly amount.
+          </div>
+        </div>
+      </div>
+
       <div class="lg-table-wrap">
         <table class="lg-table">
           <thead><tr>
@@ -165,7 +192,7 @@
           </tr></thead>
           <tbody>
           {% for r in recurring %}
-            <tr>
+            <tr data-recurring-row data-merchant="{{ r.cleaned_name }}" data-monthly="{{ '%.2f' % r.avg_amount }}">
               <td>{{ r.description }}
                 <div class="lg-note" style="font-size:0.75rem;">→ <span class="lg-mono">{{ r.cleaned_name }}</span></div>
               </td>
@@ -173,13 +200,33 @@
               <td class="num col-hide-sm">${{ '{:,.2f}'.format(r.total) }}</td>
               <td class="num col-hide-sm lg-dim">{{ r.count }}</td>
               <td style="white-space:nowrap;">
-                <form method="POST" action="/ledger/leak-hunt/{{ imp.id }}/recurring/add" style="display:inline;">
-                  <input type="hidden" name="name" value="{{ r.cleaned_name }}">
-                  <input type="hidden" name="amount" value="{{ '%.2f' % r.avg_amount }}">
-                  <input type="hidden" name="day_of_month" value="{{ r.last_day_of_month }}">
-                  <input type="hidden" name="category" value="{{ r.suggested_category or '' }}">
-                  <button type="submit" class="lg-btn outline sm">+ Add to bills</button>
-                </form>
+                <span class="lh-bill-btn-wrap" style="display:inline-block; margin-right:4px;">
+                  {% if r.in_bills %}
+                    <span class="lg-btn sm" style="border:1px solid var(--lg-teal); color:var(--lg-teal); cursor:default; padding:6px 12px;">✓ In Bills</span>
+                  {% elif r.in_bills_inactive %}
+                    <form class="lh-add-bill-form" method="POST" action="/ledger/leak-hunt/{{ imp.id }}/recurring/add" style="display:inline;">
+                      <input type="hidden" name="name" value="{{ r.cleaned_name }}">
+                      <input type="hidden" name="amount" value="{{ '%.2f' % r.avg_amount }}">
+                      <input type="hidden" name="day_of_month" value="{{ r.last_day_of_month }}">
+                      <input type="hidden" name="category" value="{{ r.suggested_category or '' }}">
+                      <button type="submit" class="lg-btn outline sm" title="Currently inactive in your recurring bills">Reactivate bill</button>
+                    </form>
+                  {% else %}
+                    <form class="lh-add-bill-form" method="POST" action="/ledger/leak-hunt/{{ imp.id }}/recurring/add" style="display:inline;">
+                      <input type="hidden" name="name" value="{{ r.cleaned_name }}">
+                      <input type="hidden" name="amount" value="{{ '%.2f' % r.avg_amount }}">
+                      <input type="hidden" name="day_of_month" value="{{ r.last_day_of_month }}">
+                      <input type="hidden" name="category" value="{{ r.suggested_category or '' }}">
+                      <button type="submit" class="lg-btn outline sm">+ Add to bills</button>
+                    </form>
+                  {% endif %}
+                </span>
+                <button type="button" class="lh-cancel-toggle lg-btn ghost sm"
+                        data-merchant="{{ r.cleaned_name }}"
+                        data-monthly="{{ '%.2f' % r.avg_amount }}"
+                        style="color: var(--lg-text-muted);">
+                  × Cancel
+                </button>
               </td>
             </tr>
           {% endfor %}
@@ -193,6 +240,11 @@
         </p>
       {% endif %}
     </div>
+
+    <script>
+      window.LH_HUNT_ID = {{ imp.id }};
+    </script>
+    <script src="/static/ledger_leak_hunt_results.js"></script>
   {% endif %}
 
   {# ===== Biggest surprises ===== #}
