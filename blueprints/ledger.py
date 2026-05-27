@@ -1510,7 +1510,8 @@ def leak_hunt_tx_update(leak_id, tx_id):
 
 	# Optionally also create a rule from this transaction.
 	make_rule = request.form.get('make_rule') in ('1', 'true', 'on')
-	rule_created = None
+	rule_created  = None
+	retro_updates = []  # list of {id, category} for matching rows updated in-place
 	if make_rule and new_cat and new_cat != 'Uncategorized':
 		desc = (row['description'] or '').strip()
 		if desc:
@@ -1528,10 +1529,36 @@ def leak_hunt_tx_update(leak_id, tx_id):
 				""", (desc, new_cat, new_subcat or None, now, now))
 				rule_created = desc
 
+			# Apply the new rule retroactively to other UNCATEGORIZED rows
+			# in the same hunt whose description contains the match string.
+			# Skip rows the user has already manually set — those reflect
+			# explicit choices we shouldn't overwrite.
+			match_rows = conn.execute("""
+				SELECT id FROM leak_transactions
+				WHERE leak_import_id = ?
+				  AND category = 'Uncategorized'
+				  AND manually_set = 0
+				  AND id != ?
+				  AND instr(lower(description), lower(?)) > 0
+			""", (row['leak_import_id'], tx_id, desc)).fetchall()
+			retro_ids = [r['id'] for r in match_rows]
+			if retro_ids:
+				placeholders = ','.join('?' for _ in retro_ids)
+				conn.execute(f"""
+					UPDATE leak_transactions
+					SET category = ?, subcategory = ?, manually_set = 0
+					WHERE id IN ({placeholders})
+				""", [new_cat, new_subcat or None] + retro_ids)
+				retro_updates = [{'id': i, 'category': new_cat} for i in retro_ids]
+
 	conn.commit()
 	conn.close()
 	if request.headers.get('X-Requested-With') == 'fetch':
-		return jsonify({'ok': True, 'rule_created': rule_created})
+		return jsonify({
+			'ok':            True,
+			'rule_created':  rule_created,
+			'retro_updates': retro_updates,
+		})
 	return redirect(url_for('ledger.leak_hunt_review', leak_id=leak_id))
 
 

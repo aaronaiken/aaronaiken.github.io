@@ -59,10 +59,16 @@
           headers: {'X-Requested-With': 'fetch'},
         });
         const data = await res.json();
+        applyRetroUpdates(data.retro_updates || []);
+        const n = (data.retro_updates || []).length;
         if (data.rule_created) {
-          flash(`Rule created: future "${data.rule_created}" → ${sel.value}`);
+          flash(n > 0
+            ? `Rule created. Auto-applied to ${n} matching row${n>1?'s':''} in this hunt.`
+            : `Rule created: future "${data.rule_created}" → ${sel.value}`);
         } else {
-          flash(`Rule already exists for that description.`);
+          flash(n > 0
+            ? `Rule already existed — applied to ${n} matching row${n>1?'s':''} here.`
+            : `Rule already exists for that description.`);
         }
       } catch (err) {
         console.error(err);
@@ -95,13 +101,35 @@
       sel.closest('tr').dataset.category = newCat;
       sel.dataset.original = newCat;
       refreshRowFlags();
+      applyRetroUpdates(data.retro_updates || []);
+      const n = (data.retro_updates || []).length;
       if (data.rule_created) {
-        flash(`Rule created: "${data.rule_created}" → ${newCat}`);
+        flash(n > 0
+          ? `Rule created — also applied to ${n} matching row${n>1?'s':''} in this hunt.`
+          : `Rule created: "${data.rule_created}" → ${newCat}`);
       }
     } catch (err) {
       console.error(err);
     }
   });
+
+  function applyRetroUpdates(updates) {
+    updates.forEach(u => {
+      const tr = $$('.lh-row').find(r => parseInt(r.dataset.id, 10) === u.id);
+      if (!tr) return;
+      const s = tr.querySelector('.lh-cat-select');
+      if (s) {
+        s.value = u.category;
+        s.dataset.original = u.category;
+        // Brief brass flash so the user sees what just changed
+        tr.style.transition = 'background-color 0.6s';
+        tr.style.backgroundColor = 'rgba(176,141,87,0.18)';
+        setTimeout(() => { tr.style.backgroundColor = ''; }, 900);
+      }
+      tr.dataset.category = u.category;
+    });
+    refreshRowFlags();
+  }
 
   // ---- recurring star toggle ----
   tbody.addEventListener('click', async (e) => {
