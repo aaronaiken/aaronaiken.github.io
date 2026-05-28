@@ -275,100 +275,18 @@ body.tools-page::after { content: ''; position: fixed; inset: 0; background: rad
         />
       </div>
 
-      <div class="sub__checks-wrap">
-        <p class="sub__section-label">// Channels — pick what you want to hear about</p>
-        <div class="sub__checks-grid">
+      <!-- One signal. One list. No per-tool channels — when something
+           ships, you get a heads-up regardless of which tool it touches.
+           The form still POSTs tools=['signal'] to keep the Dispatch
+           backend's existing array shape stable during/after migration. -->
+      <input type="hidden" name="tools" value="signal" id="sub-tools" />
 
-          <!-- General — full width, top -->
-          <label class="sub__check-label sub__check-label--general">
-            <input type="checkbox" name="tools" value="general" checked />
-            <div class="sub__check-body">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span class="sub__check-icon">📡</span>
-                <div class="sub__check-box">✓</div>
-                <span class="sub__check-name">General Tool Updates</span>
-              </div>
-              <span class="sub__check-sub">Anything new across the workshop — new tools, big releases, experiments.</span>
-            </div>
-          </label>
-
-          <!-- Audio Lab -->
-          <label class="sub__check-label">
-            <input type="checkbox" name="tools" value="audio-lab" />
-            <div class="sub__check-body">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span class="sub__check-icon">🔊</span>
-                <div class="sub__check-box">✓</div>
-                <span class="sub__check-name">Astromech // Audio Lab</span>
-              </div>
-              <span class="sub__check-sub">Synthesizer &amp; sound design tool updates.</span>
-            </div>
-          </label>
-
-          <!-- Brew Lab -->
-          <label class="sub__check-label">
-            <input type="checkbox" name="tools" value="brew-lab" />
-            <div class="sub__check-body">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span class="sub__check-icon">☕️</span>
-                <div class="sub__check-box">✓</div>
-                <span class="sub__check-name">Astromech // Brew Lab</span>
-              </div>
-              <span class="sub__check-sub">French press calculator &amp; timer improvements.</span>
-            </div>
-          </label>
-
-          <!-- Cockpit -->
-          <label class="sub__check-label">
-            <input type="checkbox" name="tools" value="cockpit" />
-            <div class="sub__check-body">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span class="sub__check-icon">🛸</span>
-                <div class="sub__check-box">✓</div>
-                <span class="sub__check-name">The Cockpit</span>
-              </div>
-              <span class="sub__check-sub">Status publishing system &amp; pipeline changes.</span>
-            </div>
-          </label>
-          <!-- Dispath -->
-          <label class="sub__check-label">
-            <input type="checkbox" name="tools" value="dispatch" />
-            <div class="sub__check-body">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span class="sub__check-icon">📬</span>
-                <div class="sub__check-box">✓</div>
-                <span class="sub__check-name">The Dispatch</span>
-              </div>
-              <span class="sub__check-sub">Communications system &amp; pipeline changes.</span>
-            </div>
-          </label>
-          <!-- Mission Log -->
-          <label class="sub__check-label">
-            <input type="checkbox" name="tools" value="mission-log" />
-            <div class="sub__check-body">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span class="sub__check-icon">📋</span>
-                <div class="sub__check-box">✓</div>
-                <span class="sub__check-name">Mission Log</span>
-              </div>
-              <span class="sub__check-sub">My personal list of things to do.</span>
-            </div>
-          </label>
-          <!-- Domain Scanner -->
-          <label class="sub__check-label">
-            <input type="checkbox" name="tools" value="domain-scanner" />
-            <div class="sub__check-body">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span class="sub__check-icon">📡</span>
-                <div class="sub__check-box">✓</div>
-                <span class="sub__check-name">Astromech // Domain Scanner</span>
-              </div>
-              <span class="sub__check-sub">Bulk domain availability checker — DNS + RDAP, paste or sweep.</span>
-            </div>
-          </label>
-
-        </div>
-      </div>
+      <p class="sub__section-label" style="margin-top:18px;">// What you'll get</p>
+      <p class="sub__fine-print" style="margin-top:6px; opacity:0.85;">
+        A short note from me when something new ships across the workshop — a new tool, a meaningful update,
+        an experiment worth telling you about. No newsletters, no per-tool channels to manage, no marketing voice.
+        One signal, my actual voice, the actual stuff. Unsubscribe anytime via the link in any email.
+      </p>
 
       <button class="sub__submit" id="sub-btn" onclick="handleSubscribe()">
         ⌇ OPEN CHANNEL
@@ -397,13 +315,8 @@ body.tools-page::after { content: ''; position: fixed; inset: 0; background: rad
         return;
       }
 
-      const checked = [...document.querySelectorAll('input[name="tools"]:checked')]
-        .map(cb => cb.value);
-
-      if (checked.length === 0) {
-        showStatus('err', '⚠ select at least one channel');
-        return;
-      }
+      // One signal — array shape preserved for backend compatibility.
+      const tools = ['signal'];
 
       btn.disabled = true;
       btn.textContent = '⌇ TRANSMITTING...';
@@ -412,7 +325,7 @@ body.tools-page::after { content: ''; position: fixed; inset: 0; background: rad
         const resp = await fetch('https://email.aaronaiken.me/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, tools: checked })
+          body: JSON.stringify({ email, tools })
         });
 
         if (resp.ok) {

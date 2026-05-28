@@ -1103,7 +1103,7 @@ function buildUsage(s, mode, sl) {
 	: 'AstroAudio.' + s.id + '(' + sl.vol.toFixed(2) + ', ' + sl.pitch + ', ' + sl.decay.toFixed(2) + ')';
   const lines = [];
   lines.push('<!-- SETUP: once in _includes/head.html or your layout -->');
-  lines.push('<!-- script src="{{ ' + "'" + '/assets/js/audio.js' + "'" + ' | relative_url }}" -->');
+  {% raw %}lines.push('<!-- script src="{{ \'/assets/js/audio.js\' | relative_url }}" -->');{% endraw %}
   lines.push('');
   lines.push('<!-- Button -->');
   lines.push('<button onclick="' + call + '">' + s.icon + ' ' + s.name + '</button>');

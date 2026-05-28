@@ -32,17 +32,17 @@ The result is one Flask app, three jobs.
 
 The [contact page](/contact/) on this site submits to a `/contact` endpoint on The Dispatch. The app validates the fields, composes an email with a `Reply-To` header set to the sender's address, and forwards it to my inbox. No data is stored. No copy is kept. It arrives like a normal email and I reply like a normal person.
 
-### Tools Signup
+### Signal Signup
 
-The [Signal List](/tools/updates/) page lets visitors subscribe to tool update notifications. They enter an email address and select which tools they want to hear about — Audio Lab, Brew Lab, the Cockpit, or general updates across the workshop.
+The [Signal List](/tools/updates/) page lets visitors subscribe to ship-news from the workshop — one signal, one list. They enter an email address and they're on it. No per-tool channels to pick, no segmentation, no decision tax at signup. When something new ships — a new tool, a meaningful update, an experiment worth sharing — everyone on the list gets the same heads-up.
 
-Submissions hit a `/subscribe` endpoint. The app validates the email, checks the selected channels against an allowed list, and writes the entry to a flat JSON file on the server. If an email re-subscribes, their channel list is merged rather than duplicated. No database. No third party. Just a JSON file I own.
+Submissions hit a `/subscribe` endpoint. The app validates the email and writes the entry to a flat JSON file on the server. Re-subscribes are deduplicated rather than duplicated. No database. No third party. Just a JSON file I own.
 
 ### Newsletter Sender
 
 A private, double-locked `/send` route serves a Markdown composer interface. HTTP Basic Auth is the first lock — the browser prompts for credentials before the page loads. A second send password is required inside the composer before anything goes out.
 
-The composer accepts a subject, a Markdown body, and a channel target — all subscribers, or just the subset subscribed to a specific tool. Hitting Preview renders the Markdown to HTML, wraps it in the email template, and loads it in an iframe showing exactly what recipients will see, along with a recipient count. Hitting Confirm loops through the matching subscribers and sends each one a personalized email with their own unsubscribe link baked into the footer.
+The composer accepts a subject and a Markdown body. Hitting Preview renders the Markdown to HTML, wraps it in the email template, and loads it in an iframe showing exactly what recipients will see, along with a recipient count. Hitting Confirm loops through all subscribers and sends each one a personalized email with their own unsubscribe link baked into the footer.
 
 ---
 
@@ -52,7 +52,7 @@ The composer accepts a subject, a Markdown body, and a channel target — all su
 
 **Email:** Sent via SMTP through Fastmail, using a custom domain address. Standard STARTTLS on port 587. The `smtplib` module from the Python standard library handles everything — no external mail SDK.
 
-**Subscriber storage:** A single JSON file at a fixed path on the server. Each entry contains the subscriber's email address, their selected channels, and created/updated timestamps. Simple enough to read, edit, or back up by hand.
+**Subscriber storage:** A single JSON file at a fixed path on the server. Each entry contains the subscriber's email address and created/updated timestamps. Simple enough to read, edit, or back up by hand. Earlier versions stored per-tool channel selections; that was simplified to a single signal list when the workshop started growing too many tools to manage as separate channels.
 
 **Markdown rendering:** The [Python-Markdown](https://python-markdown.github.io) library converts message body text to HTML before it goes into the email template. The `extra` and `nl2br` extensions are enabled — tables, fenced code blocks, and single line breaks work as expected.
 
