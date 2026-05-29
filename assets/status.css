@@ -217,13 +217,54 @@ body.status-page #side h3 { margin: 0 0 6px; font-size: 1em; }
 #side ul#author-details { margin: 4px 0 0; padding: 0; list-style: none; }
 #side ul#author-details li { margin-bottom: 3px; }
 
-/* ---- LAZY LOAD ---- */
-.older-updates-list .older-status-item {
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
+/* ---- LOAD MORE ---- */
+.st-load-more-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 18px 0 8px;
+  padding: 14px 0;
+  border-top: 1px solid #e1e8ed;
+}
+.st-load-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border: 1px solid #888;
+  background: #f0f0f0;
+  color: #222;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.15s, color 0.15s;
+}
+.st-load-more-btn:hover:not(:disabled) { background: #e5e5e5; }
+.st-load-more-btn:disabled { opacity: 0.55; cursor: progress; }
+.st-load-more-arrow { font-size: 0.9rem; }
+.st-load-more-status {
+  margin: 0;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem;
+  color: #657786;
 }
 
-.older-updates-list .older-status-item.loaded { opacity: 1; }
+/* Terminal view — recolor to match the amber CRT palette */
+body.st-terminal .st-load-more-container { border-top-color: #2d3e4a; }
+body.st-terminal .st-load-more-btn {
+  background: transparent;
+  border-color: #d4880a;
+  color: #f0b040;
+}
+body.st-terminal .st-load-more-btn:hover:not(:disabled) {
+  background: rgba(212, 136, 10, 0.12);
+  color: #ffc870;
+}
+body.st-terminal .st-load-more-status { color: #6e8a96; }
 
 /* ---- FOOTER ---- */
 body.status-page .site-footer { border-top: none; padding: 0; margin-top: 16px; }

@@ -47,13 +47,19 @@
       </div>
 
       <div class="older-updates-container">
-        <ul class="older-updates-list">
-          {% assign sorted_older_updates = site.status_updates | sort: 'date' | reverse %}
-          {% for status in sorted_older_updates %}
+        {% assign sorted_older_updates = site.status_updates | sort: 'date' | reverse %}
+        {% assign total_count = sorted_older_updates.size %}
+        {% comment %}
+          Render the latest 31 items only (forloop.first skips the very newest
+          since it's rendered in .latest-update-container above). That leaves
+          30 items in the list. The rest load on click via /status.json.
+        {% endcomment %}
+        <ul class="older-updates-list" id="olderUpdatesList">
+          {% for status in sorted_older_updates limit: 31 %}
             {% unless forloop.first %}
             <li class="older-status-item">
               <span class="st-terminal-only st-line-prefix">›</span>
-              <p class="content">{{ status.content | markdownify | truncate: 300 }}<a href="{{ status.url }}" target="_blank" class="timestamp-link">{{ status.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a></p>
+              <p class="content">{{ status.content | markdownify | strip_newlines }}<a href="{{ status.url }}" target="_blank" class="timestamp-link">{{ status.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a></p>
               {% if status.source %}
                 <p class="source">via {{ status.source }}</p>
               {% endif %}
@@ -61,7 +67,22 @@
             {% endunless %}
           {% endfor %}
         </ul>
-        <script src="/js/lazy-load-posts.js"></script>
+
+        {% if total_count > 31 %}
+        <div class="st-load-more-container" id="loadMoreContainer"
+             data-total="{{ total_count }}"
+             data-loaded="31">
+          <button class="st-load-more-btn" id="loadMoreBtn" type="button">
+            <span class="st-load-more-label">Load older updates</span>
+            <span class="st-load-more-arrow" aria-hidden="true">↓</span>
+          </button>
+          <p class="st-load-more-status" id="loadMoreStatus">
+            Showing <span id="loadMoreShown">31</span> of {{ total_count }}
+          </p>
+        </div>
+        {% endif %}
+
+        <script src="/js/status-load-more.js"></script>
         <script src="/js/dynamic-timestamp.js"></script>
       </div>
 
