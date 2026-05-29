@@ -76,12 +76,18 @@
             <ul class="cd-meetings-rows">
             {% set ns.current_month = month_label %}
           {% endif %}
-          <li class="cd-meeting-row">
+          <li class="cd-meeting-row cd-meeting-row-status-{{ m.status or 'scheduled' }}">
             <a class="cd-meeting-row-link" href="/command-deck/meetings/{{ m.id }}/">
               <span class="cd-meeting-row-date" data-iso="{{ m.meeting_date }}">{{ m.meeting_date[:16] }}</span>
-              <span class="cd-meeting-row-title">{{ m.title }}</span>
+              <span class="cd-meeting-row-title">
+                {{ m.title }}
+                {% if m.recurrence %}<span class="cd-meeting-row-recurrence" title="Recurs {{ m.recurrence }}">↻ {{ m.recurrence }}</span>{% endif %}
+              </span>
               <span class="cd-meeting-row-project">
                 {% if m.project_title %}{{ m.project_title }}{% else %}<em>standalone</em>{% endif %}
+              </span>
+              <span class="cd-meeting-row-status">
+                <span class="cd-pill meeting-status-{{ m.status or 'scheduled' }}">{{ (m.status or 'scheduled') | replace('_', ' ') }}</span>
               </span>
               <span class="cd-meeting-row-actions">
                 {{ m.action_count }} action{{ '' if m.action_count == 1 else 's' }}

@@ -302,7 +302,8 @@ def time_start():
 	# Phase 5 — meeting_id must point to a meeting on this project
 	if meeting_id:
 		meeting = conn.execute(
-			'SELECT id, project_id FROM meetings WHERE id = ?', (meeting_id,)
+			'SELECT id, project_id, time_category_id FROM meetings WHERE id = ?',
+			(meeting_id,)
 		).fetchone()
 		if not meeting:
 			conn.close()
@@ -313,6 +314,16 @@ def time_start():
 				'error': 'meeting_project_mismatch',
 				'meeting_project_id': meeting['project_id'],
 			}), 400
+		# Category propagation: inherit the meeting's default category if the
+		# caller didn't pick one AND the meeting's category is still active.
+		# Mirrors the task/ticket pattern above.
+		if not time_category_id and meeting['time_category_id']:
+			cat = conn.execute(
+				'SELECT id, is_active FROM time_categories WHERE id = ?',
+				(meeting['time_category_id'],)
+			).fetchone()
+			if cat and cat['is_active']:
+				time_category_id = meeting['time_category_id']
 
 	# Tickets — ticket must exist; if it has a project_id, must match the
 	# entry's project_id. A ticket with NULL project_id can be timed against

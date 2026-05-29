@@ -153,6 +153,14 @@
                   placeholder="(optional)">{% if mode == 'edit' %}{{ entry.notes or '' }}{% endif %}</textarea>
       </label>
 
+      {% if mode == 'new' %}
+        <!-- AUTO-TIMER OPT-IN — only relevant for the START TRIP path -->
+        <label class="cd-mileage-field cd-mileage-timer-toggle" id="startTimerToggle">
+          <input type="checkbox" name="start_timer" id="startTimerCheckbox" value="1" checked>
+          <span>Also start a timer on this project</span>
+        </label>
+      {% endif %}
+
       <!-- ACTIONS -->
       <div class="cd-mileage-form-actions">
         <a class="cd-btn ghost" href="/command-deck/mileage/">CANCEL</a>

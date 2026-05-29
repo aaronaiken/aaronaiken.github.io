@@ -9,16 +9,19 @@ project is private — privacy inherits from the project per spec §1 #10):
   POST  /command-deck/meetings/new               -- create
   POST  /command-deck/meetings/<id>/update       -- per-field patch
   POST  /command-deck/meetings/<id>/delete       -- hard delete (cascades NULL)
+  POST  /command-deck/meetings/<id>/complete     -- mark complete + spawn next on recurrence
   POST  /command-deck/meetings/<id>/action-items/add  -- creates a tasks row
 
 Cascade rules are baked into the schema (migrate_add_meetings.py):
   - project delete  → meetings.project_id          = NULL
   - meeting delete  → tasks.meeting_id             = NULL
   - meeting delete  → time_entries.meeting_id      = NULL
+  - meeting delete  → meetings.recurrence_anchor_id = NULL (chain unlinks)
 
 Notes are markdown source; rendering happens client-side via marked.js
 (same pipeline as note blocks).
 """
+import calendar
 import datetime as _dt
 
 from flask import (
@@ -30,6 +33,10 @@ from helpers.db import et_now, get_db
 
 
 meetings_bp = Blueprint('meetings', __name__)
+
+
+VALID_STATUSES = ('scheduled', 'complete', 'canceled', 'no_show')
+VALID_RECURRENCES = ('weekly', 'biweekly', 'monthly')
 
 
 # ---- Helpers ----
@@ -58,6 +65,71 @@ def _parse_meeting_date(val):
 		return val
 	except (ValueError, TypeError):
 		return None
+
+
+def _shift_iso_for_recurrence(iso_str, recurrence):
+	"""Advance an ISO 8601 datetime forward by one recurrence interval.
+
+	Preserves the original offset/format by parsing → adding → isoformat-ing.
+	For monthly, clamps to the last valid day of the target month (Jan 31 →
+	Feb 28/29, not March 3).
+	"""
+	dt = _dt.datetime.fromisoformat(iso_str)
+	if recurrence == 'weekly':
+		return (dt + _dt.timedelta(days=7)).isoformat()
+	if recurrence == 'biweekly':
+		return (dt + _dt.timedelta(days=14)).isoformat()
+	if recurrence == 'monthly':
+		year = dt.year + (dt.month // 12)
+		month = (dt.month % 12) + 1
+		last_day = calendar.monthrange(year, month)[1]
+		return dt.replace(year=year, month=month, day=min(dt.day, last_day)).isoformat()
+	return iso_str
+
+
+def _spawn_next_in_series(conn, meeting):
+	"""Given a recurring meeting row that was just completed, create the next
+	instance in the series. Caller is responsible for the commit.
+
+	Returns the new meeting id, or None if the next instance already exists
+	(idempotent — repeat complete calls don't double-spawn).
+	"""
+	if not meeting['recurrence']:
+		return None
+	anchor_id = meeting['recurrence_anchor_id'] or meeting['id']
+	next_date = _shift_iso_for_recurrence(meeting['meeting_date'], meeting['recurrence'])
+	# Idempotency: if a later meeting in this anchor chain already exists at
+	# or beyond next_date, don't spawn another one. Compare on exact ISO match
+	# first (the common "already spawned" case), then on any future date in
+	# the chain (covers manual edits to dates).
+	existing = conn.execute('''
+		SELECT id FROM meetings
+		WHERE (recurrence_anchor_id = ? OR id = ?)
+		  AND id != ?
+		  AND meeting_date >= ?
+		ORDER BY meeting_date ASC
+		LIMIT 1
+	''', (anchor_id, anchor_id, meeting['id'], next_date)).fetchone()
+	if existing:
+		return None
+	now = et_now()
+	cur = conn.execute('''
+		INSERT INTO meetings
+			(project_id, title, meeting_date, notes, status, recurrence,
+			 recurrence_anchor_id, time_category_id, created, updated)
+		VALUES (?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?)
+	''', (
+		meeting['project_id'],
+		meeting['title'],
+		next_date,
+		None,  # fresh notes for the new instance — old notes stay on the completed one
+		meeting['recurrence'],
+		anchor_id,
+		meeting['time_category_id'],
+		now,
+		now,
+	))
+	return cur.lastrowid
 
 
 # ---- Index page ----
@@ -89,9 +161,12 @@ def meetings_index():
 		       p.title AS project_title,
 		       p.slug  AS project_slug,
 		       p.is_private AS project_is_private,
+		       tc.name  AS time_category_name,
+		       tc.color AS time_category_color,
 		       (SELECT COUNT(*) FROM tasks WHERE meeting_id = m.id) AS action_count
 		FROM meetings m
-		LEFT JOIN projects p ON m.project_id = p.id
+		LEFT JOIN projects p          ON m.project_id      = p.id
+		LEFT JOIN time_categories tc  ON m.time_category_id = tc.id
 		{where}
 		ORDER BY m.meeting_date DESC, m.id DESC
 	''', args).fetchall()
@@ -126,14 +201,25 @@ def meeting_detail(meeting_id):
 		       p.title AS project_title,
 		       p.slug  AS project_slug,
 		       p.tracking_enabled AS project_tracking_enabled,
-		       p.is_private AS project_is_private
+		       p.is_private AS project_is_private,
+		       tc.name  AS time_category_name,
+		       tc.color AS time_category_color
 		FROM meetings m
-		LEFT JOIN projects p ON m.project_id = p.id
+		LEFT JOIN projects p          ON m.project_id      = p.id
+		LEFT JOIN time_categories tc  ON m.time_category_id = tc.id
 		WHERE m.id = ?
 	''', (meeting_id,)).fetchone()
 	if not meeting:
 		conn.close()
 		return "Meeting not found", 404
+
+	# Active time categories for the dropdown — same source the timer surfaces
+	# use. Archived categories aren't selectable for a new default.
+	time_categories = conn.execute('''
+		SELECT id, name, color FROM time_categories
+		WHERE is_active = 1
+		ORDER BY sort_order ASC, name ASC
+	''').fetchall()
 
 	action_items = conn.execute('''
 		SELECT * FROM tasks
@@ -167,6 +253,7 @@ def meeting_detail(meeting_id):
 		action_items=[dict(t) for t in action_items],
 		projects=[dict(p) for p in projects],
 		lifetime_seconds=lifetime_seconds,
+		time_categories=[dict(c) for c in time_categories],
 	)
 
 
@@ -193,13 +280,27 @@ def meeting_new():
 		project_id = None
 
 	notes = request.form.get('notes')
+
+	recurrence = (request.form.get('recurrence') or '').strip() or None
+	if recurrence and recurrence not in VALID_RECURRENCES:
+		recurrence = None
+
+	time_category_id = request.form.get('time_category_id')
+	try:
+		time_category_id = int(time_category_id) if time_category_id else None
+	except (ValueError, TypeError):
+		time_category_id = None
+
 	now = et_now()
 
 	conn = get_db()
 	cur = conn.execute('''
-		INSERT INTO meetings (project_id, title, meeting_date, notes, created, updated)
-		VALUES (?, ?, ?, ?, ?, ?)
-	''', (project_id, title, meeting_date, notes, now, now))
+		INSERT INTO meetings
+			(project_id, title, meeting_date, notes, status, recurrence,
+			 time_category_id, created, updated)
+		VALUES (?, ?, ?, ?, 'scheduled', ?, ?, ?, ?)
+	''', (project_id, title, meeting_date, notes, recurrence,
+	      time_category_id, now, now))
 	new_id = cur.lastrowid
 	conn.commit()
 	conn.close()
@@ -248,6 +349,42 @@ def meeting_update(meeting_id):
 	if 'notes' in data:
 		updates['notes'] = data.get('notes') or ''
 
+	if 'status' in data:
+		val = (data.get('status') or '').strip() or 'scheduled'
+		if val not in VALID_STATUSES:
+			conn.close()
+			return jsonify({'error': 'invalid_status'}), 400
+		updates['status'] = val
+
+	if 'recurrence' in data:
+		val = data.get('recurrence')
+		if val in (None, '', 'null', 'none'):
+			updates['recurrence'] = None
+		elif val in VALID_RECURRENCES:
+			updates['recurrence'] = val
+		else:
+			conn.close()
+			return jsonify({'error': 'invalid_recurrence'}), 400
+
+	if 'time_category_id' in data:
+		val = data.get('time_category_id')
+		if val in (None, '', 'null'):
+			updates['time_category_id'] = None
+		else:
+			try:
+				cat_id = int(val)
+			except (ValueError, TypeError):
+				conn.close()
+				return jsonify({'error': 'invalid_time_category_id'}), 400
+			cat = conn.execute(
+				'SELECT id FROM time_categories WHERE id = ? AND is_active = 1',
+				(cat_id,)
+			).fetchone()
+			if not cat:
+				conn.close()
+				return jsonify({'error': 'time_category_not_found'}), 404
+			updates['time_category_id'] = cat_id
+
 	if not updates:
 		conn.close()
 		return jsonify({'error': 'no_fields'}), 400
@@ -284,6 +421,40 @@ def meeting_delete(meeting_id):
 	conn.commit()
 	conn.close()
 	return jsonify({'success': True, 'deleted_id': meeting_id})
+
+
+# ---- Mark complete (spawns next on recurrence) ----
+
+
+@meetings_bp.route('/command-deck/meetings/<int:meeting_id>/complete', methods=['POST'])
+def meeting_complete(meeting_id):
+	"""Set status='complete' and, if recurrence is set, spawn the next
+	instance in the series. Response payload includes spawned.id when a new
+	meeting was created so the caller can show "next: <date>" inline."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 403
+	conn = get_db()
+	row = conn.execute('SELECT * FROM meetings WHERE id = ?', (meeting_id,)).fetchone()
+	if not row:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+	now = et_now()
+	conn.execute(
+		'UPDATE meetings SET status = ?, updated = ? WHERE id = ?',
+		('complete', now, meeting_id)
+	)
+	spawned_id = _spawn_next_in_series(conn, row)
+	conn.commit()
+	spawned = None
+	if spawned_id:
+		new_row = conn.execute(
+			'SELECT id, title, meeting_date FROM meetings WHERE id = ?',
+			(spawned_id,)
+		).fetchone()
+		if new_row:
+			spawned = dict(new_row)
+	conn.close()
+	return jsonify({'success': True, 'status': 'complete', 'spawned': spawned})
 
 
 # ---- Action items ----

@@ -3876,7 +3876,7 @@ body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
 }
 .cd-meeting-row-link {
   display: grid;
-  grid-template-columns: 14em 1fr 12em 7em;
+  grid-template-columns: 14em 1fr 10em 8em 7em;
   gap: 1rem;
   padding: 0.55rem 0.4rem;
   align-items: baseline;
@@ -3885,6 +3885,11 @@ body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
   transition: background 0.12s;
 }
 .cd-meeting-row-link:hover { background: rgba(212, 136, 10, 0.05); }
+.cd-meeting-row-status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
 
 .cd-meeting-row-date {
   font-family: var(--cd-font-ui);
@@ -3937,12 +3942,13 @@ body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
     grid-template-areas:
       "date    actions"
       "title   title"
-      "project project";
+      "project status";
     row-gap: 0.2rem;
   }
   .cd-meeting-row-date    { grid-area: date; }
   .cd-meeting-row-title   { grid-area: title; }
   .cd-meeting-row-project { grid-area: project; }
+  .cd-meeting-row-status  { grid-area: status; justify-content: flex-end; }
   .cd-meeting-row-actions { grid-area: actions; }
 }
 
@@ -4503,6 +4509,24 @@ body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
   text-transform: none;
 }
 
+.cd-mileage-timer-toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.4rem 0;
+  color: var(--cd-text-dim);
+  font-family: var(--cd-font-ui);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+.cd-mileage-timer-toggle input[type="checkbox"] {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
 .cd-mileage-form-actions {
   display: flex;
   gap: 0.5rem;
@@ -4956,6 +4980,31 @@ body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
 .cd-pill.urgent.active   { box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.25); }
 button.cd-pill { cursor: pointer; }
 button.cd-pill:hover:not(.active) { filter: brightness(1.15); }
+
+/* Meeting status pills — reuses .cd-pill base shape, distinct color per status */
+.cd-pill.meeting-status-scheduled { background: rgba(212, 136, 10, 0.12); border-color: var(--cd-amber);            color: var(--cd-amber-hi); }
+.cd-pill.meeting-status-complete  { background: rgba(60, 160, 80, 0.14);  border-color: rgba(60, 160, 80, 0.55);    color: rgba(80, 180, 100, 0.95); }
+.cd-pill.meeting-status-canceled  { background: rgba(150, 150, 150, 0.08); border-color: rgba(170, 170, 170, 0.35); color: var(--cd-text-dim); }
+.cd-pill.meeting-status-no_show   { background: rgba(255, 107, 53, 0.14); border-color: rgba(255, 107, 53, 0.6);    color: rgba(255, 130, 80, 0.95); }
+
+/* Index row gets a low-key visual dimming for non-scheduled meetings */
+.cd-meeting-row-status-complete .cd-meeting-row-link,
+.cd-meeting-row-status-canceled .cd-meeting-row-link { opacity: 0.65; }
+.cd-meeting-row-status-canceled .cd-meeting-row-title { text-decoration: line-through; }
+
+/* Inline recurrence marker next to the title */
+.cd-meeting-row-recurrence {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cd-text-dim);
+  border: 1px solid var(--cd-border);
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+}
 
 /* --- Index page --- */
 

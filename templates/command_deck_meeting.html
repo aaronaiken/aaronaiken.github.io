@@ -57,6 +57,10 @@
       <span class="cd-breadcrumb-sep">›</span>
       <span class="cd-breadcrumb-tail">{{ meeting.title }}</span>
       <span class="cd-breadcrumb-actions">
+        <button class="cd-btn primary sm" id="meetingCompleteBtn" type="button"
+                {% if meeting.status == 'complete' %}disabled{% endif %}>
+          {% if meeting.status == 'complete' %}✓ COMPLETE{% else %}MARK COMPLETE{% endif %}
+        </button>
         <button class="cd-btn ghost sm" id="meetingDeleteBtn" type="button">DELETE</button>
       </span>
     </div>
@@ -87,6 +91,41 @@
           {% if meeting.project_slug %}
             <a class="cd-meeting-project-link" href="/command-deck/projects/{{ meeting.project_slug }}/">open project →</a>
           {% endif %}
+        </div>
+
+        <div class="cd-meeting-meta-row">
+          <span class="cd-meeting-meta-label">Status</span>
+          <select class="cd-meeting-status-select" id="meetingStatusSelect">
+            <option value="scheduled" {% if (meeting.status or 'scheduled') == 'scheduled' %}selected{% endif %}>Scheduled</option>
+            <option value="complete"  {% if meeting.status == 'complete'  %}selected{% endif %}>Complete</option>
+            <option value="canceled"  {% if meeting.status == 'canceled'  %}selected{% endif %}>Canceled</option>
+            <option value="no_show"   {% if meeting.status == 'no_show'   %}selected{% endif %}>No show</option>
+          </select>
+          <span class="cd-pill meeting-status-{{ meeting.status or 'scheduled' }}" id="meetingStatusPill">{{ (meeting.status or 'scheduled') | replace('_', ' ') }}</span>
+        </div>
+
+        <div class="cd-meeting-meta-row">
+          <span class="cd-meeting-meta-label">Repeats</span>
+          <select class="cd-meeting-recurrence-select" id="meetingRecurrenceSelect">
+            <option value=""         {% if not meeting.recurrence              %}selected{% endif %}>— one-off —</option>
+            <option value="weekly"   {% if meeting.recurrence == 'weekly'      %}selected{% endif %}>Weekly</option>
+            <option value="biweekly" {% if meeting.recurrence == 'biweekly'    %}selected{% endif %}>Every 2 weeks</option>
+            <option value="monthly"  {% if meeting.recurrence == 'monthly'     %}selected{% endif %}>Monthly</option>
+          </select>
+          {% if meeting.recurrence %}
+            <span class="cd-meeting-meta-note">Next instance auto-creates when marked complete.</span>
+          {% endif %}
+        </div>
+
+        <div class="cd-meeting-meta-row">
+          <span class="cd-meeting-meta-label">Category</span>
+          <select class="cd-meeting-category-select" id="meetingCategorySelect">
+            <option value="">— none —</option>
+            {% for c in time_categories %}
+              <option value="{{ c.id }}" {% if meeting.time_category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+          <span class="cd-meeting-meta-note">Applied to timers started on this meeting.</span>
         </div>
 
         {% if meeting.project_id and meeting.project_tracking_enabled %}
@@ -611,6 +650,80 @@ const MEETING_LIFETIME_SECONDS = {{ lifetime_seconds | tojson }};
     }
     syncTodayTag();
     setInterval(syncTodayTag, 30000);
+  }
+
+  // ---- STATUS / RECURRENCE / CATEGORY inline edit ----
+  function patchMeeting(payload) {
+    return fetch('/command-deck/meetings/' + MEETING_ID + '/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload),
+    }).then(function (r) { return r.json(); });
+  }
+
+  var statusSelect = document.getElementById('meetingStatusSelect');
+  var statusPill = document.getElementById('meetingStatusPill');
+  if (statusSelect) {
+    statusSelect.addEventListener('change', function () {
+      var v = statusSelect.value;
+      patchMeeting({ status: v }).then(function (d) {
+        if (d.success) {
+          // Recolor pill + update text
+          var classes = statusPill.className.split(/\s+/).filter(function (c) {
+            return c.indexOf('meeting-status-') !== 0;
+          });
+          classes.push('meeting-status-' + v);
+          statusPill.className = classes.join(' ');
+          statusPill.textContent = v.replace('_', ' ');
+        }
+      });
+    });
+  }
+
+  var recurrenceSelect = document.getElementById('meetingRecurrenceSelect');
+  if (recurrenceSelect) {
+    recurrenceSelect.addEventListener('change', function () {
+      patchMeeting({ recurrence: recurrenceSelect.value || null }).then(function (d) {
+        if (d.success) window.location.reload();
+      });
+    });
+  }
+
+  var categorySelect = document.getElementById('meetingCategorySelect');
+  if (categorySelect) {
+    categorySelect.addEventListener('change', function () {
+      patchMeeting({ time_category_id: categorySelect.value || null });
+    });
+  }
+
+  // ---- MARK COMPLETE ----
+  var completeBtn = document.getElementById('meetingCompleteBtn');
+  if (completeBtn) {
+    completeBtn.addEventListener('click', function () {
+      if (completeBtn.disabled) return;
+      completeBtn.disabled = true;
+      fetch('/command-deck/meetings/' + MEETING_ID + '/complete', {
+        method: 'POST',
+        credentials: 'same-origin',
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.success) {
+          alert(d.error || 'Could not mark complete.');
+          completeBtn.disabled = false;
+          return;
+        }
+        if (d.spawned && d.spawned.id) {
+          var go = confirm('Marked complete. Next instance scheduled for ' +
+            new Date(d.spawned.meeting_date).toLocaleString() +
+            '.\n\nOpen the next one?');
+          if (go) {
+            window.location.href = '/command-deck/meetings/' + d.spawned.id + '/';
+            return;
+          }
+        }
+        window.location.reload();
+      });
+    });
   }
 })();
 </script>

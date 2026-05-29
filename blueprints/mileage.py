@@ -40,6 +40,98 @@ from helpers.db import et_now, get_db
 
 PRIVATE_PROJECTS_PIN = os.environ.get('PRIVATE_PROJECTS_PIN', '')
 
+# Mirror of blueprints.time_tracking._TRACKABLE_TYPES / _UTC_FORMAT.
+# Kept inline because time_tracking.py doesn't expose them and importing the
+# blueprint module would create a circular path on app startup.
+_TRACKABLE_TYPES = ('work_subproject', 'personal')
+_UTC_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+
+
+def _utc_now_iso():
+	return datetime.now(pytz.UTC).strftime(_UTC_FORMAT)
+
+
+def _autostart_trip_timer(conn, trip_row, description):
+	"""Try to start a time_entries row attached to this trip's project.
+
+	Returns the new time_entry_id, or None if we skipped (no project,
+	project not trackable / archived, or there's already an active timer
+	on this project — in that last case the existing timer is the source of
+	truth and we don't double-up).
+
+	Caller is responsible for committing.
+	"""
+	project_id = trip_row['project_id']
+	if not project_id:
+		return None
+	project = conn.execute(
+		'SELECT id, project_type, archived_at FROM projects WHERE id = ?',
+		(project_id,)
+	).fetchone()
+	if not project:
+		return None
+	if project['project_type'] not in _TRACKABLE_TYPES:
+		return None
+	if project['archived_at']:
+		return None
+	# Concurrent-timer check: if there's already a running entry on this
+	# project, leave it alone — Aaron is probably already timing the work and
+	# this trip is part of it.
+	existing = conn.execute(
+		'SELECT id FROM time_entries WHERE project_id = ? AND ended_at IS NULL',
+		(project_id,)
+	).fetchone()
+	if existing:
+		return None
+	now = _utc_now_iso()
+	cur = conn.execute('''
+		INSERT INTO time_entries
+			(project_id, description, started_at, created, updated)
+		VALUES (?, ?, ?, ?, ?)
+	''', (project_id, description or '', now, now, now))
+	return cur.lastrowid
+
+
+def _autostop_trip_timer(conn, time_entry_id):
+	"""Stop the running time_entries row linked to a trip. No-op if the
+	entry was already stopped or never existed. Caller commits."""
+	row = conn.execute(
+		'SELECT id, started_at, ended_at FROM time_entries WHERE id = ?',
+		(time_entry_id,)
+	).fetchone()
+	if not row or row['ended_at']:
+		return False
+	try:
+		started = datetime.strptime(row['started_at'], _UTC_FORMAT)
+		started = started.replace(tzinfo=pytz.UTC)
+	except (ValueError, TypeError):
+		started = None
+	now_dt = datetime.now(pytz.UTC)
+	now_iso = now_dt.strftime(_UTC_FORMAT)
+	duration = int((now_dt - started).total_seconds()) if started else 0
+	conn.execute('''
+		UPDATE time_entries
+		SET ended_at = ?, duration_seconds = ?, updated = ?
+		WHERE id = ?
+	''', (now_iso, max(0, duration), now_iso, time_entry_id))
+	return True
+
+
+def _trip_timer_description(data, project_title=None):
+	"""Pick the best description for an auto-started trip timer."""
+	desc = (data.get('description') or '').strip()
+	if desc:
+		return desc
+	frm = (data.get('from_location') or '').strip()
+	to  = (data.get('to_location') or '').strip()
+	if frm and to:
+		return f'Drive: {frm} → {to}'
+	if to:
+		return f'Drive to {to}'
+	if project_title:
+		return f'Drive — {project_title}'
+	return 'Drive'
+
 
 mileage_bp = Blueprint('mileage', __name__)
 
@@ -365,6 +457,29 @@ def mileage_new():
 		now, now,
 	))
 	new_id = cur.lastrowid
+
+	# Auto-start a linked time_entries row when this is a "START TRIP" submit
+	# and the user kept the "Also start a timer" checkbox enabled. Skipped
+	# silently when the project isn't trackable, is archived, or already has
+	# an active timer — see _autostart_trip_timer for the full guard list.
+	if start_only and _to_bool(data.get('start_timer')) and project_id:
+		row_for_timer = conn.execute(
+			'SELECT id, project_id FROM mileage_entries WHERE id = ?',
+			(new_id,)
+		).fetchone()
+		project_row = conn.execute(
+			'SELECT title FROM projects WHERE id = ?', (project_id,)
+		).fetchone()
+		timer_id = _autostart_trip_timer(
+			conn, row_for_timer,
+			_trip_timer_description(data, project_row['title'] if project_row else None),
+		)
+		if timer_id:
+			conn.execute(
+				'UPDATE mileage_entries SET time_entry_id = ?, updated = ? WHERE id = ?',
+				(timer_id, et_now(), new_id),
+			)
+
 	conn.commit()
 	row = conn.execute('''
 		SELECT me.*, p.title AS project_title, p.slug AS project_slug
@@ -478,6 +593,16 @@ def mileage_update(entry_id):
 		f'UPDATE mileage_entries SET {set_sql} WHERE id = ?',
 		list(updates.values()) + [entry_id],
 	)
+
+	# Finalizing the trip stops the linked timer. Trigger: odometer_end goes
+	# from NULL → non-NULL on this patch AND the trip has a linked time_entry.
+	# Idempotent — _autostop_trip_timer no-ops if the entry was already stopped.
+	prior_end = row['odometer_end']
+	new_end = updates.get('odometer_end', prior_end)
+	if (prior_end is None and new_end is not None
+	        and row['time_entry_id']):
+		_autostop_trip_timer(conn, row['time_entry_id'])
+
 	conn.commit()
 	row = conn.execute('''
 		SELECT me.*, p.title AS project_title, p.slug AS project_slug
