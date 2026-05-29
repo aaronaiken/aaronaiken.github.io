@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-05-29 09:43:53 -0400
+layout: status_update
+author: aaron
+source: web
+---
+🍿 Last night at the movie theater with Mozzie, we both enjoyed *The Mandalorian & Grogu*.
+
+![Status Image](https://cargo.aaronaiken.me/status/20260529094353.jpg)
