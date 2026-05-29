@@ -1,6 +1,13 @@
 {
   "tasks": [
     {
+      "id": "1780058314",
+      "title": "The Long Way",
+      "status": "open",
+      "created": "2026-05-29T08:38:34.563802-04:00",
+      "completed": null
+    },
+    {
       "id": "1780058268",
       "title": "Endpaper",
       "status": "open",
