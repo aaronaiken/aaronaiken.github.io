@@ -1,6 +1,13 @@
 {
   "tasks": [
     {
+      "id": "1780413345",
+      "title": "First Thing",
+      "status": "open",
+      "created": "2026-06-02T11:15:45.740957-04:00",
+      "completed": null
+    },
+    {
       "id": "1780280072",
       "title": "My Scratchpad",
       "status": "open",
