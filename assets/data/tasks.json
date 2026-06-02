@@ -1,6 +1,13 @@
 {
   "tasks": [
     {
+      "id": "1780413363",
+      "title": "Made My Day",
+      "status": "open",
+      "created": "2026-06-02T11:16:03.321330-04:00",
+      "completed": null
+    },
+    {
       "id": "1780413345",
       "title": "First Thing",
       "status": "open",
