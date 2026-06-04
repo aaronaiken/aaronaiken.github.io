@@ -48,21 +48,24 @@
 
 		// ---- WEATHER ----
 		function initWeather() {
+			const display = document.getElementById('weather-display');
+			if (!display) return;
+			// Paint cached value immediately so the SHIELDS area isn't blank
+			// while we wait on the network (or while wttr.in is flaky).
+			const cached = localStorage.getItem('cockpit_weather_last');
+			if (cached) display.textContent = '· ' + cached;
 			fetch('/ani/weather')
 				.then(r => r.json())
 				.then(data => {
-					if (data.weather) {
-						const display = document.getElementById('weather-display');
-						// wttr.in format: "City: ☀️ +72°F"
-						// Strip location prefix, keep conditions + temp
-						let w = data.weather;
-						if (w.includes(':')) w = w.split(':').slice(1).join(':').trim();
-						// Remove any stray encoding artifacts
-						w = w.replace(/Â/g, '').replace(/\s+/g, ' ').trim();
-						display.textContent = '· ' + w;
-					}
+					if (!data.weather) return; // keep cached value on null
+					// wttr.in format: "City: ☀️ +72°F"
+					let w = data.weather;
+					if (w.includes(':')) w = w.split(':').slice(1).join(':').trim();
+					w = w.replace(/Â/g, '').replace(/\s+/g, ' ').trim();
+					display.textContent = '· ' + w;
+					localStorage.setItem('cockpit_weather_last', w);
 				})
-				.catch(() => {});
+				.catch(() => {}); // keep cached value on fetch error
 		}
 
 		// ---- BELOW DECK BADGE ----
@@ -209,7 +212,7 @@
 				const m = wd.textContent.replace(/^[·\s]+/, '').match(/^([^+\-0-9]+)/);
 				if (m && m[1].trim()) icon = m[1].trim();
 			}
-			const template = `${icon} **Grateful Log for ${dateStr}**\n\n1. \n2. \n3. `;
+			const template = `${icon} **Grateful Log for ${dateStr}**\n1. \n2. \n3. `;
 			if (tx.value.trim().length > 0) {
 				if (!confirm("Replace current draft with grateful-log template?")) return;
 			}
