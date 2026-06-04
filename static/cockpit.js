@@ -196,6 +196,40 @@
 			updateHUD(); tx.focus();
 		}
 
+		function insertGratefulLog() {
+			const now = new Date();
+			const opts = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' };
+			const dateStr = now.toLocaleDateString('en-US', opts);
+			// Pull the current weather icon from the cockpit header.
+			// `#weather-display` renders like "· ☀️ +57°F" — strip the bullet and grab
+			// everything before the temp sign. Fall back to ☀️ if it hasn't loaded yet.
+			let icon = '☀️';
+			const wd = document.getElementById('weather-display');
+			if (wd && wd.textContent) {
+				const m = wd.textContent.replace(/^[·\s]+/, '').match(/^([^+\-0-9]+)/);
+				if (m && m[1].trim()) icon = m[1].trim();
+			}
+			const template = `${icon} **Grateful Log for ${dateStr}**\n\n1. \n2. \n3. `;
+			if (tx.value.trim().length > 0) {
+				if (!confirm("Replace current draft with grateful-log template?")) return;
+			}
+			tx.value = template;
+			updateHUD();
+			tx.focus();
+			// Place caret at end (right after "1. ") so he can start typing item 1.
+			const caret = template.indexOf('1. ') + 3;
+			tx.setSelectionRange(caret, caret);
+		}
+
+		// Markdown shortcuts on the status textarea: Cmd/Ctrl+B / +I / +K
+		tx.addEventListener('keydown', (e) => {
+			if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+			const k = e.key.toLowerCase();
+			if (k === 'b') { e.preventDefault(); wrapText('**', '**'); }
+			else if (k === 'i') { e.preventDefault(); wrapText('*', '*'); }
+			else if (k === 'k') { e.preventDefault(); smartURL(); }
+		});
+
 		function toggleTheme() {}
 
 		// ---- HYPERSPACE SUBMIT ----

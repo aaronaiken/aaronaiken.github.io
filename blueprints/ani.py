@@ -379,12 +379,104 @@ current valid comms messages:
 {degradation_block}{tone_block}{comms_block}"""
 
 
+def ani_get_command_deck_summary():
+	"""Snapshot of Below Deck / Today / projects / tickets / meetings for the briefing.
+	Read-only; each query is wrapped so a schema mismatch can't break the briefing."""
+	from helpers.db import get_db, et_now
+	summary = {}
+	try:
+		conn = get_db()
+	except Exception:
+		return summary
+	try:
+		row = conn.execute("SELECT COUNT(*) FROM tasks WHERE status = 'open'").fetchone()
+		summary['open_tasks'] = row[0] if row else 0
+	except Exception:
+		pass
+	try:
+		row = conn.execute("SELECT COUNT(*) FROM tasks WHERE status = 'open' AND today = 1").fetchone()
+		summary['today_tasks'] = row[0] if row else 0
+	except Exception:
+		pass
+	try:
+		rows = conn.execute("""
+			SELECT title FROM tasks
+			WHERE status = 'open' AND today = 1
+			ORDER BY "order" ASC LIMIT 5
+		""").fetchall()
+		summary['today_titles'] = [r[0] for r in rows]
+	except Exception:
+		pass
+	try:
+		row = conn.execute("""
+			SELECT COUNT(*) FROM projects
+			WHERE archived_at IS NULL
+		""").fetchone()
+		summary['active_projects'] = row[0] if row else 0
+	except Exception:
+		pass
+	try:
+		row = conn.execute("""
+			SELECT COUNT(*) FROM tickets
+			WHERE status != 'closed'
+		""").fetchone()
+		summary['open_tickets'] = row[0] if row else 0
+	except Exception:
+		pass
+	try:
+		today = et_now().strftime('%Y-%m-%d')
+		row = conn.execute("""
+			SELECT COUNT(*) FROM meetings
+			WHERE substr(meeting_date, 1, 10) = ? AND status = 'scheduled'
+		""", (today,)).fetchone()
+		summary['meetings_today'] = row[0] if row else 0
+	except Exception:
+		pass
+	conn.close()
+	return summary
+
+
+def ani_get_ledger_summary():
+	"""Snapshot of total debt, cash runway, current milestone. Read-only and defensive."""
+	from helpers.db import get_ledger_db
+	try:
+		from helpers.ledger import total_debt, cash_runway, current_milestone
+	except Exception:
+		return {}
+	summary = {}
+	try:
+		conn = get_ledger_db()
+	except Exception:
+		return summary
+	try:
+		summary['total_debt'] = total_debt(conn)
+	except Exception:
+		pass
+	try:
+		runway = cash_runway(conn)
+		summary['runway_days'] = getattr(runway, 'days_to_next_payday', None)
+		summary['runway_status'] = getattr(runway, 'runway_status', None)
+		summary['free_to_attack'] = getattr(runway, 'free_to_attack', None)
+	except Exception:
+		pass
+	try:
+		m = current_milestone(conn)
+		if m:
+			summary['milestone'] = m.get('title') or m.get('name') or m.get('slug')
+	except Exception:
+		pass
+	conn.close()
+	return summary
+
+
 def ani_build_briefing(meta):
 	"""One-time daily context briefing — site state, recent activity, weather, mood, patterns."""
 	status_updates = ani_get_recent_status_updates(5)
 	git_log = ani_get_recent_git_log(5)
 	recent_posts = ani_get_recent_posts(3)
 	now_last_updated = ani_get_now_page()
+	cd_summary = ani_get_command_deck_summary()
+	ledger_summary = ani_get_ledger_summary()
 	weather = ani_get_weather(meta.get('location'))
 	pattern = ani_get_visit_pattern(meta)
 	mood = ani_assess_mood(status_updates)
@@ -440,6 +532,40 @@ def ani_build_briefing(meta):
 			lines.append(f"  {p['date']}: \"{p['title']}\" — {p['description']}")
 	else:
 		lines.append("\nrecent blog posts: (none found)")
+
+	if cd_summary:
+		cd_lines = []
+		if 'today_tasks' in cd_summary:
+			cd_lines.append(f"  today-starred tasks: {cd_summary['today_tasks']}")
+		for t in cd_summary.get('today_titles') or []:
+			cd_lines.append(f"    · {t[:80]}")
+		if 'open_tasks' in cd_summary:
+			cd_lines.append(f"  total open tasks in Below Deck: {cd_summary['open_tasks']}")
+		if 'active_projects' in cd_summary:
+			cd_lines.append(f"  active projects in Command Deck: {cd_summary['active_projects']}")
+		if 'open_tickets' in cd_summary:
+			cd_lines.append(f"  open tickets: {cd_summary['open_tickets']}")
+		if 'meetings_today' in cd_summary:
+			cd_lines.append(f"  meetings scheduled today: {cd_summary['meetings_today']}")
+		if cd_lines:
+			lines.append("\ncommand deck / below deck / today:")
+			lines.extend(cd_lines)
+
+	if ledger_summary:
+		l_lines = []
+		if ledger_summary.get('total_debt') is not None:
+			l_lines.append(f"  total debt: ${ledger_summary['total_debt']:,.0f}")
+		if ledger_summary.get('runway_days') is not None:
+			status = ledger_summary.get('runway_status')
+			status_part = f" ({status})" if status else ""
+			l_lines.append(f"  days to next payday: {ledger_summary['runway_days']}{status_part}")
+		if ledger_summary.get('free_to_attack') is not None:
+			l_lines.append(f"  free-to-attack until payday: ${ledger_summary['free_to_attack']:,.0f}")
+		if ledger_summary.get('milestone'):
+			l_lines.append(f"  current milestone: {ledger_summary['milestone']}")
+		if l_lines:
+			lines.append("\nthe ledger:")
+			lines.extend(l_lines)
 
 	lines.append(f"\n/now page last updated: {now_last_updated or 'unknown'}{now_stale_note}")
 
