@@ -1747,7 +1747,13 @@ document.addEventListener('click', function (ev) {
       wrap.replaceWith(replacement);
     }
 
+    // Gate blur-cancel against the in-flight save: `change` fires first and
+    // sets saving=true; blur's setTimeout-cancel then no-ops, letting save's
+    // restoreBtn win the race and paint the new badge immediately.
+    let saving = false;
+
     async function save() {
+      saving = true;
       sel.disabled = true;
       const newId = sel.value || null;
       try {
@@ -1773,6 +1779,7 @@ document.addEventListener('click', function (ev) {
     }
 
     function cancel() {
+      if (saving) return;
       const picked = currentId ? cats.find(function (c) { return String(c.id) === currentId; }) : null;
       restoreBtn(currentId, picked && picked.name, picked && picked.color);
     }
