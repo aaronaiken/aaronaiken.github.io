@@ -298,13 +298,29 @@ def payday_session():
 				WHERE id = ?
 			""", (actual, notes, now, tx_id))
 		elif val == 'skip':
-			# Mark as confirmed but zero — autopay didn't run.
+			# The autopay didn't run — close out the original pending row,
+			# then re-materialize the same obligation for tomorrow so it
+			# surfaces in the next runway window as still-owed.
 			conn.execute("""
 				UPDATE debt_transactions
 				SET amount = 0, notes = COALESCE(notes,'') || ' [skipped on payday]',
 				    confirmed = 1, source = 'autopay_confirmed', updated = ?
 				WHERE id = ?
 			""", (now, tx_id))
+			carry_date = (L.et_today() + timedelta(days=1)).isoformat()
+			carry_notes = (
+				(row['notes'] + ' ' if row['notes'] else '')
+				+ f"[carried from skipped autopay on {row['tx_date']}]"
+			).strip()
+			conn.execute("""
+				INSERT INTO debt_transactions (
+					account_id, tx_date, amount, tx_type, source,
+					confirmed, description, notes, created, updated
+				) VALUES (?, ?, ?, 'payment', 'autopay_expected', 0, ?, ?, ?, ?)
+			""", (
+				row['account_id'], carry_date, row['amount'],
+				row['description'], carry_notes, now, now,
+			))
 
 	# 3. Income events
 	i = 0

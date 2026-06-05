@@ -374,10 +374,12 @@ def generate_autopay_expectations(conn):
 def _next_paycheck_date(conn):
 	"""Best estimate of the next paycheck date based on recurring income."""
 	today = et_today()
-	# Look for an explicitly future income event first.
+	# Look for an explicitly future income event first. Strictly future —
+	# a paycheck logged for today (e.g. just-completed payday session) is
+	# already in hand, so runway should anchor to the *next* one.
 	row = conn.execute("""
 		SELECT * FROM income_events
-		WHERE event_date >= ? AND income_type = 'paycheck'
+		WHERE event_date > ? AND income_type = 'paycheck'
 		ORDER BY event_date ASC LIMIT 1
 	""", (today.isoformat(),)).fetchone()
 	if row:
