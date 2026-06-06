@@ -645,11 +645,14 @@
 		const frame  = document.getElementById('ad-viewer-iframe');
 		if (!player || !grip || !frame) return;
 
-		// Lock the player to a 16:9 video area (+ titlebar). The PH embed
-		// letterboxes internally to preserve aspect, so a free-form resize
-		// just adds black bars instead of growing the video. Driving from
-		// width and computing height keeps every pixel of the iframe used.
-		const ASPECT = 16 / 9;
+		// The PH embed renders its content (title strip, video, controls)
+		// at a fixed internal size and does NOT scale to fill the iframe —
+		// growing the iframe just adds empty black space below. So we keep
+		// the iframe at its native embed size (481×367 from PH's share
+		// dialog) and visually scale it with CSS transform. Everything
+		// inside the embed scales together; no letterboxing.
+		const NATIVE_W = 481;
+		const NATIVE_H = 367;
 		const titlebarH = function () {
 			const tb = document.getElementById('ad-player-titlebar');
 			return tb ? tb.offsetHeight : 28;
@@ -657,15 +660,19 @@
 
 		function applySize(newW) {
 			newW = Math.max(320, newW);
-			const newH = Math.round(newW / ASPECT) + titlebarH();
+			const scale = newW / NATIVE_W;
+			const videoH = Math.round(NATIVE_H * scale);
 			player.style.width  = newW + 'px';
-			player.style.height = newH + 'px';
+			player.style.height = (videoH + titlebarH()) + 'px';
+			frame.style.transform = 'scale(' + scale + ')';
 		}
 
 		try {
 			const saved = JSON.parse(localStorage.getItem('ad-player-size'));
-			if (saved && saved.w) applySize(saved.w);
-		} catch (e) {}
+			applySize(saved && saved.w ? saved.w : 481);
+		} catch (e) {
+			applySize(481);
+		}
 
 		let resizing = false, startX, startY, startW;
 
