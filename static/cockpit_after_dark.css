@@ -195,7 +195,6 @@
 	.mode-work #ad-player { display: none !important; }
 
 	#ad-player.is-minimized #ad-player-video-wrap,
-	#ad-player.is-minimized #ad-player-controls,
 	#ad-player.is-minimized #ad-player-library,
 	#ad-player.is-minimized #ad-player-resize-grip { display: none; }
 
@@ -203,7 +202,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 6px 10px;
+		padding: 3px 8px;
 		background: #120608;
 		border-bottom: 1px solid #4a1818;
 		border-radius: 3px 3px 0 0;
@@ -290,26 +289,6 @@
 		width: 100%;
 		height: 100%;
 		object-fit: contain;
-	}
-
-	#ad-player-controls {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		padding: 7px 10px;
-		border-top: 1px solid #4a1818;
-		background: #120608;
-		border-radius: 0 0 3px 3px;
-	}
-
-	#ad-now-playing {
-		font-size: 0.45rem;
-		color: #7a2828;
-		letter-spacing: 0.08em;
-		flex: 1;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
 	}
 
 	#ad-loop-label {

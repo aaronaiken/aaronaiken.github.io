@@ -662,6 +662,13 @@
 			startY = e.clientY;
 			startW = rect.width;
 			startH = rect.height;
+			// Anchor to top/left so the player grows toward the mouse —
+			// the default `bottom: 80px; right: 24px` anchor makes it
+			// grow away from the cursor, which feels broken.
+			player.style.left   = rect.left + 'px';
+			player.style.top    = rect.top + 'px';
+			player.style.right  = 'auto';
+			player.style.bottom = 'auto';
 			frame.style.pointerEvents = 'none';
 			document.body.style.cursor = 'nwse-resize';
 			e.preventDefault();
@@ -847,8 +854,6 @@
 		// preference — the embed has its own unmute control.
 		const sep = item.url.indexOf('?') >= 0 ? '&' : '?';
 		frame.src = item.url + sep + 'autoplay=1&muted=1';
-
-		document.getElementById('ad-now-playing').textContent = item.name;
 
 		// Highlight active tile
 		document.querySelectorAll('.ad-library-tile').forEach(function(t, i) {
