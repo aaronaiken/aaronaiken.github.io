@@ -863,9 +863,10 @@
 		document.getElementById('ad-player-library').classList.remove('is-open');
 		document.getElementById('ad-library-toggle-btn').style.color = '';
 
-		// Show player if it was closed
+		// Show player if it was closed — clear the inline 'none' so the
+		// mode-after-dark CSS (display: flex column) can take over.
 		const player = document.getElementById('ad-player');
-		player.style.display = 'block';
+		player.style.display = '';
 
 		// If minimized, restore
 		if (adPlayerMinimized) adPlayerMinimize();
