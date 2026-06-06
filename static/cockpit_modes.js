@@ -634,6 +634,59 @@
 		});
 	})();
 
+	// ---- AD Player resize-grip drag ----
+	// Custom grip instead of relying on CSS `resize: both`, which is hard to
+	// grab once the iframe overlays the corner. While the user drags, the
+	// iframe gets `pointer-events: none` so the mouse can sweep across it
+	// without the embed swallowing the events.
+	(function initAdPlayerResize() {
+		const player = document.getElementById('ad-player');
+		const grip   = document.getElementById('ad-player-resize-grip');
+		const frame  = document.getElementById('ad-viewer-iframe');
+		if (!player || !grip || !frame) return;
+
+		try {
+			const saved = JSON.parse(localStorage.getItem('ad-player-size'));
+			if (saved && saved.w && saved.h) {
+				player.style.width  = saved.w + 'px';
+				player.style.height = saved.h + 'px';
+			}
+		} catch (e) {}
+
+		let resizing = false, startX, startY, startW, startH;
+
+		grip.addEventListener('mousedown', function(e) {
+			resizing = true;
+			const rect = player.getBoundingClientRect();
+			startX = e.clientX;
+			startY = e.clientY;
+			startW = rect.width;
+			startH = rect.height;
+			frame.style.pointerEvents = 'none';
+			document.body.style.cursor = 'nwse-resize';
+			e.preventDefault();
+		});
+
+		document.addEventListener('mousemove', function(e) {
+			if (!resizing) return;
+			const newW = Math.max(320, startW + (e.clientX - startX));
+			const newH = Math.max(240, startH + (e.clientY - startY));
+			player.style.width  = newW + 'px';
+			player.style.height = newH + 'px';
+		});
+
+		document.addEventListener('mouseup', function() {
+			if (!resizing) return;
+			resizing = false;
+			frame.style.pointerEvents = '';
+			document.body.style.cursor = '';
+			localStorage.setItem('ad-player-size', JSON.stringify({
+				w: parseFloat(player.style.width),
+				h: parseFloat(player.style.height)
+			}));
+		});
+	})();
+
 	// ---- Focus Timer Drag ----
 	(function initFocusTimerDrag() {
 		const timer  = document.getElementById('focus-timer');
@@ -789,10 +842,11 @@
 		if (adPlayerMinimized) adPlayerMinimize();
 
 		const frame = document.getElementById('ad-viewer-iframe');
-		// `autoplay=1` asks the embed to start without a click; the PH player
-		// owns playback / mute / volume from here.
+		// autoplay=1 starts without a click; muted=1 is required for autoplay
+		// to actually fire (browser policy) and matches the "calm by default"
+		// preference — the embed has its own unmute control.
 		const sep = item.url.indexOf('?') >= 0 ? '&' : '?';
-		frame.src = item.url + sep + 'autoplay=1';
+		frame.src = item.url + sep + 'autoplay=1&muted=1';
 
 		document.getElementById('ad-now-playing').textContent = item.name;
 

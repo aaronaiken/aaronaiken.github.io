@@ -196,7 +196,8 @@
 
 	#ad-player.is-minimized #ad-player-video-wrap,
 	#ad-player.is-minimized #ad-player-controls,
-	#ad-player.is-minimized #ad-player-library { display: none; }
+	#ad-player.is-minimized #ad-player-library,
+	#ad-player.is-minimized #ad-player-resize-grip { display: none; }
 
 	#ad-player-titlebar {
 		display: flex;
@@ -803,19 +804,37 @@ body.mode-after-dark {
     }
 
     /* ---- VIDEO PLAYER: RESIZABLE FIX ---- */
+    /* JS-driven resize via #ad-player-resize-grip — CSS `resize: both` is
+       unreliable once an iframe overlays the corner, so we own it. */
     #ad-player {
-    	resize: both;
     	overflow: hidden;
     	min-width: 320px;
-    	min-height: 200px;
+    	min-height: 240px;
     }
 
     .mode-after-dark #ad-player {
-        resize: both;
         overflow: hidden;
         min-width: 320px;
         min-height: 240px;
     }
+
+    #ad-player-resize-grip {
+    	position: absolute;
+    	right: 2px;
+    	bottom: 2px;
+    	width: 14px;
+    	height: 14px;
+    	cursor: nwse-resize;
+    	color: #8b1a1a;
+    	font-size: 14px;
+    	line-height: 14px;
+    	user-select: none;
+    	z-index: 2;
+    	opacity: 0.6;
+    	text-align: center;
+    }
+
+    #ad-player-resize-grip:hover { opacity: 1; }
 
     .mode-after-dark #ad-player #ad-player-video-wrap {
         height: auto;
