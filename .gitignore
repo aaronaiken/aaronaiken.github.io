@@ -31,6 +31,7 @@ assets/data/ledger.db-shm
 assets/data/ledger.db-wal
 assets/data/ledger.db-journal
 static/after_dark_comms.txt
+static/after_dark_videos.txt
 assets/data/scratch_work.json
 mozzie_games.json
 CLAUDE.md

@@ -1,8 +1,10 @@
 """Cockpit blueprint — publishing flow + auth + scratch + mode + focus timer + after-dark media."""
 import os
 import io
+import re
 import glob
 import json
+import random
 import logging
 from datetime import datetime
 import pytz
@@ -282,12 +284,41 @@ def cockpit_focus_break():
 
 # ---- AFTER DARK MEDIA LIBRARY ----
 
+AD_VIDEOS_FILE = 'static/after_dark_videos.txt'
+_VIEWKEY_RE = re.compile(r'viewkey=([A-Za-z0-9]+)')
+
+
 @cockpit_bp.route('/cockpit/after-dark/library')
 def after_dark_library():
-	"""List video files from Bunny AD zone /videos/ subfolder."""
+	"""Return a shuffled list of Pornhub embed entries parsed from
+	static/after_dark_videos.txt. One URL per line; '#' / blank lines skipped;
+	optional '|<label>' suffix sets the display name. Page URLs
+	(`view_video.php?viewkey=…`) and share links are accepted — the viewkey is
+	extracted and an `/embed/<viewkey>` URL is built. Returns the same
+	`{items: [{name, url}, ...]}` shape the old Bunny route returned."""
 	if not is_authenticated():
 		return jsonify({'error': 'unauthorized'}), 401
-	items = list_bunny_ad_folder('videos')
+	items = []
+	try:
+		with open(AD_VIDEOS_FILE, 'r') as f:
+			for raw in f:
+				line = raw.strip()
+				if not line or line.startswith('#'):
+					continue
+				url_part, _, label = line.partition('|')
+				url_part = url_part.strip()
+				label = label.strip()
+				m = _VIEWKEY_RE.search(url_part)
+				if not m:
+					continue
+				viewkey = m.group(1)
+				items.append({
+					'name': label or viewkey,
+					'url': f'https://www.pornhub.com/embed/{viewkey}',
+				})
+	except FileNotFoundError:
+		pass
+	random.shuffle(items)
 	return jsonify({'items': items})
 
 

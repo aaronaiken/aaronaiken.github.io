@@ -90,7 +90,7 @@
 			<span id="ad-player-title">// VIEWER</span>
 			<div class="ad-player-tb-actions">
 				<button class="ad-player-tb-btn" onclick="adLibraryToggle()" id="ad-library-toggle-btn">LIB</button>
-				<button class="ad-player-tb-btn" onclick="adViewerToggleMute()" id="ad-viewer-mute-btn">UNMUTE</button>
+				<button class="ad-player-tb-btn" onclick="adPlayNext()" id="ad-next-btn">NEXT</button>
 				<button class="ad-player-tb-btn" onclick="adPlayerMinimize()" id="ad-minimize-btn">—</button>
 				<button class="ad-player-tb-btn" onclick="adPlayerClose()">✕</button>
 			</div>
@@ -99,13 +99,11 @@
 			<div id="ad-player-library-grid" aria-label="Video library"></div>
 		</div>
 		<div id="ad-player-video-wrap">
-			<video id="ad-viewer-video" playsinline muted></video>
+			<iframe id="ad-viewer-iframe" allowfullscreen allow="autoplay; encrypted-media"
+			        frameborder="0" scrolling="no"></iframe>
 		</div>
 		<div id="ad-player-controls">
-			<button class="ad-player-tb-btn" id="ad-playpause-btn" onclick="adViewerPlayPause()">▶</button>
 			<span id="ad-now-playing">no video loaded</span>
-			<input type="range" id="ad-player-volume" min="0" max="1" step="0.05" value="0.4"
-				   oninput="adViewerVolume(this.value)">
 		</div>
 	</div>
 

@@ -234,28 +234,6 @@
         });
     }
 
-    // Video player events — all modes
-    document.addEventListener('DOMContentLoaded', function() {
-        const vid = document.getElementById('ad-viewer-video');
-        if (!vid) return;
-        vid.addEventListener('ended', function() {
-            if (adLibraryItems.length > 1) {
-                let currentIdx = adLibraryItems.findIndex(i => i.url === vid.src);
-                let nextIdx;
-                do {
-                    nextIdx = Math.floor(Math.random() * adLibraryItems.length);
-                } while (nextIdx === currentIdx);
-                adPlayVideo(adLibraryItems[nextIdx], nextIdx);
-            }
-        });
-        vid.addEventListener('pause', function() {
-            document.getElementById('ad-playpause-btn').textContent = '▶';
-        });
-        vid.addEventListener('play', function() {
-            document.getElementById('ad-playpause-btn').textContent = '❚❚';
-        });
-    });
-
 	// ============================================================
 	// FOCUS TIMER
 	// ============================================================
@@ -592,6 +570,7 @@
 	let adLibraryItems = [];
 	let adLibraryVisible = false;
 	let adPlayerMinimized = false;
+	let adCurrentIdx = -1;
 
 	// ---- Drag ----
 	(function initAdPlayerDrag() {
@@ -752,9 +731,8 @@
 	}
 
 	function adPlayerClose() {
-		const vid = document.getElementById('ad-viewer-video');
-		vid.pause();
-		vid.src = '';
+		const frame = document.getElementById('ad-viewer-iframe');
+		if (frame) frame.src = '';
 		document.getElementById('ad-player').style.display = 'none';
 	}
 
@@ -783,19 +761,21 @@
 		const grid = document.getElementById('ad-player-library-grid');
 		grid.innerHTML = '';
 		if (adLibraryItems.length === 0) {
-			grid.innerHTML = '<div style="color:#2a0f0f;font-size:0.55rem;letter-spacing:0.12em;padding:12px;">no videos in library</div>';
+			grid.innerHTML = '<div style="color:#2a0f0f;font-size:0.55rem;letter-spacing:0.12em;padding:12px;">no videos in library — add URLs to static/after_dark_videos.txt</div>';
 			return;
 		}
 		adLibraryItems.forEach(function(item, idx) {
 			const tile = document.createElement('div');
 			tile.className = 'ad-library-tile';
-			tile.textContent = item.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+			tile.textContent = item.name;
 			tile.onclick = function() { adPlayVideo(item, idx); };
 			grid.appendChild(tile);
 		});
 	}
 
 	function adPlayVideo(item, idx) {
+		adCurrentIdx = idx;
+
 		// Close library drawer
 		adLibraryVisible = false;
 		document.getElementById('ad-player-library').classList.remove('is-open');
@@ -808,15 +788,13 @@
 		// If minimized, restore
 		if (adPlayerMinimized) adPlayerMinimize();
 
-		const vid = document.getElementById('ad-viewer-video');
-		vid.src = item.url;
-		vid.volume = parseFloat(document.getElementById('ad-player-volume').value);
-		vid.load();
-		vid.play().catch(() => {});
+		const frame = document.getElementById('ad-viewer-iframe');
+		// `autoplay=1` asks the embed to start without a click; the PH player
+		// owns playback / mute / volume from here.
+		const sep = item.url.indexOf('?') >= 0 ? '&' : '?';
+		frame.src = item.url + sep + 'autoplay=1';
 
-		document.getElementById('ad-now-playing').textContent =
-			item.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
-		document.getElementById('ad-playpause-btn').textContent = '❚❚';
+		document.getElementById('ad-now-playing').textContent = item.name;
 
 		// Highlight active tile
 		document.querySelectorAll('.ad-library-tile').forEach(function(t, i) {
@@ -824,43 +802,31 @@
 		});
 	}
 
-	function adViewerPlayPause() {
-		const vid = document.getElementById('ad-viewer-video');
-		const btn = document.getElementById('ad-playpause-btn');
-		if (vid.paused) {
-			vid.play().catch(() => {});
-			btn.textContent = '❚❚';
-		} else {
-			vid.pause();
-			btn.textContent = '▶';
+	function adPlayNext() {
+		// Lazy-load the library on first NEXT so the player can be opened
+		// from outside the LIB drawer.
+		if (adLibraryItems.length === 0) {
+			fetch('/cockpit/after-dark/library')
+				.then(r => r.json())
+				.then(data => {
+					adLibraryItems = data.items || [];
+					adRenderLibrary();
+					if (adLibraryItems.length > 0) adPlayNext();
+				})
+				.catch(() => {});
+			return;
 		}
+		if (adLibraryItems.length === 1) {
+			// Re-play the only item (re-set src to nudge the embed to restart).
+			adPlayVideo(adLibraryItems[0], 0);
+			return;
+		}
+		let nextIdx;
+		do {
+			nextIdx = Math.floor(Math.random() * adLibraryItems.length);
+		} while (nextIdx === adCurrentIdx);
+		adPlayVideo(adLibraryItems[nextIdx], nextIdx);
 	}
-
-	function adViewerToggleMute() {
-		const vid = document.getElementById('ad-viewer-video');
-		const btn = document.getElementById('ad-viewer-mute-btn');
-		vid.muted = !vid.muted;
-		btn.textContent = vid.muted ? 'UNMUTE' : 'MUTE';
-	}
-
-	function adViewerVolume(val) {
-		document.getElementById('ad-viewer-video').volume = parseFloat(val);
-	}
-
-	// Update play/pause button when video ends or pauses externally
-	document.addEventListener('DOMContentLoaded', function() {
-		const vid = document.getElementById('ad-viewer-video');
-		if (!vid) return;
-		vid.addEventListener('ended', function() {
-			document.getElementById('ad-playpause-btn').textContent = '▶';
-		});
-		vid.addEventListener('pause', function() {
-			document.getElementById('ad-playpause-btn').textContent = '▶';
-		});
-		vid.addEventListener('play', function() {
-			document.getElementById('ad-playpause-btn').textContent = '❚❚';
-		});
-	});
 
 	// ============================================================
 	// AFTER DARK — MUSIC PLAYER

@@ -283,7 +283,7 @@
 		overflow: hidden;
 	}
 
-	#ad-viewer-video {
+	#ad-viewer-iframe {
 		position: absolute;
 		top: 0; left: 0;
 		width: 100%;
@@ -309,26 +309,6 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-	}
-
-	#ad-player-volume {
-		-webkit-appearance: none;
-		width: 60px;
-		height: 2px;
-		background: #3d1515;
-		outline: none;
-		border-radius: 2px;
-		cursor: pointer;
-		flex-shrink: 0;
-	}
-
-	#ad-player-volume::-webkit-slider-thumb {
-		-webkit-appearance: none;
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		background: #8b1a1a;
-		cursor: pointer;
 	}
 
 	#ad-loop-label {
@@ -844,7 +824,7 @@ body.mode-after-dark {
         min-height: 160px;
     }
 
-    .mode-after-dark #ad-player #ad-viewer-video {
+    .mode-after-dark #ad-player #ad-viewer-iframe {
         position: relative;
         width: 100%;
         height: 100%;
@@ -861,7 +841,7 @@ body.mode-after-dark {
         flex-shrink: 0;
     }
 
-    #ad-viewer-video {
+    #ad-viewer-iframe {
         position: absolute;
         top: 0; left: 0;
         width: 100%;
