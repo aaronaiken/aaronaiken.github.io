@@ -645,15 +645,29 @@
 		const frame  = document.getElementById('ad-viewer-iframe');
 		if (!player || !grip || !frame) return;
 
+		// Lock the player to a 16:9 video area (+ titlebar). The PH embed
+		// letterboxes internally to preserve aspect, so a free-form resize
+		// just adds black bars instead of growing the video. Driving from
+		// width and computing height keeps every pixel of the iframe used.
+		const ASPECT = 16 / 9;
+		const titlebarH = function () {
+			const tb = document.getElementById('ad-player-titlebar');
+			return tb ? tb.offsetHeight : 28;
+		};
+
+		function applySize(newW) {
+			newW = Math.max(320, newW);
+			const newH = Math.round(newW / ASPECT) + titlebarH();
+			player.style.width  = newW + 'px';
+			player.style.height = newH + 'px';
+		}
+
 		try {
 			const saved = JSON.parse(localStorage.getItem('ad-player-size'));
-			if (saved && saved.w && saved.h) {
-				player.style.width  = saved.w + 'px';
-				player.style.height = saved.h + 'px';
-			}
+			if (saved && saved.w) applySize(saved.w);
 		} catch (e) {}
 
-		let resizing = false, startX, startY, startW, startH;
+		let resizing = false, startX, startY, startW;
 
 		grip.addEventListener('mousedown', function(e) {
 			resizing = true;
@@ -661,10 +675,8 @@
 			startX = e.clientX;
 			startY = e.clientY;
 			startW = rect.width;
-			startH = rect.height;
-			// Anchor to top/left so the player grows toward the mouse —
-			// the default `bottom: 80px; right: 24px` anchor makes it
-			// grow away from the cursor, which feels broken.
+			// Anchor top/left so the player grows toward the mouse rather
+			// than away from it (default `bottom/right` anchor inverts).
 			player.style.left   = rect.left + 'px';
 			player.style.top    = rect.top + 'px';
 			player.style.right  = 'auto';
@@ -676,10 +688,14 @@
 
 		document.addEventListener('mousemove', function(e) {
 			if (!resizing) return;
-			const newW = Math.max(320, startW + (e.clientX - startX));
-			const newH = Math.max(240, startH + (e.clientY - startY));
-			player.style.width  = newW + 'px';
-			player.style.height = newH + 'px';
+			// Either axis drives growth — take whichever moved more in the
+			// "grow" direction (using vertical * ASPECT to compare apples-
+			// to-apples). Drag down OR right and the player scales up
+			// proportionally; drag up/left and it shrinks.
+			const dx = e.clientX - startX;
+			const dy = e.clientY - startY;
+			const effectiveDelta = Math.abs(dx) > Math.abs(dy * ASPECT) ? dx : dy * ASPECT;
+			applySize(startW + effectiveDelta);
 		});
 
 		document.addEventListener('mouseup', function() {
@@ -689,7 +705,6 @@
 			document.body.style.cursor = '';
 			localStorage.setItem('ad-player-size', JSON.stringify({
 				w: parseFloat(player.style.width),
-				h: parseFloat(player.style.height)
 			}));
 		});
 	})();
