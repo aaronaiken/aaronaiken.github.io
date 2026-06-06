@@ -714,6 +714,218 @@
 		});
 	})();
 
+	// ============================================================
+	// AFTER DARK — FLOATING YOUTUBE PLAYER
+	// Mirror of the AD video player but YT embeds scale responsively, so
+	// the iframe is plain 100%/100% with no transform: scale hack. Default
+	// position is bottom-LEFT so it doesn't stack on top of the PH player.
+	// ============================================================
+
+	let ytLibraryItems = [];
+	let ytLibraryVisible = false;
+	let ytPlayerMinimized = false;
+	let ytCurrentIdx = -1;
+
+	function ytPlayerMinimize() {
+		ytPlayerMinimized = !ytPlayerMinimized;
+		const p = document.getElementById('yt-player');
+		p.classList.toggle('is-minimized', ytPlayerMinimized);
+		document.getElementById('yt-minimize-btn').textContent = ytPlayerMinimized ? '□' : '—';
+	}
+
+	function ytPlayerClose() {
+		const frame = document.getElementById('yt-viewer-iframe');
+		if (frame) frame.src = '';
+		document.getElementById('yt-player').style.display = 'none';
+	}
+
+	function ytLibraryToggle() {
+		ytLibraryVisible = !ytLibraryVisible;
+		const drawer = document.getElementById('yt-player-library');
+		drawer.classList.toggle('is-open', ytLibraryVisible);
+		document.getElementById('yt-library-toggle-btn').style.color =
+			ytLibraryVisible ? '#8b1a1a' : '';
+		if (ytLibraryVisible && ytLibraryItems.length === 0) ytLoadLibrary();
+	}
+
+	function ytLoadLibrary(cb) {
+		fetch('/cockpit/after-dark/youtube')
+			.then(r => r.json())
+			.then(data => {
+				ytLibraryItems = data.items || [];
+				ytRenderLibrary();
+				if (cb) cb();
+			})
+			.catch(() => {});
+	}
+
+	function ytRenderLibrary() {
+		const grid = document.getElementById('yt-player-library-grid');
+		grid.innerHTML = '';
+		if (ytLibraryItems.length === 0) {
+			grid.innerHTML = '<div style="color:#2a0f0f;font-size:0.55rem;letter-spacing:0.12em;padding:12px;">no videos in library — add URLs to static/after_dark_youtube.txt</div>';
+			return;
+		}
+		ytLibraryItems.forEach(function (item, idx) {
+			const tile = document.createElement('div');
+			tile.className = 'ad-library-tile';
+			tile.textContent = item.name;
+			tile.onclick = function () { ytPlayVideo(item, idx); };
+			grid.appendChild(tile);
+		});
+	}
+
+	function ytPlayVideo(item, idx) {
+		ytCurrentIdx = idx;
+		ytLibraryVisible = false;
+		document.getElementById('yt-player-library').classList.remove('is-open');
+		document.getElementById('yt-library-toggle-btn').style.color = '';
+
+		const player = document.getElementById('yt-player');
+		player.style.display = '';
+		if (ytPlayerMinimized) ytPlayerMinimize();
+
+		const frame = document.getElementById('yt-viewer-iframe');
+		const sep = item.url.indexOf('?') >= 0 ? '&' : '?';
+		frame.src = item.url + sep + 'autoplay=1&mute=1&rel=0';
+
+		document.querySelectorAll('#yt-player-library-grid .ad-library-tile')
+			.forEach(function (t, i) { t.classList.toggle('is-playing', i === idx); });
+	}
+
+	function ytPlayNext() {
+		if (ytLibraryItems.length === 0) {
+			ytLoadLibrary(function () { if (ytLibraryItems.length > 0) ytPlayNext(); });
+			return;
+		}
+		if (ytLibraryItems.length === 1) { ytPlayVideo(ytLibraryItems[0], 0); return; }
+		let nextIdx;
+		do { nextIdx = Math.floor(Math.random() * ytLibraryItems.length); }
+		while (nextIdx === ytCurrentIdx);
+		ytPlayVideo(ytLibraryItems[nextIdx], nextIdx);
+	}
+
+	// Auto-start on after-dark load: library route already shuffles, so
+	// playing item 0 = a random pick. Stays muted per user pref.
+	if (COCKPIT_MODE === 'after-dark') {
+		document.addEventListener('DOMContentLoaded', function () {
+			ytLoadLibrary(function () {
+				if (ytLibraryItems.length > 0) ytPlayVideo(ytLibraryItems[0], 0);
+			});
+		});
+	}
+
+	// ---- YT Player drag (titlebar) ----
+	(function initYtPlayerDrag() {
+		const player = document.getElementById('yt-player');
+		const handle = document.getElementById('yt-player-titlebar');
+		if (!player || !handle) return;
+
+		try {
+			const saved = JSON.parse(localStorage.getItem('yt-player-pos'));
+			if (saved) {
+				const cx = Math.min(saved.x, window.innerWidth - 340);
+				const cy = Math.min(saved.y, window.innerHeight - 200);
+				player.style.left = Math.max(0, cx) + 'px';
+				player.style.top  = Math.max(0, cy) + 'px';
+				player.style.right = 'auto';
+				player.style.bottom = 'auto';
+			}
+		} catch (e) {}
+
+		let dragging = false, startX, startY, startL, startT;
+		handle.addEventListener('mousedown', function (e) {
+			if (e.target.tagName === 'BUTTON') return;
+			dragging = true;
+			const rect = player.getBoundingClientRect();
+			startX = e.clientX; startY = e.clientY;
+			startL = rect.left;  startT = rect.top;
+			player.style.left = startL + 'px';
+			player.style.top  = startT + 'px';
+			player.style.right = 'auto';
+			player.style.bottom = 'auto';
+			document.body.style.cursor = 'grabbing';
+			e.preventDefault();
+		});
+		document.addEventListener('mousemove', function (e) {
+			if (!dragging) return;
+			let nl = startL + (e.clientX - startX);
+			let nt = startT + (e.clientY - startY);
+			nl = Math.max(0, Math.min(nl, window.innerWidth  - player.offsetWidth));
+			nt = Math.max(0, Math.min(nt, window.innerHeight - player.offsetHeight));
+			player.style.left = nl + 'px';
+			player.style.top  = nt + 'px';
+		});
+		document.addEventListener('mouseup', function () {
+			if (!dragging) return;
+			dragging = false;
+			document.body.style.cursor = '';
+			localStorage.setItem('yt-player-pos', JSON.stringify({
+				x: parseFloat(player.style.left),
+				y: parseFloat(player.style.top),
+			}));
+		});
+	})();
+
+	// ---- YT Player resize-grip ----
+	// YT embeds are responsive — no native-size + transform-scale hack
+	// needed. Lock to 16:9 video area + titlebar; either axis can drive.
+	(function initYtPlayerResize() {
+		const player = document.getElementById('yt-player');
+		const grip   = document.getElementById('yt-player-resize-grip');
+		const frame  = document.getElementById('yt-viewer-iframe');
+		if (!player || !grip || !frame) return;
+
+		const ASPECT = 16 / 9;
+		const titlebarH = function () {
+			const tb = document.getElementById('yt-player-titlebar');
+			return tb ? tb.offsetHeight : 28;
+		};
+
+		function applySize(newW) {
+			newW = Math.max(320, newW);
+			const newH = Math.round(newW / ASPECT) + titlebarH();
+			player.style.width  = newW + 'px';
+			player.style.height = newH + 'px';
+		}
+
+		try {
+			const saved = JSON.parse(localStorage.getItem('yt-player-size'));
+			applySize(saved && saved.w ? saved.w : 480);
+		} catch (e) { applySize(480); }
+
+		let resizing = false, startX, startY, startW;
+		grip.addEventListener('mousedown', function (e) {
+			resizing = true;
+			const rect = player.getBoundingClientRect();
+			startX = e.clientX; startY = e.clientY;
+			startW = rect.width;
+			player.style.left = rect.left + 'px';
+			player.style.top  = rect.top + 'px';
+			player.style.right = 'auto';
+			player.style.bottom = 'auto';
+			frame.style.pointerEvents = 'none';
+			document.body.style.cursor = 'nwse-resize';
+			e.preventDefault();
+		});
+		document.addEventListener('mousemove', function (e) {
+			if (!resizing) return;
+			const dx = e.clientX - startX;
+			const dy = e.clientY - startY;
+			const d = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+			applySize(startW + d);
+		});
+		document.addEventListener('mouseup', function () {
+			if (!resizing) return;
+			resizing = false;
+			frame.style.pointerEvents = '';
+			document.body.style.cursor = '';
+			localStorage.setItem('yt-player-size', JSON.stringify({
+				w: parseFloat(player.style.width),
+			}));
+		});
+	})();
+
 	// ---- Focus Timer Drag ----
 	(function initFocusTimerDrag() {
 		const timer  = document.getElementById('focus-timer');

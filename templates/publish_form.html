@@ -105,6 +105,27 @@
 		<div id="ad-player-resize-grip" title="Drag to resize">⟋</div>
 	</div>
 
+	<!-- After Dark Floating YouTube Player -->
+	<div id="yt-player" aria-label="YouTube player">
+		<div id="yt-player-titlebar">
+			<span id="yt-player-title">// STREAM</span>
+			<div class="ad-player-tb-actions">
+				<button class="ad-player-tb-btn" onclick="ytLibraryToggle()" id="yt-library-toggle-btn">LIB</button>
+				<button class="ad-player-tb-btn" onclick="ytPlayNext()">NEXT</button>
+				<button class="ad-player-tb-btn" onclick="ytPlayerMinimize()" id="yt-minimize-btn">—</button>
+				<button class="ad-player-tb-btn" onclick="ytPlayerClose()">✕</button>
+			</div>
+		</div>
+		<div id="yt-player-library">
+			<div id="yt-player-library-grid" aria-label="YouTube library"></div>
+		</div>
+		<div id="yt-player-video-wrap">
+			<iframe id="yt-viewer-iframe" allowfullscreen allow="autoplay; encrypted-media"
+			        frameborder="0" scrolling="no"></iframe>
+		</div>
+		<div id="yt-player-resize-grip" title="Drag to resize">⟋</div>
+	</div>
+
 	<!-- After Dark Music Player -->
 	<div id="ad-music-player" aria-label="Music player">
         <div id="ad-music-titlebar">// MUSIC</div>

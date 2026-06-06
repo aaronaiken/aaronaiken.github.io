@@ -198,6 +198,105 @@
 	#ad-player.is-minimized #ad-player-library,
 	#ad-player.is-minimized #ad-player-resize-grip { display: none; }
 
+	/* ---- FLOATING YOUTUBE PLAYER ----
+	   Clone of #ad-player but defaults to bottom-LEFT so the two players
+	   don't stack on first load. YT embeds scale responsively so the wrap +
+	   iframe can use the same 16:9 padding-bottom trick the AD player
+	   originally had — no transform-scale needed. */
+	#yt-player {
+		display: none;
+		position: fixed;
+		z-index: 10003;
+		bottom: 80px;
+		left: 24px;
+		width: 480px;
+		background: #0e0508;
+		border: 1px solid #3a1010;
+		border-radius: 3px;
+		box-shadow: 0 8px 40px rgba(0,0,0,0.8), 0 0 0 1px #1a0808;
+		font-family: 'Share Tech Mono', monospace;
+		user-select: none;
+		-webkit-user-select: none;
+	}
+
+	.mode-after-dark #yt-player { display: flex; flex-direction: column; }
+	.mode-work        #yt-player { display: none !important; }
+
+	#yt-player.is-minimized #yt-player-video-wrap,
+	#yt-player.is-minimized #yt-player-library,
+	#yt-player.is-minimized #yt-player-resize-grip { display: none; }
+
+	#yt-player-titlebar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 3px 8px;
+		background: #120608;
+		border-bottom: 1px solid #4a1818;
+		border-radius: 3px 3px 0 0;
+		cursor: grab;
+		flex-shrink: 0;
+	}
+	#yt-player-titlebar:active { cursor: grabbing; }
+
+	#yt-player-title {
+		font-size: 0.55rem;
+		color: #c04040;
+		letter-spacing: 0.12em;
+	}
+
+	#yt-player-library {
+		max-height: 0;
+		overflow: hidden;
+		transition: max-height 0.25s;
+	}
+	#yt-player-library.is-open { max-height: 220px; overflow-y: auto; }
+
+	#yt-player-library-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+		padding: 8px;
+	}
+
+	#yt-player-video-wrap {
+		position: relative;
+		width: 100%;
+		flex: 1;
+		background: #000;
+		overflow: hidden;
+		min-height: 270px;
+	}
+
+	#yt-viewer-iframe {
+		position: absolute;
+		top: 0; left: 0;
+		width: 100%;
+		height: 100%;
+		border: 0;
+	}
+
+	#yt-player-resize-grip {
+		position: absolute;
+		right: 0;
+		bottom: 0;
+		width: 22px;
+		height: 22px;
+		cursor: nwse-resize;
+		color: #c04040;
+		background: #1a0808;
+		border-top: 1px solid #4a1818;
+		border-left: 1px solid #4a1818;
+		border-radius: 3px 0 3px 0;
+		font-size: 16px;
+		line-height: 22px;
+		user-select: none;
+		z-index: 5;
+		text-align: center;
+		opacity: 0.85;
+	}
+	#yt-player-resize-grip:hover { opacity: 1; background: #2a0c0c; }
+
 	#ad-player-titlebar {
 		display: flex;
 		align-items: center;

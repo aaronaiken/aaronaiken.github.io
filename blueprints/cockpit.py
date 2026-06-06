@@ -284,8 +284,12 @@ def cockpit_focus_break():
 
 # ---- AFTER DARK MEDIA LIBRARY ----
 
-AD_VIDEOS_FILE = 'static/after_dark_videos.txt'
+AD_VIDEOS_FILE   = 'static/after_dark_videos.txt'
+AD_YOUTUBE_FILE  = 'static/after_dark_youtube.txt'
 _VIEWKEY_RE = re.compile(r'viewkey=([A-Za-z0-9]+)')
+# Matches the 11-char video id in youtu.be/<id>, watch?v=<id>, embed/<id>,
+# or shorts/<id>. Trailing query string (?si=…&t=…) is ignored.
+_YT_ID_RE = re.compile(r'(?:youtu\.be/|youtube\.com/(?:watch\?v=|embed/|shorts/))([A-Za-z0-9_-]{11})')
 
 
 @cockpit_bp.route('/cockpit/after-dark/library')
@@ -315,6 +319,37 @@ def after_dark_library():
 				items.append({
 					'name': label or viewkey,
 					'url': f'https://www.pornhub.com/embed/{viewkey}',
+				})
+	except FileNotFoundError:
+		pass
+	random.shuffle(items)
+	return jsonify({'items': items})
+
+
+@cockpit_bp.route('/cockpit/after-dark/youtube')
+def after_dark_youtube():
+	"""Same shape as after_dark_library, but for YouTube share URLs in
+	static/after_dark_youtube.txt. Accepts youtu.be/<id>, watch?v=<id>,
+	embed/<id>, or shorts/<id> — any trailing query string is ignored."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	items = []
+	try:
+		with open(AD_YOUTUBE_FILE, 'r') as f:
+			for raw in f:
+				line = raw.strip()
+				if not line or line.startswith('#'):
+					continue
+				url_part, _, label = line.partition('|')
+				url_part = url_part.strip()
+				label = label.strip()
+				m = _YT_ID_RE.search(url_part)
+				if not m:
+					continue
+				vid = m.group(1)
+				items.append({
+					'name': label or vid,
+					'url': f'https://www.youtube.com/embed/{vid}',
 				})
 	except FileNotFoundError:
 		pass
