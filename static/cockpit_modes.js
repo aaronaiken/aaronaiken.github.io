@@ -695,13 +695,11 @@
 
 		document.addEventListener('mousemove', function(e) {
 			if (!resizing) return;
-			// Either axis drives growth — take whichever moved more in the
-			// "grow" direction (using vertical * ASPECT to compare apples-
-			// to-apples). Drag down OR right and the player scales up
-			// proportionally; drag up/left and it shrinks.
+			// Either axis drives — whichever moved more (signed) feeds
+			// applySize. Drag down-right grows; up-left shrinks.
 			const dx = e.clientX - startX;
 			const dy = e.clientY - startY;
-			const effectiveDelta = Math.abs(dx) > Math.abs(dy * ASPECT) ? dx : dy * ASPECT;
+			const effectiveDelta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
 			applySize(startW + effectiveDelta);
 		});
 
