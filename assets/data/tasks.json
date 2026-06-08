@@ -1,6 +1,13 @@
 {
   "tasks": [
     {
+      "id": "1780915259",
+      "title": "Tidy Stage",
+      "status": "open",
+      "created": "2026-06-08T06:40:59.521353-04:00",
+      "completed": null
+    },
+    {
       "id": "1780915249",
       "title": "Tidy Bar",
       "status": "open",
