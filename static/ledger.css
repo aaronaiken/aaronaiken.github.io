@@ -332,6 +332,15 @@ body.ledger a:hover { color: var(--lg-brass); }
 .lg-pending-item:last-child { border-bottom: 0; }
 .lg-pending-item .lg-num { color: var(--lg-text); }
 .lg-pending-item .date   { color: var(--lg-text-dim); font-family: var(--lg-mono); font-size: 0.78rem; }
+.lg-pending-item.is-past .lg-num,
+.lg-pending-item.is-past > span:first-child { color: var(--lg-text-dim); }
+.lg-past-badge {
+  display: inline-block;
+  color: var(--lg-brass);
+  font-size: 0.65rem;
+  vertical-align: middle;
+  margin-right: 2px;
+}
 
 /* -------- kill ladder -------- */
 .lg-ladder {

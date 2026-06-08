@@ -69,7 +69,7 @@
           <span class="lg-note" style="font-style:normal; font-size:0.85rem;">checking</span>
         </div>
         <div class="lg-runway-strip">
-          <span><span class="lg-dim">Next payday</span> <strong>{{ runway.next_payday }}</strong> ({{ runway.days_to_next_payday }}d)</span>
+          <span><span class="lg-dim">Pay period</span> <strong>{{ runway.period_start }}</strong> → <strong>{{ runway.next_payday }}</strong> ({{ runway.days_to_next_payday }}d)</span>
           <span><span class="lg-dim">Obligations</span> <strong>${{ '{:,.2f}'.format(runway.total_obligations) }}</strong></span>
           <span>
             <span class="lg-dim">Free to attack</span>
@@ -79,16 +79,24 @@
           </span>
         </div>
         {% if runway.obligations %}
+          {% set past_count = runway.obligations|selectattr('is_past')|list|length %}
           <div class="lg-spacer"></div>
           <details>
-            <summary class="lg-note" style="cursor:pointer;">{{ runway.obligations|length }} obligation{{ 's' if runway.obligations|length != 1 else '' }} between now and payday →</summary>
+            <summary class="lg-note" style="cursor:pointer;">{{ runway.obligations|length }} obligation{{ 's' if runway.obligations|length != 1 else '' }} this pay period{% if past_count %} · {{ past_count }} need{{ '' if past_count != 1 else 's' }} confirmation{% endif %} →</summary>
             <div class="lg-spacer-sm"></div>
             {% for o in runway.obligations %}
-              <div class="lg-pending-item">
-                <span>{{ o.description }} <span class="date">· {{ o.date }}</span></span>
+              <div class="lg-pending-item{% if o.is_past %} is-past{% endif %}">
+                <span>
+                  {% if o.is_past %}<span class="lg-past-badge" title="Dated before today — confirm at payday session">●</span>{% endif %}
+                  {{ o.description }} <span class="date">· {{ o.date }}</span>
+                </span>
                 <span class="lg-num">${{ '{:,.2f}'.format(o.amount) }}</span>
               </div>
             {% endfor %}
+            {% if past_count %}
+              <div class="lg-spacer-sm"></div>
+              <a href="/ledger/payday/" class="lg-note" style="cursor:pointer;">Confirm in payday session →</a>
+            {% endif %}
           </details>
         {% endif %}
       {% endif %}
@@ -144,11 +152,16 @@
     {% endif %}
   </div>
 
-  {# ============= pending confirmations ============= #}
-  {% if pending %}
+  {# Past-period stragglers: unconfirmed autopays that fell *before* the
+     current pay period began. Rare — but if they exist, surface them so
+     they don't disappear silently. The runway math doesn't include them
+     (assumed already reflected in the checking snapshot). #}
+  {% set stragglers = pending|rejectattr('tx_date', 'ge', runway.period_start)|list %}
+  {% if stragglers %}
     <div class="lg-pending-strip">
-      <h3>Pending autopay confirmations ({{ pending|length }})</h3>
-      {% for p in pending %}
+      <h3>Pre-period unconfirmed autopays ({{ stragglers|length }})</h3>
+      <p class="lg-note" style="margin:0 0 8px;">Dated before this pay period began — not deducted from runway, but worth a look at payday.</p>
+      {% for p in stragglers %}
         <div class="lg-pending-item">
           <span>
             <strong>{{ p.account_name }}</strong>
