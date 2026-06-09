@@ -6,6 +6,8 @@ page_ident: "WORKSHOP · TOOLS & EXPERIMENTS"
 author: aaron
 ---
 
+*Last updated: 2026-06-07*
+
 The Ledger is a private, password-protected web application I built to answer one question: *where am I with my debt, and what do I do next?* It lives in the same Flask app as [the Cockpit](/tools/cockpit/) but operates on its own SQLite database and behind a deliberately distinct aesthetic — the chart room of the ship, not another cockpit.
 
 It is not publicly accessible. This page is the technical manual.

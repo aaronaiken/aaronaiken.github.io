@@ -6,6 +6,8 @@ page_ident: "WORKSHOP · TOOLS & EXPERIMENTS"
 author: aaron
 ---
 
+*Last updated: 2026-05-28*
+
 The Dispatch is a private Flask web application I built to handle all outbound and inbound communication for this site — without exposing my email address publicly, without a third-party newsletter service, and without any tracking whatsoever.
 
 It lives on [PythonAnywhere](https://pythonanywhere.com), separate from the Cockpit. It is not publicly accessible. This page is the technical manual.

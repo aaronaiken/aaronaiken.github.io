@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Crimson+Pro:ital,wght@0,400;1,400&family=Share+Tech+Mono&display=swap');
+
+body.tidyapps-layout {
+  --nav-link: #a06820; --nav-link-hover: #f5b332;
+  --ident-color: #5a3c10; --ident-border: #2a1c08;
+  --footer-border: #2a1c08; --footer-label: #5a3c10;
+  --footer-link: #7a5020; --footer-link-hover: #d4880a; --footer-dim: #4a3010;
+
+  --ta-bg: #080a06; --ta-bg2: #0c0e08; --ta-bg3: #10120a;
+  --ta-amber: #d4880a; --ta-amber-hi: #f5b332; --ta-amber-lo: #9a6018;
+  --ta-text: #c89040; --ta-text-body: #a87030; --ta-text-dim: #5a3c10;
+  --ta-border: #2a1c08; --ta-border-hi: #4a3010;
+  --ta-scan: rgba(0,0,0,0.2);
+
+  background: var(--ta-bg) !important; color: var(--ta-text);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh; overflow-x: hidden;
+  margin: 0 !important; max-width: 100% !important; padding: 0 !important;
+  font-size: 17px;
+}
+
+body.tidyapps-layout * { box-sizing: border-box; }
+body.tidyapps-layout::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, var(--ta-scan) 3px, var(--ta-scan) 4px); pointer-events: none; z-index: 900; }
+body.tidyapps-layout::after { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 40%, transparent 50%, rgba(0,0,0,0.65) 100%); pointer-events: none; z-index: 901; }
+
+.ta__grain { position: fixed; inset: 0; z-index: 902; pointer-events: none; opacity: 0.04; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 180px 180px; }
+
+.ta__wrap { max-width: 720px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 10; }
+
+.ta__title-block { margin-bottom: 24px; opacity: 0; animation: ta-rise 0.5s ease-out 0.1s forwards; }
+.ta__title { font-family: 'VT323', monospace !important; font-size: 4.5rem !important; font-weight: 400 !important; color: var(--ta-amber-hi) !important; text-shadow: 0 0 24px rgba(212,136,10,0.55); letter-spacing: 0.1em !important; line-height: 1 !important; margin: 0 0 12px !important; text-decoration: none !important; animation: ta-amber-breathe 5s ease-in-out infinite; }
+.ta__subtitle { font-family: 'Crimson Pro', serif; font-size: 1.05rem; font-style: italic; color: var(--ta-text-body); margin: 0 !important; line-height: 1.6; max-width: 520px; }
+
+.ta__rule { display: flex; align-items: center; gap: 10px; margin: 28px 0 24px; opacity: 0; animation: ta-rise 0.4s ease-out 0.18s forwards; }
+.ta__rule::before, .ta__rule::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--ta-border-hi), transparent); }
+.ta__rule-glyph { font-size: 0.62rem; color: var(--ta-amber-lo); letter-spacing: 0.18em; }
+
+.ta__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 28px; opacity: 0; animation: ta-rise 0.5s ease-out 0.25s forwards; }
+@media (max-width: 560px) { .ta__grid { grid-template-columns: 1fr; } }
+
+.ta__card { display: flex; flex-direction: column; gap: 10px; padding: 20px; background: var(--ta-bg2); border: 1px solid var(--ta-border); text-decoration: none !important; color: var(--ta-text) !important; transition: border-color 0.15s, background 0.15s; position: relative; overflow: hidden; }
+.ta__card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(to right, var(--ta-amber-lo), transparent); opacity: 0; transition: opacity 0.2s; }
+.ta__card:hover { border-color: var(--ta-amber-lo); background: var(--ta-bg3) !important; }
+.ta__card:hover::before { opacity: 1; }
+.ta__card--pending { opacity: 0.6; cursor: default; pointer-events: none; }
+
+.ta__card-header { display: flex; justify-content: space-between; align-items: center; }
+.ta__card-icon { font-size: 1.5rem; line-height: 1; }
+.ta__card-status { display: flex; align-items: center; gap: 5px; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ta-amber-lo); }
+.ta__card-status--pending { color: var(--ta-text-dim); }
+.ta__card-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--ta-amber); box-shadow: 0 0 6px var(--ta-amber); animation: ta-pulse 2s ease-in-out infinite; }
+.ta__card-dot--pending { background: var(--ta-text-dim); box-shadow: none; animation: none; }
+
+.ta__card-name { font-family: 'VT323', monospace !important; font-size: 1.6rem !important; font-weight: 400 !important; color: var(--ta-amber-hi) !important; letter-spacing: 0.04em !important; line-height: 1.1 !important; margin: 0 !important; text-decoration: none !important; }
+.ta__card-desc { font-family: 'Crimson Pro', serif; font-size: 1rem; color: var(--ta-text-body); line-height: 1.7; margin: 0 !important; flex: 1; }
+.ta__card-meta { display: flex; flex-wrap: wrap; gap: 5px; }
+.ta__card-tag { font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; padding: 2px 6px; border: 1px solid var(--ta-border-hi); color: var(--ta-text-dim); }
+.ta__card-cta { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ta-amber-lo); margin-top: 4px; transition: color 0.15s; }
+.ta__card:hover .ta__card-cta { color: var(--ta-amber); }
+.ta__card-arrow { display: inline-block; transition: transform 0.15s; }
+.ta__card:hover .ta__card-arrow { transform: translateX(4px); }
+
+.ta__signal { display: flex; align-items: center; gap: 18px; padding: 20px; background: rgba(212,136,10,0.04); border: 1px solid var(--ta-amber-lo); text-decoration: none !important; color: var(--ta-text) !important; transition: background 0.15s; margin-bottom: 28px; opacity: 0; animation: ta-rise 0.5s ease-out 0.32s forwards; }
+.ta__signal:hover { background: rgba(212,136,10,0.10) !important; }
+.ta__signal-icon { font-size: 1.8rem; flex-shrink: 0; }
+.ta__signal-body { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.ta__signal-name { font-family: 'VT323', monospace; font-size: 1.3rem; color: var(--ta-amber-hi); letter-spacing: 0.04em; margin: 0; }
+.ta__signal-desc { font-family: 'Crimson Pro', serif; font-size: 0.95rem; color: var(--ta-text-body); line-height: 1.6; margin: 0; }
+.ta__signal-cta { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ta-amber-lo); flex-shrink: 0; }
+.ta__signal:hover .ta__signal-cta { color: var(--ta-amber); }
+@media (max-width: 480px) { .ta__signal { flex-direction: column; align-items: flex-start; } }
+
+@keyframes ta-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ta-amber-breathe { 0%,100% { text-shadow: 0 0 18px rgba(212,136,10,0.5); } 50% { text-shadow: 0 0 28px rgba(245,179,50,0.75); } }
+@keyframes ta-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+@media (prefers-color-scheme: light) {
+  body.tidyapps-layout {
+    --ta-bg: #f5f0e8; --ta-bg2: #ece6d8; --ta-bg3: #e4ddd0;
+    --ta-amber: #7a3e00; --ta-amber-hi: #5a2e00; --ta-amber-lo: #a06020;
+    --ta-text: #4a3818; --ta-text-body: #5a3818; --ta-text-dim: #8a7858;
+    --ta-border: #c8bfad; --ta-border-hi: #a89878;
+    --nav-link: #a06020; --nav-link-hover: #7a3e00;
+    --footer-border: #c8bfad; --footer-label: #8a7858;
+    --footer-link: #a06020; --footer-link-hover: #7a3e00; --footer-dim: #8a7858;
+    background: var(--ta-bg) !important;
+  }
+  body.tidyapps-layout::before, body.tidyapps-layout::after { display: none; }
+  .ta__grain { display: none; }
+  .ta__title { text-shadow: none !important; animation: ta-rise 0.5s ease-out 0.1s forwards !important; color: #5a2e00 !important; }
+  .ta__card { background: var(--ta-bg2); }
+  .ta__card:hover { background: var(--ta-bg3) !important; }
+  .ta__signal { background: rgba(160,96,32,0.05); }
+}
+</style>
+<body class="tidyapps-layout">
+  <div class="ta__grain"></div>
+  <main class="ta__wrap">
+    {% include nav.html %}
+    <div class="ta__title-block">
+      <h1 class="ta__title">TIDY</h1>
+      <p class="ta__subtitle">Small, polished, single-job Mac utilities. Made by hand in Harrisburg.</p>
+    </div>
+
+    <div class="ta__rule"><span class="ta__rule-glyph">◈ ◈ ◈</span></div>
+
+    <div class="ta__grid">
+      <div class="ta__card ta__card--pending">
+        <div class="ta__card-header">
+          <span class="ta__card-icon">📊</span>
+          <span class="ta__card-status ta__card-status--pending"><span class="ta__card-dot ta__card-dot--pending"></span>INCOMING</span>
+        </div>
+        <h2 class="ta__card-name">TIDY BAR</h2>
+        <p class="ta__card-desc">A cleaner menu bar for Mac. Hide the noise, drag the divider, reveal what matters. Native, sandboxed, no telemetry.</p>
+        <div class="ta__card-meta">
+          <span class="ta__card-tag">macOS</span>
+          <span class="ta__card-tag">AppKit</span>
+          <span class="ta__card-tag">Universal</span>
+        </div>
+        <div class="ta__card-cta">ON THE APP STORE (soon)</div>
+      </div>
+
+      <div class="ta__card ta__card--pending">
+        <div class="ta__card-header">
+          <span class="ta__card-icon">🎬</span>
+          <span class="ta__card-status ta__card-status--pending"><span class="ta__card-dot ta__card-dot--pending"></span>BLUEPRINT</span>
+        </div>
+        <h2 class="ta__card-name">TIDY STAGE</h2>
+        <p class="ta__card-desc">Clean desktop and neutral wallpaper for screen recording and sharing. One toggle: presenter-ready. Restores everything when you're done.</p>
+        <div class="ta__card-meta">
+          <span class="ta__card-tag">macOS</span>
+          <span class="ta__card-tag">AppKit</span>
+          <span class="ta__card-tag">Universal</span>
+        </div>
+        <div class="ta__card-cta">DESIGNED · NOT YET SHIPPED</div>
+      </div>
+    </div>
+
+    <a class="ta__signal" href="/tools/updates/">
+      <span class="ta__signal-icon">📡</span>
+      <div class="ta__signal-body">
+        <h3 class="ta__signal-name">// SIGNAL</h3>
+        <p class="ta__signal-desc">Get a heads-up when the next Tidy app ships. One signal, drop your email, done. No newsletters.</p>
+      </div>
+      <span class="ta__signal-cta">SIGN UP <span class="ta__card-arrow">→</span></span>
+    </a>
+
+    {% include footer.html %}
+  </main>
+</body>
+</html>
