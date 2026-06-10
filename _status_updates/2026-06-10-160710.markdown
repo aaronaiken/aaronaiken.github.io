@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-06-10 16:07:10 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Finishing touches then will be throwing this out into the world for people to use. Was a tool I wanted/needed first, now time (soon) for others to come in and kick the tires with me.
+
+![Status Image](https://cargo.aaronaiken.me/status/20260610160710.jpg)
