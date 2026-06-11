@@ -750,20 +750,40 @@
 
 	function ytLoadLibrary(cb) {
 		fetch('/cockpit/after-dark/youtube')
-			.then(r => r.json())
+			.then(r => {
+				if (!r.ok) throw new Error('HTTP ' + r.status);
+				return r.json();
+			})
 			.then(data => {
+				console.log('[yt] library loaded:', (data.items || []).length, 'items');
 				ytLibraryItems = data.items || [];
 				ytRenderLibrary();
 				if (cb) cb();
 			})
-			.catch(() => {});
+			.catch(err => {
+				console.error('[yt] library load failed:', err);
+				ytLibraryItems = [];
+				const grid = document.getElementById('yt-player-library-grid');
+				if (grid) {
+					grid.innerHTML =
+						'<div style="color:#c04040;font-size:0.55rem;letter-spacing:0.12em;padding:12px;">' +
+						'load failed: ' + (err && err.message ? err.message : 'unknown') + '<br>' +
+						'check browser console + /cockpit/after-dark/youtube directly</div>';
+				}
+			});
 	}
 
 	function ytRenderLibrary() {
 		const grid = document.getElementById('yt-player-library-grid');
 		grid.innerHTML = '';
 		if (ytLibraryItems.length === 0) {
-			grid.innerHTML = '<div style="color:#2a0f0f;font-size:0.55rem;letter-spacing:0.12em;padding:12px;">no videos in library — add URLs to static/after_dark_youtube.txt</div>';
+			grid.innerHTML =
+				'<div style="color:#2a0f0f;font-size:0.55rem;letter-spacing:0.12em;padding:12px;line-height:1.5;">' +
+				'no valid items returned by /cockpit/after-dark/youtube.<br>' +
+				'check static/after_dark_youtube.txt — one URL per line; supported formats:<br>' +
+				'<code>youtu.be/&lt;id&gt;</code> · <code>youtube.com/watch?v=&lt;id&gt;</code> · <code>youtube.com/embed/&lt;id&gt;</code> · <code>youtube.com/shorts/&lt;id&gt;</code><br>' +
+				'optional <code>|label</code> after URL · <code>#</code> for comments' +
+				'</div>';
 			return;
 		}
 		ytLibraryItems.forEach(function (item, idx) {
