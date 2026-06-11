@@ -203,8 +203,11 @@
 	   don't stack on first load. YT embeds scale responsively so the wrap +
 	   iframe can use the same 16:9 padding-bottom trick the AD player
 	   originally had — no transform-scale needed. */
+	/* Visible in all modes (normal / work / after-dark). Auto-start of
+	   a random video stays after-dark only — see cockpit_modes.js. */
 	#yt-player {
-		display: none;
+		display: flex;
+		flex-direction: column;
 		position: fixed;
 		z-index: 10003;
 		bottom: 80px;
@@ -218,9 +221,6 @@
 		user-select: none;
 		-webkit-user-select: none;
 	}
-
-	.mode-after-dark #yt-player { display: flex; flex-direction: column; }
-	.mode-work        #yt-player { display: none !important; }
 
 	#yt-player.is-minimized #yt-player-video-wrap,
 	#yt-player.is-minimized #yt-player-library,
