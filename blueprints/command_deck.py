@@ -258,10 +258,33 @@ def cd_block_save_as_template(slug, block_id):
 	return jsonify({'success': True, 'template_id': template_id})
 
 
+@command_deck_bp.route('/command-deck/templates/<int:template_id>/edit')
+@cd_auth_required
+def cd_template_edit_page(template_id):
+	"""Edit page for an existing template — supports project + checklist kinds.
+	Renders a form populated from body_json; saves via POST /update."""
+	conn = get_db()
+	row = conn.execute('SELECT * FROM templates WHERE id = ?', (template_id,)).fetchone()
+	if not row:
+		conn.close()
+		return ('Template not found', 404)
+	template = dict(row)
+	try:
+		template['body'] = json.loads(template['body_json'] or '{}')
+	except (ValueError, TypeError):
+		template['body'] = {}
+	template.pop('body_json', None)
+	conn.close()
+	return render_template('command_deck_template_edit.html', template=template)
+
+
 @command_deck_bp.route('/command-deck/templates/<int:template_id>/update', methods=['POST'])
 @cd_auth_required
 def cd_template_update(template_id):
-	"""Rename / re-describe. Body editing deferred to a later phase."""
+	"""Rename, re-describe, and/or replace body. All fields optional;
+	omit to leave unchanged. Body must match the template's kind:
+	  project   = {blocks: [...], tasks: [...]}
+	  checklist = {items: [...], title?: str}"""
 	data = request.get_json(silent=True) or request.form
 	conn = get_db()
 	row = conn.execute('SELECT * FROM templates WHERE id = ?', (template_id,)).fetchone()
@@ -271,6 +294,8 @@ def cd_template_update(template_id):
 
 	name = row['name']
 	description = row['description']
+	body_json_str = row['body_json']
+
 	if 'name' in data:
 		new_name = (data.get('name') or '').strip()
 		if not new_name:
@@ -279,10 +304,39 @@ def cd_template_update(template_id):
 		name = new_name
 	if 'description' in data:
 		description = (data.get('description') or '').strip() or None
+	if 'body' in data:
+		body = data.get('body')
+		if not isinstance(body, dict):
+			conn.close()
+			return jsonify({'error': 'invalid_body'}), 400
+		if row['kind'] == 'project':
+			if not isinstance(body.get('blocks'), list) or not isinstance(body.get('tasks'), list):
+				conn.close()
+				return jsonify({'error': 'invalid_body_shape'}), 400
+			for b in body['blocks']:
+				if not isinstance(b, dict) or b.get('type') not in ('note', 'checklist'):
+					conn.close()
+					return jsonify({'error': 'invalid_block'}), 400
+				if b['type'] == 'checklist' and not isinstance(b.get('items'), list):
+					conn.close()
+					return jsonify({'error': 'invalid_checklist_items'}), 400
+			for t in body['tasks']:
+				if not isinstance(t, dict) or not isinstance(t.get('title'), str):
+					conn.close()
+					return jsonify({'error': 'invalid_task'}), 400
+		else:  # checklist
+			if not isinstance(body.get('items'), list):
+				conn.close()
+				return jsonify({'error': 'invalid_body_shape'}), 400
+			for i in body['items']:
+				if not isinstance(i, dict) or not isinstance(i.get('text'), str):
+					conn.close()
+					return jsonify({'error': 'invalid_item'}), 400
+		body_json_str = json.dumps(body)
 
 	conn.execute(
-		'UPDATE templates SET name = ?, description = ?, updated = ? WHERE id = ?',
-		(name, description, et_now(), template_id)
+		'UPDATE templates SET name = ?, description = ?, body_json = ?, updated = ? WHERE id = ?',
+		(name, description, body_json_str, et_now(), template_id)
 	)
 	conn.commit()
 	conn.close()

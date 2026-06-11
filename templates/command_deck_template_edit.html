@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Edit "{{ template.name }}" · Command Deck</title>
+  <link rel="stylesheet" href="/static/command_deck.css">
+  <style>
+    /* Local styles for the template editor */
+    .tpl-edit-section { margin-bottom: 24px; }
+    .tpl-edit-section + .tpl-edit-section { border-top: 1px solid var(--cd-rule, #2a1c08); padding-top: 24px; }
+    .tpl-edit-label { display: block; font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--cd-label, #7a5020); margin: 14px 0 6px; }
+    .tpl-edit-input,
+    .tpl-edit-textarea {
+      width: 100%; box-sizing: border-box;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid var(--cd-border, #4a3010);
+      color: var(--cd-text, #c89040);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.95rem;
+      padding: 9px 11px;
+    }
+    .tpl-edit-input:focus,
+    .tpl-edit-textarea:focus { outline: none; border-color: var(--cd-amber-hi, #f5b332); }
+    .tpl-edit-textarea { min-height: 100px; resize: vertical; font-family: 'Crimson Pro', serif; line-height: 1.5; }
+
+    .tpl-block { margin-bottom: 14px; padding: 14px; border: 1px solid var(--cd-border, #4a3010); background: rgba(0,0,0,0.15); position: relative; }
+    .tpl-block-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .tpl-block-type { font-size: 0.66rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--cd-amber-lo, #9a6018); }
+
+    .tpl-row { display: flex; gap: 6px; margin-bottom: 5px; align-items: center; }
+    .tpl-row .tpl-edit-input { flex: 1; margin: 0; }
+    .tpl-row-remove {
+      flex-shrink: 0;
+      background: transparent;
+      border: 1px solid var(--cd-border, #4a3010);
+      color: var(--cd-amber-lo, #9a6018);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tpl-row-remove:hover { color: #b85d50; border-color: #b85d50; }
+
+    .tpl-add-row { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .tpl-action-bar { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--cd-rule, #2a1c08); display: flex; gap: 12px; align-items: center; }
+
+    .tpl-empty { padding: 14px; color: var(--cd-text-dim, #7a5020); font-style: italic; font-family: 'Crimson Pro', serif; }
+  </style>
+</head>
+<body class="command-deck">
+<div class="cd-shell">
+
+  <!-- HEADER -->
+  <header class="cd-header">
+    <div class="cd-header-left">
+      <a href="/command-deck/" class="cd-wordmark">COMMAND DECK</a>
+      <span class="cd-ident">TEMPLATE · EDIT</span>
+    </div>
+    <nav class="cd-header-nav">
+      <a href="/command-deck/templates/" class="cd-nav-link">← TEMPLATES</a>
+    </nav>
+  </header>
+
+  {% include 'includes/today_panel.html' %}
+  {% include 'includes/active_timer_strip.html' %}
+
+  <!-- MAIN -->
+  <div class="cd-main full-width">
+
+    <form id="tpl-edit-form" data-kind="{{ template.kind }}" data-template-id="{{ template.id }}">
+
+      <!-- METADATA -->
+      <div class="tpl-edit-section">
+        <span class="tpl-block-type">{{ template.kind | upper }} TEMPLATE</span>
+        <label class="tpl-edit-label" for="tpl-name">NAME</label>
+        <input class="tpl-edit-input" id="tpl-name" type="text" value="{{ template.name }}" required maxlength="120">
+
+        {% if template.kind == 'project' %}
+          <label class="tpl-edit-label" for="tpl-description">DESCRIPTION</label>
+          <textarea class="tpl-edit-textarea" id="tpl-description">{{ template.description or '' }}</textarea>
+        {% endif %}
+      </div>
+
+      {% if template.kind == 'project' %}
+        <!-- BLOCKS -->
+        <div class="tpl-edit-section">
+          <span class="tpl-block-type">// BLOCKS</span>
+          <div id="blocks-container" style="margin-top:12px;">
+            {% for block in template.body.blocks %}
+              <div class="tpl-block" data-type="{{ block.type }}">
+                <div class="tpl-block-header">
+                  <span class="tpl-block-type">{{ block.type | upper }}</span>
+                  <button type="button" class="tpl-row-remove" onclick="removeBlock(this)">REMOVE BLOCK</button>
+                </div>
+                <label class="tpl-edit-label">TITLE</label>
+                <input class="tpl-edit-input tpl-block-title" type="text" value="{{ block.title or '' }}">
+                {% if block.type == 'note' %}
+                  <label class="tpl-edit-label">CONTENT</label>
+                  <textarea class="tpl-edit-textarea tpl-block-content">{{ block.content or '' }}</textarea>
+                {% else %}
+                  <label class="tpl-edit-label">ITEMS</label>
+                  <div class="tpl-block-items">
+                    {% for item in block['items'] %}
+                      <div class="tpl-row">
+                        <input class="tpl-edit-input tpl-item-text" type="text" value="{{ item.text }}">
+                        <button type="button" class="tpl-row-remove" onclick="removeRow(this)" title="Remove item">×</button>
+                      </div>
+                    {% endfor %}
+                  </div>
+                  <div class="tpl-add-row">
+                    <button type="button" class="cd-btn ghost sm" onclick="addItemToBlock(this)">+ ADD ITEM</button>
+                  </div>
+                {% endif %}
+              </div>
+            {% else %}
+              <div class="tpl-empty">No blocks yet — add one below.</div>
+            {% endfor %}
+          </div>
+          <div class="tpl-add-row">
+            <button type="button" class="cd-btn ghost sm" onclick="addBlock('note')">+ ADD NOTE BLOCK</button>
+            <button type="button" class="cd-btn ghost sm" onclick="addBlock('checklist')">+ ADD CHECKLIST BLOCK</button>
+          </div>
+        </div>
+
+        <!-- TASKS -->
+        <div class="tpl-edit-section">
+          <span class="tpl-block-type">// TASKS</span>
+          <div id="tasks-container" style="margin-top:12px;">
+            {% for task in template.body.tasks %}
+              <div class="tpl-row">
+                <input class="tpl-edit-input tpl-task-title" type="text" value="{{ task.title }}">
+                <button type="button" class="tpl-row-remove" onclick="removeRow(this)" title="Remove task">×</button>
+              </div>
+            {% else %}
+              <div class="tpl-empty">No tasks yet — optional; add below if you want them.</div>
+            {% endfor %}
+          </div>
+          <div class="tpl-add-row">
+            <button type="button" class="cd-btn ghost sm" onclick="addTask()">+ ADD TASK</button>
+          </div>
+        </div>
+
+      {% else %}
+        <!-- CHECKLIST kind -->
+        <div class="tpl-edit-section">
+          <label class="tpl-edit-label" for="tpl-checklist-title">SPAWNED BLOCK TITLE (optional)</label>
+          <input class="tpl-edit-input" id="tpl-checklist-title" type="text" value="{{ template.body.title or '' }}">
+
+          <label class="tpl-edit-label">ITEMS</label>
+          <div id="items-container">
+            {% for item in template.body['items'] %}
+              <div class="tpl-row">
+                <input class="tpl-edit-input tpl-item-text" type="text" value="{{ item.text }}">
+                <button type="button" class="tpl-row-remove" onclick="removeRow(this)" title="Remove item">×</button>
+              </div>
+            {% else %}
+              <div class="tpl-empty">No items yet — add one below.</div>
+            {% endfor %}
+          </div>
+          <div class="tpl-add-row">
+            <button type="button" class="cd-btn ghost sm" onclick="addItem()">+ ADD ITEM</button>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- ACTIONS -->
+      <div class="tpl-action-bar">
+        <button type="submit" class="cd-btn primary">SAVE CHANGES</button>
+        <a href="/command-deck/templates/" class="cd-btn ghost">CANCEL</a>
+        <span id="tpl-save-status" style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:0.75rem;letter-spacing:0.15em;color:var(--cd-text-dim,#7a5020);"></span>
+      </div>
+
+    </form>
+
+  </div><!-- /.cd-main -->
+
+  <!-- FOOTER -->
+  <footer class="cd-footer">
+    <div class="cd-footer-links">
+      <a href="/command-deck/templates/" class="cd-footer-link">Templates</a>
+      <a href="/command-deck/" class="cd-footer-link">Bridge</a>
+      <a href="/publish" class="cd-footer-link">Cockpit</a>
+    </div>
+    {% include 'includes/cd_footer_status.html' %}
+    <span class="cd-footer-ident">YT-1300F · TEMPLATE · EDIT</span>
+  </footer>
+
+</div><!-- /.cd-shell -->
+
+<script>
+(function () {
+  'use strict';
+
+  var form = document.getElementById('tpl-edit-form');
+  var kind = form.getAttribute('data-kind');
+  var templateId = form.getAttribute('data-template-id');
+  var status = document.getElementById('tpl-save-status');
+
+  function clearEmpty(containerId) {
+    var container = document.getElementById(containerId);
+    if (!container) return container;
+    var empty = container.querySelector('.tpl-empty');
+    if (empty) empty.remove();
+    return container;
+  }
+
+  function makeRow(inputClass, removeTitle) {
+    var row = document.createElement('div');
+    row.className = 'tpl-row';
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'tpl-edit-input ' + inputClass;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'tpl-row-remove';
+    btn.title = removeTitle;
+    btn.textContent = '×';
+    btn.onclick = function () { removeRow(btn); };
+    row.appendChild(input);
+    row.appendChild(btn);
+    return row;
+  }
+
+  window.removeRow = function (btn) {
+    var row = btn.closest('.tpl-row');
+    if (row) row.remove();
+  };
+
+  window.removeBlock = function (btn) {
+    var block = btn.closest('.tpl-block');
+    if (block) block.remove();
+  };
+
+  window.addItemToBlock = function (btn) {
+    var block = btn.closest('.tpl-block');
+    var items = block.querySelector('.tpl-block-items');
+    var row = makeRow('tpl-item-text', 'Remove item');
+    items.appendChild(row);
+    row.querySelector('input').focus();
+  };
+
+  window.addBlock = function (type) {
+    var container = clearEmpty('blocks-container');
+    var block = document.createElement('div');
+    block.className = 'tpl-block';
+    block.setAttribute('data-type', type);
+
+    var inner = '<div class="tpl-block-header">' +
+                  '<span class="tpl-block-type">' + type.toUpperCase() + '</span>' +
+                  '<button type="button" class="tpl-row-remove" onclick="removeBlock(this)">REMOVE BLOCK</button>' +
+                '</div>' +
+                '<label class="tpl-edit-label">TITLE</label>' +
+                '<input class="tpl-edit-input tpl-block-title" type="text" value="">';
+
+    if (type === 'note') {
+      inner += '<label class="tpl-edit-label">CONTENT</label>' +
+               '<textarea class="tpl-edit-textarea tpl-block-content"></textarea>';
+    } else {
+      inner += '<label class="tpl-edit-label">ITEMS</label>' +
+               '<div class="tpl-block-items"></div>' +
+               '<div class="tpl-add-row">' +
+                 '<button type="button" class="cd-btn ghost sm" onclick="addItemToBlock(this)">+ ADD ITEM</button>' +
+               '</div>';
+    }
+
+    block.innerHTML = inner;
+    container.appendChild(block);
+    block.querySelector('.tpl-block-title').focus();
+  };
+
+  window.addTask = function () {
+    var container = clearEmpty('tasks-container');
+    var row = makeRow('tpl-task-title', 'Remove task');
+    container.appendChild(row);
+    row.querySelector('input').focus();
+  };
+
+  window.addItem = function () {
+    var container = clearEmpty('items-container');
+    var row = makeRow('tpl-item-text', 'Remove item');
+    container.appendChild(row);
+    row.querySelector('input').focus();
+  };
+
+  // ----- Submit -----
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    var name = document.getElementById('tpl-name').value.trim();
+    if (!name) {
+      status.textContent = '⚠ name is required';
+      document.getElementById('tpl-name').focus();
+      return;
+    }
+
+    var payload = { name: name };
+
+    if (kind === 'project') {
+      payload.description = document.getElementById('tpl-description').value.trim();
+
+      var blocks = [];
+      document.querySelectorAll('#blocks-container .tpl-block').forEach(function (blockEl) {
+        var type = blockEl.getAttribute('data-type');
+        var title = blockEl.querySelector('.tpl-block-title').value.trim();
+        var entry = { type: type };
+        if (title) entry.title = title;
+        if (type === 'note') {
+          entry.content = blockEl.querySelector('.tpl-block-content').value;
+        } else {
+          var items = [];
+          blockEl.querySelectorAll('.tpl-item-text').forEach(function (input) {
+            var text = input.value.trim();
+            if (text) items.push({ text: text });
+          });
+          entry.items = items;
+        }
+        blocks.push(entry);
+      });
+
+      var tasks = [];
+      document.querySelectorAll('#tasks-container .tpl-task-title').forEach(function (input) {
+        var title = input.value.trim();
+        if (title) tasks.push({ title: title });
+      });
+
+      payload.body = { blocks: blocks, tasks: tasks };
+    } else {
+      var checklistTitle = document.getElementById('tpl-checklist-title').value.trim();
+      var items = [];
+      document.querySelectorAll('#items-container .tpl-item-text').forEach(function (input) {
+        var text = input.value.trim();
+        if (text) items.push({ text: text });
+      });
+      payload.body = { items: items };
+      if (checklistTitle) payload.body.title = checklistTitle;
+    }
+
+    status.textContent = 'saving…';
+
+    fetch('/command-deck/templates/' + templateId + '/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'same-origin'
+    }).then(function (r) {
+      if (r.ok) {
+        status.textContent = '✓ saved · redirecting…';
+        setTimeout(function () {
+          window.location.href = '/command-deck/templates/';
+        }, 500);
+      } else {
+        return r.json().then(function (data) {
+          status.textContent = '⚠ save failed: ' + (data.error || 'unknown');
+        }).catch(function () {
+          status.textContent = '⚠ save failed';
+        });
+      }
+    }).catch(function (err) {
+      status.textContent = '⚠ network error';
+      console.error(err);
+    });
+  });
+})();
+</script>
+
+<script src="/static/command_deck_nav.js"></script>
+</body>
+</html>
