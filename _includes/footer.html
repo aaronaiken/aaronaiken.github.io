@@ -17,6 +17,7 @@
     <div class="site-footer__col">
       <p class="site-footer__label">More</p>
       <ul class="site-footer__list">
+        <li><a href="/the-long-way">The Long Way</a></li>
         <li><a href="/selling">Selling</a></li>
         <li><a href="/colophon/">Colophon</a></li>
         {%- if site.rss -%}
@@ -45,6 +46,10 @@
       </ul>
     </div>
 
+  </div>
+
+  <div class="site-footer__callout">
+    <span class="site-footer__callout-text">A letter, every two weeks — </span><a class="site-footer__callout-link" href="/the-long-way">The Long Way →</a>
   </div>
 
   <div class="site-footer__fine-print">
@@ -167,6 +172,36 @@
 .site-footer__list a:hover {
   color: var(--footer-link-hover, #d4880a) !important;
   background: none !important;
+}
+
+.site-footer__callout {
+  text-align: center;
+  padding: 14px 0;
+  border-top: 1px solid var(--footer-border, #2a1c08);
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-style: italic;
+  font-size: 0.92rem;
+  letter-spacing: 0;
+  color: var(--footer-dim, #3a2808);
+  line-height: 1.4;
+}
+
+.site-footer__callout-text {
+  color: var(--footer-label, #5a3c10);
+}
+
+.site-footer__callout-link {
+  color: var(--footer-link, #5a3c10) !important;
+  text-decoration: none !important;
+  background: none !important;
+  border-bottom: 1px dotted var(--footer-link, #5a3c10);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.site-footer__callout-link:hover {
+  color: var(--footer-link-hover, #d4880a) !important;
+  background: none !important;
+  border-color: var(--footer-link-hover, #d4880a);
 }
 
 .site-footer__fine-print {
