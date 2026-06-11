@@ -30,7 +30,7 @@ Direct engagements with end clients. No agencies, no staff augmentation.
 
 - **[Endpaper](https://endpaper.day)** — a private writing system. Capture thoughts in any shape (journal, notes, scholarly drafts), search across everything you've ever written, publish to any blog. My main personal tool, live and in production.
 - **[Best Cigar Matches](https://bestcigarmatches.com)** — a real direct-to-consumer business selling hand-made cedar matches. Real customers, real revenue. My wife runs fulfillment.
-- **The Creed** — a daily-reflection app I built for my kids. They check in each day on a virtue, earn points, customize their character. Their parents (us) get a dashboard. Running quietly for years.
+- **The Creed** — a daily-reflection app I built for my son Mozzie. He checks in each day on a virtue, earns points, customizes his character. Lindsay and I get the dashboard. Running quietly for years.
 - **Plink** — a tip jar for indie creators. They embed it on their site, visitors send small amounts directly, no middleman skim.
 - **[The Cockpit + The Ledger](/tools/)** — my own private command center for running my life. Tasks, projects, time, meetings, mileage, plus a full personal-finance suite covering debt elimination and cash runway. The dogfood proof — I built the same kind of thing for myself that I'd build for you.
 - **[This site](https://aaronaiken.me)** — a blog with a custom publishing pipeline I can push to from anywhere. The companion piece to the Cockpit; together they let me post a photo from my phone and have it live on the blog in seconds.
