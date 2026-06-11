@@ -204,7 +204,8 @@
 	   iframe can use the same 16:9 padding-bottom trick the AD player
 	   originally had — no transform-scale needed. */
 	/* Visible in all modes (normal / work / after-dark). Auto-start of
-	   a random video stays after-dark only — see cockpit_modes.js. */
+	   a random video stays after-dark only — see cockpit_modes.js.
+	   Hidden on mobile — 480px floating player overflows small screens. */
 	#yt-player {
 		display: flex;
 		flex-direction: column;
@@ -307,6 +308,11 @@
 		opacity: 0.85;
 	}
 	#yt-player-resize-grip:hover { opacity: 1; background: #2a0c0c; }
+
+	/* Hide YT player on mobile — 480px floating window doesn't fit. */
+	@media (max-width: 700px) {
+		#yt-player { display: none !important; }
+	}
 
 	#ad-player-titlebar {
 		display: flex;
