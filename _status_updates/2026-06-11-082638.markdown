@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-06-11 08:26:38 -0400
+layout: status_update
+author: aaron
+source: web
+---
+👨🏻‍💻 Morning writing done. More coffee and then into the workday...which is more of 👨🏻‍💻
