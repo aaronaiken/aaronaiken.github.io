@@ -245,10 +245,21 @@
 		letter-spacing: 0.12em;
 	}
 
+	/* Drawer overlays the video when open instead of competing for
+	   flex-column space (the player has a JS-applied fixed height and
+	   the video-wrap min-height blocks the library from rendering when
+	   they compete). Absolute removes it from flex flow entirely. */
 	#yt-player-library {
+		position: absolute;
+		top: 24px; /* below titlebar */
+		left: 0;
+		right: 0;
+		z-index: 2;
 		max-height: 0;
 		overflow: hidden;
 		transition: max-height 0.25s;
+		background: #0e0508;
+		border-bottom: 1px solid #4a1818;
 	}
 	#yt-player-library.is-open { max-height: 220px; overflow-y: auto; }
 
