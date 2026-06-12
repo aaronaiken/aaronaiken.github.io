@@ -1,0 +1,133 @@
+---
+layout: null
+permalink: /splinched/projection/
+title: Projection & Sandbox · Splinched
+description: Browser-only projection and sandbox tool for The Ledger spreadsheet. No data leaves your device.
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self';">
+<title>{{ page.title }}</title>
+<meta name="description" content="{{ page.description }}">
+<link rel="stylesheet" href="{{ '/assets/css/splinched-projection.css' | relative_url }}">
+</head>
+<body>
+<div class="sp-wrap">
+
+  <div class="sp-header">
+    <span class="sp-ident">SPLINCHED · PROJECTION & SANDBOX</span>
+    <a href="{{ '/splinched' | relative_url }}" class="sp-back">← Back to Splinched</a>
+  </div>
+  <h1 class="sp-title">Projection & Sandbox</h1>
+  <p class="sp-subtitle">Upload your Ledger Spreadsheet. See your debt-free date. Play with what-ifs. None of it leaves your device.</p>
+  <div class="sp-rule"></div>
+
+  <div class="sp-privacy">
+    <strong>🔒 100% local</strong>
+    <span class="sp-privacy-text">This page runs entirely in your browser. After it loads, you can disconnect from the internet and the tool still works.</span>
+    <details>
+      <summary>How do we know? ▾</summary>
+      <p>The page sets a <code>Content-Security-Policy</code> header that blocks all outbound network connections after load. No analytics, no telemetry, no cloud sync — nothing to send your numbers to.</p>
+      <p>Your spreadsheet stays on your machine. The math runs in this tab using a JavaScript port of the open-source Python helper the book describes. Sandbox state is remembered in your browser's <code>localStorage</code> so a refresh doesn't blow it away — also strictly local.</p>
+      <p>Want proof? Open the tool, then turn off your wifi. Upload a file. Run the projection. It all still works.</p>
+    </details>
+  </div>
+
+  <!-- ============= STATE: UPLOAD ============= -->
+  <div data-state="upload" class="is-active">
+    <div class="sp-drop" id="sp-drop">
+      <input type="file" id="sp-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+      <div class="sp-drop-icon">⤓</div>
+      <h2 class="sp-drop-headline">Drop your Ledger-Spreadsheet.xlsx here</h2>
+      <p class="sp-drop-hint">or click anywhere in this box to choose a file</p>
+      <div class="sp-drop-meta">
+        <span>.xlsx only · ≤ 2 MB</span>
+        <span>·</span>
+        <button id="sp-try-example" type="button">Try the example sheet →</button>
+      </div>
+    </div>
+
+    <div style="margin-top:22px;color:var(--sp-text-body);font-style:italic;">
+      Your spreadsheet doesn't get uploaded. It's read locally with a JavaScript library called <a href="https://sheetjs.com/" rel="noopener noreferrer" style="color:var(--sp-brass);">SheetJS</a>, bundled into this page. The math then runs on the parsed data, again in your tab.
+    </div>
+    <p class="sp-dim" style="margin-top:14px;font-style:italic;font-size:0.92rem;">
+      It's a tool — projections, not promises. Trust your actual bank and lender statements first, and treat what you see here as a planning aid. Full caveat shows up on the projection screen.
+    </p>
+  </div>
+
+  <!-- ============= STATE: CONFIRM ============= -->
+  <div data-state="confirm">
+    <div class="sp-card" id="sp-confirm"></div>
+    <div class="sp-actions">
+      <button class="sp-btn" id="sp-go-project">Run projection →</button>
+      <button class="sp-btn is-ghost" id="sp-back-from-confirm">← Upload a different file</button>
+    </div>
+  </div>
+
+  <!-- ============= STATE: ISSUES ============= -->
+  <div data-state="issues">
+    <div class="sp-card">
+      <h2 class="sp-card-title">We hit a snag</h2>
+      <p class="sp-dim" style="font-style:italic;">The tool reads the spreadsheet using the v{{ "1.0" }} layout described in the book. Below is what we found and how to fix it.</p>
+      <div id="sp-issues-version" class="sp-issue is-version" style="display:none;margin-top:14px;">
+        <div class="sp-issue-where">FORMAT VERSION MISMATCH</div>
+        <p class="sp-issue-msg" id="sp-issues-version-msg"></p>
+        <p class="sp-issue-hint">Re-download the latest spreadsheet template from your Splinched bundle, copy your account rows + snapshot rows over, and try again. Your data isn't lost — just paste it into the new template.</p>
+      </div>
+      <div class="sp-issues" id="sp-issues-list"></div>
+    </div>
+    <div class="sp-actions">
+      <button class="sp-btn is-ghost" id="sp-back-from-issues">← Try another file</button>
+      <button class="sp-btn is-ghost" id="sp-copy-diag" title="Copies a sanitized JSON snippet (no balance numbers) you can paste into a support email.">Copy diagnostic for support</button>
+    </div>
+    <p class="sp-dim" style="font-style:italic;margin-top:-8px;">
+      Then paste it into an email to <a href="mailto:aaron@aaronaiken.me?subject=Splinched%20Projection%20%E2%80%94%20help%20with%20my%20spreadsheet" style="color:var(--sp-brass);">aaron@aaronaiken.me</a> and I'll take a look.
+    </p>
+  </div>
+
+  <!-- ============= STATE: PROJECTION + SANDBOX ============= -->
+  <div data-state="projection">
+    <div id="sp-projection"></div>
+
+    <div class="sp-sandbox" id="sp-sandbox">
+      <div class="sp-sandbox-head" id="sp-sandbox-head">
+        <h2 class="sp-card-title">// SANDBOX — explore what-if</h2>
+        <span class="sp-toggle-icon">▸</span>
+      </div>
+      <div class="sp-sandbox-body" id="sp-sandbox-body"></div>
+    </div>
+
+    <div class="sp-actions">
+      <button class="sp-btn" id="sp-print">Print / Save as PDF</button>
+      <button class="sp-btn is-ghost" id="sp-reset-sandbox">Reset sandbox</button>
+      <button class="sp-btn is-ghost" id="sp-back-from-projection">← Back to summary</button>
+    </div>
+
+    <div class="sp-disclosure">
+      <h3>Read this before you trust the number</h3>
+      <p>This is a tool. Tools have bugs. Spreadsheets have typos. Real life happens between payday sessions, and your APR or minimum can change without telling either of us.</p>
+      <p>If something here doesn't match what you see in your bank or with your lender, <strong>trust the real number, not this projection</strong>. The math mirrors my own ledger and there are tests pinning it to known answers, but software is software.</p>
+      <p>Splinched is not financial advice. I'm not a CFP, an accountant, or a licensed anything. This is a tool to help you think clearly about your debt — not a substitute for talking to someone qualified when you need to.</p>
+    </div>
+
+    <p class="sp-dim" style="font-style:italic;margin-top:24px;">
+      <strong>Heads up:</strong> the projection lives in your tab only. Close it and the numbers are gone — that's the privacy promise. Reload, re-upload your latest spreadsheet, and you'll see the fresh picture. Your sandbox settings stick around between sessions.
+    </p>
+  </div>
+
+  <footer class="sp-footer">
+    Problem, question, or feedback? <a href="mailto:aaron@aaronaiken.me?subject=Splinched%20Projection%20%E2%80%94%20question">Email aaron@aaronaiken.me →</a>
+  </footer>
+
+</div>
+
+<!-- SheetJS bundled locally — no CDN. -->
+<script src="{{ '/assets/js/splinched-projection/xlsx.full.min.js' | relative_url }}"></script>
+<script type="module" src="{{ '/assets/js/splinched-projection/main.js' | relative_url }}"></script>
+
+</body>
+</html>
