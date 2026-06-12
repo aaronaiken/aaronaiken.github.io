@@ -533,8 +533,13 @@ function resetSandbox() {
 // ---- example sheet ----
 
 async function loadExampleSheet() {
+  // Path derives from SUPPORTED_FORMAT_VERSION so a future version bump
+  // only requires renaming the .xlsx file in /assets/splinched/ — no
+  // code change. See .kt/KT-splinched-projection.md (Bump checklist).
+  const url = `/assets/splinched/Ledger-Spreadsheet-v${SUPPORTED_FORMAT_VERSION}-example.xlsx`;
   try {
-    const res = await fetch('/assets/splinched/Ledger-Spreadsheet-v1.0-example.xlsx');
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
     const buf = await res.arrayBuffer();
     const wb = window.XLSX.read(buf, { type: 'array', cellDates: true });
     handleParsed(wb);

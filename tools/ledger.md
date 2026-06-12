@@ -100,3 +100,9 @@ The Ledger does not push notifications, send emails, or otherwise nag. The pill 
 A single button on the payday session screen labeled *Ask Claude what to do.* It sends the current state — debts, balances, runway, obligations, recent payments, upcoming events — to Anthropic's API and returns 2–3 recommendations with the math cited. It is advice, not action — nothing reaches a bank. If the API fails or returns invalid JSON, the system falls back to a deterministic rule-based avalanche recommendation so the panel never goes empty.
 
 It is not a chat. There is no memory between calls. Each press is a fresh request. The Ledger is not a companion — it is a tool.
+
+---
+
+## The Non-Coder Companion
+
+The Ledger is private — it runs on a server only I touch. The same method is captured for everyone else in [Splinched]({{ "/splinched" | relative_url }}), a book + spreadsheet bundle that does what this app does without any of the code. The book carries the story and the system; the spreadsheet handles Accounts, Snapshots, Cash Runway, Recurring expenses, and Milestones; the avalanche-snowball projection + sandbox what-if runs in a separate browser tool at [aaronaiken.me/splinched/projection/]({{ "/splinched/projection/" | relative_url }}). That page reads your spreadsheet locally — nothing uploads, nothing leaves your tab, the math runs in JavaScript ported one-to-one from the same `helpers/ledger.py` the Flask app uses. Disconnect your wifi and it still works.

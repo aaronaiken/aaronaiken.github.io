@@ -22,7 +22,7 @@ It is not a budgeting app. It is not a Dave-Ramsey replacement. It is the honest
 You get:
 
 - **The book** — PDF, ~100 pages, my voice, the story plus the method
-- **The Projection & Sandbox app** — a self-contained web tool that runs the same projection math as my private Ledger. Model your debt-free date and play with what-ifs: extra monthly attack, side income, windfalls. Browser-only, no signup, yours forever.
+- **The Projection & Sandbox app** — a self-contained web tool that runs the same projection math as my private Ledger. Model your debt-free date and play with what-ifs: extra monthly attack, side income, windfalls. Browser-only, no signup, yours forever. [Try it now with example data →](/splinched/projection/)
 - **The Ledger Spreadsheet** — spreadsheet version of my private app, no coding required
 - **The Leak-Hunt Sheet** — analyze your bank exports for forgotten recurring charges
 - **The Milestone Worksheet** — sketch your own debt-free sequence
