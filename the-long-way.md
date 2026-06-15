@@ -7,7 +7,7 @@ subtitle: Debt. Marriage. Faith. Fatherhood. Reconciliation. A letter from Aaron
 description: The Long Way — a personal newsletter from Aaron about taking the harder path through debt, marriage, faith, fatherhood, and the daily work of not taking shortcuts. Roughly every two weeks.
 ---
 
-Five years ago my world crumbled.
+In 2021 my world crumbled.
 
 By the end of 2024 I had piled up $110,000 in mostly consumer debt and a marriage that had come apart. In November of that year, I started walking back. On December 23, 2025, my wife and I remarried.
 

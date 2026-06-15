@@ -7,7 +7,7 @@ subtitle: How I built my way out of $110k of debt — and the system that got me
 description: Splinched — the book and bundle. The story behind eliminating $110k of debt, the system that got me there, and a spreadsheet you can use yourself.
 ---
 
-Five years ago my world crumbled. Four years after that I had piled up $110,000 of mostly consumer debt — leather-business overhead, tax bills, marital separation, and a lot of trying to fill a hole inside me with the spending of money I had, and the spending of money I didn't.
+In 2021 my world crumbled. Four years after that I had piled up $110,000 of mostly consumer debt — leather-business overhead, tax bills, marital separation, and a lot of trying to fill a hole inside me with the spending of money I had, and the spending of money I didn't.
 
 In October 2024, God broke through and I started to come back together. In December 2025, my wife and I remarried. By June 2026 we had paid down close to half of what I'd accumulated, and I was on track to be debt-free by March 2027.
 
