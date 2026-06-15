@@ -669,10 +669,6 @@ a.day-row-title:hover { color: var(--cd-amber-hi, #f5b332); }
     bindDayDrag(c);
   }
 
-  // dragOverInfo: where a drop would land — {segId, targetKey, before}.
-  // targetKey null = append to the segment (dropped on empty body space).
-  var dragOverInfo = null;
-
   function bindDayDrag(c) {
     c.querySelectorAll('.day-row[draggable="true"]').forEach(function(row) {
       row.addEventListener('dragstart', function(e) {
@@ -686,16 +682,19 @@ a.day-row-title:hover { color: var(--cd-amber-hi, #f5b332); }
       row.addEventListener('dragover', function(e) {
         if (!dayDrag) return;
         e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move';
-        var rect = row.getBoundingClientRect();
-        var before = e.clientY < rect.top + rect.height / 2;
         clearDropHints();
-        row.classList.add(before ? 'drop-before' : 'drop-after');
+        row.classList.add(dropBefore(row, e) ? 'drop-before' : 'drop-after');
+      });
+      // Drop directly on the row (don't rely on bubbling to the body).
+      row.addEventListener('drop', function(e) {
+        if (!dayDrag) return;
+        e.preventDefault(); e.stopPropagation();
         var body = row.closest('.day-seg-body');
-        dragOverInfo = {
-          segId: body ? body.getAttribute('data-segment-id') : '',
-          targetKey: row.getAttribute('data-kind') + ':' + row.getAttribute('data-id'),
-          before: before
-        };
+        finalizeDrop(
+          body ? body.getAttribute('data-segment-id') : '',
+          row.getAttribute('data-kind') + ':' + row.getAttribute('data-id'),
+          dropBefore(row, e)
+        );
       });
     });
     c.querySelectorAll('.day-seg-body').forEach(function(body) {
@@ -703,25 +702,28 @@ a.day-row-title:hover { color: var(--cd-amber-hi, #f5b332); }
         if (!dayDrag) return;
         e.preventDefault(); e.dataTransfer.dropEffect = 'move';
         body.classList.add('drop-hover');
-        // Empty space in the body (row handler stops propagation when over a row).
-        dragOverInfo = { segId: body.getAttribute('data-segment-id'), targetKey: null, before: false };
       });
       body.addEventListener('dragleave', function() { body.classList.remove('drop-hover'); });
+      // Drop on empty body space → append to this segment.
       body.addEventListener('drop', function(e) {
         if (!dayDrag) return;
         e.preventDefault();
-        finalizeDrop();
+        finalizeDrop(body.getAttribute('data-segment-id'), null, false);
       });
     });
   }
 
-  function finalizeDrop() {
-    var d = dayDrag; dayDrag = null;
-    var info = dragOverInfo; dragOverInfo = null;
-    clearDropHints();
-    if (!d || !info) return;
+  function dropBefore(row, e) {
+    var rect = row.getBoundingClientRect();
+    return e.clientY < rect.top + rect.height / 2;
+  }
 
-    var destSeg = (info.segId === '' || info.segId == null) ? null : Number(info.segId);
+  function finalizeDrop(segIdRaw, targetKey, before) {
+    var d = dayDrag; dayDrag = null;
+    clearDropHints();
+    if (!d) return;
+
+    var destSeg = (segIdRaw === '' || segIdRaw == null) ? null : Number(segIdRaw);
     var draggedKey = d.kind + ':' + d.id;
 
     // Current ordered keys of the destination segment (minus the dragged item).
@@ -731,10 +733,10 @@ a.day-row-title:hover { color: var(--cd-amber-hi, #f5b332); }
       .map(function(e) { return (e.kind || 'task') + ':' + e.id; })
       .filter(function(k) { return k !== draggedKey; });
 
-    if (info.targetKey && info.targetKey !== draggedKey) {
-      var idx = keys.indexOf(info.targetKey);
+    if (targetKey && targetKey !== draggedKey) {
+      var idx = keys.indexOf(targetKey);
       if (idx < 0) keys.push(draggedKey);
-      else keys.splice(info.before ? idx : idx + 1, 0, draggedKey);
+      else keys.splice(before ? idx : idx + 1, 0, draggedKey);
     } else {
       keys.push(draggedKey);
     }
