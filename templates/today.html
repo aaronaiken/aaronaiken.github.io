@@ -53,6 +53,21 @@
         <span id="todayCountLabel" style="font-family:var(--cd-font-ui);font-size:0.62rem;letter-spacing:0.15em;color:var(--cd-text-dim);">— tasks selected</span>
       </div>
 
+      <!-- MY DAY — persistent segments with today-flagged items slotted in -->
+      <div id="myDay" class="cd-mb">
+        <div class="cd-flex-between day-section-head">
+          <span class="day-section-label">// My Day</span>
+          <button id="addSegmentBtn" class="day-add-seg-btn" type="button">+ Add part of day</button>
+        </div>
+        <div id="segmentsContainer">
+          <div class="cd-panel cd-mb"><div class="cd-panel-body"><div class="cd-empty">Loading…</div></div></div>
+        </div>
+      </div>
+
+      <div class="day-section-head day-section-head-picker">
+        <span class="day-section-label">// Add to today</span>
+      </div>
+
       <div id="masterList">
         <div class="cd-panel cd-mb">
           <div class="cd-panel-body">
@@ -222,6 +237,164 @@
   background: rgba(204, 64, 64, 0.08);
   text-transform: uppercase;
 }
+
+/* ===== My Day — segments + slotted rows ===== */
+.day-section-head {
+  align-items: center;
+  margin-bottom: 8px;
+}
+.day-section-head-picker {
+  margin-top: 1.6rem;
+  padding-top: 4px;
+  border-top: 1px solid rgba(212,136,10,0.1);
+}
+.day-section-label {
+  font-family: var(--cd-font-ui);
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cd-text-dim);
+}
+.day-add-seg-btn {
+  background: none;
+  border: 1px solid rgba(212,136,10,0.35);
+  color: var(--cd-amber, #d4880a);
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.day-add-seg-btn:hover { background: rgba(212,136,10,0.1); border-color: rgba(212,136,10,0.6); }
+
+.day-segment { margin-bottom: 12px; }
+.day-seg-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.day-seg-title { text-transform: none; letter-spacing: 0.04em; }
+.day-seg-controls { display: inline-flex; gap: 2px; flex-shrink: 0; }
+.day-seg-btn {
+  background: none; border: none; cursor: pointer;
+  color: rgba(212,136,10,0.4);
+  font-size: 0.7rem; line-height: 1;
+  width: 22px; height: 22px; border-radius: 2px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: color 0.12s, background 0.12s;
+}
+.day-seg-btn:hover { color: var(--cd-amber, #d4880a); background: rgba(212,136,10,0.08); }
+.day-seg-btn:disabled { opacity: 0.25; cursor: default; }
+.day-seg-btn:disabled:hover { color: rgba(212,136,10,0.4); background: none; }
+
+.day-seg-body { transition: background 0.12s; min-height: 8px; }
+.day-seg-body.drop-hover {
+  background: rgba(212,136,10,0.1);
+  outline: 1px dashed rgba(212,136,10,0.5);
+  outline-offset: -3px;
+}
+.day-empty-hint {
+  padding: 8px 14px;
+  font-family: var(--cd-font-ui);
+  font-size: 0.56rem;
+  letter-spacing: 0.06em;
+  color: rgba(212,136,10,0.35);
+}
+.day-unassigned .cd-panel-title { color: var(--cd-text-dim); }
+.day-done-panel { opacity: 0.7; }
+
+.day-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 2px;
+  transition: background 0.12s;
+}
+.day-row:hover { background: rgba(212,136,10,0.05); }
+.day-row.dragging { opacity: 0.4; }
+.day-row[draggable="true"] { cursor: grab; }
+.day-row.is-done { opacity: 0.55; }
+.day-row.is-done .day-row-title { text-decoration: line-through; }
+
+.day-handle { color: rgba(212,136,10,0.25); font-size: 0.7rem; flex-shrink: 0; cursor: grab; }
+.day-row-title {
+  font-family: var(--cd-font-mono, 'Share Tech Mono', monospace);
+  font-size: 0.78rem;
+  color: var(--cd-text, rgba(212,136,10,0.85));
+  flex: 1; min-width: 0;
+  line-height: 1.4;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+a.day-row-title { text-decoration: none; }
+a.day-row-title:hover { color: var(--cd-amber-hi, #f5b332); }
+
+.day-check, .day-timer {
+  background: none; border: 1px solid rgba(212,136,10,0.35);
+  cursor: pointer; flex-shrink: 0;
+  width: 22px; height: 22px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; line-height: 1; padding: 0;
+  color: rgba(212,136,10,0.7);
+  transition: all 0.12s;
+}
+.day-check:hover { border-color: var(--cd-amber); color: var(--cd-amber); background: rgba(212,136,10,0.1); }
+.day-check.done { border-color: rgba(212,136,10,0.5); color: var(--cd-amber); cursor: default; background: rgba(212,136,10,0.12); }
+.day-timer { border-radius: 2px; }
+.day-timer:hover { border-color: var(--cd-amber); color: var(--cd-amber); background: rgba(212,136,10,0.1); }
+.day-timer.running {
+  border-color: #f5b332; color: #f5b332;
+  background: rgba(245,179,50,0.12);
+  box-shadow: 0 0 8px rgba(245,179,50,0.3);
+}
+.day-spacer { width: 22px; flex-shrink: 0; }
+.day-timer-elapsed {
+  font-family: var(--cd-font-mono, monospace);
+  font-size: 0.6rem; color: #f5b332;
+  font-variant-numeric: tabular-nums; flex-shrink: 0;
+  min-width: 44px;
+}
+.day-due {
+  font-family: var(--cd-font-ui);
+  font-size: 0.55rem; letter-spacing: 0.06em;
+  color: rgba(212,136,10,0.45);
+  border: 1px dashed rgba(212,136,10,0.25);
+  padding: 1px 6px; border-radius: 2px;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  background: none;
+}
+.day-due:hover { color: var(--cd-amber); border-color: rgba(212,136,10,0.6); }
+.day-due.set { border-style: solid; color: rgba(212,136,10,0.7); }
+.day-due.due-today { color: var(--cd-amber-hi, #f5b332); border-color: rgba(245,179,50,0.6); background: rgba(245,179,50,0.08); }
+.day-due.overdue { color: var(--cd-red, #cc4040); border-color: rgba(204,64,64,0.6); background: rgba(204,64,64,0.08); }
+.day-due-input {
+  font-family: var(--cd-font-mono, monospace);
+  font-size: 0.6rem;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--cd-amber, #d4880a);
+  color: var(--cd-amber); border-radius: 2px; padding: 1px 4px;
+  flex-shrink: 0;
+}
+/* Move-to-segment picker reuses .cd-assign-select for theme-correct contrast */
+.day-move { flex-shrink: 0; }
+
+/* Block/ticket titles in My Day — match the checklist label look, but as a link */
+.cd-checklist-item .day-nav-link {
+  font-family: var(--cd-font-body);
+  font-size: 0.95rem;
+  color: var(--cd-text);
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+  text-decoration: none;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cd-checklist-item .day-nav-link:hover { color: var(--cd-amber-hi, #f5b332); }
+/* Reused checklist rows inside a segment get a little breathing room + drag affordance */
+.day-seg-body .cd-checklist-item.day-row { padding: 5px 12px; border-radius: 2px; }
+.day-seg-body .cd-checklist-item.day-row:hover { background: rgba(212,136,10,0.05); }
+.day-seg-body .cd-checklist-item.day-row[draggable="true"] { cursor: grab; }
+.day-seg-body .cd-checklist-item.day-row.dragging { opacity: 0.4; }
+.day-move { margin-left: 4px; }
 </style>
 
 <script>
@@ -254,10 +427,20 @@
     }
   }
 
-  function loadMasterList() {
-    fetch('/today/data')
+  // ---- Shared state ----
+  var STATE = { segments: [], todayOpen: [], todayDone: [], loaded: false };
+  var ACTIVE = [];       // running time entries (mirrored from TimeTrackerCore)
+  var dayDrag = null;    // {kind, id} during a drag
+
+  function loadEverything() {
+    return fetch('/today/data')
       .then(function(r) { return r.json(); })
       .then(function(data) {
+        STATE.segments = data.segments || [];
+        STATE.todayOpen = data.today_open || [];
+        STATE.todayDone = data.today_done || [];
+        STATE.loaded = true;
+        renderMyDay();
         renderMasterList(
           data.below_deck || [],
           data.area_groups || [],
@@ -268,9 +451,403 @@
         updateCountLabel((data.today_open || []).length);
       })
       .catch(function() {
-        document.getElementById('masterList').innerHTML =
-          '<div class="cd-panel"><div class="cd-panel-body"><div class="cd-empty">Could not load tasks.</div></div></div>';
+        var ml = document.getElementById('masterList');
+        if (ml) ml.innerHTML = '<div class="cd-panel"><div class="cd-panel-body"><div class="cd-empty">Could not load tasks.</div></div></div>';
+        var sc = document.getElementById('segmentsContainer');
+        if (sc) sc.innerHTML = '<div class="cd-panel"><div class="cd-panel-body"><div class="cd-empty">Could not load.</div></div></div>';
       });
+  }
+
+  function findEntry(kind, id) {
+    return (STATE.todayOpen || []).filter(function(e) {
+      return (e.kind || 'task') === kind && String(e.id) === String(id);
+    })[0];
+  }
+
+  // ---- My Day rendering ----
+  function entryLabel(e) {
+    var kind = e.kind || 'task';
+    if (kind === 'ticket') {
+      var num = e.ticket_number || ('TKT-' + e.id);
+      return num + ' · ' + (e.title || '');
+    }
+    if (kind === 'item') return e.text || '';
+    if (kind === 'block') {
+      var prog = (e.total_count > 0) ? ' (' + e.checked_count + '/' + e.total_count + ')' : '';
+      return '▣ ' + (e.title || 'Checklist') + prog;
+    }
+    return e.title || '';
+  }
+
+  function entryHref(e) {
+    var kind = e.kind || 'task';
+    if (kind === 'ticket') return '/command-deck/tickets/' + e.id + '/';
+    if (e.project_slug) return '/command-deck/projects/' + e.project_slug + '/';
+    return null;
+  }
+
+  function renderMyDay() {
+    var container = document.getElementById('segmentsContainer');
+    if (!container) return;
+    var open = STATE.todayOpen || [];
+    var done = STATE.todayDone || [];
+
+    if (STATE.segments.length === 0 && open.length === 0 && done.length === 0) {
+      container.innerHTML =
+        '<div class="cd-panel"><div class="cd-panel-body"><div class="cd-empty">' +
+        'No parts of your day yet. Add one above to shape today, then star tasks below to slot them in.' +
+        '</div></div></div>';
+      return;
+    }
+
+    // Group open items by segment.
+    var bySeg = {}; var unassigned = [];
+    open.forEach(function(e) {
+      if (e.today_segment_id) {
+        (bySeg[e.today_segment_id] = bySeg[e.today_segment_id] || []).push(e);
+      } else {
+        unassigned.push(e);
+      }
+    });
+
+    var html = '';
+    STATE.segments.forEach(function(s, idx) {
+      html += segmentPanel(s, bySeg[s.id] || [], idx, STATE.segments.length);
+    });
+    html += unassignedPanel(unassigned);
+    if (done.length) {
+      html += '<div class="cd-panel cd-mb day-done-panel">' +
+        '<div class="cd-panel-header"><span class="cd-panel-title">Done today</span></div>' +
+        '<div class="cd-panel-body" style="padding:4px 0;">';
+      done.forEach(function(e) { html += doneRow(e); });
+      html += '</div></div>';
+    }
+    container.innerHTML = html;
+    bindDayInteractions();
+    syncRowStates(ACTIVE);
+    refreshAllBadges();
+  }
+
+  function segmentPanel(s, items, idx, total) {
+    var h = '<div class="cd-panel cd-mb day-segment" data-segment-id="' + s.id + '">';
+    h += '<div class="cd-panel-header day-seg-header">';
+    h += '<span class="cd-panel-title day-seg-title">' + escHtml(s.title) + '</span>';
+    h += '<span class="day-seg-controls">';
+    h += '<button class="day-seg-btn js-seg-up" data-id="' + s.id + '" title="Move up"' + (idx === 0 ? ' disabled' : '') + '>▲</button>';
+    h += '<button class="day-seg-btn js-seg-down" data-id="' + s.id + '" title="Move down"' + (idx === total - 1 ? ' disabled' : '') + '>▼</button>';
+    h += '<button class="day-seg-btn js-seg-rename" data-id="' + s.id + '" title="Rename">✎</button>';
+    h += '<button class="day-seg-btn js-seg-del" data-id="' + s.id + '" title="Delete">✕</button>';
+    h += '</span></div>';
+    h += '<div class="cd-panel-body day-seg-body" data-segment-id="' + s.id + '" style="padding:4px 0;">';
+    if (items.length) { items.forEach(function(e) { h += dayRow(e); }); }
+    else { h += '<div class="day-empty-hint">Drag tasks here, or use the move menu.</div>'; }
+    h += '</div></div>';
+    return h;
+  }
+
+  function unassignedPanel(items) {
+    var h = '<div class="cd-panel cd-mb day-segment day-unassigned" data-segment-id="">';
+    h += '<div class="cd-panel-header"><span class="cd-panel-title day-seg-title">Unassigned</span></div>';
+    h += '<div class="cd-panel-body day-seg-body" data-segment-id="" style="padding:4px 0;">';
+    if (items.length) { items.forEach(function(e) { h += dayRow(e); }); }
+    else { h += '<div class="day-empty-hint">Nothing waiting. Star a task below to add it to today.</div>'; }
+    h += '</div></div>';
+    return h;
+  }
+
+  // A My Day row reuses the canonical Command Deck checklist-row look:
+  // .cd-checklist-item gives the checkbox + serif label + due pill + ⏱ timer
+  // styling for free (command_deck.css is loaded here). `.day-row` is just our
+  // behaviour hook for drag + the move-to-segment select.
+  function dayRow(e) {
+    var kind = e.kind || 'task';
+    var id = e.id;
+    var completable = (kind === 'task' || kind === 'item');
+    var timeable = (kind === 'task' || kind === 'item' || kind === 'ticket') && !!e.project_id;
+
+    var h = '<div class="cd-checklist-item day-row" draggable="true" data-kind="' + kind + '" data-id="' + id + '">';
+    h += '<span class="cd-checklist-drag-handle" title="Drag to a segment" aria-hidden="true">⠿</span>';
+
+    // Complete — the real checklist checkbox (tasks + items)
+    if (completable) {
+      h += '<input type="checkbox" class="day-complete" data-kind="' + kind + '" data-id="' + id + '">';
+    }
+
+    // Title — label for completable rows, link out for block/ticket
+    var href = (!completable) ? entryHref(e) : null;
+    if (href) {
+      h += '<a class="day-nav-link" href="' + href + '">' + escHtml(entryLabel(e)) + '</a>';
+    } else {
+      h += '<label>' + escHtml(entryLabel(e)) + '</label>';
+    }
+
+    // Due — the real cd-due-wrapper badge + native date input
+    h += dueWrapperHtml(e);
+
+    // Timer — the real ⏱ cd-tt-row-btn (start/stop + live elapsed via syncRowStates)
+    if (timeable) {
+      var scopeAttr = kind === 'task' ? 'data-tt-task-id' : (kind === 'item' ? 'data-tt-item-id' : 'data-tt-ticket-id');
+      h += '<button class="cd-tt-row-btn cd-tt-' + kind + '-btn" ' + scopeAttr + '="' + id + '" ' +
+           'data-tt-project-id="' + e.project_id + '" data-tt-text="' + escAttr(entryLabel(e)) + '" ' +
+           'title="Start timer" type="button">⏱</button>';
+    }
+
+    // Move-to-segment picker (My Day addition)
+    h += moveSelectHtml(e);
+
+    h += '</div>';
+    return h;
+  }
+
+  function doneRow(e) {
+    var kind = e.kind || 'task';
+    var completable = (kind === 'task' || kind === 'item');
+    var h = '<div class="cd-checklist-item checked day-row is-done" data-kind="' + kind + '" data-id="' + e.id + '">';
+    h += '<span class="cd-checklist-drag-handle" aria-hidden="true" style="visibility:hidden;">⠿</span>';
+    if (completable) h += '<input type="checkbox" checked disabled>';
+    h += '<label>' + escHtml(entryLabel(e)) + '</label>';
+    h += '</div>';
+    return h;
+  }
+
+  function dueWrapperHtml(e) {
+    var kind = e.kind || 'task';
+    var iso = e.due_date || '';
+    if (kind === 'task') {
+      return dueWrapperMarkup('/tasks/' + e.id + '/due-date', iso);
+    }
+    if (kind === 'item' && e.project_slug) {
+      return dueWrapperMarkup('/command-deck/projects/' + e.project_slug + '/checklist/' + e.id + '/due-date', iso);
+    }
+    if (kind === 'ticket' && iso) {
+      // read-only badge — ticket due edits live on the ticket detail page
+      return '<span class="cd-due-wrapper cd-due-readonly" data-due-date="' + iso + '">' +
+             '<span class="cd-due-badge">due ' + escHtml(iso) + '</span></span>';
+    }
+    return '';
+  }
+
+  function dueWrapperMarkup(url, iso) {
+    return '<span class="cd-due-wrapper" data-due-url="' + url + '" data-due-date="' + iso + '">' +
+      '<button class="cd-due-badge' + (iso ? '' : ' unset') + '" type="button" title="Set / change due date">' +
+      (iso ? 'due ' + escHtml(iso) : '+ due') + '</button>' +
+      '<input type="date" class="cd-due-input" value="' + iso + '" tabindex="-1" aria-hidden="true"></span>';
+  }
+
+  function escAttr(s) { return escHtml(s).replace(/"/g, '&quot;'); }
+
+  function moveSelectHtml(e) {
+    var kind = e.kind || 'task';
+    var cur = e.today_segment_id;
+    var opts = '<option value=""' + (!cur ? ' selected' : '') + '>— Unassigned</option>';
+    STATE.segments.forEach(function(s) {
+      opts += '<option value="' + s.id + '"' + (String(cur) === String(s.id) ? ' selected' : '') + '>' + escHtml(s.title) + '</option>';
+    });
+    return '<select class="cd-assign-select day-move" data-kind="' + kind + '" data-id="' + e.id + '" title="Move to part of day">' + opts + '</select>';
+  }
+
+  // ---- My Day interactions ----
+  function bindDayInteractions() {
+    var c = document.getElementById('segmentsContainer');
+    if (!c) return;
+    c.querySelectorAll('.day-move').forEach(function(sel) {
+      sel.addEventListener('change', function() {
+        assignEntity(sel.getAttribute('data-kind'), sel.getAttribute('data-id'), sel.value);
+      });
+    });
+    c.querySelectorAll('.js-seg-up').forEach(function(b) { b.addEventListener('click', function() { moveSegment(b.getAttribute('data-id'), -1); }); });
+    c.querySelectorAll('.js-seg-down').forEach(function(b) { b.addEventListener('click', function() { moveSegment(b.getAttribute('data-id'), 1); }); });
+    c.querySelectorAll('.js-seg-rename').forEach(function(b) { b.addEventListener('click', function() { renameSegment(b.getAttribute('data-id')); }); });
+    c.querySelectorAll('.js-seg-del').forEach(function(b) { b.addEventListener('click', function() { deleteSegment(b.getAttribute('data-id')); }); });
+    bindDayDrag(c);
+  }
+
+  function bindDayDrag(c) {
+    c.querySelectorAll('.day-row[draggable="true"]').forEach(function(row) {
+      row.addEventListener('dragstart', function(e) {
+        dayDrag = { kind: row.getAttribute('data-kind'), id: row.getAttribute('data-id') };
+        row.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', dayDrag.id); } catch (_) {}
+      });
+      row.addEventListener('dragend', function() { row.classList.remove('dragging'); clearDropHints(); });
+    });
+    c.querySelectorAll('.day-seg-body').forEach(function(body) {
+      body.addEventListener('dragover', function(e) {
+        if (!dayDrag) return;
+        e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+        body.classList.add('drop-hover');
+      });
+      body.addEventListener('dragleave', function() { body.classList.remove('drop-hover'); });
+      body.addEventListener('drop', function(e) {
+        if (!dayDrag) return;
+        e.preventDefault();
+        var segId = body.getAttribute('data-segment-id'); // '' = unassigned
+        var d = dayDrag; dayDrag = null; clearDropHints();
+        assignEntity(d.kind, d.id, segId);
+      });
+    });
+  }
+
+  function clearDropHints() {
+    document.querySelectorAll('.day-seg-body.drop-hover').forEach(function(b) { b.classList.remove('drop-hover'); });
+  }
+
+  function assignEntity(kind, id, segmentId) {
+    var entry = findEntry(kind, id);
+    if (entry) {
+      entry.today_segment_id = segmentId ? Number(segmentId) : null;
+      renderMyDay();   // optimistic
+    }
+    var fd = new FormData();
+    fd.append('kind', kind);
+    fd.append('id', id);
+    if (segmentId) fd.append('segment_id', segmentId);
+    fetch('/today/assign', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(d) { if (!d || !d.success) loadEverything(); })
+      .catch(function() { loadEverything(); });
+  }
+
+  function completeDayEntry(kind, id) {
+    // Auto-stop a running timer for this entity (parity with the project page).
+    if (window.TimeTrackerCore) {
+      var active = window.TimeTrackerCore.current().filter(function(en) {
+        return (kind === 'task' && String(en.task_id) === String(id)) ||
+               (kind === 'item' && String(en.checklist_item_id) === String(id));
+      })[0];
+      if (active) window.TimeTrackerCore.stopTimer(active.id);
+    }
+    var fd = new FormData();
+    fd.append(kind === 'item' ? 'item_id' : 'task_id', id);
+    fetch('/today/complete', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function() { loadEverything(); })
+      .catch(function() {});
+  }
+
+  // ---- Timers — reuse the canonical ⏱ button behaviour (start/stop +
+  //      conflict-guard), generalised to read the project id per row. ----
+  function startRowTimer(projectId, opts, text) {
+    var TTC = window.TimeTrackerCore;
+    if (!TTC || !TTC.isLoaded()) return;
+    var existing = TTC.current().filter(function(en) {
+      return String(en.project_id) === String(projectId);
+    })[0];
+    if (existing) {
+      var prev = (existing.description || existing.project_title || 'current timer') +
+                 ' · ' + TTC.formatElapsed(TTC.elapsedSeconds(existing));
+      if (!window.confirm('A timer is already running on this project (' + prev +
+                          '). Stop it and start this one?')) return;
+      TTC.stopTimer(existing.id).then(function() { TTC.startTimer(projectId, text, opts); });
+    } else {
+      TTC.startTimer(projectId, text, opts);
+    }
+  }
+
+  // Paint running state onto the ⏱ buttons — identical to the project page's
+  // syncRowStates: ■ + live elapsed, data-running/entry-id for the stop path,
+  // and the .cd-tt-running pulse on the row.
+  function syncRowStates(entries) {
+    var c = document.getElementById('segmentsContainer');
+    if (!c || !window.TimeTrackerCore) return;
+    c.querySelectorAll('.cd-tt-row-btn').forEach(function(btn) {
+      btn.dataset.running = '0';
+      btn.dataset.entryId = '';
+      btn.textContent = '⏱';
+      btn.title = 'Start timer';
+      var row = btn.closest('.cd-checklist-item');
+      if (row) row.classList.remove('cd-tt-running');
+    });
+    (entries || []).forEach(function(en) {
+      var btn = null;
+      if (en.task_id) btn = c.querySelector('.cd-tt-task-btn[data-tt-task-id="' + en.task_id + '"]');
+      else if (en.checklist_item_id) btn = c.querySelector('.cd-tt-item-btn[data-tt-item-id="' + en.checklist_item_id + '"]');
+      else if (en.ticket_id) btn = c.querySelector('.cd-tt-ticket-btn[data-tt-ticket-id="' + en.ticket_id + '"]');
+      if (!btn) return;
+      btn.dataset.running = '1';
+      btn.dataset.entryId = en.id;
+      btn.textContent = '■ ' + window.TimeTrackerCore.formatElapsed(window.TimeTrackerCore.elapsedSeconds(en));
+      btn.title = 'Stop timer';
+      var row = btn.closest('.cd-checklist-item');
+      if (row) row.classList.add('cd-tt-running');
+    });
+  }
+
+  // ---- Due-date badges — copied from the Command Deck project page so the
+  //      relative-date labels (due today / tomorrow / OVERDUE …) match. ----
+  function fmtDueLabel(iso) {
+    if (!iso) return '+ due';
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var parts = iso.split('-').map(Number);
+    var due = new Date(parts[0], parts[1] - 1, parts[2]); due.setHours(0, 0, 0, 0);
+    var days = Math.round((due - today) / 86400000);
+    var wk = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][due.getDay()];
+    if (days < 0) return 'OVERDUE ' + wk + ' ' + (due.getMonth() + 1) + '/' + due.getDate();
+    if (days === 0) return 'due today';
+    if (days === 1) return 'due tomorrow';
+    if (days < 7) return 'due ' + wk + ' ' + (due.getMonth() + 1) + '/' + due.getDate();
+    return 'due ' + iso;
+  }
+
+  function formatBadge(badgeEl) {
+    var wrapper = badgeEl.closest('.cd-due-wrapper');
+    var iso = wrapper ? wrapper.getAttribute('data-due-date') : '';
+    var label = fmtDueLabel(iso);
+    badgeEl.textContent = label;
+    badgeEl.classList.toggle('unset', !iso);
+    badgeEl.classList.toggle('overdue', !!iso && label.indexOf('OVERDUE') === 0);
+    badgeEl.classList.toggle('today', !!iso && label === 'due today');
+    badgeEl.classList.toggle('soon', !!iso && (label === 'due tomorrow' || /^due (Mon|Tue|Wed|Thu|Fri|Sat|Sun) /.test(label)));
+  }
+
+  function refreshAllBadges() {
+    document.querySelectorAll('#segmentsContainer .cd-due-badge').forEach(formatBadge);
+  }
+
+  // ---- Segment management ----
+  function addSegment() {
+    var title = window.prompt('Name this part of your day (e.g. Morning, Deep Work, Admin, Evening):');
+    if (title === null) return;
+    title = title.trim();
+    if (!title) return;
+    var fd = new FormData(); fd.append('title', title);
+    fetch('/today/segments', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function() { loadEverything(); });
+  }
+
+  function renameSegment(id) {
+    var seg = (STATE.segments || []).filter(function(s) { return String(s.id) === String(id); })[0];
+    var title = window.prompt('Rename this part of your day:', seg ? seg.title : '');
+    if (title === null) return;
+    title = title.trim();
+    if (!title) return;
+    var fd = new FormData(); fd.append('title', title);
+    fetch('/today/segments/' + id + '/rename', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function() { loadEverything(); });
+  }
+
+  function deleteSegment(id) {
+    if (!window.confirm('Delete this part of your day? Anything in it moves back to Unassigned.')) return;
+    fetch('/today/segments/' + id + '/delete', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function() { loadEverything(); });
+  }
+
+  function moveSegment(id, dir) {
+    var ids = (STATE.segments || []).map(function(s) { return s.id; });
+    var i = -1;
+    ids.forEach(function(x, n) { if (String(x) === String(id)) i = n; });
+    var j = i + dir;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    var tmp = ids[i]; ids[i] = ids[j]; ids[j] = tmp;
+    fetch('/today/segments/reorder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order: ids })
+    }).then(function(r) { return r.json(); }).then(function() { loadEverything(); });
   }
 
   function renderMasterList(belowDeck, areaGroups, personalProjects, todayOpen, ticketsBrowse) {
@@ -473,6 +1050,9 @@
           return;
         }
         updateCountLabel(data.count);
+        // Sync My Day — a newly-starred row appears in Unassigned; an
+        // un-starred one disappears from its segment.
+        loadEverything();
       })
       .catch(function() {
         toggleStar(btn, wasStarred); // revert on error
@@ -501,7 +1081,104 @@
     badge.classList.add(data.count <= 3 ? 'green' : data.count <= 6 ? 'amber' : 'red');
   });
 
-  loadMasterList();
+  // ---- Delegated handlers (registered once; cover dynamically-rendered rows) ----
+
+  // ⏱ timer button — start (with conflict-guard) or stop.
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.cd-tt-row-btn');
+    if (!btn || !btn.closest('#segmentsContainer')) return;
+    e.preventDefault();
+    if (btn.dataset.running === '1') {
+      if (btn.dataset.entryId && window.TimeTrackerCore) {
+        btn.disabled = true;
+        window.TimeTrackerCore.stopTimer(btn.dataset.entryId).then(function() { btn.disabled = false; });
+      }
+      return;
+    }
+    var pid = btn.dataset.ttProjectId;
+    if (!pid) return;
+    var opts = {};
+    if (btn.dataset.ttTaskId) opts.task_id = btn.dataset.ttTaskId;
+    else if (btn.dataset.ttItemId) opts.checklist_item_id = btn.dataset.ttItemId;
+    else if (btn.dataset.ttTicketId) opts.ticket_id = btn.dataset.ttTicketId;
+    startRowTimer(pid, opts, btn.dataset.ttText || '');
+  });
+
+  // Due badge click → open the native date picker.
+  document.addEventListener('click', function(e) {
+    var badge = e.target.closest('.cd-due-badge');
+    if (!badge || !badge.closest('#segmentsContainer')) return;
+    var wrapper = badge.closest('.cd-due-wrapper');
+    if (!wrapper || wrapper.classList.contains('cd-due-readonly')) return;
+    var input = wrapper.querySelector('.cd-due-input');
+    if (!input) return;
+    e.preventDefault();
+    if (typeof input.showPicker === 'function') { try { input.showPicker(); } catch (_) { input.focus(); } }
+    else input.focus();
+  });
+
+  // Due date change → POST + reformat badge + keep STATE in sync.
+  document.addEventListener('change', function(e) {
+    var input = e.target.closest('.cd-due-input');
+    if (!input || !input.closest('#segmentsContainer')) return;
+    var wrapper = input.closest('.cd-due-wrapper');
+    var url = wrapper && wrapper.getAttribute('data-due-url');
+    if (!url) return;
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ due_date: input.value || null }) })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) {
+        if (!d) return;
+        wrapper.setAttribute('data-due-date', d.due_date || '');
+        var badge = wrapper.querySelector('.cd-due-badge');
+        if (badge) formatBadge(badge);
+        var row = wrapper.closest('.day-row');
+        if (row) { var en = findEntry(row.getAttribute('data-kind'), row.getAttribute('data-id')); if (en) en.due_date = d.due_date || ''; }
+      });
+  });
+
+  // Right-click due badge → quick clear.
+  document.addEventListener('contextmenu', function(e) {
+    var badge = e.target.closest('.cd-due-badge');
+    if (!badge || !badge.closest('#segmentsContainer')) return;
+    var wrapper = badge.closest('.cd-due-wrapper');
+    if (!wrapper || wrapper.classList.contains('cd-due-readonly')) return;
+    if (!wrapper.getAttribute('data-due-date')) return;
+    e.preventDefault();
+    if (!window.confirm('Clear due date?')) return;
+    fetch(wrapper.getAttribute('data-due-url'), { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ due_date: null }) })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) {
+        if (!d) return;
+        wrapper.setAttribute('data-due-date', '');
+        var inp = wrapper.querySelector('.cd-due-input'); if (inp) inp.value = '';
+        formatBadge(badge);
+        var row = wrapper.closest('.day-row');
+        if (row) { var en = findEntry(row.getAttribute('data-kind'), row.getAttribute('data-id')); if (en) en.due_date = ''; }
+      });
+  });
+
+  // Checkbox → complete the task/item (auto-stops its timer).
+  document.addEventListener('change', function(e) {
+    var cb = e.target;
+    if (!cb.classList || !cb.classList.contains('day-complete') || !cb.checked) return;
+    completeDayEntry(cb.getAttribute('data-kind'), cb.getAttribute('data-id'));
+  });
+
+  // Reflect running timers on the ⏱ buttons; tick the live elapsed each second.
+  if (window.TimeTrackerCore) {
+    window.TimeTrackerCore.subscribe(function(entries) {
+      ACTIVE = entries || [];
+      syncRowStates(ACTIVE);
+    });
+  }
+  setInterval(function() { if (ACTIVE && ACTIVE.length) syncRowStates(ACTIVE); }, 1000);
+
+  var addBtn = document.getElementById('addSegmentBtn');
+  if (addBtn) addBtn.addEventListener('click', addSegment);
+
+  loadEverything();
 
 })();
 </script>

@@ -195,21 +195,21 @@ def _today_autoclear(conn):
 	cutoff_utc = cutoff_utc_dt.strftime(_UTC_FORMAT)
 
 	conn.execute('''
-		UPDATE tasks SET today = 0
+		UPDATE tasks SET today = 0, today_segment_id = NULL
 		WHERE today = 1
 		  AND status = 'completed'
 		  AND completed_date IS NOT NULL
 		  AND completed_date < ?
 	''', (cutoff_et,))
 	conn.execute('''
-		UPDATE checklist_items SET today = 0
+		UPDATE checklist_items SET today = 0, today_segment_id = NULL
 		WHERE today = 1
 		  AND checked = 1
 		  AND checked_at IS NOT NULL
 		  AND checked_at < ?
 	''', (cutoff_utc,))
 	conn.execute('''
-		UPDATE blocks SET today = 0
+		UPDATE blocks SET today = 0, today_segment_id = NULL
 		WHERE today = 1
 		  AND id IN (
 		    SELECT b.id FROM blocks b
@@ -234,7 +234,7 @@ def _today_autoclear(conn):
 	# from earlier today survive until 4am the next morning so Aaron can
 	# review what landed today before they roll off the list.
 	conn.execute('''
-		UPDATE tickets SET today = 0
+		UPDATE tickets SET today = 0, today_segment_id = NULL
 		WHERE today = 1
 		  AND status = 'closed'
 		  AND closed_date IS NOT NULL
@@ -377,7 +377,7 @@ def today_data():
 	# rows in their original order beneath. NULL-handling: `due_date IS NULL`
 	# sorts FALSE (0) before TRUE (1), putting dated rows on top.
 	today_tasks_open = conn.execute('''
-		SELECT t.id, t.title, t.status, t.today, t.project_id, t.due_date,
+		SELECT t.id, t.title, t.status, t.today, t.today_segment_id, t.project_id, t.due_date,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
 		       parent.area_color AS area_color
@@ -388,7 +388,7 @@ def today_data():
 		ORDER BY t.due_date IS NULL ASC, t.due_date ASC, t.id ASC
 	''').fetchall()
 	today_items_open = conn.execute('''
-		SELECT ci.id, ci.text, ci.checked, ci.today, ci.block_id, ci.due_date,
+		SELECT ci.id, ci.text, ci.checked, ci.today, ci.today_segment_id, ci.block_id, ci.due_date,
 		       b.title AS block_title, b.project_id,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
@@ -403,7 +403,7 @@ def today_data():
 
 	# Today section — done: completed tasks + checked items still flagged
 	today_tasks_done = conn.execute('''
-		SELECT t.id, t.title, t.status, t.today, t.project_id,
+		SELECT t.id, t.title, t.status, t.today, t.today_segment_id, t.project_id,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
 		       parent.area_color AS area_color
@@ -414,7 +414,7 @@ def today_data():
 		ORDER BY t.completed_date DESC
 	''').fetchall()
 	today_items_done = conn.execute('''
-		SELECT ci.id, ci.text, ci.checked, ci.today, ci.block_id,
+		SELECT ci.id, ci.text, ci.checked, ci.today, ci.today_segment_id, ci.block_id,
 		       b.title AS block_title, b.project_id,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
@@ -433,7 +433,7 @@ def today_data():
 	# every item checked go in today_done (post-completion limbo until
 	# the autoclear pass on the next 4am rollover).
 	today_blocks = conn.execute('''
-		SELECT b.id, b.title, b.today, b.project_id,
+		SELECT b.id, b.title, b.today, b.today_segment_id, b.project_id,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
 		       parent.area_color AS area_color,
@@ -462,7 +462,7 @@ def today_data():
 	# treats ticket rows as navigation-only (no inline complete button —
 	# closing requires a resolution prompt).
 	today_tickets_open = conn.execute('''
-		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today,
+		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today, t.today_segment_id,
 		       t.project_id, t.due_date, t.requested_date,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
@@ -481,7 +481,7 @@ def today_data():
 		         (t.priority = 'urgent') DESC, t.updated DESC
 	''').fetchall()
 	today_tickets_done = conn.execute('''
-		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today,
+		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today, t.today_segment_id,
 		       t.project_id, t.closed_date,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
@@ -502,7 +502,7 @@ def today_data():
 	# All non-closed tickets (browseable list for the master picker on /today/)
 	# — top-level group like Below Deck, sorted urgent-first then recency.
 	tickets_browse = conn.execute('''
-		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today,
+		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today, t.today_segment_id,
 		       t.project_id, t.due_date, t.requested_date,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.title AS area_title,
@@ -605,6 +605,12 @@ def today_data():
 		area_groups_by_id.values(), key=lambda g: g['area_title']
 	)
 
+	# Day segments — persistent, user-defined parts of the day. Today-flagged
+	# entities carry an optional today_segment_id; NULL = the Unassigned bucket.
+	segments = conn.execute(
+		'SELECT id, title, "order" FROM today_segments ORDER BY "order" ASC, id ASC'
+	).fetchall()
+
 	conn.close()
 
 	def _serialize_task(row):
@@ -629,6 +635,8 @@ def today_data():
 		return d
 
 	return jsonify({
+		# Day segments — ordered list for the My Day view.
+		'segments': [dict(s) for s in segments],
 		# Mixed lists — kind='task' / 'item' / 'block' / 'ticket' on each entry.
 		# Each carries area_title + area_color when under a sub-project.
 		'today_open': (
@@ -692,14 +700,24 @@ def today_star():
 			conn.close()
 			return jsonify({'error': 'not_found'}), 404
 		new_today = 0 if row['today'] else 1
-		conn.execute('UPDATE tasks SET today = ? WHERE id = ?', (new_today, task_id))
+		conn.execute(
+			'UPDATE tasks SET today = ?, '
+			'today_segment_id = CASE WHEN ? = 0 THEN NULL ELSE today_segment_id END '
+			'WHERE id = ?',
+			(new_today, new_today, task_id)
+		)
 	elif item_id:
 		row = conn.execute('SELECT id, today FROM checklist_items WHERE id = ?', (item_id,)).fetchone()
 		if not row:
 			conn.close()
 			return jsonify({'error': 'not_found'}), 404
 		new_today = 0 if row['today'] else 1
-		conn.execute('UPDATE checklist_items SET today = ? WHERE id = ?', (new_today, item_id))
+		conn.execute(
+			'UPDATE checklist_items SET today = ?, '
+			'today_segment_id = CASE WHEN ? = 0 THEN NULL ELSE today_segment_id END '
+			'WHERE id = ?',
+			(new_today, new_today, item_id)
+		)
 	elif block_id:
 		row = conn.execute(
 			"SELECT id, today, type FROM blocks WHERE id = ?", (block_id,)
@@ -711,7 +729,12 @@ def today_star():
 			conn.close()
 			return jsonify({'error': 'block_not_checklist'}), 400
 		new_today = 0 if row['today'] else 1
-		conn.execute('UPDATE blocks SET today = ? WHERE id = ?', (new_today, block_id))
+		conn.execute(
+			'UPDATE blocks SET today = ?, '
+			'today_segment_id = CASE WHEN ? = 0 THEN NULL ELSE today_segment_id END '
+			'WHERE id = ?',
+			(new_today, new_today, block_id)
+		)
 	else:
 		# ticket_id
 		row = conn.execute(
@@ -721,7 +744,12 @@ def today_star():
 			conn.close()
 			return jsonify({'error': 'not_found'}), 404
 		new_today = 0 if row['today'] else 1
-		conn.execute('UPDATE tickets SET today = ? WHERE id = ?', (new_today, ticket_id))
+		conn.execute(
+			'UPDATE tickets SET today = ?, '
+			'today_segment_id = CASE WHEN ? = 0 THEN NULL ELSE today_segment_id END '
+			'WHERE id = ?',
+			(new_today, new_today, ticket_id)
+		)
 
 	conn.commit()
 	# Combined open count for the badge — tasks + items + blocks + tickets
@@ -797,3 +825,131 @@ def today_complete():
 	conn.commit()
 	conn.close()
 	return jsonify({'success': True})
+
+
+# ---- Day segments — persistent "parts of my day" + task assignment ----
+
+# kind → table whitelist for /today/assign. Table names are interpolated into
+# SQL, so this dict is the trust boundary — never pass request input straight in.
+_ASSIGN_TABLES = {
+	'task': 'tasks',
+	'item': 'checklist_items',
+	'block': 'blocks',
+	'ticket': 'tickets',
+}
+
+
+@today_bp.route('/today/segments', methods=['POST'])
+def today_segment_create():
+	"""Create a persistent day-segment. Appended to the end of the order."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 403
+	title = (request.form.get('title') or '').strip()
+	if not title:
+		return jsonify({'error': 'title_required'}), 400
+	conn = get_db()
+	max_order = conn.execute(
+		'SELECT COALESCE(MAX("order"), -1) FROM today_segments'
+	).fetchone()[0]
+	cur = conn.execute(
+		'INSERT INTO today_segments (title, "order", created_at) VALUES (?, ?, ?)',
+		(title, max_order + 1, et_now())
+	)
+	seg_id = cur.lastrowid
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True, 'id': seg_id, 'title': title})
+
+
+@today_bp.route('/today/segments/<int:seg_id>/rename', methods=['POST'])
+def today_segment_rename(seg_id):
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 403
+	title = (request.form.get('title') or '').strip()
+	if not title:
+		return jsonify({'error': 'title_required'}), 400
+	conn = get_db()
+	row = conn.execute('SELECT id FROM today_segments WHERE id = ?', (seg_id,)).fetchone()
+	if not row:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+	conn.execute('UPDATE today_segments SET title = ? WHERE id = ?', (title, seg_id))
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True, 'id': seg_id, 'title': title})
+
+
+@today_bp.route('/today/segments/<int:seg_id>/delete', methods=['POST'])
+def today_segment_delete(seg_id):
+	"""Delete a segment. Any entities assigned to it revert to Unassigned
+	(today_segment_id = NULL) — they stay in Today, just lose their slot."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 403
+	conn = get_db()
+	row = conn.execute('SELECT id FROM today_segments WHERE id = ?', (seg_id,)).fetchone()
+	if not row:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+	for table in _ASSIGN_TABLES.values():
+		conn.execute(
+			f'UPDATE {table} SET today_segment_id = NULL WHERE today_segment_id = ?',
+			(seg_id,)
+		)
+	conn.execute('DELETE FROM today_segments WHERE id = ?', (seg_id,))
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True})
+
+
+@today_bp.route('/today/segments/reorder', methods=['POST'])
+def today_segment_reorder():
+	"""Persist a new segment order. Body: {order: [seg_id, ...]}."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 403
+	data = request.get_json(silent=True) or {}
+	order = data.get('order', [])
+	conn = get_db()
+	for i, sid in enumerate(order):
+		conn.execute('UPDATE today_segments SET "order" = ? WHERE id = ?', (i, sid))
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True})
+
+
+@today_bp.route('/today/assign', methods=['POST'])
+def today_assign():
+	"""Move a Today entity into a segment (or to Unassigned).
+
+	Form fields: kind ('task'|'item'|'block'|'ticket'), id, segment_id.
+	An empty/absent segment_id means Unassigned. Assigning into the day also
+	sets today = 1 — dragging something from the picker straight into a segment
+	both stars it for Today and slots it."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 403
+	kind = request.form.get('kind')
+	entity_id = request.form.get('id')
+	segment_id = request.form.get('segment_id')  # '' / None => Unassigned
+	table = _ASSIGN_TABLES.get(kind)
+	if not table or not entity_id:
+		return jsonify({'error': 'kind_and_id_required'}), 400
+	conn = get_db()
+	row = conn.execute(f'SELECT id FROM {table} WHERE id = ?', (entity_id,)).fetchone()
+	if not row:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+	seg_val = None
+	if segment_id:
+		seg = conn.execute(
+			'SELECT id FROM today_segments WHERE id = ?', (segment_id,)
+		).fetchone()
+		if not seg:
+			conn.close()
+			return jsonify({'error': 'segment_not_found'}), 404
+		seg_val = seg['id']
+	conn.execute(
+		f'UPDATE {table} SET today = 1, today_segment_id = ? WHERE id = ?',
+		(seg_val, entity_id)
+	)
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True, 'today_segment_id': seg_val})
