@@ -377,7 +377,7 @@ def today_data():
 	# rows in their original order beneath. NULL-handling: `due_date IS NULL`
 	# sorts FALSE (0) before TRUE (1), putting dated rows on top.
 	today_tasks_open = conn.execute('''
-		SELECT t.id, t.title, t.status, t.today, t.today_segment_id, t.project_id, t.due_date,
+		SELECT t.id, t.title, t.status, t.today, t.today_segment_id, t.today_order, t.project_id, t.due_date,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
 		       parent.area_color AS area_color
@@ -385,10 +385,10 @@ def today_data():
 		LEFT JOIN projects p      ON t.project_id = p.id
 		LEFT JOIN projects parent ON p.parent_project_id = parent.id
 		WHERE t.today = 1 AND t.status = 'open'
-		ORDER BY t.due_date IS NULL ASC, t.due_date ASC, t.id ASC
+		ORDER BY t.today_order ASC, t.due_date IS NULL ASC, t.due_date ASC, t.id ASC
 	''').fetchall()
 	today_items_open = conn.execute('''
-		SELECT ci.id, ci.text, ci.checked, ci.today, ci.today_segment_id, ci.block_id, ci.due_date,
+		SELECT ci.id, ci.text, ci.checked, ci.today, ci.today_segment_id, ci.today_order, ci.block_id, ci.due_date,
 		       b.title AS block_title, b.project_id,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
@@ -398,7 +398,7 @@ def today_data():
 		JOIN projects p           ON b.project_id = p.id
 		LEFT JOIN projects parent ON p.parent_project_id = parent.id
 		WHERE ci.today = 1 AND ci.checked = 0 AND ci.archived_at IS NULL
-		ORDER BY ci.due_date IS NULL ASC, ci.due_date ASC, ci.id ASC
+		ORDER BY ci.today_order ASC, ci.due_date IS NULL ASC, ci.due_date ASC, ci.id ASC
 	''').fetchall()
 
 	# Today section — done: completed tasks + checked items still flagged
@@ -433,7 +433,7 @@ def today_data():
 	# every item checked go in today_done (post-completion limbo until
 	# the autoclear pass on the next 4am rollover).
 	today_blocks = conn.execute('''
-		SELECT b.id, b.title, b.today, b.today_segment_id, b.project_id,
+		SELECT b.id, b.title, b.today, b.today_segment_id, b.today_order, b.project_id,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
 		       parent.area_color AS area_color,
@@ -443,7 +443,7 @@ def today_data():
 		JOIN projects p           ON b.project_id = p.id
 		LEFT JOIN projects parent ON p.parent_project_id = parent.id
 		WHERE b.today = 1 AND b.type = 'checklist'
-		ORDER BY b.id ASC
+		ORDER BY b.today_order ASC, b.id ASC
 	''').fetchall()
 	today_blocks_open = []
 	today_blocks_done = []
@@ -462,7 +462,7 @@ def today_data():
 	# treats ticket rows as navigation-only (no inline complete button —
 	# closing requires a resolution prompt).
 	today_tickets_open = conn.execute('''
-		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today, t.today_segment_id,
+		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today, t.today_segment_id, t.today_order,
 		       t.project_id, t.due_date, t.requested_date,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
@@ -477,11 +477,11 @@ def today_data():
 		LEFT JOIN customers c            ON t.customer_id = c.id
 		LEFT JOIN ticket_types tt        ON t.type_id = tt.id
 		WHERE t.today = 1 AND t.status != 'closed'
-		ORDER BY t.due_date IS NULL ASC, t.due_date ASC,
+		ORDER BY t.today_order ASC, t.due_date IS NULL ASC, t.due_date ASC,
 		         (t.priority = 'urgent') DESC, t.updated DESC
 	''').fetchall()
 	today_tickets_done = conn.execute('''
-		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today, t.today_segment_id,
+		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today, t.today_segment_id, t.today_order,
 		       t.project_id, t.closed_date,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.id AS area_id, parent.title AS area_title,
@@ -502,7 +502,7 @@ def today_data():
 	# All non-closed tickets (browseable list for the master picker on /today/)
 	# — top-level group like Below Deck, sorted urgent-first then recency.
 	tickets_browse = conn.execute('''
-		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today, t.today_segment_id,
+		SELECT t.id, t.ticket_number, t.title, t.status, t.priority, t.today, t.today_segment_id, t.today_order,
 		       t.project_id, t.due_date, t.requested_date,
 		       p.title AS project_title, p.slug AS project_slug,
 		       parent.title AS area_title,
@@ -946,10 +946,65 @@ def today_assign():
 			conn.close()
 			return jsonify({'error': 'segment_not_found'}), 404
 		seg_val = seg['id']
+	# Append to the end of the destination segment (drag handles precise ordering).
+	order_val = _next_today_order(conn, seg_val)
 	conn.execute(
-		f'UPDATE {table} SET today = 1, today_segment_id = ? WHERE id = ?',
-		(seg_val, entity_id)
+		f'UPDATE {table} SET today = 1, today_segment_id = ?, today_order = ? WHERE id = ?',
+		(seg_val, order_val, entity_id)
 	)
 	conn.commit()
 	conn.close()
 	return jsonify({'success': True, 'today_segment_id': seg_val})
+
+
+def _next_today_order(conn, seg_val):
+	"""Max today_order across all four Today-citizen tables for a segment
+	(seg_val=None → the Unassigned bucket), plus one. Used to append."""
+	m = -1
+	for t in _ASSIGN_TABLES.values():
+		if seg_val is None:
+			r = conn.execute(
+				f'SELECT MAX(today_order) AS m FROM {t} WHERE today = 1 AND today_segment_id IS NULL'
+			).fetchone()
+		else:
+			r = conn.execute(
+				f'SELECT MAX(today_order) AS m FROM {t} WHERE today = 1 AND today_segment_id = ?',
+				(seg_val,)
+			).fetchone()
+		if r and r['m'] is not None and r['m'] > m:
+			m = r['m']
+	return m + 1
+
+
+@today_bp.route('/today/reorder', methods=['POST'])
+def today_reorder():
+	"""Persist the manual order of entities within a My Day segment.
+
+	Body: {segment_id: <id|''|null>, order: [{kind, id}, ...]}. Sets each
+	listed entity's today_segment_id to the target segment and today_order to
+	its index — so a drag both re-slots (if it crossed segments) and reorders."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 403
+	data = request.get_json(silent=True) or {}
+	order = data.get('order', [])
+	seg_raw = data.get('segment_id')
+	conn = get_db()
+	seg_val = None
+	if seg_raw not in (None, '', 'null'):
+		seg = conn.execute('SELECT id FROM today_segments WHERE id = ?', (seg_raw,)).fetchone()
+		if not seg:
+			conn.close()
+			return jsonify({'error': 'segment_not_found'}), 404
+		seg_val = seg['id']
+	for i, item in enumerate(order):
+		table = _ASSIGN_TABLES.get(item.get('kind'))
+		eid = item.get('id')
+		if not table or not eid:
+			continue
+		conn.execute(
+			f'UPDATE {table} SET today = 1, today_segment_id = ?, today_order = ? WHERE id = ?',
+			(seg_val, i, eid)
+		)
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True})
