@@ -580,16 +580,22 @@ a.day-row-title:hover { color: var(--cd-amber-hi, #f5b332); }
       h += '<input type="checkbox" class="day-complete" data-kind="' + kind + '" data-id="' + id + '">';
     }
 
-    // Title — label for completable rows, link out for block/ticket
-    var href = (!completable) ? entryHref(e) : null;
+    // Title — link to the item's context (project page / ticket detail) so its
+    // project info is one click away. Falls back to a plain label when there's
+    // nowhere to go (e.g. a Below Deck task with no project).
+    var href = entryHref(e);
     if (href) {
-      h += '<a class="day-nav-link" href="' + href + '">' + escHtml(entryLabel(e)) + '</a>';
+      h += '<a class="day-nav-link" href="' + href + '" title="Open ' + (e.project_title ? escAttr(e.project_title) : 'details') + '">' + escHtml(entryLabel(e)) + '</a>';
     } else {
       h += '<label>' + escHtml(entryLabel(e)) + '</label>';
     }
 
     // Due — the real cd-due-wrapper badge + native date input
     h += dueWrapperHtml(e);
+
+    // Remove from Today — reuse the canonical ★ (un-star clears today + segment)
+    h += '<button class="cd-today-star starred" data-kind="' + kind + '" data-id="' + id + '" ' +
+         'title="Remove from Today" type="button">★</button>';
 
     // Timer — the real ⏱ cd-tt-row-btn (start/stop + live elapsed via syncRowStates)
     if (timeable) {
@@ -1237,6 +1243,32 @@ a.day-row-title:hover { color: var(--cd-amber-hi, #f5b332); }
     var cb = e.target;
     if (!cb.classList || !cb.classList.contains('day-complete') || !cb.checked) return;
     completeDayEntry(cb.getAttribute('data-kind'), cb.getAttribute('data-id'));
+  });
+
+  // ★ → remove the entity from Today (un-star clears today + its segment).
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.cd-today-star');
+    if (!btn || !btn.closest('#segmentsContainer')) return;
+    e.preventDefault();
+    var kind = btn.getAttribute('data-kind');
+    var id = btn.getAttribute('data-id');
+    if (!kind || !id) return;
+    // Optimistic: drop it from My Day immediately.
+    function notThis(x) { return !((x.kind || 'task') === kind && String(x.id) === String(id)); }
+    STATE.todayOpen = (STATE.todayOpen || []).filter(notThis);
+    STATE.todayDone = (STATE.todayDone || []).filter(notThis);
+    renderMyDay();
+    var fd = new FormData();
+    var field = kind === 'item' ? 'item_id' : kind === 'block' ? 'block_id' : kind === 'ticket' ? 'ticket_id' : 'task_id';
+    fd.append(field, id);
+    fetch('/today/star', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d || !d.success) { loadEverything(); return; }
+        // Resync the picker star + count below.
+        loadEverything();
+      })
+      .catch(function() { loadEverything(); });
   });
 
   // Reflect running timers on the ⏱ buttons; tick the live elapsed each second.
