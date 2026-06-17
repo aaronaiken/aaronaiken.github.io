@@ -1,0 +1,127 @@
+---
+layout: null
+permalink: /splinched/leak-hunt/
+title: Leak Hunt · Splinched
+description: Browser-only leak-hunt tool for your bank CSV. Find forgotten recurring charges. No data leaves your device.
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self';">
+<title>{{ page.title }}</title>
+<meta name="description" content="{{ page.description }}">
+<link rel="stylesheet" href="{{ '/assets/css/splinched-leak-hunt.css' | relative_url }}">
+</head>
+<body>
+<div class="sp-wrap">
+
+  <div class="sp-header">
+    <span class="sp-ident">SPLINCHED · LEAK HUNT</span>
+    <a href="{{ '/splinched' | relative_url }}" class="sp-back">← Back to Splinched</a>
+  </div>
+  <h1 class="sp-title">Leak Hunt</h1>
+  <p class="sp-subtitle">Drop in a bank export. Find the quiet recurring charges draining you. None of it leaves your device.</p>
+  <div class="sp-rule"></div>
+
+  <div class="sp-privacy">
+    <strong>🔒 100% local</strong>
+    <span class="sp-privacy-text">This is raw bank-transaction data — so it never leaves your browser. After this page loads you can disconnect from the internet and the hunt still runs.</span>
+    <details>
+      <summary>How do we know? ▾</summary>
+      <p>The page sets a <code>Content-Security-Policy</code> header that blocks all outbound network connections after load. No upload, no analytics, no telemetry, no cloud — there is nowhere for your transactions to go.</p>
+      <p>Your CSV is read locally with a tiny JavaScript parser bundled into this page. Categorizing, the recurring-charge detector, all the math — it runs in this tab using a port of the open-source Python helper the book describes. Your editable rules and last-hunt comparison are saved in your browser's <code>localStorage</code>, also strictly local.</p>
+      <p>Want proof? Open the tool, turn off your wifi, then drop in a file. It all still works.</p>
+    </details>
+  </div>
+
+  <!-- ============= STATE: UPLOAD ============= -->
+  <div data-state="upload" class="is-active">
+    <div class="sp-drop" id="lh-drop">
+      <input type="file" id="lh-file" accept=".csv,text/csv,text/plain">
+      <div class="sp-drop-icon">⤓</div>
+      <h2 class="sp-drop-headline">Drop your bank CSV here</h2>
+      <p class="sp-drop-hint">or click anywhere in this box to choose a file</p>
+      <div class="sp-drop-meta">
+        <span>.csv export · PNC, or any date / description / amount columns</span>
+        <span>·</span>
+        <button id="lh-try-example" type="button">Try an example file →</button>
+      </div>
+    </div>
+
+    <div class="sp-cadence-card">
+      <h3 class="sp-card-title">How long a window?</h3>
+      <p>The recurring-charge detector needs to see a charge <strong>at least twice</strong>, so a single month barely flags anything. For your <strong>first hunt, export ≥ 90 days</strong>. After that, a quick monthly pass keeps you honest, and another 90-day sweep each quarter catches what crept back in.</p>
+    </div>
+
+    <p class="sp-dim" style="margin-top:18px;font-style:italic;">
+      Your file isn't uploaded. It's read locally, parsed in this tab, and categorized with rules you can edit. Nothing is sent anywhere — that's the whole point of doing this in the browser.
+    </p>
+  </div>
+
+  <!-- ============= STATE: COLUMN MAP (unknown format) ============= -->
+  <div data-state="map">
+    <div class="sp-card">
+      <h2 class="sp-card-title">We couldn't auto-detect the columns</h2>
+      <p class="sp-dim" style="font-style:italic;">No problem — just tell us which column is which. We found these columns in your file:</p>
+      <div id="lh-map-body" style="margin-top:16px;"></div>
+      <label class="sp-toggle" style="margin-top:16px;">
+        <input type="checkbox" id="lh-map-flip">
+        <span>My amounts are <strong>negative for spending</strong> (flip the sign)</span>
+      </label>
+      <p class="sp-ctl-hint">Leave this unchecked if a purchase shows as a positive number in your export. Check it if purchases are negative and deposits are positive.</p>
+    </div>
+    <div class="sp-actions">
+      <button class="sp-btn" id="lh-map-go">Parse with these columns →</button>
+      <button class="sp-btn is-ghost" id="lh-map-back">← Try another file</button>
+    </div>
+  </div>
+
+  <!-- ============= STATE: RESULTS ============= -->
+  <div data-state="results">
+    <div id="lh-totals"></div>
+    <div id="lh-cadence"></div>
+    <div id="lh-comparison"></div>
+    <div id="lh-breakdown"></div>
+    <div id="lh-recurring"></div>
+    <div id="lh-biggest"></div>
+
+    <!-- Review & recategorize (the editable panel) -->
+    <div class="sp-sandbox" id="lh-review">
+      <div class="sp-sandbox-head" id="lh-review-head">
+        <h2 class="sp-card-title">// REVIEW &amp; RECATEGORIZE</h2>
+        <span class="sp-toggle-icon">▸</span>
+      </div>
+      <div class="sp-sandbox-body" id="lh-review-body"></div>
+    </div>
+
+    <div class="sp-actions">
+      <button class="sp-btn" id="lh-save-compare" title="Stores this hunt's summary in your browser so the next hunt can show drift. No numbers leave your device.">Save as comparison baseline</button>
+      <button class="sp-btn is-ghost" id="lh-print">Print / Save as PDF</button>
+      <button class="sp-btn is-ghost" id="lh-restart">← Hunt another file</button>
+    </div>
+
+    <div class="sp-disclosure">
+      <h3>Read this before you act on it</h3>
+      <p>This is a tool. Auto-categorization guesses from the merchant name and will get some wrong — that's why the review panel lets you fix them. The recurring detector flags <em>look-alike</em> charges; confirm before you cancel anything.</p>
+      <p>If a number here doesn't match your actual bank statement, <strong>trust the bank, not this tool</strong>. The math mirrors the Ledger's own leak-hunt helper and there are tests pinning it to known answers, but software is software.</p>
+      <p>Splinched is not financial advice. I'm not a CFP, an accountant, or a licensed anything. This is a tool to help you see where the money goes — not a substitute for talking to someone qualified.</p>
+    </div>
+
+    <p class="sp-dim" style="font-style:italic;margin-top:24px;">
+      <strong>Heads up:</strong> this hunt lives in your tab only. Close it and the transactions are gone — that's the privacy promise. Your editable rules and the comparison baseline persist in this browser; your raw transactions never do.
+    </p>
+  </div>
+
+  <footer class="sp-footer">
+    Problem, question, or feedback? <a href="mailto:aaron@aaronaiken.me?subject=Splinched%20Leak%20Hunt%20%E2%80%94%20question">Email aaron@aaronaiken.me →</a>
+  </footer>
+
+</div>
+
+<script type="module" src="{{ '/assets/js/splinched-leak-hunt/main.js' | relative_url }}"></script>
+
+</body>
+</html>

@@ -24,7 +24,7 @@ You get:
 - **The book** — PDF, ~100 pages, my voice, the story plus the method
 - **The Projection & Sandbox app** — a self-contained web tool that runs the same projection math as my private Ledger. Model your debt-free date and play with what-ifs: extra monthly attack, side income, windfalls. Browser-only, no signup, yours forever. [Try it now with example data →](/splinched/projection/)
 - **The Ledger Spreadsheet** — spreadsheet version of my private app, no coding required
-- **The Leak-Hunt Sheet** — analyze your bank exports for forgotten recurring charges
+- **The Leak-Hunt app** — drop in a bank CSV and surface forgotten recurring charges, categorized automatically. Browser-only, nothing uploaded. [Try it now with an example file →](/splinched/leak-hunt/)
 - **The Milestone Worksheet** — sketch your own debt-free sequence
 - **The Daily Practice Card** — index-card-sized cheat sheet for payday sessions
 
