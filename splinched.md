@@ -13,7 +13,7 @@ In October 2024, God broke through and I started to come back together. In Decem
 
 The system that got me there started as a Python web app I built for myself — a private *Ledger* that runs my payday sessions, projects my payoff dates, and hunts down forgotten recurring charges. It worked. Other tools I'd tried (spreadsheets, Notion trackers, budgeting apps) all went stale within months. The Ledger didn't, because it's built around five specific questions instead of a dashboard full of metrics.
 
-**Splinched** is the book I wrote about it. It's the story behind the system, the method that runs it, and a full working toolkit — a browser-based Projection & Sandbox app, a spreadsheet ledger, a leak-hunt template, and a milestone-mapping worksheet — you can use yourself.
+**Splinched** is the book I wrote about it. It's the story behind the system, the method that runs it, and a full working toolkit — a browser-based Projection & Sandbox app, a Leak Hunt app, a spreadsheet ledger, and a milestone-mapping worksheet — you can use yourself.
 
 It is not a budgeting app. It is not a Dave-Ramsey replacement. It is the honest book I needed when I was carrying $110,000 of debt and didn't know where to start. If that sounds like you, or someone you know, it's for you.
 
