@@ -21,7 +21,7 @@ It is not a budgeting app. It is not a Dave-Ramsey replacement. It is the honest
 
 You get:
 
-- **The book** — PDF, ~100 pages, my voice, the story plus the method
+- **The book** — PDF, 120+ pages, my voice, the story plus the method
 - **The Projection & Sandbox app** — a self-contained web tool that runs the same projection math as my private Ledger. Model your debt-free date and play with what-ifs: extra monthly attack, side income, windfalls. Browser-only, no signup, yours forever. [Try it now with example data →](/splinched/projection/)
 - **The Ledger Spreadsheet** — spreadsheet version of my private app, no coding required
 - **The Leak-Hunt app** — drop in a bank CSV and surface forgotten recurring charges, categorized automatically. Browser-only, nothing uploaded. [Try it now with an example file →](/splinched/leak-hunt/)
@@ -54,7 +54,7 @@ Splinched is not for everyone. To save you time:
 
 ## About the author
 
-I'm Aaron Aiken — a program manager, a tinkerer, and a guy who built his way out of debt by writing his own tools. More about me at [aaronaiken.me/about](/about/aaronaiken). When I'm not at the day job or with my family, I write code, make leather goods, and tend a small private operating system that runs my life. The Ledger is one piece of that system. Splinched is the story of how it got built.
+I'm Aaron Aiken — a maker. I build business solutions and small applications by trade, make leather goods by hand, and write. I built my way out of debt the way I build everything else: by making my own tools. More about me at [aaronaiken.me/about](/about/aaronaiken). The Ledger is one piece of a small private operating system that runs my life. Splinched is the story of how it got built.
 
 ## Frequently asked questions
 
