@@ -1,10 +1,11 @@
 ---
 layout: splinched
-title: Splinched
+title: "Splinched — How I Paid Off $110k of Debt"
+heading: Splinched
 permalink: /splinched
 page_ident: "BOOK · SPLINCHED"
 subtitle: How I built my way out of $110k of debt — and the system that got me there.
-description: Splinched — the book and bundle. The story behind eliminating $110k of debt, the system that got me there, and a spreadsheet you can use yourself.
+description: How I paid off $110k of debt — the book, the system that got me there, and a toolkit you can use yourself.
 image: /assets/splinched/splinched-og-share.png
 ---
 

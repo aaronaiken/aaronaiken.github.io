@@ -115,7 +115,7 @@ body.splinched-layout * { box-sizing: border-box; }
     {% include nav.html %}
 
     <header class="sl__header">
-      <h1 class="sl__title">{{ page.title | escape }}</h1>
+      <h1 class="sl__title">{{ page.heading | default: page.title | escape }}</h1>
       {% if page.subtitle %}<p class="sl__subtitle">{{ page.subtitle }}</p>{% endif %}
     </header>
 
