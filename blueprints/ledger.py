@@ -194,6 +194,12 @@ def payday_form():
 
 	runway = L.cash_runway(conn)
 	expected_checking = L.expected_checking_balance(conn)
+	# Secondary estimate: what checking would read if the still-unconfirmed
+	# autopays had cleared. Display-only — the Expected rule is unchanged.
+	pending_autopays = L.pending_autopays_total(conn)
+	expected_if_cleared = None
+	if expected_checking is not None and pending_autopays > 0:
+		expected_if_cleared = expected_checking - pending_autopays
 	budget = L.attack_budget(conn)
 	projection = L.project_payoff(conn)
 
@@ -222,6 +228,8 @@ def payday_form():
 		'ledger_payday.html',
 		runway=runway,
 		expected_checking=expected_checking,
+		expected_if_cleared=expected_if_cleared,
+		pending_autopays=pending_autopays,
 		budget=budget,
 		projection=projection,
 		pending=pending,

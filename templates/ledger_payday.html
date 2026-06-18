@@ -46,6 +46,13 @@
             </span>
             <span id="lg-checking-delta" class="lg-mono lg-dim"></span>
           </div>
+          {% if expected_if_cleared is not none %}
+            <div class="lg-runway-strip" style="margin-top:4px;">
+              <span class="lg-dim" style="font-size:0.85em;">…or ~<strong>${{ '{:,.2f}'.format(expected_if_cleared) }}</strong>
+                if the ${{ '{:,.2f}'.format(pending_autopays) }} in pending autopays has already cleared</span>
+            </div>
+            <p class="lg-note" style="margin-top:4px;">Expected counts only autopays you've confirmed. The lower figure assumes the still-unconfirmed ones have hit — confirm them below at payday to make it exact.</p>
+          {% endif %}
         {% else %}
           <div class="lg-note">No prior snapshot yet — this is your first.</div>
         {% endif %}

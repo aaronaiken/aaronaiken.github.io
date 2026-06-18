@@ -638,6 +638,38 @@ def expected_checking_balance(conn):
 	return bal
 
 
+def pending_autopays_total(conn):
+	"""Sum of as-yet-unconfirmed autopay payments since the last checking
+	snapshot — i.e. the money expected_checking_balance() has NOT subtracted
+	yet, because that function only deducts *confirmed* clears.
+
+	This is the exact complement of the autopay term in expected_checking_balance
+	(confirmed = 0 vs confirmed = 1 over the same window), so
+	    expected_checking_balance() - pending_autopays_total()
+	gives "what checking would be if every pending autopay had cleared." Used to
+	show a secondary, clearly-labelled estimate on the payday view; the rules
+	behind Expected stay untouched.
+	"""
+	checking_id = get_setting(conn, 'checking_account_id')
+	if not checking_id:
+		return 0.0
+	last = conn.execute("""
+		SELECT snapshot_at FROM balance_snapshots
+		WHERE account_id = ?
+		ORDER BY snapshot_at DESC, id DESC LIMIT 1
+	""", (checking_id,)).fetchone()
+	if not last:
+		return 0.0
+
+	snap_date = datetime.fromisoformat(last['snapshot_at'].replace('Z', '+00:00')).date()
+	today = et_today()
+	return conn.execute("""
+		SELECT COALESCE(SUM(amount), 0) AS s FROM debt_transactions
+		WHERE confirmed = 0 AND tx_type = 'payment'
+		  AND tx_date >= ? AND tx_date <= ?
+	""", (snap_date.isoformat(), today.isoformat())).fetchone()['s']
+
+
 # ---- projection (month by month) ----
 
 def project_payoff(conn, max_months=240, overrides=None):
