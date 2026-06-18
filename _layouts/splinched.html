@@ -72,6 +72,8 @@ body.splinched-layout * { box-sizing: border-box; }
 .sl__price-standard { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--sl-text-dim); letter-spacing: 0.08em; margin-bottom: 24px; font-variant-numeric: tabular-nums; }
 .sl__price-cta { display: inline-block; padding: 14px 36px; background: var(--sl-brass); color: var(--sl-bg) !important; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; letter-spacing: 0.2em; text-transform: uppercase; text-decoration: none !important; border: 1px solid var(--sl-brass) !important; transition: background 0.15s, color 0.15s; }
 .sl__price-cta:hover { background: var(--sl-brass-hi); border-color: var(--sl-brass-hi) !important; color: var(--sl-bg) !important; }
+.sl__price-secondary { display: block; margin: 16px auto 0; font-family: 'Crimson Pro', serif; font-style: italic; font-size: 0.98rem; color: var(--sl-text-body) !important; text-decoration: none !important; border-bottom: none !important; background: none !important; transition: color 0.15s; }
+.sl__price-secondary:hover { color: var(--sl-brass-hi) !important; border-bottom: none !important; background: none !important; }
 .sl__price-note { font-family: 'Crimson Pro', serif; font-style: italic; font-size: 0.9rem; color: var(--sl-text-dim); margin-top: 22px; line-height: 1.55; }
 
 @keyframes sl-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -125,5 +127,8 @@ body.splinched-layout * { box-sizing: border-box; }
 
     {% include footer.html %}
   </main>
+  <!-- Lemon Squeezy overlay checkout: turns .lemonsqueezy-button links into
+       in-page overlays so buyers never leave aaronaiken.me. -->
+  <script src="https://assets.lemonsqueezy.com/lemon.js" defer></script>
 </body>
 </html>
