@@ -337,40 +337,48 @@ def ani_generate_image(scene):
 	if not api_key:
 		return None
 	bible = ani_get_bible() or ''
+	# Keep the prompt clean: the content boundary is steered by Ani's tag (her system
+	# prompt), NOT spelled out here — words like "topless/nude/genitals" nudge the model
+	# toward nudity that then trips xAI's OUTPUT moderation (400). bible + scene + a plain
+	# photographic style line passes reliably.
 	prompt = (
 		f"{bible.strip()}\n\n"
 		f"Scene: {scene.strip()}\n\n"
-		"Render a realistic, high-quality photograph of this same woman — keep her face "
-		"and body consistent. Tasteful and flirty is welcome; tasteful topless is okay, "
-		"but never show the lower body or genitals and never depict sexual acts."
+		"A realistic, high-quality photograph of this same woman — keep her face and body "
+		"consistent across photos. Natural, tasteful, flirty."
 	).strip()
-	try:
-		resp = requests.post(
-			'https://api.x.ai/v1/images/generations',
-			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
-			json={'model': 'grok-imagine-image-quality', 'prompt': prompt, 'n': 1},
-			timeout=90
-		)
-		resp.raise_for_status()
-		item = (resp.json().get('data') or [{}])[0]
-		img_url = item.get('url')
-		if not img_url:
-			return None
-		# Re-host the temporary xAI image on Bunny for persistence
+
+	# xAI image moderation is non-deterministic; retry once on a non-200 (incl. moderation 400).
+	for attempt in range(2):
 		try:
-			from helpers.bunny import upload_ani_image_to_bunny
-			img = requests.get(img_url, timeout=60)
-			img.raise_for_status()
-			mime = item.get('mime_type', 'image/jpeg')
-			ext = 'png' if 'png' in mime else 'jpg'
-			cdn = upload_ani_image_to_bunny(img.content, f"ani-{int(time.time())}.{ext}", mime)
-			return cdn or img_url
+			resp = requests.post(
+				'https://api.x.ai/v1/images/generations',
+				headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+				json={'model': 'grok-imagine-image-quality', 'prompt': prompt, 'n': 1},
+				timeout=90
+			)
+			if resp.status_code != 200:
+				print(f"Ani image gen HTTP {resp.status_code} (try {attempt+1}): {resp.text[:200]}")
+				continue
+			item = (resp.json().get('data') or [{}])[0]
+			img_url = item.get('url')
+			if not img_url:
+				continue
+			# Re-host the temporary xAI image on Bunny for persistence
+			try:
+				from helpers.bunny import upload_ani_image_to_bunny
+				img = requests.get(img_url, timeout=60)
+				img.raise_for_status()
+				mime = item.get('mime_type', 'image/jpeg')
+				ext = 'png' if 'png' in mime else 'jpg'
+				cdn = upload_ani_image_to_bunny(img.content, f"ani-{int(time.time())}.{ext}", mime)
+				return cdn or img_url
+			except Exception as e:
+				print(f"Ani image re-host failed (serving temp url): {e}")
+				return img_url
 		except Exception as e:
-			print(f"Ani image re-host failed (serving temp url): {e}")
-			return img_url
-	except Exception as e:
-		print(f"Ani image gen error: {e}")
-		return None
+			print(f"Ani image gen error (try {attempt+1}): {e}")
+	return None
 
 
 def ani_get_weather(location):
@@ -855,11 +863,13 @@ def ani_chat():
 	# Did Ani decide to send a photo? Strip the hidden [[PIC: ...]] tag from the
 	# visible text and generate the image from her scene description.
 	image_url = None
+	image_error = False
 	pic_match = ANI_PIC_RE.search(reply)
 	if pic_match:
 		scene = pic_match.group(1).strip()
 		reply = ANI_PIC_RE.sub('', reply).strip() or '📷'
 		image_url = ani_generate_image(scene)
+		image_error = image_url is None  # she sent a pic but generation/moderation failed
 
 	updated_history.append({'role': 'user', 'content': user_message})
 	assistant_entry = {'role': 'assistant', 'content': reply}
@@ -885,7 +895,7 @@ def ani_chat():
 
 	ani_save_conversation(updated_history, updated_meta)
 
-	return jsonify({'reply': reply, 'image_url': image_url})
+	return jsonify({'reply': reply, 'image_url': image_url, 'image_error': image_error})
 
 
 @ani_bp.route('/ani/history', methods=['GET'])

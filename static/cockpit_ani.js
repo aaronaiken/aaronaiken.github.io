@@ -168,6 +168,9 @@
 		aniRenderMessage('assistant', data.reply || '', data.image_url);
 		updateAcheDisplay(0);
 	  }
+	  if (data.image_error) {
+		aniRenderNotify('photo blocked by the content filter — ask her for a tamer/different scene');
+	  }
 	  aniScrollToBottom();
 	  aniInput.focus();
 	})
