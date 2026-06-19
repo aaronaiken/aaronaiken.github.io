@@ -274,6 +274,9 @@
 		<div class="section-label">// Transmission</div>
 		<div class="input-wrap">
 			<form action="/publish" method="post" id="status-form" enctype="multipart/form-data">
+				<!-- Set by logAsStatus() when posting from a completed Mission Log
+				     task → backend links that task to this status update. -->
+				<input type="hidden" name="link_task_id" id="link-task-id" value="">
 				<textarea
 					name="status"
 					id="status-input"

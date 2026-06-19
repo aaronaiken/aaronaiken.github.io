@@ -18,7 +18,7 @@ from flask import (
 from helpers.auth import is_authenticated
 from helpers.git import get_git_status, perform_git_ops
 from helpers.comms import get_valid_comms, get_after_dark_comms
-from helpers.tasks_json import load_tasks
+from helpers.tasks_json import load_tasks, save_tasks
 from helpers.scratch import load_scratch_work, save_scratch_work
 from helpers.bunny import list_bunny_ad_folder, upload_status_image_to_bunny
 from helpers.omg_lol import post_to_omg_lol
@@ -90,6 +90,23 @@ def publish_status():
 		os.makedirs("_status_updates", exist_ok=True)
 		with open(fn, "w") as f:
 			f.write(full_markdown)
+
+		# Auto-link: if this status update was posted from completing a Mission
+		# Log task (the "STATUS UPDATE" log-prompt action sets link_task_id), set
+		# that task's blog_url to this update's permalink so it shows publicly on
+		# /tools/tasks/. Default collection permalink → /status_updates/<name>.html.
+		# perform_git_ops does `git add .`, so tasks.json is committed alongside.
+		link_task_id = request.form.get('link_task_id', '').strip()
+		if link_task_id:
+			try:
+				status_url = '/status_updates/' + os.path.basename(fn).replace('.markdown', '.html')
+				tdata = load_tasks()
+				target = next((t for t in tdata.get('tasks', []) if t.get('id') == link_task_id), None)
+				if target:
+					target['blog_url'] = status_url
+					save_tasks(tdata)
+			except Exception as e:
+				print(f"auto-link status->task error: {e}")
 
 		perform_git_ops(fn)
 

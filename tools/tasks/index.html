@@ -183,6 +183,18 @@ body::after {
 	align-self: center;
 }
 
+.ml-item-link {
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 0.9rem;
+	color: var(--amber-lo);
+	text-decoration: none;
+	flex-shrink: 0;
+	align-self: center;
+	padding: 0 2px;
+	transition: color 0.15s;
+}
+.ml-item-link:hover { color: var(--amber); }
+
 /* ---- EMPTY STATE ---- */
 .ml-empty {
 	padding: 32px 0;
@@ -345,11 +357,15 @@ body::after {
 		const date  = isComplete
 			? (task.completed ? formatDate(task.completed) : '')
 			: (task.created   ? formatDate(task.created)   : '');
+		const link  = task.blog_url
+			? `<a class="ml-item-link" href="${escHtml(task.blog_url)}" target="_blank" rel="noopener" title="Related status update or post">↗</a>`
+			: '';
 
 		return `
 			<li class="${cls}" style="animation-delay:${delay.toFixed(2)}s">
 				<div class="ml-item-icon">${icon}</div>
 				<div class="ml-item-title">${escHtml(task.title)}</div>
+				${link}
 				${date ? `<div class="ml-item-date">${date}</div>` : ''}
 			</li>`;
 	}

@@ -454,6 +454,9 @@
 		function logAsStatus() {
 			const statusInput = document.getElementById('status-input');
 			statusInput.value = `✅ Shipped: ${_lastCompletedTitle}`;
+			// Tell the backend to auto-link this task to the status update once published.
+			const lt = document.getElementById('link-task-id');
+			if (lt) lt.value = _lastCompletedId || '';
 			updateHUD();
 			statusInput.focus();
 			dismissLogPrompt();
@@ -478,7 +481,7 @@
 		function linkTaskBlog(id) {
 			const li = document.querySelector(`.task-item[data-id="${id}"]`);
 			const current = li ? (li.dataset.blog || '') : '';
-			const url = prompt('Published blog-post URL for this task (blank to unlink):', current);
+			const url = prompt('Published URL for this task — blog post or status update (blank to unlink):', current);
 			if (url === null) return; // cancelled
 			const trimmed = url.trim();
 			const fd = new FormData();
