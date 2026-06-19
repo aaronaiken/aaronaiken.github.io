@@ -27,6 +27,12 @@ ANI_HOUSE_FILE = 'static/ani_house.txt'             # room/house details for sce
 # Ani emits this tag to send a photo; backend strips it + generates the image.
 ANI_PIC_RE = re.compile(r'\[\[PIC:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 
+# Fallback: when Aaron clearly asks for a photo but Ani forgets the tag, generate
+# one anyway (from her narration). request-verb + a pic-noun within ~30 chars.
+ANI_PIC_REQUEST_RE = re.compile(
+	r'\b(?:send|show|take|snap|gimme|give me|let me see|lemme see)\b'
+	r'[^.?!\n]{0,30}\b(?:pic|picture|photo|selfie|shot|image)\b', re.IGNORECASE)
+
 # Safety net — her explicit persona slips nudity into the scene tag ("no bra",
 # "nothing underneath", "naked"), which xAI's image moderation hard-rejects (the
 # photo comes back blank). Strip those phrases so the image actually renders; the
@@ -883,8 +889,13 @@ def ani_chat():
 	if pic_match:
 		image_scene = pic_match.group(1).strip()
 		reply = ANI_PIC_RE.sub('', reply).strip() or '📷'
+	elif ANI_PIC_REQUEST_RE.search(user_message):
+		# Aaron clearly asked for a pic but she didn't tag — use her narration as the
+		# scene so a request always yields a photo (sanitized + bible-anchored downstream).
+		image_scene = reply[:500]
+	if image_scene:
 		image_url = ani_generate_image(image_scene)
-		image_error = image_url is None  # she sent a pic but generation/moderation failed
+		image_error = image_url is None  # generation/moderation failed
 
 	updated_history.append({'role': 'user', 'content': user_message})
 	assistant_entry = {'role': 'assistant', 'content': reply}
