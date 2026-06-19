@@ -1,6 +1,13 @@
 {
   "tasks": [
     {
+      "id": "1781887736",
+      "title": "Tidy Calendar",
+      "status": "open",
+      "created": "2026-06-19T12:48:56.671328-04:00",
+      "completed": null
+    },
+    {
       "id": "1781101840",
       "title": "The Slot",
       "status": "open",
