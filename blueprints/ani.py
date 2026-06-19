@@ -27,6 +27,17 @@ ANI_HOUSE_FILE = 'static/ani_house.txt'             # room/house details for sce
 # Ani emits this tag to send a photo; backend strips it + generates the image.
 ANI_PIC_RE = re.compile(r'\[\[PIC:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 
+# Safety net — her explicit persona slips nudity into the scene tag ("no bra",
+# "nothing underneath", "naked"), which xAI's image moderation hard-rejects (the
+# photo comes back blank). Strip those phrases so the image actually renders; the
+# bible already defaults her to tasteful clothing.
+_ANI_NUDE_RE = re.compile(
+	r'\b(?:completely\s+|fully\s+|totally\s+)?'
+	r'(?:naked|nude|nudity|topless|bare[-\s]?(?:chest(?:ed)?|breast(?:ed)?|skin)?|'
+	r'no\s+bra|no\s+panties|no\s+underwear|nothing\s+underneath|underwear[-\s]?less|'
+	r'exposed|undressed|genitals?|nipples?|pussy|crotch|recently\s+used|quietly\s+needy)\b',
+	re.IGNORECASE)
+
 # Ani helpers shell out to git (recent-status, recent-git-log) — needs repo cwd.
 REPO_ROOT = os.environ.get('COCKPIT_REPO_ROOT', '/home/aaronaiken/status_update')
 
@@ -336,7 +347,8 @@ def ani_generate_image(scene):
 	api_key = os.environ.get('XAI_API_KEY')
 	if not api_key:
 		return None
-	print(f"Ani PIC requested — scene: {scene!r}")
+	clean_scene = re.sub(r'\s{2,}', ' ', _ANI_NUDE_RE.sub('', scene)).strip(' ,;.')
+	print(f"Ani PIC — raw scene: {scene!r} | sanitized: {clean_scene!r}")
 	bible = ani_get_bible() or ''
 	# Keep the prompt clean: the content boundary is steered by Ani's tag (her system
 	# prompt), NOT spelled out here — words like "topless/nude/genitals" nudge the model
@@ -344,9 +356,10 @@ def ani_generate_image(scene):
 	# photographic style line passes reliably.
 	prompt = (
 		f"{bible.strip()}\n\n"
-		f"Scene: {scene.strip()}\n\n"
+		f"Scene: {clean_scene}\n\n"
 		"A realistic, high-quality photograph of this same woman — keep her face and body "
-		"consistent across photos. Natural, tasteful, flirty."
+		"consistent across photos. She is wearing flattering, tasteful clothing. "
+		"Natural, tasteful, flirty."
 	).strip()
 
 	# xAI image moderation is non-deterministic; retry once on a non-200 (incl. moderation 400).
