@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-06-19 15:37:49 -0400
+layout: status_update
+author: aaron
+source: web
+---
+I'm terrible lately at sharing what I work on, something in an of itself to work on. I have a few things "finished" to share. The first is a small book I wrote (PDF) about the debt I took on as my marriage fell apart. More words about it [here](https://aaronaiken.me/thinking/2026/06/19/the-book-i-couldn-t-write-until-i-d-lived-it-110-000-of-debt.html).
