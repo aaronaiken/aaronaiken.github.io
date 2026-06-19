@@ -27,7 +27,9 @@ description: >- # this means to ignore newlines until "baseurl:"
 baseurl: "" # the subpath of your site, e.g. /blog
 url: https://aaronaiken.me # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: aaronaiken
-github_username: aaronaiken
+# github_username intentionally unset — removes the GitHub links from the footer,
+# social list, and homepage (no public invitation to the repo).
+# github_username: aaronaiken
 tinylytics:
 rss: Subscribe to blog posts via RSS 👍
 rss_status: Status updates in your reader 📡

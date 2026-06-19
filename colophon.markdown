@@ -16,7 +16,7 @@ Here is how it is made.
 
 Built with [Jekyll](https://jekyllrb.com), a static site generator. No database, no server-side rendering, no CMS. Every page on this site is a flat HTML file generated from Markdown and Liquid templates. It is fast, simple, and entirely mine.
 
-Hosted on [GitHub Pages](https://pages.github.com). The repository is public. Source code is available for anyone curious enough to look.
+Hosted on [GitHub Pages](https://pages.github.com).
 
 ---
 
