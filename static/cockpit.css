@@ -282,6 +282,22 @@
 		letter-spacing: 0.1em; text-shadow: 0 0 8px var(--secret-neon); display: none;
 	}
 
+	#alt-text-row { display: none; align-items: center; gap: 8px; margin: 8px 0 4px; }
+	#alt-text-input {
+		flex: 1; background: var(--bg2); border: 1px solid var(--border-hi);
+		color: var(--text-body); padding: 6px 9px; border-radius: 2px;
+		font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; letter-spacing: 0.04em;
+	}
+	#alt-text-input:focus { outline: none; border-color: var(--amber-lo); }
+	#alt-suggest-btn {
+		flex-shrink: 0; cursor: pointer; background: none; color: var(--amber-lo);
+		border: 1px solid var(--amber-lo); padding: 5px 9px; border-radius: 2px;
+		font-family: 'Share Tech Mono', monospace; font-size: 0.6rem;
+		letter-spacing: 0.15em; text-transform: uppercase; transition: all 0.15s;
+	}
+	#alt-suggest-btn:hover:not(:disabled) { color: var(--amber); border-color: var(--amber); background: var(--amber-dim); }
+	#alt-suggest-btn:disabled { opacity: 0.6; cursor: default; }
+
 	button#publish-btn {
 		width: 100%; background: var(--amber-dim);
 		border: 1px solid var(--amber-lo); color: var(--amber-hi);

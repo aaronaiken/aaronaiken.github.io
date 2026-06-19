@@ -292,6 +292,11 @@
 					<div><span id="char-count">0</span> / 280</div>
 				</div>
 
+				<div id="alt-text-row">
+					<input type="text" name="image_alt" id="alt-text-input" placeholder="Alt text — describe the image" maxlength="160" autocomplete="off">
+					<button type="button" id="alt-suggest-btn" onclick="suggestAltText()" title="Suggest alt text with AI">✨ SUGGEST</button>
+				</div>
+
 				<button type="submit" id="publish-btn" onclick="playCockpitSound('success')">
 					⌇ EXECUTE TRANSMISSION
 				</button>

@@ -2,6 +2,7 @@
 import os
 import io
 import re
+import base64
 import glob
 import json
 import random
@@ -73,7 +74,10 @@ def publish_status():
 				img.save(buf, format="JPEG", optimize=True, quality=85)
 				buf.seek(0)
 			cdn_url = upload_status_image_to_bunny(buf.read(), img_filename)
-			image_markdown = f"\n\n![Status Image]({cdn_url})"
+			# Alt text from the form (optionally AI-suggested, always user-reviewed).
+			# Strip chars that would break the markdown image syntax.
+			alt = request.form.get('image_alt', '').strip().replace('\n', ' ').replace(']', '')
+			image_markdown = f"\n\n![{alt or 'Status image'}]({cdn_url})"
 
 		tags = [t for t in ["movie", "book", "music", "idea", "coffee"] if f"#{t}" in txt.lower()]
 		fm = f"---\ntitle: Status\ndate: {now.strftime('%Y-%m-%d %H:%M:%S %z')}\nlayout: status_update\n"
@@ -120,6 +124,61 @@ def publish_status():
 		tasks=tasks_data.get('tasks', []),
 		cockpit_mode=cockpit_mode_cookie,
 	)
+
+
+@cockpit_bp.route("/publish/alt-suggest", methods=['POST'])
+def alt_suggest():
+	"""Generate suggested alt text for an uploaded image via Claude vision.
+	Backs the publish form's "✨ suggest" button. Returns {ok, alt}. The user
+	always reviews/edits the result before it's published — nothing auto-applies.
+	Uses Haiku (cheap + fast) on a downscaled JPEG; the image is never stored."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	image_file = request.files.get('image')
+	if not image_file or image_file.filename == '':
+		return jsonify({'error': 'no image'}), 400
+	api_key = os.environ.get('ANTHROPIC_API_KEY')
+	if not api_key:
+		return jsonify({'error': 'alt-text AI is not configured'}), 503
+
+	try:
+		# Downscale to a modest JPEG — vision doesn't need full res, and this
+		# keeps the request cheap/fast. Mirrors the publish-flow normalization.
+		with Image.open(image_file) as img:
+			img = ImageOps.exif_transpose(img)
+			if img.mode in ("RGBA", "P"):
+				img = img.convert("RGB")
+			if img.size[0] > 1024:
+				ratio = 1024 / float(img.size[0])
+				img = img.resize((1024, int(img.size[1] * ratio)), Image.Resampling.LANCZOS)
+			buf = io.BytesIO()
+			img.save(buf, format="JPEG", quality=80)
+			b64 = base64.standard_b64encode(buf.getvalue()).decode("utf-8")
+
+		import anthropic
+		client = anthropic.Anthropic(api_key=api_key)
+		resp = client.messages.create(
+			model="claude-haiku-4-5",
+			max_tokens=120,
+			system=(
+				"You write concise, factual alt text for images on a personal blog. "
+				"Reply with ONE plain sentence (max ~140 characters) describing what is "
+				"visibly in the image. No 'image of'/'photo of' preamble, no markdown, "
+				"no surrounding quotes."
+			),
+			messages=[{
+				"role": "user",
+				"content": [
+					{"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b64}},
+					{"type": "text", "text": "Write alt text for this image."},
+				],
+			}],
+		)
+		alt = "".join(b.text for b in resp.content if b.type == "text").strip()
+		return jsonify({'ok': True, 'alt': alt})
+	except Exception as e:
+		logger.error(f"alt-suggest error: {e}")
+		return jsonify({'error': 'generation failed'}), 500
 
 
 @cockpit_bp.route("/login", methods=['GET', 'POST'])

@@ -305,7 +305,34 @@
 				label.innerText = 'PAYLOAD READY';
 				status.style.display = 'inline';
 				status.style.animation = 'blink 0.5s step-end 3';
+				document.getElementById('alt-text-row').style.display = 'flex';
 			}
+		}
+
+		// Ask Claude to suggest alt text for the attached image. Fills the input;
+		// you review/edit before publishing. Nothing auto-applies.
+		function suggestAltText() {
+			const fileInput = document.getElementById('image-upload');
+			const input = document.getElementById('alt-text-input');
+			const btn = document.getElementById('alt-suggest-btn');
+			if (!fileInput.files.length) return;
+			const fd = new FormData();
+			fd.append('image', fileInput.files[0]);
+			btn.disabled = true;
+			btn.textContent = '✨ …';
+			fetch('/publish/alt-suggest', { method: 'POST', body: fd })
+				.then(r => r.json())
+				.then(data => {
+					if (!data.ok || !data.alt) throw new Error(data.error || 'failed');
+					input.value = data.alt;
+					input.focus();
+					btn.textContent = '✨ SUGGEST';
+					btn.disabled = false;
+				})
+				.catch(() => {
+					btn.textContent = 'RETRY';
+					btn.disabled = false;
+				});
 		}
 
 		// ---- TASKS ----
