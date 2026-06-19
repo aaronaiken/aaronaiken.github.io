@@ -739,6 +739,17 @@
 		document.getElementById('yt-player').style.display = 'none';
 	}
 
+	// Show/hide the YouTube player without touching playback (unlike Close,
+	// which clears the iframe src). Bound to Cmd/Ctrl+Shift+Y and the command
+	// palette. Showing a previously-closed player just reveals the idle frame —
+	// no autoplay surprise; LIB / NEXT launch a video.
+	function ytPlayerToggle() {
+		const p = document.getElementById('yt-player');
+		if (!p) return;
+		const hidden = getComputedStyle(p).display === 'none';
+		p.style.display = hidden ? '' : 'none';
+	}
+
 	function ytLibraryToggle() {
 		ytLibraryVisible = !ytLibraryVisible;
 		const drawer = document.getElementById('yt-player-library');
@@ -1521,6 +1532,7 @@
 		{ icon: '▼', label: 'Below Deck',     hint: '/below-deck',    action: () => window.location.href = '/below-deck' },
 		{ icon: '⌇', label: 'Publish Status', hint: '/publish',       action: () => window.location.href = '/publish' },
 		{ icon: '✦', label: 'Brain Dump',     hint: 'Ctrl+Space',     action: () => { cmdClose(); brainDumpOpen(); } },
+		{ icon: '▶', label: 'Toggle YouTube Player', hint: 'Ctrl+Shift+Y', action: () => { cmdClose(); ytPlayerToggle(); } },
 		{ icon: '⏎', label: 'Refresh',        hint: '',               action: () => window.location.reload() },
 	];
 
@@ -1536,6 +1548,11 @@
 		if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
 			e.preventDefault();
 			cmdOpen();
+		}
+		// Cmd/Ctrl+Shift+Y — show/hide the floating YouTube player
+		if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'y' || e.key === 'Y')) {
+			e.preventDefault();
+			ytPlayerToggle();
 		}
 	});
 
