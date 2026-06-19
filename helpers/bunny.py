@@ -98,6 +98,24 @@ def upload_status_image_to_bunny(image_bytes, filename):
 	return f"{BUNNY_STATUS_CDN_URL}/status/{filename}"
 
 
+def upload_ani_image_to_bunny(image_bytes, filename, content_type='image/jpeg'):
+	"""Upload an Ani-generated image to the after-dark Bunny zone under ani/pics/.
+	xAI image URLs are temporary, so we re-host for persistence in chat history.
+	Returns the CDN URL, or None if the AD zone isn't configured."""
+	if not (BUNNY_AD_STORAGE_ZONE and BUNNY_AD_API_KEY and BUNNY_AD_CDN_URL):
+		return None
+	upload_url = f"https://ny.storage.bunnycdn.com/{BUNNY_AD_STORAGE_ZONE}/ani/pics/{filename}"
+	response = req_lib.put(
+		upload_url,
+		data=image_bytes,
+		headers={'AccessKey': BUNNY_AD_API_KEY, 'Content-Type': content_type},
+		timeout=60
+	)
+	if response.status_code != 201:
+		raise Exception(f"Bunny ani upload failed: {response.status_code} {response.text}")
+	return f"{BUNNY_AD_CDN_URL}/ani/pics/{filename}"
+
+
 def _allowed_file(filename):
 	return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_FILE_EXTENSIONS
 

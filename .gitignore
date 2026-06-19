@@ -21,6 +21,8 @@ static/comms.txt
 .kt
 ani_conversation.json
 static/ani_memory.txt
+static/ani_character_bible.txt
+static/ani_house.txt
 assets/data/scratch.json
 assets/data/below_deck.json
 assets/data/command_deck.db

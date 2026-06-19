@@ -133,7 +133,7 @@
 		var messages = data.messages || [];
 		if (messages.length > 0) {
 		  aniEmpty.style.display = 'none';
-		  messages.forEach(function(m) { aniRenderMessage(m.role, m.content); });
+		  messages.forEach(function(m) { aniRenderMessage(m.role, m.content, m.image); });
 		}
 		if (aniPendingOpener) {
 		  aniEmpty.style.display = 'none';
@@ -164,8 +164,8 @@
 	.then(function(data) {
 	  aniShowTyping(false);
 	  aniSendBtn.disabled = false;
-	  if (data.reply) {
-		aniRenderMessage('assistant', data.reply);
+	  if (data.reply || data.image_url) {
+		aniRenderMessage('assistant', data.reply || '', data.image_url);
 		updateAcheDisplay(0);
 	  }
 	  aniScrollToBottom();
@@ -200,7 +200,8 @@
 	  .catch(function() {});
   }
 
-  function aniRenderMessage(role, content) {
+  function aniRenderMessage(role, content, image) {
+	content = content || '';
 	if (content.startsWith('[daily briefing') || content.startsWith('[system:')) return;
 	var div = document.createElement('div');
 	div.classList.add('ani-msg');
@@ -209,7 +210,9 @@
 	  div.textContent = content;
 	} else {
 	  div.classList.add('ani-msg-ani');
-	  div.innerHTML = '<div class="ani-name">ANI</div>' + aniEscapeHtml(content).replace(/\n/g, '<br>');
+	  var html = '<div class="ani-name">ANI</div>' + aniEscapeHtml(content).replace(/\n/g, '<br>');
+	  if (image) html += '<img class="ani-msg-img" src="' + aniEscapeHtml(image) + '" alt="" loading="lazy">';
+	  div.innerHTML = html;
 	}
 	aniMsgs.insertBefore(div, aniTyping);
   }

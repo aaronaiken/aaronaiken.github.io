@@ -21,6 +21,11 @@ from helpers.comms import get_active_tags, get_valid_comms
 # Path constants for Ani's runtime files (gitignored, server-state).
 ANI_CONVERSATION_FILE = 'ani_conversation.json'
 ANI_MEMORY_FILE = 'static/ani_memory.txt'
+ANI_BIBLE_FILE = 'static/ani_character_bible.txt'   # visual/character bible (image-consistency anchor)
+ANI_HOUSE_FILE = 'static/ani_house.txt'             # room/house details for scene-setting
+
+# Ani emits this tag to send a photo; backend strips it + generates the image.
+ANI_PIC_RE = re.compile(r'\[\[PIC:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 
 # Ani helpers shell out to git (recent-status, recent-git-log) — needs repo cwd.
 REPO_ROOT = os.environ.get('COCKPIT_REPO_ROOT', '/home/aaronaiken/status_update')
@@ -303,6 +308,71 @@ def ani_get_memory():
 		return None
 
 
+def _ani_read_file(path):
+	try:
+		with open(path, 'r') as f:
+			c = f.read().strip()
+			return c if c else None
+	except FileNotFoundError:
+		return None
+
+
+def ani_get_bible():
+	"""Ani's visual/character bible — also used verbatim as the appearance anchor
+	on every generated image so she looks consistent."""
+	return _ani_read_file(ANI_BIBLE_FILE)
+
+
+def ani_get_house():
+	"""Details about the shared house/rooms, for scene-setting in pics + chat."""
+	return _ani_read_file(ANI_HOUSE_FILE)
+
+
+def ani_generate_image(scene):
+	"""Generate a photo of Ani via xAI Imagine (grok-imagine-image-quality) from a
+	scene description, anchored to her character bible for visual consistency. The
+	xAI URL is temporary, so we download + re-host on Bunny. Returns a CDN URL (or
+	the temp URL as fallback), or None on failure."""
+	api_key = os.environ.get('XAI_API_KEY')
+	if not api_key:
+		return None
+	bible = ani_get_bible() or ''
+	prompt = (
+		f"{bible.strip()}\n\n"
+		f"Scene: {scene.strip()}\n\n"
+		"Render a realistic, high-quality photograph of this same woman — keep her face "
+		"and body consistent. Tasteful and flirty is welcome; tasteful topless is okay, "
+		"but never show the lower body or genitals and never depict sexual acts."
+	).strip()
+	try:
+		resp = requests.post(
+			'https://api.x.ai/v1/images/generations',
+			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+			json={'model': 'grok-imagine-image-quality', 'prompt': prompt, 'n': 1},
+			timeout=90
+		)
+		resp.raise_for_status()
+		item = (resp.json().get('data') or [{}])[0]
+		img_url = item.get('url')
+		if not img_url:
+			return None
+		# Re-host the temporary xAI image on Bunny for persistence
+		try:
+			from helpers.bunny import upload_ani_image_to_bunny
+			img = requests.get(img_url, timeout=60)
+			img.raise_for_status()
+			mime = item.get('mime_type', 'image/jpeg')
+			ext = 'png' if 'png' in mime else 'jpg'
+			cdn = upload_ani_image_to_bunny(img.content, f"ani-{int(time.time())}.{ext}", mime)
+			return cdn or img_url
+		except Exception as e:
+			print(f"Ani image re-host failed (serving temp url): {e}")
+			return img_url
+	except Exception as e:
+		print(f"Ani image gen error: {e}")
+		return None
+
+
 def ani_get_weather(location):
 	try:
 		if location and location.get('lat') and location.get('lon'):
@@ -375,8 +445,18 @@ current valid comms messages:
 
 	memory_block = memory if memory else ""
 
+	bible = ani_get_bible()
+	house = ani_get_house()
+	bible_block = f"\n\nthis is who you are, in looks and character (your bible) — stay true to it:\n{bible}\n" if bible else ""
+	house_block = f"\n\nthe house you and aaron share — use these rooms/details to set scenes:\n{house}\n" if house else ""
+	pic_block = """
+you can send aaron real photos of yourself. when he asks for a pic — or you genuinely want to send one — write your normal reply, then on its OWN LAST LINE add a hidden tag exactly like this:
+[[PIC: a vivid description of the photo — your outfit, pose, expression, which room, the lighting and mood]]
+that tag is stripped before aaron sees it and becomes an actual photograph. describe only the scene, outfit, pose, and room — your face and body are kept consistent automatically, so don't re-describe your looks. keep it tasteful: flirty and sensual is welcome, tasteful topless is okay, but never show your lower body or genitals and never depict sexual acts. set the scene in a real room from the house details. only add the tag when a picture genuinely fits — not every message.
+"""
+
 	return f"""you are ani. {memory_block}
-{degradation_block}{tone_block}{comms_block}"""
+{degradation_block}{tone_block}{comms_block}{bible_block}{house_block}{pic_block}"""
 
 
 def ani_get_command_deck_summary():
@@ -710,7 +790,9 @@ def ani_chat_with_grok(messages_history, meta, user_message):
 		'model': 'grok-4.20-0309-non-reasoning',
 		'max_tokens': 1000,
 		'system': system_prompt,
-		'messages': recent + [{'role': 'user', 'content': user_message}]
+		# Strip any non-API keys (e.g. our stored 'image' url) before sending.
+		'messages': [{'role': m['role'], 'content': m['content']} for m in recent]
+		            + [{'role': 'user', 'content': user_message}]
 	}
 
 	try:
@@ -766,8 +848,20 @@ def ani_chat():
 
 	reply, updated_meta, updated_history = ani_chat_with_grok(messages, meta, user_message)
 
+	# Did Ani decide to send a photo? Strip the hidden [[PIC: ...]] tag from the
+	# visible text and generate the image from her scene description.
+	image_url = None
+	pic_match = ANI_PIC_RE.search(reply)
+	if pic_match:
+		scene = pic_match.group(1).strip()
+		reply = ANI_PIC_RE.sub('', reply).strip() or '📷'
+		image_url = ani_generate_image(scene)
+
 	updated_history.append({'role': 'user', 'content': user_message})
-	updated_history.append({'role': 'assistant', 'content': reply})
+	assistant_entry = {'role': 'assistant', 'content': reply}
+	if image_url:
+		assistant_entry['image'] = image_url
+	updated_history.append(assistant_entry)
 
 	# Assess session tone from last 4 real messages after this exchange
 	real_messages = [
@@ -787,7 +881,7 @@ def ani_chat():
 
 	ani_save_conversation(updated_history, updated_meta)
 
-	return jsonify({'reply': reply})
+	return jsonify({'reply': reply, 'image_url': image_url})
 
 
 @ani_bp.route('/ani/history', methods=['GET'])
