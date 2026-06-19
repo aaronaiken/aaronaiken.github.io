@@ -4,6 +4,8 @@ title: "The book I couldn't write until I'd lived it — $110,000 of debt"
 date: 2026-06-19T15:26:52.048381+00:00
 categories: [thinking]
 author: aaron
+description: "The story behind Splinched — how I paid down ~$110k of debt with a system I built myself, and the honest book and working toolkit I made from it for anyone starting out."
+image: /assets/splinched/splinched-og-share.png
 cosmic_id: Endpaper-Ψ-0009
 written_in: Endpaper
 ---
