@@ -836,15 +836,9 @@
 		ytPlayVideo(ytLibraryItems[nextIdx], nextIdx);
 	}
 
-	// Auto-start on after-dark load: library route already shuffles, so
-	// playing item 0 = a random pick. Stays muted per user pref.
-	if (COCKPIT_MODE === 'after-dark') {
-		document.addEventListener('DOMContentLoaded', function () {
-			ytLoadLibrary(function () {
-				if (ytLibraryItems.length > 0) ytPlayVideo(ytLibraryItems[0], 0);
-			});
-		});
-	}
+	// The YouTube player starts hidden on load (style="display:none" in the
+	// template) and is summoned with Cmd/Ctrl+Shift+Y or the Ctrl+K palette —
+	// no auto-open/auto-play in any mode. Once shown, LIB / NEXT load + play.
 
 	// ---- YT Player drag (titlebar) ----
 	(function initYtPlayerDrag() {
