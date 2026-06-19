@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-06-19 11:57:26 -0400
+layout: status_update
+author: aaron
+source: web
+---
+✅ Fix the freezer - well, replace the entire thing. I tried to do what I could, repair guy said replace it, and so that’s what we did. 
+
+![Stainless steel French-door refrigerator in a kitchen with white cabinetry, dark blue walls, and wood flooring.](https://cargo.aaronaiken.me/status/20260619115726.jpg)
