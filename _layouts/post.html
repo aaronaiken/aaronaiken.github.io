@@ -44,6 +44,7 @@ body.post-page::after { content: ''; position: fixed; inset: 0; background: radi
 
 .post__meta { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pp-text-dim); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .post__meta-sep { color: var(--pp-border-hi); }
+.post__shipped { font-family: 'Share Tech Mono', monospace; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pp-amber-lo); margin-top: 12px; }
 .post__category-label { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pp-amber-lo); text-decoration: none !important; background: none !important; margin: 0 0 12px !important; display: inline-block; transition: color 0.15s; }
 .post__category-label:hover { color: var(--pp-amber) !important; background: none !important; }
 .post__author-link { color: var(--pp-amber-lo) !important; text-decoration: none !important; background: none !important; transition: color 0.15s; }
@@ -150,6 +151,7 @@ body.post-page::after { content: ''; position: fixed; inset: 0; background: radi
         </span>
         {%- endif -%}
       </div>
+      {% if page.shipped_from %}<div class="post__shipped">✅ Shipped from the Mission Log{% if page.shipped_from != true %}: {{ page.shipped_from }}{% endif %}</div>{% endif %}
     </header>
     <div class="post__rule"></div>
     <div class="post__content e-content" itemprop="articleBody">

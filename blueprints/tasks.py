@@ -82,6 +82,34 @@ def tasks_complete():
 	return jsonify({"ok": True, "task": target})
 
 
+@tasks_bp.route("/tasks/link-blog", methods=['POST'])
+def tasks_link_blog():
+	"""Attach (or clear) a published blog-post URL on a Mission Log task.
+	Pass an empty blog_url to unlink. Accepts absolute http(s) URLs or a
+	site-relative path. Stored as `blog_url` on the task JSON; the publish
+	form renders it as a `post ↗` link next to the title."""
+	if not is_authenticated():
+		return jsonify({"error": "unauthorized"}), 401
+
+	task_id = request.form.get('id', '').strip()
+	blog_url = request.form.get('blog_url', '').strip()
+	if not task_id:
+		return jsonify({"error": "id required"}), 400
+	if blog_url and not blog_url.startswith(('http://', 'https://', '/')):
+		return jsonify({"error": "invalid url"}), 400
+
+	data = load_tasks()
+	target = next((t for t in data['tasks'] if t['id'] == task_id), None)
+	if not target:
+		return jsonify({"error": "task not found"}), 404
+
+	target['blog_url'] = blog_url or None
+	save_tasks(data)
+	perform_git_ops(TASKS_FILE)
+
+	return jsonify({"ok": True, "task": target})
+
+
 @tasks_bp.route("/tasks/delete", methods=['POST'])
 def tasks_delete():
 	if not is_authenticated():

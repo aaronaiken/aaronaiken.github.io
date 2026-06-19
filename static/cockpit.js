@@ -310,6 +310,7 @@
 
 		// ---- TASKS ----
 		let _lastCompletedTitle = '';
+		let _lastCompletedId = '';
 
 		function addTask() {
 			const input = document.getElementById('task-input');
@@ -358,6 +359,7 @@
 			if (!li) return;
 			playChirp(550, 'sine');
 			_lastCompletedTitle = title;
+			_lastCompletedId = id;
 			const fd = new FormData();
 			fd.append('id', id);
 			fetch('/tasks/complete', { method: 'POST', body: fd })
@@ -397,9 +399,11 @@
 			li.className = 'task-item';
 			li.dataset.id = task.id;
 			li.dataset.title = task.title;
+			li.dataset.blog = '';
 			li.innerHTML = `
 				<button class="task-check" onclick="completeTask('${task.id}', '${task.title.replace(/'/g, "\\'")}')" title="Mark complete"></button>
-				<span class="task-title">${escapeHtml(task.title)}</span>
+				<span class="task-title">${escapeHtml(task.title)}<a class="task-post-link" target="_blank" rel="noopener" title="Linked blog post" hidden>post ↗</a></span>
+				<button class="task-link" onclick="linkTaskBlog('${task.id}')" title="Link a blog post">🔗</button>
 				<button class="task-delete" onclick="deleteTask('${task.id}')" title="Delete">✕</button>
 			`;
 			const divider = list.querySelector('.tasks-divider');
@@ -430,13 +434,50 @@
 		}
 
 		function logAsBlogDraft() {
-			const draft = `---\ntitle: "${_lastCompletedTitle}"\ndate: ${new Date().toISOString().split('T')[0]}\nlayout: post\nauthor: aaron\n---\n\n`;
+			const draft = `---\ntitle: "${_lastCompletedTitle}"\ndate: ${new Date().toISOString().split('T')[0]}\nlayout: post\nauthor: aaron\nshipped_from: "${_lastCompletedTitle}"\n---\n\n`;
 			navigator.clipboard.writeText(draft)
 				.then(() => {
 					const btn = document.querySelector('.task-log-btn:nth-child(2)');
 					if (btn) { btn.textContent = 'COPIED ✓'; setTimeout(() => btn.textContent = 'BLOG DRAFT', 2000); }
 				})
 				.catch(() => {});
+			dismissLogPrompt();
+		}
+
+		// Link a published blog post to a Mission Log task (task → post). The
+		// reverse link (the public "shipped from" note on the post) comes from
+		// the post's `shipped_from` front-matter — pre-filled by BLOG DRAFT for
+		// new posts; add it by hand on an existing post.
+		function linkTaskBlog(id) {
+			const li = document.querySelector(`.task-item[data-id="${id}"]`);
+			const current = li ? (li.dataset.blog || '') : '';
+			const url = prompt('Published blog-post URL for this task (blank to unlink):', current);
+			if (url === null) return; // cancelled
+			const trimmed = url.trim();
+			const fd = new FormData();
+			fd.append('id', id);
+			fd.append('blog_url', trimmed);
+			fetch('/tasks/link-blog', { method: 'POST', body: fd })
+				.then(r => r.json())
+				.then(data => {
+					if (!data.ok) throw new Error(data.error || 'failed');
+					if (li) {
+						li.dataset.blog = trimmed;
+						li.classList.toggle('has-blog', !!trimmed);
+						const link = li.querySelector('.task-post-link');
+						if (link) {
+							link.href = trimmed;
+							if (trimmed) link.removeAttribute('hidden');
+							else link.setAttribute('hidden', '');
+						}
+					}
+					playChirp(trimmed ? 880 : 440, 'sine');
+				})
+				.catch(() => playChirp(220, 'sawtooth'));
+		}
+
+		function logLinkPost() {
+			if (_lastCompletedId) linkTaskBlog(_lastCompletedId);
 			dismissLogPrompt();
 		}
 

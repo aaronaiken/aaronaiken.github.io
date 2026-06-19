@@ -325,10 +325,11 @@
 
 					{% if open_tasks %}
 						{% for task in open_tasks %}
-						<li class="task-item" data-id="{{ task.id }}" data-title="{{ task.title | e }}">
+						<li class="task-item{% if task.blog_url %} has-blog{% endif %}" data-id="{{ task.id }}" data-title="{{ task.title | e }}" data-blog="{{ task.blog_url or '' }}">
 							<button class="task-check" onclick="completeTask('{{ task.id }}', '{{ task.title | e }}')" title="Mark complete"></button>
-							<span class="task-title">{{ task.title }}</span>
-							<button class="task-delete" onclick="deleteTask('{{ task.id }}')" title="Delete">✕</button>
+							<span class="task-title">{{ task.title }}<a class="task-post-link" href="{{ task.blog_url or '' }}" target="_blank" rel="noopener" title="Linked blog post"{% if not task.blog_url %} hidden{% endif %}>post ↗</a></span>
+							<button class="task-link" onclick="linkTaskBlog('{{ task.id }}')" title="Link a blog post">🔗</button>
+								<button class="task-delete" onclick="deleteTask('{{ task.id }}')" title="Delete">✕</button>
 						</li>
 						{% endfor %}
 					{% else %}
@@ -338,10 +339,11 @@
 					{% if done_tasks %}
 						<li class="tasks-divider">// Completed</li>
 						{% for task in done_tasks %}
-						<li class="task-item is-complete" data-id="{{ task.id }}">
+						<li class="task-item is-complete{% if task.blog_url %} has-blog{% endif %}" data-id="{{ task.id }}" data-title="{{ task.title | e }}" data-blog="{{ task.blog_url or '' }}">
 							<div class="task-check" style="cursor:default;">✓</div>
-							<span class="task-title">{{ task.title }}</span>
-							<button class="task-delete" onclick="deleteTask('{{ task.id }}')" title="Delete">✕</button>
+							<span class="task-title">{{ task.title }}<a class="task-post-link" href="{{ task.blog_url or '' }}" target="_blank" rel="noopener" title="Linked blog post"{% if not task.blog_url %} hidden{% endif %}>post ↗</a></span>
+							<button class="task-link" onclick="linkTaskBlog('{{ task.id }}')" title="Link a blog post">🔗</button>
+								<button class="task-delete" onclick="deleteTask('{{ task.id }}')" title="Delete">✕</button>
 						</li>
 						{% endfor %}
 					{% endif %}
@@ -352,6 +354,7 @@
 					<div class="task-log-actions">
 						<button class="task-log-btn primary" onclick="logAsStatus()">STATUS UPDATE</button>
 						<button class="task-log-btn" onclick="logAsBlogDraft()">BLOG DRAFT</button>
+							<button class="task-log-btn" onclick="logLinkPost()">LINK POST</button>
 						<button class="task-log-btn dismiss" onclick="dismissLogPrompt()">DISMISS</button>
 					</div>
 				</div>

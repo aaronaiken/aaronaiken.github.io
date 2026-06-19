@@ -407,6 +407,23 @@
 
 	.task-delete:hover { color: var(--red); }
 
+	.task-link {
+		background: none; border: none; color: var(--border-hi);
+		font-size: 0.7rem; cursor: pointer; padding: 2px 4px;
+		flex-shrink: 0; transition: color 0.15s;
+	}
+	.task-link:hover { color: var(--amber); }
+	.task-item.has-blog .task-link { color: var(--amber-lo); }
+
+	.task-post-link {
+		font-size: 0.68rem; color: var(--amber-lo) !important;
+		font-family: 'Share Tech Mono', monospace;
+		letter-spacing: 0.06em; text-decoration: none;
+		border-bottom: 1px dotted var(--amber-lo); margin-left: 6px;
+		white-space: nowrap; transition: color 0.15s, border-color 0.15s;
+	}
+	.task-post-link:hover { color: var(--amber) !important; border-color: var(--amber); }
+
 	.task-log-prompt {
 		display: none;
 		background: var(--bg2); border: 1px solid var(--amber-lo);
