@@ -11,10 +11,10 @@
 	<link rel="shortcut icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
 	<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Crimson+Pro:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
 
-	<link rel="stylesheet" href="{{ url_for('static', filename='cockpit.css') }}">
-	<link rel="stylesheet" href="{{ url_for('static', filename='cockpit_modes.css') }}">
-	<link rel="stylesheet" href="{{ url_for('static', filename='cockpit_after_dark.css') }}">
-	<link rel="stylesheet" href="{{ url_for('static', filename='cockpit_ani.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='cockpit.css') }}?v={{ asset_v }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='cockpit_modes.css') }}?v={{ asset_v }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='cockpit_after_dark.css') }}?v={{ asset_v }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='cockpit_ani.css') }}?v={{ asset_v }}">
 </head>
 <body class="{{ cockpit_mode or '' }}">
 
@@ -386,9 +386,9 @@
 		window.COCKPIT_COMMS    = {{ comms_list|tojson }};
 		window.COCKPIT_AD_COMMS = {{ after_dark_comms_list|tojson }};
 	</script>
-	<script src="{{ url_for('static', filename='cockpit.js') }}"></script>
+	<script src="{{ url_for('static', filename='cockpit.js') }}?v={{ asset_v }}"></script>
 
-	<script src="{{ url_for('static', filename='cockpit_modes.js') }}"></script>
+	<script src="{{ url_for('static', filename='cockpit_modes.js') }}?v={{ asset_v }}"></script>
 
 <!-- ============================================================ -->
 <!-- ANI PANEL                                                     -->
@@ -450,7 +450,7 @@
   </div>
 </div>
 
-	<script src="{{ url_for('static', filename='cockpit_ani.js') }}"></script>
+	<script src="{{ url_for('static', filename='cockpit_ani.js') }}?v={{ asset_v }}"></script>
 
 <!-- ============================================================ -->
 <!-- END ANI PANEL                                                 -->

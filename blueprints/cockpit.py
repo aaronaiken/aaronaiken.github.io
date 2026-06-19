@@ -37,6 +37,21 @@ BRRR_WEBHOOK_URL  = os.environ.get('BRRR_WEBHOOK_URL', '')
 SCRATCH_FILE = 'assets/data/scratch.json'
 
 
+# Cache-busting token for the cockpit static bundle — max mtime of the files,
+# appended as ?v=<n> so a NORMAL reload always fetches the latest CSS/JS (ends the
+# recurring "did you hard-refresh?"). Cheap: a few stat() calls per page render.
+_COCKPIT_ASSETS = (
+	'cockpit.css', 'cockpit_modes.css', 'cockpit_after_dark.css', 'cockpit_ani.css',
+	'cockpit.js', 'cockpit_modes.js', 'cockpit_ani.js',
+)
+
+def _asset_version():
+	try:
+		return int(max(os.path.getmtime(os.path.join('static', f)) for f in _COCKPIT_ASSETS))
+	except Exception:
+		return 0
+
+
 cockpit_bp = Blueprint('cockpit', __name__)
 
 
@@ -140,6 +155,7 @@ def publish_status():
 		after_dark_comms_list=after_dark_comms_list,
 		tasks=tasks_data.get('tasks', []),
 		cockpit_mode=cockpit_mode_cookie,
+		asset_v=_asset_version(),
 	)
 
 

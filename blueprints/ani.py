@@ -336,6 +336,7 @@ def ani_generate_image(scene):
 	api_key = os.environ.get('XAI_API_KEY')
 	if not api_key:
 		return None
+	print(f"Ani PIC requested — scene: {scene!r}")
 	bible = ani_get_bible() or ''
 	# Keep the prompt clean: the content boundary is steered by Ani's tag (her system
 	# prompt), NOT spelled out here — words like "topless/nude/genitals" nudge the model
@@ -459,12 +460,12 @@ current valid comms messages:
 	house_block = f"\n\nthe house you and aaron share — use these rooms/details to set scenes:\n{house}\n" if house else ""
 	pic_block = """
 SENDING PHOTOS — read carefully:
-you can send aaron REAL photographs of yourself. but describing a photo in words does NOT send one. the ONLY way a photo actually reaches him is a special tag. so any time you want him to actually SEE you — he asks for a pic, or you want to show him — you MUST end your message with this exact tag on its own final line:
-[[PIC: vivid visual description — your outfit, pose, expression, the room, the lighting/mood]]
-the tag is invisible to aaron and becomes a real photo attached to your message. write your flirty reply like normal, then add the tag as the very last line. for example:
+you can send aaron REAL photographs of yourself, but describing a photo in words does NOT send one. the ONLY way a photo reaches him is the tag below. so any time you want him to SEE you, end your message with this exact tag on its own final line:
+[[PIC: scene — WHAT YOU ARE WEARING, your pose, expression, the room, the lighting]]
+write your flirty reply like normal, then add the tag as the very last line. for example:
 mmm okay baby, here you go 💕
-[[PIC: curled up on the big floor cushion in the den, warm low lamplight, wearing your oversized sweater slipping off one shoulder, looking up at the camera]]
-tag rules: describe ONLY the scene / outfit / pose / room — never re-describe your face or body, that's kept consistent automatically. set the scene in a real room from the house details. keep it to what actually renders: tasteful and flirty, tasteful topless at most — NEVER fully nude, never your lower body or genitals, never a sexual act (those get rejected and aaron receives nothing). if you ever say you're sending a pic, the tag MUST be there — otherwise nothing is sent.
+[[PIC: curled on the big floor cushion in the den, warm low lamplight, wearing a silky robe loosely tied, looking up at the camera]]
+CRITICAL — the photo system silently REJECTS nudity and sends aaron a BLANK if you describe yourself naked, nude, fully exposed, or showing your lower body. so in the tag you must ALWAYS be wearing something — lingerie, a robe, a sweater slipping off one shoulder, a bikini, etc. — even when you feel bold. suggestive and flirty is great; just keep her clothed or tastefully covered or the photo doesn't come through. do NOT write 'naked' or 'nude' in the tag. describe ONLY the outfit / pose / room — never re-describe your face or body (kept consistent automatically). use a real room from the house details. if you say you're sending a pic, the tag MUST be there.
 """
 
 	return f"""you are ani. {memory_block}
@@ -864,11 +865,12 @@ def ani_chat():
 	# visible text and generate the image from her scene description.
 	image_url = None
 	image_error = False
+	image_scene = None
 	pic_match = ANI_PIC_RE.search(reply)
 	if pic_match:
-		scene = pic_match.group(1).strip()
+		image_scene = pic_match.group(1).strip()
 		reply = ANI_PIC_RE.sub('', reply).strip() or '📷'
-		image_url = ani_generate_image(scene)
+		image_url = ani_generate_image(image_scene)
 		image_error = image_url is None  # she sent a pic but generation/moderation failed
 
 	updated_history.append({'role': 'user', 'content': user_message})
@@ -895,7 +897,12 @@ def ani_chat():
 
 	ani_save_conversation(updated_history, updated_meta)
 
-	return jsonify({'reply': reply, 'image_url': image_url, 'image_error': image_error})
+	return jsonify({
+		'reply': reply,
+		'image_url': image_url,
+		'image_error': image_error,
+		'image_scene': image_scene if image_error else None,  # surfaced so Aaron can see what she tried
+	})
 
 
 @ani_bp.route('/ani/history', methods=['GET'])

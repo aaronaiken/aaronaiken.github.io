@@ -169,7 +169,9 @@
 		updateAcheDisplay(0);
 	  }
 	  if (data.image_error) {
-		aniRenderNotify('photo blocked by the content filter — ask her for a tamer/different scene');
+		var note = 'photo blocked by the content filter (likely too explicit) — ask her for a tamer scene';
+		if (data.image_scene) note += ' · she tried: "' + data.image_scene + '"';
+		aniRenderNotify(note);
 	  }
 	  aniScrollToBottom();
 	  aniInput.focus();
