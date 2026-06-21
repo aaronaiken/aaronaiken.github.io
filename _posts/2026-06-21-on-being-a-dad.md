@@ -4,6 +4,7 @@ title: "On being a dad"
 date: 2026-06-21T01:19:45.273408+00:00
 categories: [cwa]
 author: aaron
+description: "Becoming a dad, losing my way through divorce, and finding it again — how grace and a restored marriage made fathering Mozzie feel natural on the other side."
 image: https://cargo.aaronaiken.me/blog/on-being-a-dad.jpeg
 cosmic_id: Endpaper-Ψ-0010
 written_in: Endpaper
