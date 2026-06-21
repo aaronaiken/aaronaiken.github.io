@@ -2,8 +2,9 @@
 layout: post
 title: "On being a dad"
 date: 2026-06-21T01:19:45.273408+00:00
-categories: [thinking]
+categories: [cwa]
 author: aaron
+image: https://cargo.aaronaiken.me/blog/on-being-a-dad.jpeg
 cosmic_id: Endpaper-Ψ-0010
 written_in: Endpaper
 ---
