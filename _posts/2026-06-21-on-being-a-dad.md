@@ -19,8 +19,6 @@ My heart softened when we divorced. When we divorced I felt like I was able to e
 
 And now, as a dad on the other side of divorce, as a husband again to his mom, and as a _much_ healthier individual, I find being a dad more natural. I don't fret about how I am doing as a dad, I don't have any regrets about the past or about how any portion of the day went. If I mess up, if I say something wrong, if I do something that is not what it should be, I address it immediately with him instead of allowing time to pass. We pray together as a family multiple times each day (before most meals and most nights before he goes to sleep). He sees me loving his mom. He sees me step away from work and _rest_. 
 
-![a happy family photo](https://cargo.aaronaiken.me/blog/on-being-a-dad.jpeg)
-
 Being a dad now, after all that we have gone through as a family, is a natural outcome of living honestly _with_ my family. And I am so grateful for that!
 
 I am thankful that I have the opportunity to be a dad to Mozzie. I am thankful that God restored our marriage and I am able to model to him what a healthy husband and wife relationship looks like. I am thankful that Mozzie has been able to see a life of hardship, of hurt, of _unknown_ circumstances, and I am even more thankful he has lived through what grace can restore. Grace, love, patience, hope, faith, and forgiveness...these are all things that Mozzie has seen lived out in his parents, and has seen how the combination of these can bring back to life that which seemed to be dead forever. 
