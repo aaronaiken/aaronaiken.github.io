@@ -12,7 +12,7 @@ import pytz
 from PIL import Image, ImageOps
 import requests as req_lib
 from flask import (
-	Blueprint, request, redirect, url_for, jsonify, render_template, make_response,
+	Blueprint, request, redirect, url_for, jsonify, render_template, make_response, flash,
 )
 
 from helpers.auth import is_authenticated
@@ -65,13 +65,23 @@ def publish_status():
 	if request.method == 'POST':
 		txt = request.form['status']
 		image_file = request.files.get('image')
+		has_image = bool(image_file and image_file.filename != '')
+
+		# Guard: a status needs *something* to transmit — text or an image.
+		# An empty submission (accidental double-submit, a stray Enter, a JS
+		# hiccup) would otherwise write a blank entry whose empty <content>
+		# breaks the Atom feed for downstream consumers — micro.blog throws
+		# `FrozenError: can't modify frozen String: ""` and stops ingesting
+		# the whole feed until the bad post is removed (June 2026 incident).
+		if not txt.strip() and not has_image:
+			flash("Nothing to transmit — add text or an image before publishing.", "error")
+			return redirect(url_for('cockpit.publish_status'))
+
 		now = datetime.now(pytz.timezone('America/New_York'))
 		fn = now.strftime("_status_updates/%Y-%m-%d-%H%M%S.markdown")
 		image_markdown = ""
-		has_image = False
 
-		if image_file and image_file.filename != '':
-			has_image = True
+		if has_image:
 			img_filename = f"{now.strftime('%Y%m%d%H%M%S')}.jpg"
 			with Image.open(image_file) as img:
 				# Apply EXIF rotation first — iPhone landscape shots arrive

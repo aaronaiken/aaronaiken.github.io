@@ -27,6 +27,21 @@
 
 	*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+	/* Flash banner — server-side notices (e.g. empty-transmission guard). */
+	.flash-banner {
+		margin: 0 0 12px;
+		padding: 8px 12px;
+		border-left: 3px solid var(--amber);
+		background: var(--bg2);
+		color: var(--text-body);
+		font-size: 0.85rem;
+		letter-spacing: 0.02em;
+	}
+	.flash-banner.flash-error {
+		border-left-color: var(--red);
+		color: var(--amber-hi);
+	}
+
 	body {
 		background: var(--bg);
 		color: var(--text);

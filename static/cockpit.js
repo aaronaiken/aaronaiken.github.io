@@ -236,11 +236,29 @@
 		function toggleTheme() {}
 
 		// ---- HYPERSPACE SUBMIT ----
+		let cockpitSubmitting = false;
 		document.getElementById('status-form').addEventListener('submit', (e) => {
+			e.preventDefault();
+			// Guard: drop repeat submits (double-tap, Enter spam) once one is
+			// already in flight — prevents accidental duplicate transmissions.
+			if (cockpitSubmitting) return;
+			// Guard: a status needs text or an image. Never transmit a blank
+			// post — an empty <content> breaks the Atom feed for micro.blog.
+			// Mirrors the server-side check in blueprints/cockpit.py.
+			const txt = document.getElementById('status-input').value.trim();
+			const hasImage = document.getElementById('image-upload').files.length > 0;
+			if (!txt && !hasImage) {
+				const input = document.getElementById('status-input');
+				input.placeholder = 'Nothing to transmit — add text or an image.';
+				input.focus();
+				return;
+			}
+			cockpitSubmitting = true;
+			const btn = document.getElementById('publish-btn');
+			if (btn) btn.disabled = true;
 			if ("vibrate" in navigator) navigator.vibrate([30, 50, 30]);
 			cockpit.classList.add('hyperspace');
 			setTimeout(() => e.target.submit(), 450);
-			e.preventDefault();
 		});
 
 		// ---- SOUNDS ----

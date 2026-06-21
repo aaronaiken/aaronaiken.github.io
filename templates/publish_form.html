@@ -272,6 +272,13 @@
 		</div>
 
 		<div class="section-label">// Transmission</div>
+		{% with messages = get_flashed_messages(with_categories=true) %}
+			{% if messages %}
+				{% for category, message in messages %}
+					<div class="flash-banner flash-{{ category }}" role="alert">{{ message }}</div>
+				{% endfor %}
+			{% endif %}
+		{% endwith %}
 		<div class="input-wrap">
 			<form action="/publish" method="post" id="status-form" enctype="multipart/form-data">
 				<!-- Set by logAsStatus() when posting from a completed Mission Log
