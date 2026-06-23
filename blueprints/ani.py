@@ -49,14 +49,14 @@ _ANI_TOP_INJECT_PLAIN = ', wearing a soft top that fully covers her chest'
 # or 'venice' (uncensored Lustify, no coverage rule → renders her scene faithfully). Flag-gated
 # so xAI stays default until VENICE_API_KEY is set and ANI_IMAGE_BACKEND=venice is flipped.
 ANI_IMAGE_BACKEND = os.environ.get('ANI_IMAGE_BACKEND', 'xai').strip().lower()
-VENICE_IMAGE_MODEL = os.environ.get('VENICE_IMAGE_MODEL', 'lustify-sdxl')  # exact id confirmed via /models
+VENICE_IMAGE_MODEL = os.environ.get('VENICE_IMAGE_MODEL', 'lustify-v8')  # confirmed via /models
 # Venice quality dials (all env-overridable for tuning without a deploy). Negative prompt drives
-# most of the realism; low cfg keeps skin natural; ~30 steps for the SDXL Lustify checkpoint.
+# most of the realism; low cfg keeps skin natural (v8 sweet spot 2.5–4.5); ~30 steps for Lustify.
 VENICE_NEGATIVE_PROMPT = os.environ.get('VENICE_NEGATIVE_PROMPT',
 	'cartoon, anime, painting, illustration, drawing, 3d render, cgi, deformed, disfigured, '
 	'bad anatomy, extra fingers, mutated hands, blurry, lowres, watermark, text, logo, '
 	'airbrushed, plastic skin, oversaturated')
-VENICE_CFG_SCALE = float(os.environ.get('VENICE_CFG_SCALE', '4.5'))
+VENICE_CFG_SCALE = float(os.environ.get('VENICE_CFG_SCALE', '3.5'))
 VENICE_STEPS = int(os.environ.get('VENICE_STEPS', '30'))
 
 # Ani helpers shell out to git (recent-status, recent-git-log) — needs repo cwd.
