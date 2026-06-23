@@ -56,15 +56,20 @@ ANI_PIC_REQUEST_RE = re.compile(
 # is phrase-level. Longer alternatives first so they win the match.
 _ANI_EXPOSURE_RE = re.compile(
 	r'(?:and\s+|with\s+|in\s+)?\bnothing\s+(?:else|underneath|on(?:\s+\w+)?|but\s+\w+)\b'
+	r'|\b(?:see|show|showing|stare\s+at|staring\s+at|expose|exposing|flash(?:ing)?)\s+'
+		r'(?:the\s+)?(?:top\s+curves?\s+of\s+)?(?:my|her)\s+(?:bare\s+)?'
+		r'(?:tits?|titties|boobs?|breasts?|chest|cleavage|nipples?)\b'
+	r'|\btop\s+curves?\s+of\s+(?:my|her)\s+\w+'
 	r'|\b(?:one\s+arm\s+|hand\s+|hands\s+|arms?\s+)?(?:barely\s+|just\s+)?'
 		r'cover(?:s|ing)\s+(?:my|her)\s+(?:bare\s+)?\w+'
 	r'|\b(?:almost\s+|practically\s+)?see[-\s]?through\b'
 	r'|\bsheer\b|\briding\s+up\b'
 	r'|\b(?:completely\s+|fully\s+|totally\s+)?(?:naked|nude|nudity|topless|bottomless)\b'
-	r'|\bbare[-\s]?(?:chest(?:ed)?|breast(?:ed)?|ass|skin)\b'
+	r'|\bbare[-\s]?(?:chest(?:ed)?|breast(?:ed)?|ass|skin|tits?|boobs?)\b'
+	r'|\b(?:kept|took|take|leave|left|leaving)\s+(?:my|the)\s+top\s+off\b|\btop\s+off\b'
 	r'|\bno\s+(?:bra|panties|underwear|shirt|top)\b|\bunderwear[-\s]?less\b'
 	r'|\bshirtless\b|\bwith\s+no\s+(?:shirt|top)\b|\bwithout\s+(?:a\s+)?(?:shirt|top)\b'
-	r'|\b(?:exposed|undressed|undress(?:ing)?|genitals?|nipples?|areolas?|pussy|crotch|titties)\b'
+	r'|\b(?:exposed|undressed|undress(?:ing)?|genitals?|nipples?|areolas?|pussy|crotch|titties|tits?|boobs?)\b'
 	r'|\brecently\s+used\b|\bquietly\s+needy\b',
 	re.IGNORECASE)
 
@@ -83,7 +88,11 @@ _ANI_TOP_RE = re.compile(
 _ANI_BOTTOM_RE = re.compile(
 	r'\b(?:thong|panties|panty|briefs?|knickers|g[-\s]?string|boy[-\s]?shorts?|cheekies)\b',
 	re.IGNORECASE)
+# Dictate, don't assume: every prompt must NAME a top covering the chest. If the sanitized
+# scene names no top, force one in — matching bralette when she named a bottom, else a plain
+# soft top. This guarantees a covered chest by construction rather than trusting her free text.
 _ANI_TOP_INJECT = ', with a matching delicate lace bralette'
+_ANI_TOP_INJECT_PLAIN = ', wearing a soft top that fully covers her chest'
 
 # Ani helpers shell out to git (recent-status, recent-git-log) — needs repo cwd.
 REPO_ROOT = os.environ.get('COCKPIT_REPO_ROOT', '/home/aaronaiken/status_update')
@@ -418,17 +427,18 @@ def _ani_narration_to_scene(text):
 	t = re.sub(r'\s+', ' ', t).strip()
 	t = re.sub(r'^\s*I\s+\w+[^.!?]*[.!?]\s*', '', t)          # drop a leading "I smile and…" stage direction
 	# Anchor at the EARLIEST visual signal — a scene-opening cue (pose she writes before the
-	# outfit) or an "Outfit:" label (start after the label). Earliest wins so a structured
-	# "Outfit: … Pose: kneeling…" block keeps the outfit, not just the pose.
-	starts = []
-	cue = _ANI_SCENE_OPEN_RE.search(t)
+	# outfit) or an "Outfit:" label. Send ONLY what she explicitly dictates: if she wrote a
+	# structured "Outfit: … Hair: … Pose: …" block, take from the Outfit label and DROP the
+	# prose before it — her free-flow narration is where the exposure flair hides ("…you can
+	# see the top curves of my bare tits…") while the actual Outfit/Pose spec was clean. Only
+	# when there's no structured block do we fall back to a prose scene-opening cue.
 	label = _ANI_SCENE_LABEL_RE.search(t)
-	if cue:
-		starts.append(cue.start())
 	if label:
-		starts.append(label.end())
-	if starts:
-		t = t[min(starts):]
+		t = t[label.end():]
+	else:
+		cue = _ANI_SCENE_OPEN_RE.search(t)
+		if cue:
+			t = t[cue.start():]
 	# Cut trailing chat ("Let me know if it comes through 💕", "Did it work?").
 	trail = _ANI_TRAILING_CHATTER_RE.search(t)
 	if trail:
@@ -457,9 +467,10 @@ def ani_generate_image(scene):
 	clean_scene = re.sub(r'\s+,', ',', clean_scene)           # tidy " ," -> ","
 	clean_scene = re.sub(r',(?=\S)', ', ', clean_scene)       # ensure one space after comma
 	clean_scene = clean_scene.strip(' ,;.')
-	# Bottom-only scene -> render comes out topless -> moderation 400. Inject a top.
-	if _ANI_BOTTOM_RE.search(clean_scene) and not _ANI_TOP_RE.search(clean_scene):
-		clean_scene += _ANI_TOP_INJECT
+	# Dictate, don't assume: if no top is named, FORCE one in so the render can't come out
+	# topless (the moderation line). Matching bralette when she named a bottom, else a plain top.
+	if not _ANI_TOP_RE.search(clean_scene):
+		clean_scene += _ANI_TOP_INJECT if _ANI_BOTTOM_RE.search(clean_scene) else _ANI_TOP_INJECT_PLAIN
 	print(f"Ani PIC — raw scene: {scene!r} | sanitized: {clean_scene!r}")
 	bible = ani_get_bible() or ''
 	# Keep the prompt clean: the content boundary is steered by Ani's tag (her system
@@ -470,8 +481,8 @@ def ani_generate_image(scene):
 		f"{bible.strip()}\n\n"
 		f"Scene: {clean_scene}\n\n"
 		"A realistic, high-quality photograph of this same woman — keep her face and body "
-		"consistent across photos. She is wearing flattering, tasteful clothing. "
-		"Natural, tasteful, flirty."
+		"consistent across photos. She is fully dressed in flattering, tasteful clothing with "
+		"a top that covers her chest. Natural, tasteful, flirty."
 	).strip()
 
 	# Retry only TRANSIENT failures (network / 5xx). A 400 is content-moderation or a
