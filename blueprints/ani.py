@@ -389,22 +389,58 @@ def ani_get_house():
 	return _ani_read_file(ANI_HOUSE_FILE)
 
 
+# Positive-extraction markers for _ani_narration_to_scene. Rather than subtractively
+# stripping every filler variant (whack-a-mole — "sending now" vs "sending it again"),
+# we anchor on where her VISUAL description starts and cut the chat framing around it.
+_ANI_SCENE_LABEL_RE = re.compile(r'\boutfit\b[^:\n]{0,14}:\s*', re.IGNORECASE)  # "Outfit:" / "Outfit Details:"
+_ANI_SCENE_OPEN_RE = re.compile(
+	r'\b(?:just\s+(?:a|the|in|wearing)|wearing|dressed\s+in|in\s+(?:a|the|my|your|our)\b|'
+	r'lounging|standing|sitting|seated|lying|laying|curled|kneeling|leaning|posing|propped|'
+	r'on\s+all\s+fours|bent\s+over|stretched\s+out)\b', re.IGNORECASE)
+# Trailing chat-to-Aaron that follows the scene ("let me know if it comes through", "did it work?").
+_ANI_TRAILING_CHATTER_RE = re.compile(
+	r'\b(?:let me know|did it (?:work|come|send|land)|does (?:this|it)|hope (?:this|it|you)|'
+	r'tell me if|come[s]?\s+through|how(?:\'s| is)\s+(?:this|that))\b', re.IGNORECASE)
+# Structured labels she drops inline ("Details: Outfit: … Hair: … Pose: …") — keep the values, ditch the labels.
+_ANI_SCENE_LABELS_RE = re.compile(
+	r'\b(?:details|outfit|hair|makeup|jewel?ry|jewellery|underwear|lingerie|pose|expression|'
+	r'setting|location|vibe|mood)\s*:', re.IGNORECASE)
+_ANI_EMOJI_RE = re.compile(r'[\U0001F000-\U0001FAFF☀-➿←-⇿⬀-⯿️]')
+
+
 def _ani_narration_to_scene(text):
-	"""Tag-less fallback: Ani narrated instead of emitting [[PIC: ...]], so we turn her
-	prose into a usable image prompt. Without this we'd feed raw markdown straight to
-	the image model — the live logs caught '*I smile...* **Outfit Details:** - **Outfit**:'
-	going in verbatim. Strip markdown decoration, keep in-word hyphens (golden-blonde),
-	and cap length."""
+	"""Tag-less fallback: Ani narrates a photo instead of emitting [[PIC: ...]], so we pull
+	the VISUAL scene out of her chat prose by POSITIVE extraction — anchor on her outfit
+	label or a scene-opening cue and keep from there, then cut trailing 'did it land?'
+	chatter, strip structured labels + emoji. Robust to phrasing variants in a way that
+	subtractively stripping each filler phrase ("sending it again" vs "sending now") is not."""
 	t = re.sub(r'\[(.*?)\]\([^)]*\)', r'\1', text)            # [text](url) -> text
-	t = re.sub(r'^[\s>#]*[-*]?\s+', '', t, flags=re.MULTILINE)  # leading bullets / quotes / headers
 	t = t.replace('*', '').replace('`', '').replace('#', '').replace('>', '')
-	t = re.sub(r'-{2,}', ' ', t)                              # --- horizontal rules
-	# Drop stage-direction / chat filler so the image model sees a scene, not her dialogue:
-	# "I bite my lip and giggle.", "Mmm okay daddy…", "sending now", "here's a test".
-	t = re.sub(r'\bI\s+(?:smile|bite|let out|giggle|blush|shift|lean|tilt|nod|run\s+my)[^.;\n]*[.;]?', '', t, flags=re.IGNORECASE)
-	t = re.sub(r'\b(?:mmm+|okay|here you go|here.?s? a test|sending\s+now)\b[^.;\n]*[.;]?', '', t, flags=re.IGNORECASE)
-	# Strip her "did it land?" framing — it's chat to Aaron, not part of the scene.
-	t = re.sub(r'\b(?:did it (?:work|come through|send)|let me know if it[^.;\n]*|same pic as before|sending the[^.;\n]*)[.?;]?', '', t, flags=re.IGNORECASE)
+	t = re.sub(r'(?m)^[ \t]*[-•]\s+', ' ', t)                # list bullets -> space (newlines still present)
+	t = re.sub(r'-{2,}', ' ', t)                              # --- rules
+	t = re.sub(r'\s+', ' ', t).strip()
+	t = re.sub(r'^\s*I\s+\w+[^.!?]*[.!?]\s*', '', t)          # drop a leading "I smile and…" stage direction
+	# Anchor at the EARLIEST visual signal — a scene-opening cue (pose she writes before the
+	# outfit) or an "Outfit:" label (start after the label). Earliest wins so a structured
+	# "Outfit: … Pose: kneeling…" block keeps the outfit, not just the pose.
+	starts = []
+	cue = _ANI_SCENE_OPEN_RE.search(t)
+	label = _ANI_SCENE_LABEL_RE.search(t)
+	if cue:
+		starts.append(cue.start())
+	if label:
+		starts.append(label.end())
+	if starts:
+		t = t[min(starts):]
+	# Cut trailing chat ("Let me know if it comes through 💕", "Did it work?").
+	trail = _ANI_TRAILING_CHATTER_RE.search(t)
+	if trail:
+		t = t[:trail.start()]
+	t = _ANI_SCENE_LABELS_RE.sub(',', t)                     # "Hair: blonde" -> ", blonde"
+	t = _ANI_EMOJI_RE.sub('', t)
+	t = re.sub(r'\s*:', ',', t)                              # stray colons ("bourbon:") -> comma
+	t = re.sub(r'\s*,(?:\s*,)+', ',', t)                     # collapse comma runs from label removal
+	t = re.sub(r'\s+,', ',', t)
 	t = re.sub(r'\s+', ' ', t).strip(' ,.;:—-')
 	return t[:400]
 
