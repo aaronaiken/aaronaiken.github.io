@@ -50,6 +50,14 @@ _ANI_TOP_INJECT_PLAIN = ', wearing a soft top that fully covers her chest'
 # so xAI stays default until VENICE_API_KEY is set and ANI_IMAGE_BACKEND=venice is flipped.
 ANI_IMAGE_BACKEND = os.environ.get('ANI_IMAGE_BACKEND', 'xai').strip().lower()
 VENICE_IMAGE_MODEL = os.environ.get('VENICE_IMAGE_MODEL', 'lustify-sdxl')  # exact id confirmed via /models
+# Venice quality dials (all env-overridable for tuning without a deploy). Negative prompt drives
+# most of the realism; low cfg keeps skin natural; ~30 steps for the SDXL Lustify checkpoint.
+VENICE_NEGATIVE_PROMPT = os.environ.get('VENICE_NEGATIVE_PROMPT',
+	'cartoon, anime, painting, illustration, drawing, 3d render, cgi, deformed, disfigured, '
+	'bad anatomy, extra fingers, mutated hands, blurry, lowres, watermark, text, logo, '
+	'airbrushed, plastic skin, oversaturated')
+VENICE_CFG_SCALE = float(os.environ.get('VENICE_CFG_SCALE', '4.5'))
+VENICE_STEPS = int(os.environ.get('VENICE_STEPS', '30'))
 
 # Ani helpers shell out to git (recent-status, recent-git-log) — needs repo cwd.
 REPO_ROOT = os.environ.get('COCKPIT_REPO_ROOT', '/home/aaronaiken/status_update')
@@ -367,10 +375,11 @@ def ani_normalize_scene(history):
 	                or m.get('content', '').startswith('[system:'))]
 	convo = '\n'.join(f"{m['role']}: {m.get('content', '')}" for m in real[-8:])
 	if ANI_IMAGE_BACKEND == 'venice':
-		# Uncensored backend — render her scene faithfully, no coverage rule.
+		# Uncensored backend — zero coverage guardrails, fully faithful passthrough.
 		rules = (
-			"- Render exactly what she describes, including lingerie or nudity if that is the scene. "
-			"Do not add or remove clothing — translate her description faithfully.\n"
+			"- Render EXACTLY what she describes with no censorship or softening — including full nudity "
+			"and explicit detail if that is the scene. Never add, remove, or tone down clothing or acts.\n"
+			"- Describe her outfit (or state of undress), pose, room, and lighting.\n"
 			"- Do not describe her face or body shape — those stay consistent elsewhere.\n"
 			"- Output ONLY the prompt line: no labels, no quotes, no preamble, no commentary.\n"
 		)
@@ -429,7 +438,9 @@ def _ani_generate_venice(prompt):
 			'https://api.venice.ai/api/v1/image/generate',
 			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
 			json={'model': VENICE_IMAGE_MODEL, 'prompt': prompt[:7500], 'safe_mode': False,
-			      'format': 'jpeg', 'return_binary': True, 'width': 1024, 'height': 1280},
+			      'negative_prompt': VENICE_NEGATIVE_PROMPT, 'cfg_scale': VENICE_CFG_SCALE,
+			      'steps': VENICE_STEPS, 'format': 'jpeg', 'return_binary': True,
+			      'width': 1024, 'height': 1280},
 			timeout=120)
 		if resp.status_code != 200:
 			print(f"Ani Venice HTTP {resp.status_code}: {resp.text[:200]}")
@@ -453,10 +464,10 @@ def ani_generate_image(scene):
 
 	if ANI_IMAGE_BACKEND == 'venice':
 		print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) — scene: {clean_scene!r}")
+		# Lustify (SDXL) — photoreal style wrap. No coverage guardrails: render her scene as-is.
 		prompt = (
-			f"{bible.strip()}\n\n{clean_scene}\n\n"
-			"A realistic, high-quality photograph of this same woman — keep her face and body "
-			"consistent across photos."
+			f"RAW photo, photorealistic. {bible.strip()} {clean_scene}. "
+			"Shot on DSLR, 85mm, shallow depth of field, natural skin texture, sharp focus, high detail."
 		).strip()
 		return _ani_generate_venice(prompt)
 
