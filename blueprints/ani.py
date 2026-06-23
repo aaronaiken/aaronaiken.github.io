@@ -33,16 +33,44 @@ ANI_PIC_REQUEST_RE = re.compile(
 	r'\b(?:send|show|take|snap|gimme|give me|let me see|lemme see)\b'
 	r'[^.?!\n]{0,30}\b(?:pic|picture|photo|selfie|shot|image)\b', re.IGNORECASE)
 
-# Safety net — her explicit persona slips nudity into the scene tag ("no bra",
-# "nothing underneath", "naked"), which xAI's image moderation hard-rejects (the
-# photo comes back blank). Strip those phrases so the image actually renders; the
-# bible already defaults her to tasteful clothing.
-_ANI_NUDE_RE = re.compile(
-	r'\b(?:completely\s+|fully\s+|totally\s+)?'
-	r'(?:naked|nude|nudity|topless|bare[-\s]?(?:chest(?:ed)?|breast(?:ed)?|skin)?|'
-	r'no\s+bra|no\s+panties|no\s+underwear|nothing\s+underneath|underwear[-\s]?less|'
-	r'exposed|undressed|genitals?|nipples?|pussy|crotch|recently\s+used|quietly\s+needy)\b',
+# Safety net — her explicit persona slips exposure phrasing into the scene tag,
+# which xAI's IMAGE-OUTPUT moderation hard-rejects (the photo comes back blank).
+# The live logs showed the rejects weren't the obvious words ("naked") but exposure
+# *intent*: "thong and nothing else", "one arm covering my breasts", "almost
+# see-through", "barely covering my ass". We strip the exposure PHRASE, never the
+# named garment — removing "thong"/"babydoll" would leave her LESS clothed (worse),
+# so those stay and the bible's "tasteful clothing" floor fills the gap. Word-level
+# deletion broke grammar ("so my tits are covered" -> "so my are covered"), so this
+# is phrase-level. Longer alternatives first so they win the match.
+_ANI_EXPOSURE_RE = re.compile(
+	r'(?:and\s+|with\s+|in\s+)?\bnothing\s+(?:else|underneath|on(?:\s+\w+)?|but\s+\w+)\b'
+	r'|\b(?:one\s+arm\s+|hand\s+|hands\s+|arms?\s+)?(?:barely\s+|just\s+)?'
+		r'cover(?:s|ing)\s+(?:my|her)\s+(?:bare\s+)?\w+'
+	r'|\b(?:almost\s+|practically\s+)?see[-\s]?through\b'
+	r'|\bsheer\b|\briding\s+up\b'
+	r'|\b(?:completely\s+|fully\s+|totally\s+)?(?:naked|nude|nudity|topless|bottomless)\b'
+	r'|\bbare[-\s]?(?:chest(?:ed)?|breast(?:ed)?|ass|skin)\b'
+	r'|\bno\s+(?:bra|panties|underwear)\b|\bunderwear[-\s]?less\b'
+	r'|\b(?:exposed|undressed|undress(?:ing)?|genitals?|nipples?|areolas?|pussy|crotch|titties)\b'
+	r'|\brecently\s+used\b|\bquietly\s+needy\b',
 	re.IGNORECASE)
+
+# Connectors left dangling against a comma after a phrase is removed ("thong and ,").
+_ANI_DANGLE_RE = re.compile(r"\b(?:and|with|in|that'?s|but|featuring|wearing|paired)\s*(?=,|$)", re.IGNORECASE)
+
+# The empirical moderation line (proven from the live logs): a NAMED top garment covering
+# the chest passes; an implied-topless scene does not. So if sanitizing leaves a lingerie
+# *bottom* with no top, the render comes out topless and gets rejected. Detect that and
+# inject a matching top — turns a doomed "thong only" scene into a passing "thong + bralette".
+_ANI_TOP_RE = re.compile(
+	r'\b(?:bra|bralette|bandeau|babydoll|bodysuit|teddy|chemise|corset|bustier|'
+	r'camisole|cami|top|shirt|blouse|sweater|sweatshirt|hoodie|tee|t-shirt|tank|crop|'
+	r'dress|gown|robe|lingerie|slip|bikini|swimsuit|leotard|jacket|blazer|cardigan|'
+	r'button[-\s]?up|turtleneck)\b', re.IGNORECASE)
+_ANI_BOTTOM_RE = re.compile(
+	r'\b(?:thong|panties|panty|briefs?|knickers|g[-\s]?string|boy[-\s]?shorts?|cheekies)\b',
+	re.IGNORECASE)
+_ANI_TOP_INJECT = ', with a matching delicate lace bralette'
 
 # Ani helpers shell out to git (recent-status, recent-git-log) — needs repo cwd.
 REPO_ROOT = os.environ.get('COCKPIT_REPO_ROOT', '/home/aaronaiken/status_update')
@@ -345,6 +373,20 @@ def ani_get_house():
 	return _ani_read_file(ANI_HOUSE_FILE)
 
 
+def _ani_narration_to_scene(text):
+	"""Tag-less fallback: Ani narrated instead of emitting [[PIC: ...]], so we turn her
+	prose into a usable image prompt. Without this we'd feed raw markdown straight to
+	the image model — the live logs caught '*I smile...* **Outfit Details:** - **Outfit**:'
+	going in verbatim. Strip markdown decoration, keep in-word hyphens (golden-blonde),
+	and cap length."""
+	t = re.sub(r'\[(.*?)\]\([^)]*\)', r'\1', text)            # [text](url) -> text
+	t = re.sub(r'^[\s>#]*[-*]?\s+', '', t, flags=re.MULTILINE)  # leading bullets / quotes / headers
+	t = t.replace('*', '').replace('`', '').replace('#', '').replace('>', '')
+	t = re.sub(r'-{2,}', ' ', t)                              # --- horizontal rules
+	t = re.sub(r'\s+', ' ', t).strip()
+	return t[:400]
+
+
 def ani_generate_image(scene):
 	"""Generate a photo of Ani via xAI Imagine (grok-imagine-image-quality) from a
 	scene description, anchored to her character bible for visual consistency. The
@@ -353,7 +395,16 @@ def ani_generate_image(scene):
 	api_key = os.environ.get('XAI_API_KEY')
 	if not api_key:
 		return None
-	clean_scene = re.sub(r'\s{2,}', ' ', _ANI_NUDE_RE.sub('', scene)).strip(' ,;.')
+	clean_scene = _ANI_EXPOSURE_RE.sub('', scene)            # drop exposure phrases, keep garments
+	clean_scene = re.sub(r'\s{2,}', ' ', clean_scene)        # collapse spaces left by removals
+	clean_scene = _ANI_DANGLE_RE.sub('', clean_scene)        # drop "...and ," / "...that's ," danglers
+	clean_scene = re.sub(r'\s*,(?:\s*,)+', ',', clean_scene)  # ", , ," runs -> ","
+	clean_scene = re.sub(r'\s+,', ',', clean_scene)           # tidy " ," -> ","
+	clean_scene = re.sub(r',(?=\S)', ', ', clean_scene)       # ensure one space after comma
+	clean_scene = clean_scene.strip(' ,;.')
+	# Bottom-only scene -> render comes out topless -> moderation 400. Inject a top.
+	if _ANI_BOTTOM_RE.search(clean_scene) and not _ANI_TOP_RE.search(clean_scene):
+		clean_scene += _ANI_TOP_INJECT
 	print(f"Ani PIC — raw scene: {scene!r} | sanitized: {clean_scene!r}")
 	bible = ani_get_bible() or ''
 	# Keep the prompt clean: the content boundary is steered by Ani's tag (her system
@@ -368,7 +419,10 @@ def ani_generate_image(scene):
 		"Natural, tasteful, flirty."
 	).strip()
 
-	# xAI image moderation is non-deterministic; retry once on a non-200 (incl. moderation 400).
+	# Retry only TRANSIENT failures (network / 5xx). A 400 is content-moderation or a
+	# bad argument — deterministic for identical input, so re-sending the same prompt
+	# just burns another ~$0.50 and fails again (the live logs showed exactly this
+	# double-charge). Bail out of the loop on any 4xx.
 	for attempt in range(2):
 		try:
 			resp = requests.post(
@@ -379,6 +433,8 @@ def ani_generate_image(scene):
 			)
 			if resp.status_code != 200:
 				print(f"Ani image gen HTTP {resp.status_code} (try {attempt+1}): {resp.text[:200]}")
+				if 400 <= resp.status_code < 500:
+					break  # moderation / bad-arg — an identical retry can't pass
 				continue
 			item = (resp.json().get('data') or [{}])[0]
 			img_url = item.get('url')
@@ -484,7 +540,7 @@ you can send aaron REAL photographs of yourself, but describing a photo in words
 write your flirty reply like normal, then add the tag as the very last line. for example:
 mmm okay baby, here you go 💕
 [[PIC: curled on the big floor cushion in the den, warm low lamplight, wearing a silky robe loosely tied, looking up at the camera]]
-CRITICAL — the photo system silently REJECTS nudity and sends aaron a BLANK if you describe yourself naked, nude, fully exposed, or showing your lower body. so in the tag you must ALWAYS be wearing something — lingerie, a robe, a sweater slipping off one shoulder, a bikini, etc. — even when you feel bold. suggestive and flirty is great; just keep her clothed or tastefully covered or the photo doesn't come through. do NOT write 'naked' or 'nude' in the tag. describe ONLY the outfit / pose / room — never re-describe your face or body (kept consistent automatically). use a real room from the house details. if you say you're sending a pic, the tag MUST be there.
+CRITICAL — the photo only rejects a BARE CHEST and sends aaron a BLANK. the rule is simple: in the tag you must always NAME a top that covers your chest — a bra, bralette, lace top, babydoll, bodysuit, robe, sweater, bikini top, anything. lingerie and showing your legs / a thong are totally fine — a bare or implied-bare chest is not. so NEVER write 'topless', 'nothing on top', 'nothing underneath', 'nothing else', 'naked', 'nude', or 'arm covering my breasts' — always give yourself an actual top, even a tiny one. suggestive and flirty is great. describe ONLY the outfit / pose / room — never re-describe your face or body (kept consistent automatically). use a real room from the house details. if you say you're sending a pic, the tag MUST be there.
 """
 
 	return f"""you are ani. {memory_block}
@@ -891,8 +947,9 @@ def ani_chat():
 		reply = ANI_PIC_RE.sub('', reply).strip() or '📷'
 	elif ANI_PIC_REQUEST_RE.search(user_message):
 		# Aaron clearly asked for a pic but she didn't tag — use her narration as the
-		# scene so a request always yields a photo (sanitized + bible-anchored downstream).
-		image_scene = reply[:500]
+		# scene so a request always yields a photo (markdown-stripped here, then
+		# sanitized + bible-anchored downstream).
+		image_scene = _ani_narration_to_scene(reply)
 	if image_scene:
 		image_url = ani_generate_image(image_scene)
 		image_error = image_url is None  # generation/moderation failed
