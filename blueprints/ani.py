@@ -45,6 +45,12 @@ _ANI_BOTTOM_RE = re.compile(
 _ANI_TOP_INJECT = ', with a matching delicate lace bralette'
 _ANI_TOP_INJECT_PLAIN = ', wearing a soft top that fully covers her chest'
 
+# Image backend: 'xai' (grok-imagine, output-moderated → normalizer enforces a covered chest)
+# or 'venice' (uncensored Lustify, no coverage rule → renders her scene faithfully). Flag-gated
+# so xAI stays default until VENICE_API_KEY is set and ANI_IMAGE_BACKEND=venice is flipped.
+ANI_IMAGE_BACKEND = os.environ.get('ANI_IMAGE_BACKEND', 'xai').strip().lower()
+VENICE_IMAGE_MODEL = os.environ.get('VENICE_IMAGE_MODEL', 'lustify-sdxl')  # exact id confirmed via /models
+
 # Ani helpers shell out to git (recent-status, recent-git-log) — needs repo cwd.
 REPO_ROOT = os.environ.get('COCKPIT_REPO_ROOT', '/home/aaronaiken/status_update')
 
@@ -360,19 +366,32 @@ def ani_normalize_scene(history):
 	        if not (m.get('content', '').startswith('[daily briefing')
 	                or m.get('content', '').startswith('[system:'))]
 	convo = '\n'.join(f"{m['role']}: {m.get('content', '')}" for m in real[-8:])
+	if ANI_IMAGE_BACKEND == 'venice':
+		# Uncensored backend — render her scene faithfully, no coverage rule.
+		rules = (
+			"- Render exactly what she describes, including lingerie or nudity if that is the scene. "
+			"Do not add or remove clothing — translate her description faithfully.\n"
+			"- Do not describe her face or body shape — those stay consistent elsewhere.\n"
+			"- Output ONLY the prompt line: no labels, no quotes, no preamble, no commentary.\n"
+		)
+	else:
+		# xAI (grok-imagine) — output-moderated, so guarantee a covered chest by construction.
+		rules = (
+			"HARD RULES — the image API silently rejects any violation, so follow exactly:\n"
+			"- She must ALWAYS be wearing a top that covers her chest (a bra, bralette, lace top, camisole, "
+			"babydoll, bodysuit, sweater, or shirt). If the conversation implies she is topless, bare-chested, "
+			"exposed, or showing her breasts, SILENTLY replace it with the closest covered equivalent (e.g. a "
+			"matching lace bralette). Do not mention that you changed anything.\n"
+			"- Never output the words naked, nude, topless, bare, exposed, see-through, sheer, nipples, tits, "
+			"breasts, or any nudity. A thong, lingerie, and bare legs are fine.\n"
+			"- Do not describe her face or body shape — those stay consistent elsewhere. Keep it tasteful and flirty.\n"
+			"- Output ONLY the prompt line: no labels, no quotes, no preamble, no commentary.\n"
+		)
 	system = (
 		"You write ONE single-line image-generation prompt for a photograph of a woman named Ani, "
 		"based on the recent conversation. Describe only her outfit, her pose, the room/setting, and "
 		"the lighting, as one comma-separated line.\n"
-		"HARD RULES — the image API silently rejects any violation, so follow exactly:\n"
-		"- She must ALWAYS be wearing a top that covers her chest (a bra, bralette, lace top, camisole, "
-		"babydoll, bodysuit, sweater, or shirt). If the conversation implies she is topless, bare-chested, "
-		"exposed, or showing her breasts, SILENTLY replace it with the closest covered equivalent (e.g. a "
-		"matching lace bralette). Do not mention that you changed anything.\n"
-		"- Never output the words naked, nude, topless, bare, exposed, see-through, sheer, nipples, tits, "
-		"breasts, or any nudity. A thong, lingerie, and bare legs are fine.\n"
-		"- Do not describe her face or body shape — those stay consistent elsewhere. Keep it tasteful and flirty.\n"
-		"- Output ONLY the prompt line: no labels, no quotes, no preamble, no commentary.\n"
+		+ rules +
 		f"Rooms in their home, use these details for setting consistency:\n{house}"
 	)
 	payload = {
@@ -398,25 +417,58 @@ def ani_normalize_scene(history):
 		return None
 
 
+def _ani_generate_venice(prompt):
+	"""Generate via Venice (uncensored Lustify) and re-host on Bunny. safe_mode=False so adult
+	content isn't blurred; return_binary gives raw bytes (no base64 decode). Returns CDN URL or None."""
+	api_key = os.environ.get('VENICE_API_KEY')
+	if not api_key:
+		print("Ani Venice: no VENICE_API_KEY set")
+		return None
+	try:
+		resp = requests.post(
+			'https://api.venice.ai/api/v1/image/generate',
+			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+			json={'model': VENICE_IMAGE_MODEL, 'prompt': prompt[:7500], 'safe_mode': False,
+			      'format': 'jpeg', 'return_binary': True, 'width': 1024, 'height': 1280},
+			timeout=120)
+		if resp.status_code != 200:
+			print(f"Ani Venice HTTP {resp.status_code}: {resp.text[:200]}")
+			return None
+		if resp.headers.get('x-venice-is-content-violation') == 'true':
+			print("Ani Venice: content-violation (TOS) — not served")
+			return None
+		from helpers.bunny import upload_ani_image_to_bunny
+		return upload_ani_image_to_bunny(resp.content, f"ani-{int(time.time())}.jpg", 'image/jpeg')
+	except Exception as e:
+		print(f"Ani Venice error: {e}")
+		return None
+
+
 def ani_generate_image(scene):
-	"""Generate a photo of Ani via xAI Imagine (grok-imagine-image-quality) from a
-	scene description, anchored to her character bible for visual consistency. The
-	xAI URL is temporary, so we download + re-host on Bunny. Returns a CDN URL (or
-	the temp URL as fallback), or None on failure."""
+	"""Generate a photo of Ani from a scene prompt, anchored to her character bible, and re-host
+	on Bunny. Routes to the configured backend: 'venice' (uncensored, faithful) or 'xai'
+	(grok-imagine, output-moderated → covered-chest top-guard). Returns a CDN URL or None."""
+	clean_scene = re.sub(r'\s{2,}', ' ', scene).strip(' ,;.')
+	bible = ani_get_bible() or ''
+
+	if ANI_IMAGE_BACKEND == 'venice':
+		print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) — scene: {clean_scene!r}")
+		prompt = (
+			f"{bible.strip()}\n\n{clean_scene}\n\n"
+			"A realistic, high-quality photograph of this same woman — keep her face and body "
+			"consistent across photos."
+		).strip()
+		return _ani_generate_venice(prompt)
+
+	# --- xAI grok-imagine (default) ---
 	api_key = os.environ.get('XAI_API_KEY')
 	if not api_key:
 		return None
-	clean_scene = re.sub(r'\s{2,}', ' ', scene).strip(' ,;.')
 	# Belt-and-suspenders: the normalizer should always name a top, but if it somehow didn't,
 	# force one in so the render can't come out topless (the moderation line).
 	if not _ANI_TOP_RE.search(clean_scene):
 		clean_scene += _ANI_TOP_INJECT if _ANI_BOTTOM_RE.search(clean_scene) else _ANI_TOP_INJECT_PLAIN
 	print(f"Ani PIC — scene: {clean_scene!r}")
-	bible = ani_get_bible() or ''
-	# Keep the prompt clean: the content boundary is steered by Ani's tag (her system
-	# prompt), NOT spelled out here — words like "topless/nude/genitals" nudge the model
-	# toward nudity that then trips xAI's OUTPUT moderation (400). bible + scene + a plain
-	# photographic style line passes reliably.
 	prompt = (
 		f"{bible.strip()}\n\n"
 		f"Scene: {clean_scene}\n\n"
