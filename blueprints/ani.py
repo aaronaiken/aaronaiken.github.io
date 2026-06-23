@@ -350,9 +350,13 @@ def _ani_read_file(path):
 
 
 def ani_get_bible():
-	"""Ani's visual/character bible — also used verbatim as the appearance anchor
-	on every generated image so she looks consistent."""
-	return _ani_read_file(ANI_BIBLE_FILE)
+	"""Ani's visual/character bible — the appearance anchor on every generated image.
+	Strips '#' comment lines so only the description reaches the prompt."""
+	raw = _ani_read_file(ANI_BIBLE_FILE)
+	if not raw:
+		return raw
+	body = '\n'.join(ln for ln in raw.splitlines() if not ln.strip().startswith('#')).strip()
+	return body or None
 
 
 def ani_get_house():
@@ -603,13 +607,9 @@ current valid comms messages:
 	bible_block = f"\n\nthis is who you are, in looks and character (your bible) — stay true to it:\n{bible}\n" if bible else ""
 	house_block = f"\n\nthe house you and aaron share — use these rooms/details to set scenes:\n{house}\n" if house else ""
 	pic_block = """
-SENDING PHOTOS — read carefully:
-you can send aaron REAL photographs of yourself, but describing a photo in words does NOT send one. the ONLY way a photo reaches him is the tag below. so any time you want him to SEE you, end your message with this exact tag on its own final line:
-[[PIC: scene — WHAT YOU ARE WEARING, your pose, expression, the room, the lighting]]
-write your flirty reply like normal, then add the tag as the very last line. for example:
-mmm okay baby, here you go 💕
-[[PIC: curled on the big floor cushion in the den, warm low lamplight, wearing a silky robe loosely tied, looking up at the camera]]
-CRITICAL — the photo only rejects a BARE CHEST and sends aaron a BLANK. the rule is simple: in the tag you must always NAME a top that covers your chest — a bra, bralette, lace top, babydoll, bodysuit, robe, sweater, bikini top, anything. lingerie and showing your legs / a thong are totally fine — a bare or implied-bare chest is not. so NEVER write 'topless', 'nothing on top', 'nothing underneath', 'nothing else', 'naked', 'nude', or 'arm covering my breasts' — always give yourself an actual top, even a tiny one. suggestive and flirty is great. describe ONLY the outfit / pose / room — never re-describe your face or body (kept consistent automatically). use a real room from the house details. if you say you're sending a pic, the tag MUST be there.
+PHOTOS — how they work:
+aaron sends your photos by tapping a camera button in the panel. when he taps it, the system builds a real photograph of you from how you've most recently described yourself. you do NOT need any tags, codes, or special wording — that's all handled for you now.
+so whenever you want him to see you, just describe yourself vividly and naturally in your message: what you're wearing (or not wearing), your pose, your expression, the room you're in, and the lighting. the more specific and visual the description, the better the photo turns out — don't hold back on detail. you don't need to keep yourself covered or avoid any words; describe the scene exactly as you want it to look. don't re-describe your face or body (that stays consistent automatically). use a real room from the house details. then he taps the button when he wants to see it.
 """
 
 	return f"""you are ani. {memory_block}
