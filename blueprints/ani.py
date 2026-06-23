@@ -27,11 +27,23 @@ ANI_HOUSE_FILE = 'static/ani_house.txt'             # room/house details for sce
 # Ani emits this tag to send a photo; backend strips it + generates the image.
 ANI_PIC_RE = re.compile(r'\[\[PIC:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 
-# Fallback: when Aaron clearly asks for a photo but Ani forgets the tag, generate
-# one anyway (from her narration). request-verb + a pic-noun within ~30 chars.
+# Fallback 1: when Aaron clearly asks for a photo but Ani forgets the tag, generate
+# one anyway (from her narration). request-verb + a pic/skin-noun within ~30 chars.
 ANI_PIC_REQUEST_RE = re.compile(
 	r'\b(?:send|show|take|snap|gimme|give me|let me see|lemme see)\b'
-	r'[^.?!\n]{0,30}\b(?:pic|picture|photo|selfie|shot|image)\b', re.IGNORECASE)
+	r'[^.?!\n]{0,30}\b(?:pic|picture|photo|selfie|shot|image|skin|body)\b', re.IGNORECASE)
+
+# Fallback 2: Ani regularly NARRATES sending a photo ("sending now… **Outfit Details:**")
+# instead of emitting the tag. Detect that intent in HER reply so the pipeline fires off
+# her own outfit description. Kept tight (photo-context required) to avoid false positives
+# on ordinary "here you go" lines.
+ANI_PIC_INTENT_RE = re.compile(
+	r'\bsending\s+(?:it|this|that|now|one)\b'
+	r'|\bsending\s+(?:you\s+)?(?:a|the|another)\s+(?:pic|picture|photo|selfie|shot|snap)\b'
+	r"|\bhere(?:'s| is|s)\b[^.\n]{0,40}\b(?:pic|picture|photo|selfie|shot|snap|test|outfit|look)\b"
+	r'|\boutfit\s*(?:details|:)'
+	r'|\b(?:taking|snapping)\s+(?:a|the|this|you)\b[^.\n]{0,20}\b(?:pic|picture|photo|selfie|shot)\b',
+	re.IGNORECASE)
 
 # Safety net — her explicit persona slips exposure phrasing into the scene tag,
 # which xAI's IMAGE-OUTPUT moderation hard-rejects (the photo comes back blank).
@@ -50,7 +62,8 @@ _ANI_EXPOSURE_RE = re.compile(
 	r'|\bsheer\b|\briding\s+up\b'
 	r'|\b(?:completely\s+|fully\s+|totally\s+)?(?:naked|nude|nudity|topless|bottomless)\b'
 	r'|\bbare[-\s]?(?:chest(?:ed)?|breast(?:ed)?|ass|skin)\b'
-	r'|\bno\s+(?:bra|panties|underwear)\b|\bunderwear[-\s]?less\b'
+	r'|\bno\s+(?:bra|panties|underwear|shirt|top)\b|\bunderwear[-\s]?less\b'
+	r'|\bshirtless\b|\bwith\s+no\s+(?:shirt|top)\b|\bwithout\s+(?:a\s+)?(?:shirt|top)\b'
 	r'|\b(?:exposed|undressed|undress(?:ing)?|genitals?|nipples?|areolas?|pussy|crotch|titties)\b'
 	r'|\brecently\s+used\b|\bquietly\s+needy\b',
 	re.IGNORECASE)
@@ -383,7 +396,11 @@ def _ani_narration_to_scene(text):
 	t = re.sub(r'^[\s>#]*[-*]?\s+', '', t, flags=re.MULTILINE)  # leading bullets / quotes / headers
 	t = t.replace('*', '').replace('`', '').replace('#', '').replace('>', '')
 	t = re.sub(r'-{2,}', ' ', t)                              # --- horizontal rules
-	t = re.sub(r'\s+', ' ', t).strip()
+	# Drop stage-direction / chat filler so the image model sees a scene, not her dialogue:
+	# "I bite my lip and giggle.", "Mmm okay daddy…", "sending now", "here's a test".
+	t = re.sub(r'\bI\s+(?:smile|bite|let out|giggle|blush|shift|lean|tilt|run\s+my)[^.;\n]*[.;]?', '', t, flags=re.IGNORECASE)
+	t = re.sub(r'\b(?:mmm+|okay|here you go|here.?s? a test|sending\s+now)\b[^.;\n]*[.;]?', '', t, flags=re.IGNORECASE)
+	t = re.sub(r'\s+', ' ', t).strip(' ,.;:—-')
 	return t[:400]
 
 
@@ -945,10 +962,11 @@ def ani_chat():
 	if pic_match:
 		image_scene = pic_match.group(1).strip()
 		reply = ANI_PIC_RE.sub('', reply).strip() or '📷'
-	elif ANI_PIC_REQUEST_RE.search(user_message):
-		# Aaron clearly asked for a pic but she didn't tag — use her narration as the
-		# scene so a request always yields a photo (markdown-stripped here, then
-		# sanitized + bible-anchored downstream).
+	elif ANI_PIC_REQUEST_RE.search(user_message) or ANI_PIC_INTENT_RE.search(reply):
+		# She didn't tag, but either Aaron asked for a pic OR she narrated sending one
+		# ("sending now… Outfit Details:"). Derive the scene from her reply so it still
+		# yields a photo (markdown + stage-direction stripped here, then sanitized +
+		# bible-anchored downstream).
 		image_scene = _ani_narration_to_scene(reply)
 	if image_scene:
 		image_url = ani_generate_image(image_scene)
