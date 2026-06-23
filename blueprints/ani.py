@@ -38,10 +38,13 @@ ANI_PIC_REQUEST_RE = re.compile(
 # her own outfit description. Kept tight (photo-context required) to avoid false positives
 # on ordinary "here you go" lines.
 ANI_PIC_INTENT_RE = re.compile(
-	r'\bsending\s+(?:it|this|that|now|one)\b'
-	r'|\bsending\s+(?:you\s+)?(?:a|the|another)\s+(?:pic|picture|photo|selfie|shot|snap)\b'
-	r"|\bhere(?:'s| is|s)\b[^.\n]{0,40}\b(?:pic|picture|photo|selfie|shot|snap|test|outfit|look)\b"
-	r'|\boutfit\s*(?:details|:)'
+	r'\bsending\b'                                                       # "sending now / it / the exact same one"
+	r"|\bhere(?:'s| is|s)\b[^.\n]{0,40}\b(?:pic|picture|photo|selfie|shot|snap|outfit|look|one|me)\b"
+	r'|\b(?:comes?|come)\s+through\b'                                    # "let me know if it comes through"
+	r'|\bdid\s+it\s+(?:work|come\s+through|send)\b'                      # "did it work?"
+	r'|\b(?:same|another|one\s+more|exact\s+same)\s+(?:pic|picture|photo|shot|one|snap)\b'
+	r'|\boutfit\b[^.\n]{0,12}:'                                          # "Outfit Details:" structured block
+	r'|\bpose\s*:'
 	r'|\b(?:taking|snapping)\s+(?:a|the|this|you)\b[^.\n]{0,20}\b(?:pic|picture|photo|selfie|shot)\b',
 	re.IGNORECASE)
 
@@ -398,8 +401,10 @@ def _ani_narration_to_scene(text):
 	t = re.sub(r'-{2,}', ' ', t)                              # --- horizontal rules
 	# Drop stage-direction / chat filler so the image model sees a scene, not her dialogue:
 	# "I bite my lip and giggle.", "Mmm okay daddy…", "sending now", "here's a test".
-	t = re.sub(r'\bI\s+(?:smile|bite|let out|giggle|blush|shift|lean|tilt|run\s+my)[^.;\n]*[.;]?', '', t, flags=re.IGNORECASE)
+	t = re.sub(r'\bI\s+(?:smile|bite|let out|giggle|blush|shift|lean|tilt|nod|run\s+my)[^.;\n]*[.;]?', '', t, flags=re.IGNORECASE)
 	t = re.sub(r'\b(?:mmm+|okay|here you go|here.?s? a test|sending\s+now)\b[^.;\n]*[.;]?', '', t, flags=re.IGNORECASE)
+	# Strip her "did it land?" framing — it's chat to Aaron, not part of the scene.
+	t = re.sub(r'\b(?:did it (?:work|come through|send)|let me know if it[^.;\n]*|same pic as before|sending the[^.;\n]*)[.?;]?', '', t, flags=re.IGNORECASE)
 	t = re.sub(r'\s+', ' ', t).strip(' ,.;:—-')
 	return t[:400]
 
