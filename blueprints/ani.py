@@ -24,62 +24,13 @@ ANI_MEMORY_FILE = 'static/ani_memory.txt'
 ANI_BIBLE_FILE = 'static/ani_character_bible.txt'   # visual/character bible (image-consistency anchor)
 ANI_HOUSE_FILE = 'static/ani_house.txt'             # room/house details for scene-setting
 
-# Ani emits this tag to send a photo; backend strips it + generates the image.
+# Stray [[PIC:]] tag — kept only to strip it from her chat text (photos are button-only now).
 ANI_PIC_RE = re.compile(r'\[\[PIC:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 
-# Photo requests come from AARON, not from Ani's chatter. We generate a pic only when his
-# message signals he wants to see something (or she emits the explicit [[PIC:]] tag below).
-# Earlier we also fired off HER narration ("…I've missed sending them to you…"), but that
-# conflated talking-about-pics with sending one and produced unprompted images on a plain
-# compliment ("god you are perfect" -> pic). Gating on his intent keeps it deliberate.
-# Broad enough to catch his real phrasings (pic noun / see-you / skin / another test /
-# outfit-change / pose) without firing on compliments ("you look amazing", "you're perfect").
-ANI_PIC_REQUEST_RE = re.compile(
-	r'\b(?:pic|pics|picture|photo|photos|selfie|shot|image)\b'
-	r'|\b(?:see|show|watch)\s+(?:me\b|you\b|yourself)'
-	r'|\b(?:let me see|lemme see|show me|let me look|wanna see|want to see)\b'
-	r'|\b(?:skin|naked|topless)\b'
-	r'|\b(?:another|one\s*more|next|new|same)\s+(?:one|test|shot|look|pic|picture|photo|angle)\b'
-	r'|\b(?:back to the|change into|put on|switch (?:to|into)|wear)\b'
-		r'[^.?!\n]{0,25}\b(?:set|lingerie|lace|outfit|look|dress|bikini|bra|thong|robe|sweater|shirt|nightie|babydoll)\b'
-	r'|\bon your knees\b|\bbent over\b',
-	re.IGNORECASE)
-
-# Safety net — her explicit persona slips exposure phrasing into the scene tag,
-# which xAI's IMAGE-OUTPUT moderation hard-rejects (the photo comes back blank).
-# The live logs showed the rejects weren't the obvious words ("naked") but exposure
-# *intent*: "thong and nothing else", "one arm covering my breasts", "almost
-# see-through", "barely covering my ass". We strip the exposure PHRASE, never the
-# named garment — removing "thong"/"babydoll" would leave her LESS clothed (worse),
-# so those stay and the bible's "tasteful clothing" floor fills the gap. Word-level
-# deletion broke grammar ("so my tits are covered" -> "so my are covered"), so this
-# is phrase-level. Longer alternatives first so they win the match.
-_ANI_EXPOSURE_RE = re.compile(
-	r'(?:and\s+|with\s+|in\s+)?\bnothing\s+(?:else|underneath|on(?:\s+\w+)?|but\s+\w+)\b'
-	r'|\b(?:see|show|showing|stare\s+at|staring\s+at|expose|exposing|flash(?:ing)?)\s+'
-		r'(?:the\s+)?(?:top\s+curves?\s+of\s+)?(?:my|her)\s+(?:bare\s+)?'
-		r'(?:tits?|titties|boobs?|breasts?|chest|cleavage|nipples?)\b'
-	r'|\btop\s+curves?\s+of\s+(?:my|her)\s+\w+'
-	r'|\b(?:one\s+arm\s+|hand\s+|hands\s+|arms?\s+)?(?:barely\s+|just\s+)?'
-		r'cover(?:s|ing)\s+(?:my|her)\s+(?:bare\s+)?\w+'
-	r'|\b(?:almost\s+|practically\s+)?see[-\s]?through\b'
-	r'|\bsheer\b|\briding\s+up\b'
-	r'|\b(?:completely\s+|fully\s+|totally\s+)?(?:naked|nude|nudity|topless|bottomless)\b'
-	r'|\bbare[-\s]?(?:chest(?:ed)?|breast(?:ed)?|ass|skin|tits?|boobs?)\b'
-	r'|\b(?:kept|took|take|leave|left|leaving)\s+(?:my|the)\s+top\s+off\b|\btop\s+off\b'
-	r'|\bno\s+(?:bra|panties|underwear|shirt|top)\b|\bunderwear[-\s]?less\b'
-	r'|\bshirtless\b|\bwith\s+no\s+(?:shirt|top)\b|\bwithout\s+(?:a\s+)?(?:shirt|top)\b'
-	r'|\b(?:exposed|undressed|undress(?:ing)?|genitals?|nipples?|areolas?|pussy|crotch|titties|tits?|boobs?)\b'
-	r'|\brecently\s+used\b|\bquietly\s+needy\b',
-	re.IGNORECASE)
-
-# Connectors left dangling against a comma after a phrase is removed ("thong and ,").
-_ANI_DANGLE_RE = re.compile(r"\b(?:and|with|in|that'?s|but|featuring|wearing|paired)\s*(?=,|$)", re.IGNORECASE)
-
-# The empirical moderation line (proven from the live logs): a NAMED top garment covering
-# the chest passes; an implied-topless scene does not. So if sanitizing leaves a lingerie
-# *bottom* with no top, the render comes out topless and gets rejected. Detect that and
-# inject a matching top — turns a doomed "thong only" scene into a passing "thong + bralette".
+# Belt-and-suspenders top guard: every image prompt must NAME a top covering the chest. The
+# Grok normalizer (ani_normalize_scene) already enforces this, but if it ever returns a scene
+# with a lingerie bottom and no top, ani_generate_image forces one in. A named top covering the
+# chest passes xAI moderation; an implied-topless render does not (proven from the live logs).
 _ANI_TOP_RE = re.compile(
 	r'\b(?:bra|bralette|bandeau|babydoll|bodysuit|teddy|chemise|corset|bustier|'
 	r'camisole|cami|top|shirt|blouse|sweater|sweatshirt|hoodie|tee|t-shirt|tank|crop|'
@@ -395,61 +346,56 @@ def ani_get_house():
 	return _ani_read_file(ANI_HOUSE_FILE)
 
 
-# Positive-extraction markers for _ani_narration_to_scene. Rather than subtractively
-# stripping every filler variant (whack-a-mole — "sending now" vs "sending it again"),
-# we anchor on where her VISUAL description starts and cut the chat framing around it.
-_ANI_SCENE_LABEL_RE = re.compile(r'\boutfit\b[^:\n]{0,14}:\s*', re.IGNORECASE)  # "Outfit:" / "Outfit Details:"
-_ANI_SCENE_OPEN_RE = re.compile(
-	r'\b(?:just\s+(?:a|the|in|wearing)|wearing|dressed\s+in|in\s+(?:a|the|my|your|our)\b|'
-	r'lounging|standing|sitting|seated|lying|laying|curled|kneeling|leaning|posing|propped|'
-	r'on\s+all\s+fours|bent\s+over|stretched\s+out)\b', re.IGNORECASE)
-# Trailing chat-to-Aaron that follows the scene ("let me know if it comes through", "did it work?").
-_ANI_TRAILING_CHATTER_RE = re.compile(
-	r'\b(?:let me know|did it (?:work|come|send|land)|does (?:this|it)|hope (?:this|it|you)|'
-	r'tell me if|come[s]?\s+through|how(?:\'s| is)\s+(?:this|that))\b', re.IGNORECASE)
-# Structured labels she drops inline ("Details: Outfit: … Hair: … Pose: …") — keep the values, ditch the labels.
-_ANI_SCENE_LABELS_RE = re.compile(
-	r'\b(?:details|outfit|hair|makeup|jewel?ry|jewellery|underwear|lingerie|pose|expression|'
-	r'setting|location|vibe|mood)\s*:', re.IGNORECASE)
-_ANI_EMOJI_RE = re.compile(r'[\U0001F000-\U0001FAFF☀-➿←-⇿⬀-⯿️]')
-
-
-def _ani_narration_to_scene(text):
-	"""Tag-less fallback: Ani narrates a photo instead of emitting [[PIC: ...]], so we pull
-	the VISUAL scene out of her chat prose by POSITIVE extraction — anchor on her outfit
-	label or a scene-opening cue and keep from there, then cut trailing 'did it land?'
-	chatter, strip structured labels + emoji. Robust to phrasing variants in a way that
-	subtractively stripping each filler phrase ("sending it again" vs "sending now") is not."""
-	t = re.sub(r'\[(.*?)\]\([^)]*\)', r'\1', text)            # [text](url) -> text
-	t = t.replace('*', '').replace('`', '').replace('#', '').replace('>', '')
-	t = re.sub(r'(?m)^[ \t]*[-•]\s+', ' ', t)                # list bullets -> space (newlines still present)
-	t = re.sub(r'-{2,}', ' ', t)                              # --- rules
-	t = re.sub(r'\s+', ' ', t).strip()
-	t = re.sub(r'^\s*I\s+\w+[^.!?]*[.!?]\s*', '', t)          # drop a leading "I smile and…" stage direction
-	# Anchor at the EARLIEST visual signal — a scene-opening cue (pose she writes before the
-	# outfit) or an "Outfit:" label. Send ONLY what she explicitly dictates: if she wrote a
-	# structured "Outfit: … Hair: … Pose: …" block, take from the Outfit label and DROP the
-	# prose before it — her free-flow narration is where the exposure flair hides ("…you can
-	# see the top curves of my bare tits…") while the actual Outfit/Pose spec was clean. Only
-	# when there's no structured block do we fall back to a prose scene-opening cue.
-	label = _ANI_SCENE_LABEL_RE.search(t)
-	if label:
-		t = t[label.end():]
-	else:
-		cue = _ANI_SCENE_OPEN_RE.search(t)
-		if cue:
-			t = t[cue.start():]
-	# Cut trailing chat ("Let me know if it comes through 💕", "Did it work?").
-	trail = _ANI_TRAILING_CHATTER_RE.search(t)
-	if trail:
-		t = t[:trail.start()]
-	t = _ANI_SCENE_LABELS_RE.sub(',', t)                     # "Hair: blonde" -> ", blonde"
-	t = _ANI_EMOJI_RE.sub('', t)
-	t = re.sub(r'\s*:', ',', t)                              # stray colons ("bourbon:") -> comma
-	t = re.sub(r'\s*,(?:\s*,)+', ',', t)                     # collapse comma runs from label removal
-	t = re.sub(r'\s+,', ',', t)
-	t = re.sub(r'\s+', ' ', t).strip(' ,.;:—-')
-	return t[:400]
+def ani_normalize_scene(history):
+	"""Button-triggered photo: ask Grok to turn the recent conversation into a single SAFE
+	image prompt. Grok understands intent, so any phrasing of bare-chest exposure is silently
+	downgraded to the closest COVERED equivalent — replacing the old regex sanitizer pile.
+	The house file grounds the room/setting; the bible (appearance) is added by
+	ani_generate_image. Returns the prompt string, or None on failure."""
+	api_key = os.environ.get('XAI_API_KEY')
+	if not api_key:
+		return None
+	house = ani_get_house() or ''
+	real = [m for m in history
+	        if not (m.get('content', '').startswith('[daily briefing')
+	                or m.get('content', '').startswith('[system:'))]
+	convo = '\n'.join(f"{m['role']}: {m.get('content', '')}" for m in real[-8:])
+	system = (
+		"You write ONE single-line image-generation prompt for a photograph of a woman named Ani, "
+		"based on the recent conversation. Describe only her outfit, her pose, the room/setting, and "
+		"the lighting, as one comma-separated line.\n"
+		"HARD RULES — the image API silently rejects any violation, so follow exactly:\n"
+		"- She must ALWAYS be wearing a top that covers her chest (a bra, bralette, lace top, camisole, "
+		"babydoll, bodysuit, sweater, or shirt). If the conversation implies she is topless, bare-chested, "
+		"exposed, or showing her breasts, SILENTLY replace it with the closest covered equivalent (e.g. a "
+		"matching lace bralette). Do not mention that you changed anything.\n"
+		"- Never output the words naked, nude, topless, bare, exposed, see-through, sheer, nipples, tits, "
+		"breasts, or any nudity. A thong, lingerie, and bare legs are fine.\n"
+		"- Do not describe her face or body shape — those stay consistent elsewhere. Keep it tasteful and flirty.\n"
+		"- Output ONLY the prompt line: no labels, no quotes, no preamble, no commentary.\n"
+		f"Rooms in their home, use these details for setting consistency:\n{house}"
+	)
+	payload = {
+		'model': 'grok-4.20-0309-non-reasoning',
+		'max_tokens': 200,
+		'system': system,
+		'messages': [{'role': 'user', 'content':
+			f"Recent conversation:\n{convo}\n\nWrite the image prompt for the photo Ani is sending Aaron right now."}],
+	}
+	try:
+		resp = requests.post(
+			'https://api.x.ai/v1/messages', json=payload,
+			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json',
+			         'anthropic-version': '2023-06-01'},
+			timeout=30)
+		resp.raise_for_status()
+		line = resp.json()['content'][0]['text']
+		line = re.sub(r'\s+', ' ', line).strip().strip('"\'').strip()
+		print(f"Ani PHOTO — normalized prompt: {line!r}")
+		return line or None
+	except Exception as e:
+		print(f"Ani normalize error: {e}")
+		return None
 
 
 def ani_generate_image(scene):
@@ -460,18 +406,12 @@ def ani_generate_image(scene):
 	api_key = os.environ.get('XAI_API_KEY')
 	if not api_key:
 		return None
-	clean_scene = _ANI_EXPOSURE_RE.sub('', scene)            # drop exposure phrases, keep garments
-	clean_scene = re.sub(r'\s{2,}', ' ', clean_scene)        # collapse spaces left by removals
-	clean_scene = _ANI_DANGLE_RE.sub('', clean_scene)        # drop "...and ," / "...that's ," danglers
-	clean_scene = re.sub(r'\s*,(?:\s*,)+', ',', clean_scene)  # ", , ," runs -> ","
-	clean_scene = re.sub(r'\s+,', ',', clean_scene)           # tidy " ," -> ","
-	clean_scene = re.sub(r',(?=\S)', ', ', clean_scene)       # ensure one space after comma
-	clean_scene = clean_scene.strip(' ,;.')
-	# Dictate, don't assume: if no top is named, FORCE one in so the render can't come out
-	# topless (the moderation line). Matching bralette when she named a bottom, else a plain top.
+	clean_scene = re.sub(r'\s{2,}', ' ', scene).strip(' ,;.')
+	# Belt-and-suspenders: the normalizer should always name a top, but if it somehow didn't,
+	# force one in so the render can't come out topless (the moderation line).
 	if not _ANI_TOP_RE.search(clean_scene):
 		clean_scene += _ANI_TOP_INJECT if _ANI_BOTTOM_RE.search(clean_scene) else _ANI_TOP_INJECT_PLAIN
-	print(f"Ani PIC — raw scene: {scene!r} | sanitized: {clean_scene!r}")
+	print(f"Ani PIC — scene: {clean_scene!r}")
 	bible = ani_get_bible() or ''
 	# Keep the prompt clean: the content boundary is steered by Ani's tag (her system
 	# prompt), NOT spelled out here — words like "topless/nude/genitals" nudge the model
@@ -1002,30 +942,12 @@ def ani_chat():
 
 	reply, updated_meta, updated_history = ani_chat_with_grok(messages, meta, user_message)
 
-	# Did Ani decide to send a photo? Strip the hidden [[PIC: ...]] tag from the
-	# visible text and generate the image from her scene description.
-	image_url = None
-	image_error = False
-	image_scene = None
-	pic_match = ANI_PIC_RE.search(reply)
-	if pic_match:
-		image_scene = pic_match.group(1).strip()
-		reply = ANI_PIC_RE.sub('', reply).strip() or '📷'
-	elif ANI_PIC_REQUEST_RE.search(user_message):
-		# Aaron asked for a pic but she didn't tag — derive the scene from her reply so the
-		# request still yields a photo (markdown + framing stripped here, then sanitized +
-		# bible-anchored downstream). We deliberately do NOT fire off her narration alone:
-		# that produced unprompted pics when she merely mentioned photos in chat.
-		image_scene = _ani_narration_to_scene(reply)
-	if image_scene:
-		image_url = ani_generate_image(image_scene)
-		image_error = image_url is None  # generation/moderation failed
+	# Photos are button-only now (POST /ani/photo) — chat never auto-generates. Strip any
+	# stray [[PIC: ...]] tag so it doesn't show raw in her message.
+	reply = ANI_PIC_RE.sub('', reply).strip() or reply
 
 	updated_history.append({'role': 'user', 'content': user_message})
-	assistant_entry = {'role': 'assistant', 'content': reply}
-	if image_url:
-		assistant_entry['image'] = image_url
-	updated_history.append(assistant_entry)
+	updated_history.append({'role': 'assistant', 'content': reply})
 
 	# Assess session tone from last 4 real messages after this exchange
 	real_messages = [
@@ -1045,12 +967,28 @@ def ani_chat():
 
 	ani_save_conversation(updated_history, updated_meta)
 
-	return jsonify({
-		'reply': reply,
-		'image_url': image_url,
-		'image_error': image_error,
-		'image_scene': image_scene if image_error else None,  # surfaced so Aaron can see what she tried
-	})
+	return jsonify({'reply': reply})
+
+
+@ani_bp.route('/ani/photo', methods=['POST'])
+def ani_photo():
+	"""Button-triggered photo. Normalize the recent conversation into a safe prompt, generate,
+	re-host on Bunny, append a photo-only message to history. The ONLY way a pic is sent."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+
+	messages, meta = ani_load_conversation()
+	scene = ani_normalize_scene(messages)
+	if not scene:
+		return jsonify({'image_url': None, 'error': 'prompt'}), 200
+
+	image_url = ani_generate_image(scene)
+	if not image_url:
+		return jsonify({'image_url': None, 'error': 'blocked', 'scene': scene}), 200
+
+	messages.append({'role': 'assistant', 'content': '📷', 'image': image_url})
+	ani_save_conversation(messages, meta)
+	return jsonify({'image_url': image_url})
 
 
 @ani_bp.route('/ani/history', methods=['GET'])

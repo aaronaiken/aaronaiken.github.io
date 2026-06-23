@@ -239,6 +239,24 @@
 #ani-send-btn:hover { color: #f5b332; border-color: #9a6018; }
 #ani-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+#ani-photo-btn {
+  background: none;
+  border: 1px solid #2e1e08;
+  color: #9a6018;
+  font-size: 1rem;
+  padding: 4px 9px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: border-color 0.15s, filter 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  filter: grayscale(0.35);
+}
+#ani-photo-btn:hover { border-color: #9a6018; filter: grayscale(0); }
+#ani-photo-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+body.ani-fullscreen #ani-photo-btn { border-color: #2a3360; }
+body.ani-fullscreen #ani-photo-btn:hover { border-color: #4a5fa8; }
+
 #ani-footer-row {
   display: flex;
   justify-content: space-between;

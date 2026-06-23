@@ -2,6 +2,7 @@
   const aniMsgs        = document.getElementById('ani-messages');
   const aniInput       = document.getElementById('ani-input');
   const aniSendBtn     = document.getElementById('ani-send-btn');
+  const aniPhotoBtn    = document.getElementById('ani-photo-btn');
   const aniTyping      = document.getElementById('ani-typing-indicator');
   const aniEmpty       = document.getElementById('ani-empty-state');
   const aniAcheDisplay = document.getElementById('ani-ache-display');
@@ -182,6 +183,38 @@
 	  aniRenderMessage('assistant', "lost the signal for a sec. try again?");
 	  aniScrollToBottom();
 	});
+  }
+
+  function aniPhoto() {
+	if (aniPhotoBtn.disabled) return;
+	aniEmpty.style.display = 'none';
+	aniPhotoBtn.disabled = true;
+	aniSendBtn.disabled = true;
+	aniRenderNotify('developing a photo…');
+	aniShowTyping(true);
+	aniScrollToBottom();
+	fetch('/ani/photo', { method: 'POST' })
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		aniShowTyping(false);
+		aniPhotoBtn.disabled = false;
+		aniSendBtn.disabled = false;
+		if (data.image_url) {
+		  aniRenderMessage('assistant', '', data.image_url);
+		} else if (data.error === 'blocked') {
+		  aniRenderNotify('photo blocked by the filter — describe a tamer scene and tap 📷 again');
+		} else {
+		  aniRenderNotify('could not develop a photo — give her a scene to work from first');
+		}
+		aniScrollToBottom();
+	  })
+	  .catch(function() {
+		aniShowTyping(false);
+		aniPhotoBtn.disabled = false;
+		aniSendBtn.disabled = false;
+		aniRenderNotify('photo request failed — try again');
+		aniScrollToBottom();
+	  });
   }
 
   function aniRefresh() {
