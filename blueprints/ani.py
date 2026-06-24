@@ -430,19 +430,39 @@ def ani_normalize_scene(history):
 		return None
 
 
-def _ani_generate_venice(prompt):
+def _ani_garment_negative(scene):
+	"""Lustify (NSFW) tends to drop named garments and render full nude. When the scene names
+	clothing that should stay ON, push the 'missing' state into the negative so it's kept.
+	Returns '' when the scene is actually meant to be nude (don't fight it)."""
+	sl = scene.lower()
+	if re.search(r'\b(?:fully|completely|totally|stark)?\s*(?:nude|naked)\b', sl):
+		return ''
+	neg = []
+	if re.search(r'\b(?:yoga\s*pants|pants|leggings|jeans|trousers|skirt|shorts|thong|panties|'
+	             r'underwear|g[-\s]?string|briefs|bikini bottoms?)\b', sl):
+		neg.append('bottomless, no pants, pants removed, bare crotch, exposed genitals')
+	top = re.search(r'\b(?:bra|bralette|crop\s*top|tank top|top|shirt|blouse|sweater|hoodie|tank|'
+	                r'dress|gown|bodysuit|bikini top|lingerie|camisole|corset|babydoll|robe)\b', sl)
+	topless = re.search(r'\b(?:topless|bare\s*(?:breasts?|chest|tits?)|no\s*(?:top|bra|shirt)|tits?\s*out)\b', sl)
+	if top and not topless:
+		neg.append('topless, bare breasts, exposed nipples')
+	return ', '.join(neg)
+
+
+def _ani_generate_venice(prompt, extra_negative=''):
 	"""Generate via Venice (uncensored Lustify) and re-host on Bunny. safe_mode=False so adult
 	content isn't blurred; return_binary gives raw bytes (no base64 decode). Returns CDN URL or None."""
 	api_key = os.environ.get('VENICE_API_KEY')
 	if not api_key:
 		print("Ani Venice: no VENICE_API_KEY set")
 		return None
+	negative = VENICE_NEGATIVE_PROMPT + (', ' + extra_negative if extra_negative else '')
 	try:
 		resp = requests.post(
 			'https://api.venice.ai/api/v1/image/generate',
 			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
 			json={'model': VENICE_IMAGE_MODEL, 'prompt': prompt[:7500], 'safe_mode': False,
-			      'negative_prompt': VENICE_NEGATIVE_PROMPT, 'cfg_scale': VENICE_CFG_SCALE,
+			      'negative_prompt': negative, 'cfg_scale': VENICE_CFG_SCALE,
 			      'steps': VENICE_STEPS, 'format': 'jpeg', 'return_binary': True,
 			      'width': 1024, 'height': 1280},
 			timeout=120)
@@ -467,13 +487,15 @@ def ani_generate_image(scene):
 	bible = ani_get_bible() or ''
 
 	if ANI_IMAGE_BACKEND == 'venice':
-		print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) — scene: {clean_scene!r}")
-		# Lustify (SDXL) — photoreal style wrap. No coverage guardrails: render her scene as-is.
+		# Lustify (SDXL) — photoreal style wrap. No coverage guardrails: render her scene as-is,
+		# but keep named garments ON via a garment-aware negative (Lustify loves to drop them).
+		extra_neg = _ani_garment_negative(clean_scene)
+		print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) — scene: {clean_scene!r} | keep-on: {extra_neg!r}")
 		prompt = (
 			f"RAW photo, photorealistic. {bible.strip()} {clean_scene}. "
 			"Shot on DSLR, 85mm, shallow depth of field, natural skin texture, sharp focus, high detail."
 		).strip()
-		return _ani_generate_venice(prompt)
+		return _ani_generate_venice(prompt, extra_neg)
 
 	# --- xAI grok-imagine (default) ---
 	api_key = os.environ.get('XAI_API_KEY')
