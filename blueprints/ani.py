@@ -56,7 +56,8 @@ VENICE_NEGATIVE_PROMPT = os.environ.get('VENICE_NEGATIVE_PROMPT',
 	'cartoon, anime, painting, illustration, drawing, 3d render, cgi, deformed, disfigured, '
 	'bad anatomy, extra fingers, mutated hands, blurry, lowres, watermark, text, logo, '
 	'airbrushed, plastic skin, oversaturated')
-VENICE_CFG_SCALE = float(os.environ.get('VENICE_CFG_SCALE', '3.5'))
+VENICE_CFG_SCALE = float(os.environ.get('VENICE_CFG_SCALE', '3.5'))           # nude scenes: low cfg = best skin
+VENICE_CFG_CLOTHED = float(os.environ.get('VENICE_CFG_CLOTHED', '5.5'))       # clothed scenes: higher cfg holds garments
 VENICE_STEPS = int(os.environ.get('VENICE_STEPS', '30'))
 
 # Ani helpers shell out to git (recent-status, recent-git-log) — needs repo cwd.
@@ -438,9 +439,12 @@ def _ani_garment_negative(scene):
 	if re.search(r'\b(?:fully|completely|totally|stark)?\s*(?:nude|naked)\b', sl):
 		return ''
 	neg = []
-	if re.search(r'\b(?:yoga\s*pants|pants|leggings|jeans|trousers|skirt|shorts|thong|panties|'
-	             r'underwear|g[-\s]?string|briefs|bikini bottoms?)\b', sl):
-		neg.append('bottomless, no pants, pants removed, bare crotch, exposed genitals')
+	pants = re.search(r'\b(?:yoga\s*pants|leggings|pants|jeans|trousers|skirt|shorts)\b', sl)
+	undies = re.search(r'\b(?:thong|panties|g[-\s]?string|briefs?|bikini bottoms?)\b', sl)
+	if pants:  # she's in real pants -> also reject panties/underwear so it renders pants, not a brief
+		neg.append('bottomless, no pants, pants removed, bare crotch, exposed genitals, panties, thong, underwear, briefs')
+	elif undies:
+		neg.append('bottomless, no underwear, bare crotch, exposed genitals')
 	top = re.search(r'\b(?:bra|bralette|crop\s*top|tank top|top|shirt|blouse|sweater|hoodie|tank|'
 	                r'dress|gown|bodysuit|bikini top|lingerie|camisole|corset|babydoll|robe)\b', sl)
 	topless = re.search(r'\b(?:topless|bare\s*(?:breasts?|chest|tits?)|no\s*(?:top|bra|shirt)|tits?\s*out)\b', sl)
@@ -449,7 +453,7 @@ def _ani_garment_negative(scene):
 	return ', '.join(neg)
 
 
-def _ani_generate_venice(prompt, extra_negative=''):
+def _ani_generate_venice(prompt, extra_negative='', cfg=None):
 	"""Generate via Venice (uncensored Lustify) and re-host on Bunny. safe_mode=False so adult
 	content isn't blurred; return_binary gives raw bytes (no base64 decode). Returns CDN URL or None."""
 	api_key = os.environ.get('VENICE_API_KEY')
@@ -462,7 +466,7 @@ def _ani_generate_venice(prompt, extra_negative=''):
 			'https://api.venice.ai/api/v1/image/generate',
 			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
 			json={'model': VENICE_IMAGE_MODEL, 'prompt': prompt[:7500], 'safe_mode': False,
-			      'negative_prompt': negative, 'cfg_scale': VENICE_CFG_SCALE,
+			      'negative_prompt': negative, 'cfg_scale': cfg if cfg is not None else VENICE_CFG_SCALE,
 			      'steps': VENICE_STEPS, 'format': 'jpeg', 'return_binary': True,
 			      'width': 1024, 'height': 1280},
 			timeout=120)
@@ -487,15 +491,25 @@ def ani_generate_image(scene):
 	bible = ani_get_bible() or ''
 
 	if ANI_IMAGE_BACKEND == 'venice':
-		# Lustify (SDXL) — photoreal style wrap. No coverage guardrails: render her scene as-is,
-		# but keep named garments ON via a garment-aware negative (Lustify loves to drop them).
+		# Lustify (SDXL) is great at FULLY nude (low cfg = best skin) but drifts nude on partial
+		# clothing. So adapt: if a garment must stay on, lead with the outfit, push the missing
+		# state into the negative, and bump cfg to hold it; nude scenes stay low-cfg for quality.
 		extra_neg = _ani_garment_negative(clean_scene)
-		print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) — scene: {clean_scene!r} | keep-on: {extra_neg!r}")
-		prompt = (
-			f"RAW photo, photorealistic. {bible.strip()} {clean_scene}. "
-			"Shot on DSLR, 85mm, shallow depth of field, natural skin texture, sharp focus, high detail."
-		).strip()
-		return _ani_generate_venice(prompt, extra_neg)
+		if extra_neg:
+			prompt = (
+				f"RAW photo, photorealistic, full body shot. {clean_scene}, the named garments "
+				f"clearly worn and visible on her body. {bible.strip()} "
+				"Shot on DSLR, natural skin texture, sharp focus, high detail."
+			).strip()
+			cfg = VENICE_CFG_CLOTHED
+		else:
+			prompt = (
+				f"RAW photo, photorealistic. {bible.strip()} {clean_scene}. "
+				"Shot on DSLR, 85mm, shallow depth of field, natural skin texture, sharp focus, high detail."
+			).strip()
+			cfg = VENICE_CFG_SCALE
+		print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) cfg{cfg} — scene: {clean_scene!r} | keep-on: {extra_neg!r}")
+		return _ani_generate_venice(prompt, extra_neg, cfg)
 
 	# --- xAI grok-imagine (default) ---
 	api_key = os.environ.get('XAI_API_KEY')
