@@ -424,6 +424,12 @@ def ani_normalize_scene(history):
 			"foot of the bed or beside her, looking ALONG her body. When she is lying down, NEVER use an "
 			"overhead, top-down, bird's-eye, or 'looking straight down' angle — that foreshortening "
 			"distorts the body and breaks the render. Keep the camera roughly level with her, full-body.\n"
+			"- REAR / FROM-BEHIND poses (doggy, on all fours, bent over, facing away, ass toward him): the "
+			"camera is BEHIND her. LEAD with 'view from directly behind her, her bare back and buttocks "
+			"toward the camera, camera positioned behind and slightly above her'. Her head is down and her "
+			"face is HIDDEN or turned away — never 'looking back over her shoulder', never craned up toward "
+			"the lens. For these rear poses the behind-camera framing is the ONLY camera note — do NOT also "
+			"add a 'foot of the bed' or 'looking along her body' angle (that drags her face back into view).\n"
 			"- Do not describe her facial features or overall body type — those stay consistent "
 			"elsewhere. DO describe pose, limb position, and hand placement.\n"
 			"- Output ONLY the prompt line: no labels, no quotes, no preamble, no commentary.\n"
@@ -504,12 +510,29 @@ _ANI_PRONE_NEG = ('on her stomach, prone, lying face down, kneeling, on all four
 _ANI_OVERHEAD_NEG = ('overhead shot, top-down view, top-down angle, bird\'s eye view, aerial view, '
 	'high angle from above, looking straight down, drone shot, ceiling view, foreshortened body')
 
+# A deliberately rear-facing pose (all fours / doggy / from behind / bent over). For these we do the
+# OPPOSITE of the supine handling: push the render toward a true from-behind view by negating the
+# front (the model's default is to spin her around to face the camera — that's what broke doggy).
+_ANI_REAR_INTENT_RE = re.compile(
+	r'(?:all fours|doggy|rear view|facing away|bent over|over (?:her|the) shoulder|'
+	r'ass (?:toward|up|out)|butt (?:toward|up|out)|buttocks toward|'
+	r'from (?:directly |right )?behind|back (?:toward|to) the camera|view from behind)', re.IGNORECASE)
+_ANI_REAR_NEG = ('facing camera, front view, frontal nudity, breasts toward camera, looking at the camera, '
+	'face toward camera, face visible, head raised looking up, front-facing, turned toward viewer')
+
 def _ani_pose_negative(scene):
-	"""Scene-specific pose negatives: kill the prone/rear attractor for supine/spread scenes, and the
-	overhead/top-down angle for any lying scene (its foreshortening is what duplicates her)."""
+	"""Scene-specific pose negatives. Rear/from-behind scenes get FRONT-view negatives (push to a true
+	from-behind shot). Supine/spread scenes get the prone-attractor negative; lying scenes also get the
+	overhead negative (its foreshortening duplicates her)."""
 	sl = scene.lower()
+	if _ANI_REAR_INTENT_RE.search(scene):
+		return _ANI_REAR_NEG  # intended rear — negate the front so it doesn't spin her around
 	parts = []
-	if _ANI_LYING_RE.search(scene) or 'on her back' in sl or 'spread' in sl:
+	# narrowed 'spread' → 'legs/thighs spread' so a doggy "knees spread" no longer trips this
+	supine_spread = (_ANI_LYING_RE.search(scene) or 'on her back' in sl
+	                 or 'legs spread' in sl or 'spread wide' in sl or 'spread open' in sl
+	                 or 'thighs spread' in sl or 'spread legs' in sl)
+	if supine_spread:
 		parts.append(_ANI_PRONE_NEG)
 	if _ANI_LYING_RE.search(scene) or 'on her back' in sl:
 		parts.append(_ANI_OVERHEAD_NEG)
@@ -538,9 +561,15 @@ def _ani_bible_identity(bible):
 # Env-toggleable; fails OPEN (a flaky check never blocks a photo).
 ANI_IMAGE_QA = os.environ.get('ANI_IMAGE_QA', '1').strip().lower() not in ('0', 'false', 'no', 'off')
 ANI_IMAGE_QA_RETRIES = int(os.environ.get('ANI_IMAGE_QA_RETRIES', '2'))
-# Sonnet, not Haiku: Haiku 4.5 over-flags normal spread/foreshortened poses as defects (and misses
-# real duplicates); Sonnet 4.6 reliably tells a genuine two-body merge from a bold-but-valid pose.
-ANI_IMAGE_QA_MODEL = os.environ.get('ANI_IMAGE_QA_MODEL', 'claude-sonnet-4-6')
+# Rear scenes get a bigger budget: a true from-behind render lands only ~half the time per gen (strong
+# face-the-camera prior), so more re-rolls are needed to reliably reject the front-facing ones.
+ANI_IMAGE_QA_RETRIES_REAR = int(os.environ.get('ANI_IMAGE_QA_RETRIES_REAR', '4'))
+# QA runs on GROK (xAI), not Claude. Claude (Sonnet/Haiku) intermittently REFUSES to evaluate
+# explicit nudes ("cannot process explicit sexual content") — a refusal my loop reads as a defect,
+# wasting a re-roll. Grok is uncensored (never refuses), same key/provider as the normalizer, cheaper,
+# and matched/beat Sonnet's accuracy on the labeled set (8/8: passes valid spreads, catches the
+# real two-body merge). Vision via the xAI OpenAI-compatible endpoint.
+ANI_IMAGE_QA_MODEL = os.environ.get('ANI_IMAGE_QA_MODEL', 'grok-4.20-0309-non-reasoning')
 
 
 def _ani_venice_bytes(prompt, negative, cfg, width, height, steps):
@@ -569,39 +598,48 @@ def _ani_venice_bytes(prompt, negative, cfg, width, height, steps):
 		return None
 
 
-def _ani_image_qa(image_bytes):
-	"""Cheap vision gate. Returns (ok, reason). ok=False for >1 person, a duplicated/merged body or
-	head, extra/missing/fused limbs, or grossly broken anatomy. Nudity is NOT a defect. Fails OPEN
-	(ok=True) on any error so QA can never hard-block a photo."""
-	api_key = os.environ.get('ANTHROPIC_API_KEY')
+_ANI_QA_PROMPT = (
+	"AI-generated nude photo of one woman in an explicit pose. Reply with compact JSON: "
+	"{\"ok\": true|false, \"reason\": \"...\"}.\n"
+	"Set ok=FALSE only if you CLEARLY see a generation defect: more than one person, two separate "
+	"faces, a duplicated or merged second body, or extra / missing / fused limbs.\n"
+	"Set ok=TRUE for a single woman in any explicit pose. Do NOT infer a defect from the pose, the "
+	"camera angle, or the proportions alone — spread legs, raised/pulled-back knees, foreshortening, "
+	"and long limbs are all normal and fine. Judge a defect only from a clearly visible duplicate "
+	"body/face or a clearly broken limb. Nudity and explicit anatomy are never defects.")
+
+# Appended to the QA prompt only for rear-intent scenes: framing (rear vs front) is not a "defect", so
+# without this the loop happily accepts the front-facing render the model loves to default to.
+_ANI_QA_REAR_SUFFIX = (
+	"\nADDITIONAL CHECK — this photo MUST be a rear / from-behind view: her back and/or bare buttocks "
+	"toward the camera. If instead she is FACING the camera (the front of her body — breasts, belly — "
+	"and her face toward the lens), set ok=false with reason 'not-rear'. A profile or hidden face is "
+	"fine as long as her back/buttocks are to the camera.")
+
+def _ani_image_qa(image_bytes, require_rear=False):
+	"""Cheap vision gate via Grok (xAI, uncensored — Claude refuses explicit). Returns (ok, reason):
+	ok=False for >1 person, a duplicated/merged body or head, or extra/missing/fused limbs; nudity is
+	NOT a defect. With require_rear, also fails a front-facing render. Fails OPEN (ok=True) on any error
+	so QA can never hard-block a photo."""
+	api_key = os.environ.get('XAI_API_KEY')
 	if not api_key:
-		return True, 'no-anthropic-key'
+		return True, 'no-xai-key'
 	import base64, json as _json
 	b64 = base64.standard_b64encode(image_bytes).decode()
+	prompt = _ANI_QA_PROMPT + (_ANI_QA_REAR_SUFFIX if require_rear else '')
 	try:
 		resp = requests.post(
-			'https://api.anthropic.com/v1/messages',
-			headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01',
-			         'content-type': 'application/json'},
-			json={'model': ANI_IMAGE_QA_MODEL, 'max_tokens': 120,
+			'https://api.x.ai/v1/chat/completions',
+			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+			json={'model': ANI_IMAGE_QA_MODEL, 'max_tokens': 150,
 			      'messages': [{'role': 'user', 'content': [
-			          {'type': 'image', 'source': {'type': 'base64', 'media_type': 'image/jpeg', 'data': b64}},
-			          {'type': 'text', 'text': (
-			              "AI-generated nude photo of one woman in an explicit pose. Reply with compact "
-			              "JSON: {\"ok\": true|false, \"reason\": \"...\"}.\n"
-			              "Set ok=FALSE only if you CLEARLY see a generation defect: more than one "
-			              "person, two separate faces, a duplicated or merged second body, or extra / "
-			              "missing / fused limbs.\n"
-			              "Set ok=TRUE for a single woman in any explicit pose. Do NOT infer a defect "
-			              "from the pose, the camera angle, or the proportions alone — spread legs, "
-			              "raised/pulled-back knees, foreshortening, and long limbs are all normal and "
-			              "fine. Judge a defect only from a clearly visible duplicate body/face or a "
-			              "clearly broken limb. Nudity and explicit anatomy are never defects.")}]}]},
-			timeout=30)
+			          {'type': 'text', 'text': prompt},
+			          {'type': 'image_url', 'image_url': {'url': f'data:image/jpeg;base64,{b64}'}}]}]},
+			timeout=40)
 		if resp.status_code != 200:
 			print(f"Ani QA HTTP {resp.status_code}: {resp.text[:160]}")
 			return True, 'qa-http-error'
-		txt = resp.json()['content'][0]['text']
+		txt = resp.json()['choices'][0]['message']['content']
 		m = re.search(r'\{.*\}', txt, re.S)
 		data = _json.loads(m.group(0)) if m else {}
 		return bool(data.get('ok', True)), str(data.get('reason', ''))[:140]
@@ -610,11 +648,13 @@ def _ani_image_qa(image_bytes):
 		return True, 'qa-exception'
 
 
-def _ani_render_venice(prompt, negative, cfg, width, height, steps):
+def _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear=False):
 	"""Render via Venice with the vision-QA retry loop, then re-host the accepted image on Bunny.
 	Re-rolls QA failures up to ANI_IMAGE_QA_RETRIES (each Venice call is a fresh seed); after the
-	budget is spent it sends the last attempt rather than failing the photo. Returns CDN URL or None."""
-	attempts = (ANI_IMAGE_QA_RETRIES + 1) if ANI_IMAGE_QA else 1
+	budget is spent it sends the last attempt rather than failing the photo. require_rear also re-rolls
+	front-facing renders for rear-intent scenes (with a bigger retry budget). Returns CDN URL or None."""
+	retries = ANI_IMAGE_QA_RETRIES_REAR if require_rear else ANI_IMAGE_QA_RETRIES
+	attempts = (retries + 1) if ANI_IMAGE_QA else 1
 	img = None
 	for attempt in range(1, attempts + 1):
 		img = _ani_venice_bytes(prompt, negative, cfg, width, height, steps)
@@ -622,7 +662,7 @@ def _ani_render_venice(prompt, negative, cfg, width, height, steps):
 			return None  # HTTP/TOS failure — an identical retry won't help
 		if not ANI_IMAGE_QA:
 			break
-		ok, reason = _ani_image_qa(img)
+		ok, reason = _ani_image_qa(img, require_rear)
 		print(f"Ani QA {attempt}/{attempts}: ok={ok} reason={reason!r}")
 		if ok:
 			break
@@ -637,6 +677,14 @@ def ani_generate_image(scene):
 	on Bunny. Routes to the configured backend: 'venice' (uncensored, faithful) or 'xai'
 	(grok-imagine, output-moderated → covered-chest top-guard). Returns a CDN URL or None."""
 	clean_scene = re.sub(r'\s{2,}', ' ', scene).strip(' ,;.')
+	# Rear scenes lead with a 'camera behind her' note, but the normalizer reliably ALSO tacks on a
+	# 'foot of the bed / looking along her body' clause (it won't stop, however the rule is worded) and
+	# the model blends them, dragging her face back to the lens. Strip that conflicting camera clause in
+	# code so the behind-camera framing stands alone — the deterministic fix the prompt rule couldn't be.
+	if _ANI_REAR_INTENT_RE.search(clean_scene):
+		clean_scene = re.sub(r',[^,]*\b(?:foot of the bed|along her body|looking along)\b[^,]*', '',
+		                     clean_scene, flags=re.IGNORECASE)
+		clean_scene = re.sub(r'\s{2,}', ' ', clean_scene).strip(' ,;.')
 	bible = ani_get_bible() or ''
 
 	if ANI_IMAGE_BACKEND == 'venice':
@@ -649,6 +697,7 @@ def ani_generate_image(scene):
 		extra_neg = _ani_garment_negative(clean_scene)
 		complex_pose = bool(_ANI_POSE_RE.search(clean_scene))
 		pose_neg = _ani_pose_negative(clean_scene)
+		require_rear = bool(_ANI_REAR_INTENT_RE.search(clean_scene))
 		# Base realism + always-on dup/anatomy guards + scene-specific garment/pose negatives.
 		negative = ', '.join(p for p in (
 			VENICE_NEGATIVE_PROMPT, VENICE_DUP_NEGATIVE, VENICE_ANATOMY_NEGATIVE, extra_neg, pose_neg) if p)
@@ -669,8 +718,8 @@ def ani_generate_image(scene):
 			).strip()
 			cfg = VENICE_CFG_POSE if complex_pose else VENICE_CFG_SCALE
 		print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) cfg{cfg} {width}x{height} steps{steps} "
-		      f"pose={complex_pose} qa={ANI_IMAGE_QA} — scene: {clean_scene!r}")
-		return _ani_render_venice(prompt, negative, cfg, width, height, steps)
+		      f"pose={complex_pose} rear={require_rear} qa={ANI_IMAGE_QA} — scene: {clean_scene!r}")
+		return _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear)
 
 	# --- xAI grok-imagine (default) ---
 	api_key = os.environ.get('XAI_API_KEY')
