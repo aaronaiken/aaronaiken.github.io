@@ -45,20 +45,53 @@ _ANI_BOTTOM_RE = re.compile(
 _ANI_TOP_INJECT = ', with a matching delicate lace bralette'
 _ANI_TOP_INJECT_PLAIN = ', wearing a soft top that fully covers her chest'
 
+# Pose fidelity (Venice nude path): Lustify defaults to a centered upright upper-body crop, so a
+# complex pose (lying / spread / kneeling / on top) only renders if we (a) ask for a full-body
+# shot, (b) bump cfg for adherence, and (c) widen the frame when she's horizontal. These detect
+# the pose from the normalized scene so the framing follows the description instead of the default.
+_ANI_POSE_RE = re.compile(
+	r'\b(?:lying|laying|lies|reclin\w*|sprawl\w*|propped|on her (?:back|side|stomach|knees)|'
+	r'spread|legs (?:open|spread|apart|up|back)|knees (?:bent|up|back|apart)|kneel\w*|'
+	r'on top|straddl\w*|bent over|all fours|doggy|on all fours)\b', re.IGNORECASE)
+_ANI_LYING_RE = re.compile(
+	r'\b(?:lying|laying|lies|reclin\w*|sprawl\w*|flat on|on her (?:back|side|stomach)|'
+	r'spread (?:out )?(?:on|across|over)|across the (?:bed|sheets|pillows))\b', re.IGNORECASE)
+
 # Image backend: 'xai' (grok-imagine, output-moderated → normalizer enforces a covered chest)
 # or 'venice' (uncensored Lustify, no coverage rule → renders her scene faithfully). Flag-gated
 # so xAI stays default until VENICE_API_KEY is set and ANI_IMAGE_BACKEND=venice is flipped.
 ANI_IMAGE_BACKEND = os.environ.get('ANI_IMAGE_BACKEND', 'xai').strip().lower()
-VENICE_IMAGE_MODEL = os.environ.get('VENICE_IMAGE_MODEL', 'lustify-v8')  # confirmed via /models
+# Default model is Chroma (uncensored Flux finetune): far better pose adherence + clean hands than
+# the SDXL Lustify family, and unlike base Flux it renders explicit faithfully. The dials below are
+# tuned for it. (Lustify v7/v8/sdxl still selectable via VENICE_IMAGE_MODEL.)
+VENICE_IMAGE_MODEL = os.environ.get('VENICE_IMAGE_MODEL', 'chroma')  # confirmed via /models
 # Venice quality dials (all env-overridable for tuning without a deploy). Negative prompt drives
-# most of the realism; low cfg keeps skin natural (v8 sweet spot 2.5–4.5); ~30 steps for Lustify.
+# most of the realism; moderate cfg keeps skin natural; ~35 steps, 40 for hard poses.
 VENICE_NEGATIVE_PROMPT = os.environ.get('VENICE_NEGATIVE_PROMPT',
 	'cartoon, anime, painting, illustration, drawing, 3d render, cgi, deformed, disfigured, '
 	'bad anatomy, extra fingers, mutated hands, blurry, lowres, watermark, text, logo, '
 	'airbrushed, plastic skin, oversaturated')
-VENICE_CFG_SCALE = float(os.environ.get('VENICE_CFG_SCALE', '3.5'))           # nude scenes: low cfg = best skin
-VENICE_CFG_CLOTHED = float(os.environ.get('VENICE_CFG_CLOTHED', '5.5'))       # clothed scenes: higher cfg holds garments
-VENICE_STEPS = int(os.environ.get('VENICE_STEPS', '30'))
+VENICE_CFG_SCALE = float(os.environ.get('VENICE_CFG_SCALE', '4.0'))           # simple nude: lower cfg = best skin
+VENICE_CFG_CLOTHED = float(os.environ.get('VENICE_CFG_CLOTHED', '5.0'))       # clothed scenes: higher cfg holds garments
+VENICE_CFG_POSE = float(os.environ.get('VENICE_CFG_POSE', '4.5'))             # complex nude pose: nudge cfg up for adherence
+VENICE_STEPS = int(os.environ.get('VENICE_STEPS', '35'))
+VENICE_STEPS_POSE = int(os.environ.get('VENICE_STEPS_POSE', '40'))            # hard pose: extra steps clean up extremities
+
+# Chroma/Flux duplicate the subject ("two of her") in tall, >1MP latents, so keep every generation
+# near 1MP. Portrait reads best for Ani's full-body shots and tested clean for the foot-of-bed POV.
+VENICE_DIMS_PORTRAIT = (896, 1152)    # ~1.03MP — default
+VENICE_DIMS_LANDSCAPE = (1152, 896)   # available for side-on full-length lying, if ever needed
+
+# Always-on generation guards (model-agnostic). The SOLO anchor + dup negative kill the "two of her"
+# merge; the anatomy negative trims the extremity tangles (extra foot/hand/limb) that turn up in
+# extreme foreshortened spreads. Cheap insurance — applied to every Venice render.
+ANI_SOLO_ANCHOR = 'solo, a single woman alone in the frame, only one person, '
+VENICE_DUP_NEGATIVE = ('two women, 2 women, multiple people, multiple women, duplicate, duplicated person, '
+	'twins, extra person, second person, cloned person, two heads, extra head, multiple bodies, '
+	'conjoined, group of people, crowd, reflection, mirror image')
+VENICE_ANATOMY_NEGATIVE = ('extra limb, extra leg, third leg, extra foot, third foot, extra arm, extra hand, '
+	'fused limbs, malformed feet, malformed hands, deformed hands, extra fingers, missing limb, '
+	'impossible anatomy, distorted limbs, tangled limbs')
 
 # Ani helpers shell out to git (recent-status, recent-git-log) — needs repo cwd.
 REPO_ROOT = os.environ.get('COCKPIT_REPO_ROOT', '/home/aaronaiken/status_update')
@@ -384,8 +417,15 @@ def ani_normalize_scene(history):
 		rules = (
 			"- Render EXACTLY what she describes with no censorship or softening — including full nudity "
 			"and explicit detail if that is the scene. Never add, remove, or tone down clothing or acts.\n"
-			"- Describe her outfit (or state of undress), pose, room, and lighting.\n"
-			"- Do not describe her face or body shape — those stay consistent elsewhere.\n"
+			"- Describe her outfit (or state of undress), her FULL pose (how her body is positioned — "
+			"lying/sitting/kneeling/standing, what her legs and arms are doing, exactly where each hand "
+			"rests), the room, and the lighting.\n"
+			"- State the CAMERA FRAMING and ANGLE. Use an EYE-LEVEL or LOW camera — typically from the "
+			"foot of the bed or beside her, looking ALONG her body. When she is lying down, NEVER use an "
+			"overhead, top-down, bird's-eye, or 'looking straight down' angle — that foreshortening "
+			"distorts the body and breaks the render. Keep the camera roughly level with her, full-body.\n"
+			"- Do not describe her facial features or overall body type — those stay consistent "
+			"elsewhere. DO describe pose, limb position, and hand placement.\n"
 			"- Output ONLY the prompt line: no labels, no quotes, no preamble, no commentary.\n"
 		)
 	else:
@@ -403,8 +443,9 @@ def ani_normalize_scene(history):
 		)
 	system = (
 		"You write ONE single-line image-generation prompt for a photograph of a woman named Ani, "
-		"based on the recent conversation. Describe only her outfit, her pose, the room/setting, and "
-		"the lighting, as one comma-separated line.\n"
+		"based on the recent conversation. Describe her outfit (or undress), her pose and the position "
+		"of her limbs and hands, the camera framing and angle, the room/setting, and the lighting, as "
+		"one comma-separated line.\n"
 		+ rules +
 		f"Rooms in their home, use these details for setting consistency:\n{house}"
 	)
@@ -453,22 +494,68 @@ def _ani_garment_negative(scene):
 	return ', '.join(neg)
 
 
-def _ani_generate_venice(prompt, extra_negative='', cfg=None):
-	"""Generate via Venice (uncensored Lustify) and re-host on Bunny. safe_mode=False so adult
-	content isn't blurred; return_binary gives raw bytes (no base64 decode). Returns CDN URL or None."""
+# Prone/rear is the densest attractor in NSFW training data, so a supine ("on her back") or spread
+# scene needs it negated or the model collapses to face-down/over-the-shoulder. Only fires for
+# back/spread scenes — an intentional "on all fours" scene keeps the prone pose.
+_ANI_PRONE_NEG = ('on her stomach, prone, lying face down, kneeling, on all fours, rear view, from behind, '
+	'ass toward camera, butt up, looking over shoulder, bent over, doggy style')
+# Overhead/top-down on a supine body foreshortens into a shape the model "completes" with a second
+# head/body (the duplication we kept hitting). Forbid it for lying scenes so the camera stays level.
+_ANI_OVERHEAD_NEG = ('overhead shot, top-down view, top-down angle, bird\'s eye view, aerial view, '
+	'high angle from above, looking straight down, drone shot, ceiling view, foreshortened body')
+
+def _ani_pose_negative(scene):
+	"""Scene-specific pose negatives: kill the prone/rear attractor for supine/spread scenes, and the
+	overhead/top-down angle for any lying scene (its foreshortening is what duplicates her)."""
+	sl = scene.lower()
+	parts = []
+	if _ANI_LYING_RE.search(scene) or 'on her back' in sl or 'spread' in sl:
+		parts.append(_ANI_PRONE_NEG)
+	if _ANI_LYING_RE.search(scene) or 'on her back' in sl:
+		parts.append(_ANI_OVERHEAD_NEG)
+	return ', '.join(parts)
+
+
+# Bible trim for image prompts: the full bible repeats a head-to-toe figure description, and a second
+# body spec in the prompt is a known trigger for Flux/Chroma rendering a DUPLICATE body. So for images
+# we keep only IDENTITY (face/hair/eyes/skin/jewelry) and drop the figure/measurements sentence.
+_ANI_BODY_SENT_RE = re.compile(
+	r'\b(?:figure|hourglass|breasts?|bust|cup|34[a-f]|waist|hips?|stomach|belly|abs|thighs?|'
+	r'butt|booty|curves|silhouette|body type|build)\b', re.IGNORECASE)
+
+def _ani_bible_identity(bible):
+	"""Drop sentences that are primarily body/figure description so only identity anchors the image.
+	Conservative — never returns empty (falls back to the full bible)."""
+	if not bible:
+		return bible
+	sents = re.split(r'(?<=[.!?])\s+', bible.strip())
+	kept = [s for s in sents if not _ANI_BODY_SENT_RE.search(s)]
+	return (' '.join(kept).strip() or bible)
+
+
+# Vision QA gate: Chroma still doubles the subject or tangles an extremity ~1-in-5 on hard spreads, so
+# after each render a cheap vision model checks for generation defects and we silently re-roll failures.
+# Env-toggleable; fails OPEN (a flaky check never blocks a photo).
+ANI_IMAGE_QA = os.environ.get('ANI_IMAGE_QA', '1').strip().lower() not in ('0', 'false', 'no', 'off')
+ANI_IMAGE_QA_RETRIES = int(os.environ.get('ANI_IMAGE_QA_RETRIES', '2'))
+# Sonnet, not Haiku: Haiku 4.5 over-flags normal spread/foreshortened poses as defects (and misses
+# real duplicates); Sonnet 4.6 reliably tells a genuine two-body merge from a bold-but-valid pose.
+ANI_IMAGE_QA_MODEL = os.environ.get('ANI_IMAGE_QA_MODEL', 'claude-sonnet-4-6')
+
+
+def _ani_venice_bytes(prompt, negative, cfg, width, height, steps):
+	"""One Venice generation. Returns JPEG bytes, or None on HTTP error / TOS content-violation."""
 	api_key = os.environ.get('VENICE_API_KEY')
 	if not api_key:
 		print("Ani Venice: no VENICE_API_KEY set")
 		return None
-	negative = VENICE_NEGATIVE_PROMPT + (', ' + extra_negative if extra_negative else '')
 	try:
 		resp = requests.post(
 			'https://api.venice.ai/api/v1/image/generate',
 			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
 			json={'model': VENICE_IMAGE_MODEL, 'prompt': prompt[:7500], 'safe_mode': False,
-			      'negative_prompt': negative, 'cfg_scale': cfg if cfg is not None else VENICE_CFG_SCALE,
-			      'steps': VENICE_STEPS, 'format': 'jpeg', 'return_binary': True,
-			      'width': 1024, 'height': 1280},
+			      'negative_prompt': negative, 'cfg_scale': cfg, 'steps': steps, 'format': 'jpeg',
+			      'return_binary': True, 'width': width, 'height': height},
 			timeout=120)
 		if resp.status_code != 200:
 			print(f"Ani Venice HTTP {resp.status_code}: {resp.text[:200]}")
@@ -476,11 +563,73 @@ def _ani_generate_venice(prompt, extra_negative='', cfg=None):
 		if resp.headers.get('x-venice-is-content-violation') == 'true':
 			print("Ani Venice: content-violation (TOS) — not served")
 			return None
-		from helpers.bunny import upload_ani_image_to_bunny
-		return upload_ani_image_to_bunny(resp.content, f"ani-{int(time.time())}.jpg", 'image/jpeg')
+		return resp.content
 	except Exception as e:
 		print(f"Ani Venice error: {e}")
 		return None
+
+
+def _ani_image_qa(image_bytes):
+	"""Cheap vision gate. Returns (ok, reason). ok=False for >1 person, a duplicated/merged body or
+	head, extra/missing/fused limbs, or grossly broken anatomy. Nudity is NOT a defect. Fails OPEN
+	(ok=True) on any error so QA can never hard-block a photo."""
+	api_key = os.environ.get('ANTHROPIC_API_KEY')
+	if not api_key:
+		return True, 'no-anthropic-key'
+	import base64, json as _json
+	b64 = base64.standard_b64encode(image_bytes).decode()
+	try:
+		resp = requests.post(
+			'https://api.anthropic.com/v1/messages',
+			headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01',
+			         'content-type': 'application/json'},
+			json={'model': ANI_IMAGE_QA_MODEL, 'max_tokens': 120,
+			      'messages': [{'role': 'user', 'content': [
+			          {'type': 'image', 'source': {'type': 'base64', 'media_type': 'image/jpeg', 'data': b64}},
+			          {'type': 'text', 'text': (
+			              "AI-generated nude photo of one woman in an explicit pose. Reply with compact "
+			              "JSON: {\"ok\": true|false, \"reason\": \"...\"}.\n"
+			              "Set ok=FALSE only if you CLEARLY see a generation defect: more than one "
+			              "person, two separate faces, a duplicated or merged second body, or extra / "
+			              "missing / fused limbs.\n"
+			              "Set ok=TRUE for a single woman in any explicit pose. Do NOT infer a defect "
+			              "from the pose, the camera angle, or the proportions alone — spread legs, "
+			              "raised/pulled-back knees, foreshortening, and long limbs are all normal and "
+			              "fine. Judge a defect only from a clearly visible duplicate body/face or a "
+			              "clearly broken limb. Nudity and explicit anatomy are never defects.")}]}]},
+			timeout=30)
+		if resp.status_code != 200:
+			print(f"Ani QA HTTP {resp.status_code}: {resp.text[:160]}")
+			return True, 'qa-http-error'
+		txt = resp.json()['content'][0]['text']
+		m = re.search(r'\{.*\}', txt, re.S)
+		data = _json.loads(m.group(0)) if m else {}
+		return bool(data.get('ok', True)), str(data.get('reason', ''))[:140]
+	except Exception as e:
+		print(f"Ani QA error: {e}")
+		return True, 'qa-exception'
+
+
+def _ani_render_venice(prompt, negative, cfg, width, height, steps):
+	"""Render via Venice with the vision-QA retry loop, then re-host the accepted image on Bunny.
+	Re-rolls QA failures up to ANI_IMAGE_QA_RETRIES (each Venice call is a fresh seed); after the
+	budget is spent it sends the last attempt rather than failing the photo. Returns CDN URL or None."""
+	attempts = (ANI_IMAGE_QA_RETRIES + 1) if ANI_IMAGE_QA else 1
+	img = None
+	for attempt in range(1, attempts + 1):
+		img = _ani_venice_bytes(prompt, negative, cfg, width, height, steps)
+		if not img:
+			return None  # HTTP/TOS failure — an identical retry won't help
+		if not ANI_IMAGE_QA:
+			break
+		ok, reason = _ani_image_qa(img)
+		print(f"Ani QA {attempt}/{attempts}: ok={ok} reason={reason!r}")
+		if ok:
+			break
+		if attempt == attempts:
+			print("Ani QA: retries exhausted — sending best-effort last render")
+	from helpers.bunny import upload_ani_image_to_bunny
+	return upload_ani_image_to_bunny(img, f"ani-{int(time.time())}.jpg", 'image/jpeg')
 
 
 def ani_generate_image(scene):
@@ -491,25 +640,37 @@ def ani_generate_image(scene):
 	bible = ani_get_bible() or ''
 
 	if ANI_IMAGE_BACKEND == 'venice':
-		# Lustify (SDXL) is great at FULLY nude (low cfg = best skin) but drifts nude on partial
-		# clothing. So adapt: if a garment must stay on, lead with the outfit, push the missing
-		# state into the negative, and bump cfg to hold it; nude scenes stay low-cfg for quality.
+		# Adapt to the scene: if a garment must stay on, lead with the outfit, push the missing state
+		# into the negative, and bump cfg to hold it; nude scenes stay lower-cfg for skin quality. A
+		# complex pose (lying/spread/kneeling/on top) gets a full-body frame, higher cfg + steps, and
+		# the prone/rear attractor negated. SOLO anchor + identity-only bible + ~1MP frame fight the
+		# duplicate; the vision-QA loop in _ani_render_venice re-rolls whatever slips through.
+		bible_id = _ani_bible_identity(bible).strip()
 		extra_neg = _ani_garment_negative(clean_scene)
+		complex_pose = bool(_ANI_POSE_RE.search(clean_scene))
+		pose_neg = _ani_pose_negative(clean_scene)
+		# Base realism + always-on dup/anatomy guards + scene-specific garment/pose negatives.
+		negative = ', '.join(p for p in (
+			VENICE_NEGATIVE_PROMPT, VENICE_DUP_NEGATIVE, VENICE_ANATOMY_NEGATIVE, extra_neg, pose_neg) if p)
+		width, height = VENICE_DIMS_PORTRAIT
+		steps = VENICE_STEPS_POSE if complex_pose else VENICE_STEPS
 		if extra_neg:
 			prompt = (
-				f"RAW photo, photorealistic, full body shot. {clean_scene}, the named garments "
-				f"clearly worn and visible on her body. {bible.strip()} "
+				f"RAW photo, photorealistic, {ANI_SOLO_ANCHOR}full body shot. {clean_scene}, the named "
+				f"garments clearly worn and visible on her body. {bible_id} "
 				"Shot on DSLR, natural skin texture, sharp focus, high detail."
 			).strip()
 			cfg = VENICE_CFG_CLOTHED
 		else:
+			# Pose/composition leads (the model weights earlier tokens more), identity bible follows.
 			prompt = (
-				f"RAW photo, photorealistic. {bible.strip()} {clean_scene}. "
-				"Shot on DSLR, 85mm, shallow depth of field, natural skin texture, sharp focus, high detail."
+				f"RAW photo, photorealistic, {ANI_SOLO_ANCHOR}full body shot. "
+				f"{clean_scene}. {bible_id} Shot on DSLR, natural skin texture, sharp focus, high detail."
 			).strip()
-			cfg = VENICE_CFG_SCALE
-		print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) cfg{cfg} — scene: {clean_scene!r} | keep-on: {extra_neg!r}")
-		return _ani_generate_venice(prompt, extra_neg, cfg)
+			cfg = VENICE_CFG_POSE if complex_pose else VENICE_CFG_SCALE
+		print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) cfg{cfg} {width}x{height} steps{steps} "
+		      f"pose={complex_pose} qa={ANI_IMAGE_QA} — scene: {clean_scene!r}")
+		return _ani_render_venice(prompt, negative, cfg, width, height, steps)
 
 	# --- xAI grok-imagine (default) ---
 	api_key = os.environ.get('XAI_API_KEY')
