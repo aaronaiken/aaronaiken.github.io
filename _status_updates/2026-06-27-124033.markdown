@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-06-27 12:40:33 -0400
+layout: status_update
+author: aaron
+source: web
+---
+My view for a bit. 
+
+![Laptop with audio editing software open showing school bell sound effects, surrounded by water bottles, sheet music, and a handwritten note on a stage in the background.](https://cargo.aaronaiken.me/status/20260627124033.jpg)
