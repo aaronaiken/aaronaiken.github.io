@@ -322,12 +322,26 @@
 	  if (e.rear) tags.push('rear');
 	  var sc = e.scene || '';
 	  var sceneTxt = aniEscapeHtml(sc.slice(0, 90)) + (sc.length > 90 ? '…' : '');
-	  var link = e.url ? ' · <a href="' + aniEscapeHtml(e.url) + '" target="_blank" rel="noopener">img</a>' : '';
-	  return '<div class="plog-entry">'
+	  // expandable detail: full scene + every QA attempt with its reason + meta + image link
+	  var tries = qa.length
+		? qa.map(function(a, i) {
+			return '<div class="plog-try"><span class="' + (a.ok ? 'plog-ok' : 'plog-fail') + '">'
+			  + (a.ok ? '✓' : '✗') + ' try ' + (i + 1) + '</span> '
+			  + aniEscapeHtml(a.reason || (a.ok ? 'ok' : 'rejected')) + '</div>';
+		  }).join('')
+		: '<div class="plog-try">no QA run</div>';
+	  var meta = 'cfg ' + (e.cfg != null ? e.cfg : '?') + ' · ' + (e.dims || '?');
+	  var link = e.url ? '<a href="' + aniEscapeHtml(e.url) + '" target="_blank" rel="noopener">open image ↗</a>' : '';
+	  return '<div class="plog-entry" onclick="this.classList.toggle(\'open\')" title="tap for detail">'
 		+ '<div class="plog-row1"><span class="plog-ts">' + aniEscapeHtml(e.ts || '') + '</span>' + badge
 		  + '<span class="plog-tags">' + aniEscapeHtml(tags.join(' · ')) + '</span></div>'
-		+ '<div class="plog-scene">' + sceneTxt + link + '</div>'
+		+ '<div class="plog-scene">' + sceneTxt + '</div>'
 		+ '<div class="plog-qa">QA ' + ticks + ' <span class="plog-reason">' + aniEscapeHtml(reason) + '</span></div>'
+		+ '<div class="plog-detail">'
+		  + '<div class="plog-full">' + aniEscapeHtml(sc) + '</div>'
+		  + '<div class="plog-tries">' + tries + '</div>'
+		  + '<div class="plog-meta">' + aniEscapeHtml(meta) + (link ? ' · ' + link : '') + '</div>'
+		+ '</div>'
 		+ '</div>';
 	}).join('');
   }

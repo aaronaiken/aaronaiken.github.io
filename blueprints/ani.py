@@ -61,6 +61,9 @@ _ANI_LYING_RE = re.compile(
 # or 'venice' (uncensored Lustify, no coverage rule → renders her scene faithfully). Flag-gated
 # so xAI stays default until VENICE_API_KEY is set and ANI_IMAGE_BACKEND=venice is flipped.
 ANI_IMAGE_BACKEND = os.environ.get('ANI_IMAGE_BACKEND', 'xai').strip().lower()
+# Scene normalizer (chat → image prompt). grok-4.3 follows the "render ONLY her latest scene"
+# instruction more reliably than the older non-reasoning model (which let a prior photo's scene leak).
+ANI_NORMALIZE_MODEL = os.environ.get('ANI_NORMALIZE_MODEL', 'grok-4.3')
 # Default model is Chroma (uncensored Flux finetune): far better pose adherence + clean hands than
 # the SDXL Lustify family, and unlike base Flux it renders explicit faithfully. The dials below are
 # tuned for it. (Lustify v7/v8/sdxl still selectable via VENICE_IMAGE_MODEL.)
@@ -91,7 +94,11 @@ VENICE_DUP_NEGATIVE = ('two women, 2 women, multiple people, multiple women, dup
 	'conjoined, group of people, crowd, reflection, mirror image')
 VENICE_ANATOMY_NEGATIVE = ('extra limb, extra leg, third leg, extra foot, third foot, extra arm, extra hand, '
 	'fused limbs, malformed feet, malformed hands, deformed hands, extra fingers, missing limb, '
-	'impossible anatomy, distorted limbs, tangled limbs')
+	'impossible anatomy, distorted limbs, tangled limbs, '
+	# foreshortened-extremity + extreme-pose artifacts (legs-up / deep-arch poses)
+	'inverted feet, backwards feet, twisted ankles, rotated foot, deformed toes, disjointed ankle, '
+	'impossibly bent back, contorted spine, broken back, unnatural spine bend, dislocated joints, '
+	'bent backwards, body bent the wrong way')
 
 # Ani helpers shell out to git (recent-status, recent-git-log) — needs repo cwd.
 REPO_ROOT = os.environ.get('COCKPIT_REPO_ROOT', '/home/aaronaiken/status_update')
@@ -411,7 +418,18 @@ def ani_normalize_scene(history):
 	real = [m for m in history
 	        if not (m.get('content', '').startswith('[daily briefing')
 	                or m.get('content', '').startswith('[system:'))]
-	convo = '\n'.join(f"{m['role']}: {m.get('content', '')}" for m in real[-8:])
+	# Anchor on the MOST RECENT scene Ani described — NOT a blend of the last 8 (which let a prior
+	# photo's pose/outfit/location leak forward and override the new request). Skip the '📷' image
+	# markers; the latest assistant text IS her current look. Fall back to convo if none found.
+	latest_scene = ''
+	for m in reversed(real):
+		c = (m.get('content', '') or '').strip()
+		if m.get('role') == 'assistant' and c and c != '📷' and not m.get('image'):
+			latest_scene = c
+			break
+	# light background context (drop the 📷 markers), most recent last
+	ctx = [m for m in real[-8:] if (m.get('content', '') or '').strip() not in ('', '📷')]
+	convo = '\n'.join(f"{m['role']}: {m.get('content', '')}" for m in ctx)
 	if ANI_IMAGE_BACKEND == 'venice':
 		# Uncensored backend — zero coverage guardrails, fully faithful passthrough.
 		rules = (
@@ -430,6 +448,11 @@ def ani_normalize_scene(history):
 			"face is HIDDEN or turned away — never 'looking back over her shoulder', never craned up toward "
 			"the lens. For these rear poses the behind-camera framing is the ONLY camera note — do NOT also "
 			"add a 'foot of the bed' or 'looking along her body' angle (that drags her face back into view).\n"
+			"- LEGS-UP poses (on her back with legs raised/in the air): do NOT write 'legs straight up' or "
+			"'feet toward the ceiling' with the head far away — that foreshortens her head and the render "
+			"sprouts a second inverted face. Instead frame it as 'lying on her back with her knees drawn "
+			"back toward her chest, her head and face clearly in frame in the foreground', camera at "
+			"eye level from the foot of the bed. Keep her head close, large, and clearly the only face.\n"
 			"- Do not describe her facial features or overall body type — those stay consistent "
 			"elsewhere. DO describe pose, limb position, and hand placement.\n"
 			"- Output ONLY the prompt line: no labels, no quotes, no preamble, no commentary.\n"
@@ -448,28 +471,38 @@ def ani_normalize_scene(history):
 			"- Output ONLY the prompt line: no labels, no quotes, no preamble, no commentary.\n"
 		)
 	system = (
-		"You write ONE single-line image-generation prompt for a photograph of a woman named Ani, "
-		"based on the recent conversation. Describe her outfit (or undress), her pose and the position "
-		"of her limbs and hands, the camera framing and angle, the room/setting, and the lighting, as "
-		"one comma-separated line.\n"
+		"You write ONE single-line image-generation prompt for a photograph of a woman named Ani. "
+		"You are given THE SCENE TO RENDER — her single most recent described look. Render ONLY that "
+		"scene. The rest of the conversation is background; NEVER carry forward an earlier outfit, "
+		"pose, location, or state of undress from a previous message or photo — only the latest scene "
+		"counts. Describe her outfit (or undress), her pose and the position of her limbs and hands, "
+		"the camera framing and angle, the room/setting, and the lighting, as one comma-separated line.\n"
 		+ rules +
 		f"Rooms in their home, use these details for setting consistency:\n{house}"
 	)
+	user_msg = (
+		f"Conversation so far (most recent last), for light background only:\n{convo}\n\n"
+		"=== THE SCENE TO RENDER (this and ONLY this) ===\n"
+		f"{latest_scene or '(use the single most recent scene in the conversation above)'}\n\n"
+		"Write the one image-prompt line for THE SCENE TO RENDER above. Match its outfit/undress, pose, "
+		"and location exactly. Ignore any earlier scene or photo."
+	)
 	payload = {
-		'model': 'grok-4.20-0309-non-reasoning',
-		'max_tokens': 200,
-		'system': system,
-		'messages': [{'role': 'user', 'content':
-			f"Recent conversation:\n{convo}\n\nWrite the image prompt for the photo Ani is sending Aaron right now."}],
+		'model': ANI_NORMALIZE_MODEL,
+		'max_tokens': 220,
+		'messages': [
+			{'role': 'system', 'content': system},
+			{'role': 'user', 'content': user_msg},
+		],
 	}
 	try:
+		# xAI OpenAI-compatible endpoint (grok-4.3 isn't served on the anthropic-style /v1/messages).
 		resp = requests.post(
-			'https://api.x.ai/v1/messages', json=payload,
-			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json',
-			         'anthropic-version': '2023-06-01'},
+			'https://api.x.ai/v1/chat/completions', json=payload,
+			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
 			timeout=30)
 		resp.raise_for_status()
-		line = resp.json()['content'][0]['text']
+		line = resp.json()['choices'][0]['message']['content']
 		line = re.sub(r'\s+', ' ', line).strip().strip('"\'').strip()
 		print(f"Ani PHOTO — normalized prompt: {line!r}")
 		return line or None
@@ -569,7 +602,7 @@ ANI_IMAGE_QA_RETRIES_REAR = int(os.environ.get('ANI_IMAGE_QA_RETRIES_REAR', '4')
 # wasting a re-roll. Grok is uncensored (never refuses), same key/provider as the normalizer, cheaper,
 # and matched/beat Sonnet's accuracy on the labeled set (8/8: passes valid spreads, catches the
 # real two-body merge). Vision via the xAI OpenAI-compatible endpoint.
-ANI_IMAGE_QA_MODEL = os.environ.get('ANI_IMAGE_QA_MODEL', 'grok-4.20-0309-non-reasoning')
+ANI_IMAGE_QA_MODEL = os.environ.get('ANI_IMAGE_QA_MODEL', 'grok-4.3')
 
 
 def _ani_venice_bytes(prompt, negative, cfg, width, height, steps):
@@ -661,7 +694,7 @@ def ani_log_photo_event(scene, cfg, width, height, pose, rear, clothed, qa, outc
 			'ts': datetime.now(pytz.timezone('America/New_York')).strftime('%m/%d %H:%M'),
 			'model': VENICE_IMAGE_MODEL, 'cfg': cfg, 'dims': f'{width}x{height}',
 			'pose': bool(pose), 'rear': bool(rear), 'clothed': bool(clothed),
-			'qa': qa, 'outcome': outcome, 'scene': (scene or '')[:200], 'url': url,
+			'qa': qa, 'outcome': outcome, 'scene': (scene or '')[:500], 'url': url,
 		}
 		try:
 			with open(ANI_PHOTO_LOG_FILE) as f:

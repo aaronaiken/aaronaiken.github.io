@@ -736,6 +736,14 @@ body.ani-fullscreen #ani-ache-display.ache-urgent { color: #a8d4ff; }
 .plog-scene a { color: #9a6018; }
 .plog-qa { margin-top: 2px; color: #8a6428; letter-spacing: 0.12em; }
 .plog-reason { color: #6a4818; letter-spacing: 0; }
+.plog-entry { cursor: pointer; }
+.plog-entry:hover { background: rgba(212, 136, 10, 0.04); }
+.plog-detail { display: none; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #2e1e08; }
+.plog-entry.open .plog-detail { display: block; }
+.plog-full { color: #c89040; word-break: break-word; margin-bottom: 5px; }
+.plog-try { color: #8a6428; word-break: break-word; line-height: 1.5; }
+.plog-meta { margin-top: 5px; color: #6a4818; font-size: 10px; }
+.plog-meta a { color: #d4880a; }
 
 /* fullscreen "outer space" palette */
 body.ani-fullscreen .ani-photolog-overlay { background: rgba(12, 18, 38, 0.94); }
@@ -747,6 +755,12 @@ body.ani-fullscreen .plog-entry { color: #7e8fc8; border-color: #1a2240; }
 body.ani-fullscreen .plog-scene { color: #a8b8e8; }
 body.ani-fullscreen .plog-reason,
 body.ani-fullscreen .plog-tags { color: #5a6fa0; }
+body.ani-fullscreen .plog-entry:hover { background: rgba(120, 150, 230, 0.05); }
+body.ani-fullscreen .plog-detail { border-top-color: #2a3360; }
+body.ani-fullscreen .plog-full { color: #a8b8e8; }
+body.ani-fullscreen .plog-try { color: #7e8fc8; }
+body.ani-fullscreen .plog-meta { color: #5a6fa0; }
+body.ani-fullscreen .plog-meta a { color: #a8d4ff; }
 
 /* Mobile: chat fills viewport, no LOOPS, no ad-panel */
 @media (max-width: 700px) {
