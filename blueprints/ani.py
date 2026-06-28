@@ -599,14 +599,16 @@ def _ani_venice_bytes(prompt, negative, cfg, width, height, steps):
 
 
 _ANI_QA_PROMPT = (
-	"AI-generated nude photo of one woman in an explicit pose. Reply with compact JSON: "
-	"{\"ok\": true|false, \"reason\": \"...\"}.\n"
+	"AI-generated photo of one woman. She may be nude, partially clothed, or fully clothed — that is "
+	"NOT a defect either way, both are valid. Judge ONLY for generation defects. Reply with compact "
+	"JSON: {\"ok\": true|false, \"reason\": \"...\"}.\n"
 	"Set ok=FALSE only if you CLEARLY see a generation defect: more than one person, two separate "
 	"faces, a duplicated or merged second body, or extra / missing / fused limbs.\n"
-	"Set ok=TRUE for a single woman in any explicit pose. Do NOT infer a defect from the pose, the "
-	"camera angle, or the proportions alone — spread legs, raised/pulled-back knees, foreshortening, "
-	"and long limbs are all normal and fine. Judge a defect only from a clearly visible duplicate "
-	"body/face or a clearly broken limb. Nudity and explicit anatomy are never defects.")
+	"Set ok=TRUE for a single woman in any pose and any state of dress. Do NOT infer a defect from the "
+	"pose, the outfit, the amount of clothing, the camera angle, or the proportions alone — spread "
+	"legs, raised/pulled-back knees, foreshortening, long limbs, and being clothed OR nude are all "
+	"normal and fine. Judge a defect only from a clearly visible duplicate body/face or a clearly "
+	"broken limb. Neither nudity nor clothing is ever a defect.")
 
 # Appended to the QA prompt only for rear-intent scenes: framing (rear vs front) is not a "defect", so
 # without this the loop happily accepts the front-facing render the model loves to default to.
