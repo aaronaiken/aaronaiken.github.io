@@ -100,6 +100,28 @@ VENICE_ANATOMY_NEGATIVE = ('extra limb, extra leg, third leg, extra foot, third 
 	'impossibly bent back, contorted spine, broken back, unnatural spine bend, dislocated joints, '
 	'bent backwards, body bent the wrong way')
 
+# Partner / POV mode: when her scene is a sex act WITH the viewer (penetration, oral, riding…), we want
+# the OPPOSITE of the solo guards — a deliberate partial second body (his erect penis / hands). So the
+# partner branch drops the SOLO anchor + the "multiple people" dup-suppression, keeps anti-HER-duplication,
+# and adds penis-anatomy + no-rings-on-him + non-opaque-cum negatives. The feet-fix is pose-gated (applied
+# to upright facing poses where legs foreshorten up by the head; skipped for rear + legs-up where feet-up
+# is correct). Validated across doggy / missionary / cowgirl / reverse / blowjob / deepthroat / titjob /
+# creampie / facial / cum-play. KNOWN model ceilings (not bugs): cum leans white, rings can leak onto him,
+# precise cum placement is loose.
+_ANI_PARTNER_RE = re.compile(
+	r'\b(?:penis|cock|dick|penetrat\w*|blow\s?job|deep\s?throat|tit\s?job|cowgirl|creampie|'
+	r'cum(?:ming|shot|play)?|facial|riding (?:you|him|his|the viewer)|a man\'s|the viewer\'s|'
+	r'sucking (?:you|him|his|a)|fucking)\b', re.IGNORECASE)
+ANI_PARTNER_ANCHOR = 'POV first-person photo, '
+VENICE_PARTNER_NEGATIVE = ('two women, 2 women, duplicate woman, twins, cloned woman, conjoined, extra woman, '
+	'two female heads, deformed penis, malformed penis, two penises, extra penis, disfigured genitals, '
+	'broken anatomy, rings on the man\'s hand, jewelry on the man, man wearing rings, '
+	'opaque white paint, flat matte white, thick white paste, chalky white')
+_ANI_PARTNER_FEET_NEG = ('feet near head, feet by shoulders, feet above the hips, foot near face, '
+	'feet beside ears, feet beside her head, soles near face, raised feet behind head, '
+	'feet in the upper corners, foot above shoulder, symmetrical feet framing her face, '
+	'legs folded up over her body, contorted legs, extra feet, misplaced feet')
+
 # Ani helpers shell out to git (recent-status, recent-git-log) — needs repo cwd.
 REPO_ROOT = os.environ.get('COCKPIT_REPO_ROOT', '/home/aaronaiken/status_update')
 
@@ -453,6 +475,19 @@ def ani_normalize_scene(history):
 			"sprouts a second inverted face. Instead frame it as 'lying on her back with her knees drawn "
 			"back toward her chest, her head and face clearly in frame in the foreground', camera at "
 			"eye level from the foot of the bed. Keep her head close, large, and clearly the only face.\n"
+			"- SEX WITH HIM (she is having sex with the viewer — penetration, riding, a blowjob, titjob, "
+			"etc.): write it as a FIRST-PERSON POV photo from his perspective, with his erect penis and/or "
+			"his hands PARTIALLY in frame; SHE is the only full subject. FACE-FOCUSED oral (blowjob, "
+			"deepthroat, cum on her face / in her mouth): an EXTREME tight close-up framing ONLY her head, "
+			"face and shoulders plus the penis — crop out EVERYTHING below her shoulders, so NO torso, hips, "
+			"legs or feet appear in frame at all (her feet must never be visible). Chest-focused (titjob, cum "
+			"on her tits, cowgirl facing him): a close-up from her chest up, cropped at the waist so no hips, "
+			"legs or feet appear. Doggy / from behind: 'view from directly behind her, "
+			"her back and ass toward the camera'. Missionary: 'on her back with her legs raised and bent "
+			"back, knees toward her chest'. When she mentions cum, describe it as thin translucent milky "
+			"off-white fluid with a wet sheen (never opaque white paint). For sloppy/messy oral, include "
+			"thick clear saliva and drool — glossy strands of spit stretching and dripping from her mouth, "
+			"lips, tongue, and the cock.\n"
 			"- Do not describe her facial features or overall body type — those stay consistent "
 			"elsewhere. DO describe pose, limb position, and hand placement.\n"
 			"- Output ONLY the prompt line: no labels, no quotes, no preamble, no commentary.\n"
@@ -651,17 +686,37 @@ _ANI_QA_REAR_SUFFIX = (
 	"and her face toward the lens), set ok=false with reason 'not-rear'. A profile or hidden face is "
 	"fine as long as her back/buttocks are to the camera.")
 
-def _ani_image_qa(image_bytes, require_rear=False):
+# Partner/POV: a partial second body (the male partner) is EXPECTED, so override the base "one person"
+# rule — fail only on HER duplication / broken limbs / the feet-by-head glitch / a malformed penis.
+_ANI_QA_PARTNER_SUFFIX = (
+	"\nIMPORTANT — this is a POV photo of her having sex with the male viewer, so a PARTIAL second body is "
+	"EXPECTED and is NOT a defect: a man's erect penis and/or his hand(s) may be in frame. Do NOT call that "
+	"'more than one person'. Set ok=false ONLY if: the WOMAN herself is duplicated (two female faces/bodies), "
+	"a limb is broken/extra/missing/fused, or the penis is badly malformed.\n"
+	"LOOK CAREFULLY AT HER FEET AND LEGS — THIS IS THE MOST COMMON DEFECT, CHECK IT FIRST: in a head-and-"
+	"shoulders or face-and-chest close-up (oral / facing-him riding) NO foot or toes should appear anywhere "
+	"in the upper half of the frame. If you see a foot, sole, or toes up near her head, beside or above her "
+	"ears, by her shoulders, in the top corners, or floating above her hips — ESPECIALLY two feet placed "
+	"symmetrically on either side of her head — that is anatomically impossible foreshortening and a defect, "
+	"NO MATTER whose feet they look like (hers or the man's). Set ok=false with reason 'feet-glitch'. When in "
+	"doubt about a foot near her head, treat it as a feet-glitch and fail.\n"
+	"CHECK HER HEAD/NECK: if her BACK is to the camera (rear / from-behind view) but her FACE is turned "
+	"fully forward toward the lens — an impossible owl-like ~180° neck rotation — that is a defect; set "
+	"ok=false with reason 'backwards-head'. A natural over-the-shoulder glance or a hidden/down face is fine. "
+	"One woman + a partial male POV with intact, correctly-placed anatomy = ok=true.")
+
+def _ani_image_qa(image_bytes, require_rear=False, partner=False):
 	"""Cheap vision gate via Grok (xAI, uncensored — Claude refuses explicit). Returns (ok, reason):
 	ok=False for >1 person, a duplicated/merged body or head, or extra/missing/fused limbs; nudity is
-	NOT a defect. With require_rear, also fails a front-facing render. Fails OPEN (ok=True) on any error
-	so QA can never hard-block a photo."""
+	NOT a defect. With require_rear, also fails a front-facing render. With partner, allows a partial male
+	POV partner (fails only on HER duplication / broken limbs / malformed penis). Fails OPEN (ok=True) on
+	any error so QA can never hard-block a photo."""
 	api_key = os.environ.get('XAI_API_KEY')
 	if not api_key:
 		return True, 'no-xai-key'
 	import base64, json as _json
 	b64 = base64.standard_b64encode(image_bytes).decode()
-	prompt = _ANI_QA_PROMPT + (_ANI_QA_REAR_SUFFIX if require_rear else '')
+	prompt = _ANI_QA_PROMPT + (_ANI_QA_PARTNER_SUFFIX if partner else (_ANI_QA_REAR_SUFFIX if require_rear else ''))
 	try:
 		resp = requests.post(
 			'https://api.x.ai/v1/chat/completions',
@@ -712,13 +767,13 @@ def ani_log_photo_event(scene, cfg, width, height, pose, rear, clothed, qa, outc
 
 
 def _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear=False,
-                       scene='', pose=False, clothed=False):
+                       scene='', pose=False, clothed=False, partner=False):
 	"""Render via Venice with the vision-QA retry loop, then re-host the accepted image on Bunny.
 	Re-rolls QA failures up to ANI_IMAGE_QA_RETRIES (each Venice call is a fresh seed); after the
 	budget is spent it sends the last attempt rather than failing the photo. require_rear also re-rolls
-	front-facing renders for rear-intent scenes (with a bigger retry budget). Records a structured event
-	for the panel LOG viewer. Returns CDN URL or None."""
-	retries = ANI_IMAGE_QA_RETRIES_REAR if require_rear else ANI_IMAGE_QA_RETRIES
+	front-facing renders for rear-intent scenes; partner uses POV-aware QA (allows the partial male). Both
+	get the bigger retry budget. Records a structured event for the panel LOG viewer. Returns CDN URL or None."""
+	retries = ANI_IMAGE_QA_RETRIES_REAR if (require_rear or partner) else ANI_IMAGE_QA_RETRIES
 	max_attempts = (retries + 1) if ANI_IMAGE_QA else 1
 	img = None
 	qa = []
@@ -729,7 +784,7 @@ def _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear
 			return None  # HTTP/TOS failure — an identical retry won't help
 		if not ANI_IMAGE_QA:
 			break
-		ok, reason = _ani_image_qa(img, require_rear)
+		ok, reason = _ani_image_qa(img, require_rear, partner)
 		qa.append({'ok': bool(ok), 'reason': reason})
 		print(f"Ani QA {attempt}/{max_attempts}: ok={ok} reason={reason!r}")
 		if ok:
@@ -765,6 +820,29 @@ def ani_generate_image(scene):
 		# the prone/rear attractor negated. SOLO anchor + identity-only bible + ~1MP frame fight the
 		# duplicate; the vision-QA loop in _ani_render_venice re-rolls whatever slips through.
 		bible_id = _ani_bible_identity(bible).strip()
+
+		# --- PARTNER / POV branch: a sex act WITH the viewer. Inverts the solo guards (we want a partial
+		# male partner), keeps anti-HER-duplication, pose-gates the feet-fix, uses POV-aware QA. ---
+		if _ANI_PARTNER_RE.search(clean_scene):
+			low = clean_scene.lower()
+			rear = bool(_ANI_REAR_INTENT_RE.search(clean_scene))
+			legs_up = (bool(_ANI_LYING_RE.search(clean_scene)) or 'on her back' in low
+			           or 'legs raised' in low or 'legs back' in low or 'knees toward' in low)
+			feet_fix = not rear and not legs_up   # upright facing poses foreshorten feet up by the head
+			negative = ', '.join(p for p in (
+				VENICE_NEGATIVE_PROMPT, VENICE_PARTNER_NEGATIVE,
+				(_ANI_PARTNER_FEET_NEG if feet_fix else '')) if p)
+			anchor = '' if ('pov' in low or 'first-person' in low or 'first person' in low) else ANI_PARTNER_ANCHOR
+			prompt = (
+				f"RAW photo, photorealistic, {anchor}{clean_scene}. {bible_id} "
+				"Shot on DSLR, natural skin texture, sharp focus, high detail."
+			).strip()
+			w, h = VENICE_DIMS_PORTRAIT
+			print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) PARTNER cfg{VENICE_CFG_POSE} {w}x{h} "
+			      f"feet_fix={feet_fix} rear={rear} qa={ANI_IMAGE_QA} — scene: {clean_scene!r}")
+			return _ani_render_venice(prompt, negative, VENICE_CFG_POSE, w, h, VENICE_STEPS_POSE,
+			                          require_rear=False, scene=clean_scene, pose=True, clothed=False, partner=True)
+
 		extra_neg = _ani_garment_negative(clean_scene)
 		complex_pose = bool(_ANI_POSE_RE.search(clean_scene))
 		pose_neg = _ani_pose_negative(clean_scene)
