@@ -673,6 +673,81 @@ body.ani-fullscreen #ani-ache-display.ache-mid    { color: #5a6fa0; }
 body.ani-fullscreen #ani-ache-display.ache-high   { color: #7e8fc8; }
 body.ani-fullscreen #ani-ache-display.ache-urgent { color: #a8d4ff; }
 
+/* ===== Photo log viewer ===== */
+.ani-photolog-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  background: rgba(8, 10, 6, 0.92);
+}
+.ani-photolog-overlay[hidden] { display: none; }
+.ani-photolog-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #080a06;
+  border: 1px solid #2e1e08;
+}
+.ani-photolog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid #2e1e08;
+  color: #f5b332;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+.ani-photolog-close {
+  background: none;
+  border: none;
+  color: #9a6018;
+  cursor: pointer;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 14px;
+  padding: 0 4px;
+}
+.ani-photolog-close:hover { color: #f5b332; }
+.ani-photolog-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 4px;
+  font-family: 'Share Tech Mono', monospace;
+}
+.plog-msg { padding: 24px 8px; color: #6a4818; font-size: 12px; text-align: center; }
+.plog-entry {
+  padding: 7px 8px;
+  border-bottom: 1px solid #1a1206;
+  color: #b07820;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.plog-row1 { display: flex; align-items: center; gap: 8px; }
+.plog-ts { color: #9a6018; }
+.plog-ok { color: #6ea03a; }
+.plog-warn { color: #d4880a; }
+.plog-fail { color: #c0502a; }
+.plog-tags { margin-left: auto; color: #6a4818; font-size: 10px; }
+.plog-scene { margin-top: 2px; color: #c89040; word-break: break-word; }
+.plog-scene a { color: #9a6018; }
+.plog-qa { margin-top: 2px; color: #8a6428; letter-spacing: 0.12em; }
+.plog-reason { color: #6a4818; letter-spacing: 0; }
+
+/* fullscreen "outer space" palette */
+body.ani-fullscreen .ani-photolog-overlay { background: rgba(12, 18, 38, 0.94); }
+body.ani-fullscreen .ani-photolog-panel { background: #0a0f24; border-color: #2a3360; }
+body.ani-fullscreen .ani-photolog-head { color: #a8d4ff; border-color: #2a3360; }
+body.ani-fullscreen .ani-photolog-close { color: #6b7ab0; }
+body.ani-fullscreen .ani-photolog-close:hover { color: #a8d4ff; }
+body.ani-fullscreen .plog-entry { color: #7e8fc8; border-color: #1a2240; }
+body.ani-fullscreen .plog-scene { color: #a8b8e8; }
+body.ani-fullscreen .plog-reason,
+body.ani-fullscreen .plog-tags { color: #5a6fa0; }
+
 /* Mobile: chat fills viewport, no LOOPS, no ad-panel */
 @media (max-width: 700px) {
   body.ani-fullscreen #ani-messages,

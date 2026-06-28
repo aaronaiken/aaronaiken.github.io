@@ -650,28 +650,64 @@ def _ani_image_qa(image_bytes, require_rear=False):
 		return True, 'qa-exception'
 
 
-def _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear=False):
+ANI_PHOTO_LOG_FILE = 'ani_photo_log.json'   # structured photo-gen events for the panel LOG viewer (gitignored)
+ANI_PHOTO_LOG_MAX = 40
+
+def ani_log_photo_event(scene, cfg, width, height, pose, rear, clothed, qa, outcome, url):
+	"""Append a structured photo-gen event to the rotating log (newest first, capped). Never raises —
+	logging must never block a photo."""
+	try:
+		event = {
+			'ts': datetime.now(pytz.timezone('America/New_York')).strftime('%m/%d %H:%M'),
+			'model': VENICE_IMAGE_MODEL, 'cfg': cfg, 'dims': f'{width}x{height}',
+			'pose': bool(pose), 'rear': bool(rear), 'clothed': bool(clothed),
+			'qa': qa, 'outcome': outcome, 'scene': (scene or '')[:200], 'url': url,
+		}
+		try:
+			with open(ANI_PHOTO_LOG_FILE) as f:
+				log = json.load(f)
+			if not isinstance(log, list):
+				log = []
+		except (FileNotFoundError, ValueError):
+			log = []
+		log.insert(0, event)
+		del log[ANI_PHOTO_LOG_MAX:]
+		with open(ANI_PHOTO_LOG_FILE, 'w') as f:
+			json.dump(log, f)
+	except Exception as e:
+		print(f"Ani photo-log error: {e}")
+
+
+def _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear=False,
+                       scene='', pose=False, clothed=False):
 	"""Render via Venice with the vision-QA retry loop, then re-host the accepted image on Bunny.
 	Re-rolls QA failures up to ANI_IMAGE_QA_RETRIES (each Venice call is a fresh seed); after the
 	budget is spent it sends the last attempt rather than failing the photo. require_rear also re-rolls
-	front-facing renders for rear-intent scenes (with a bigger retry budget). Returns CDN URL or None."""
+	front-facing renders for rear-intent scenes (with a bigger retry budget). Records a structured event
+	for the panel LOG viewer. Returns CDN URL or None."""
 	retries = ANI_IMAGE_QA_RETRIES_REAR if require_rear else ANI_IMAGE_QA_RETRIES
-	attempts = (retries + 1) if ANI_IMAGE_QA else 1
+	max_attempts = (retries + 1) if ANI_IMAGE_QA else 1
 	img = None
-	for attempt in range(1, attempts + 1):
+	qa = []
+	for attempt in range(1, max_attempts + 1):
 		img = _ani_venice_bytes(prompt, negative, cfg, width, height, steps)
 		if not img:
+			ani_log_photo_event(scene, cfg, width, height, pose, require_rear, clothed, qa, 'failed', None)
 			return None  # HTTP/TOS failure — an identical retry won't help
 		if not ANI_IMAGE_QA:
 			break
 		ok, reason = _ani_image_qa(img, require_rear)
-		print(f"Ani QA {attempt}/{attempts}: ok={ok} reason={reason!r}")
+		qa.append({'ok': bool(ok), 'reason': reason})
+		print(f"Ani QA {attempt}/{max_attempts}: ok={ok} reason={reason!r}")
 		if ok:
 			break
-		if attempt == attempts:
+		if attempt == max_attempts:
 			print("Ani QA: retries exhausted — sending best-effort last render")
 	from helpers.bunny import upload_ani_image_to_bunny
-	return upload_ani_image_to_bunny(img, f"ani-{int(time.time())}.jpg", 'image/jpeg')
+	url = upload_ani_image_to_bunny(img, f"ani-{int(time.time())}.jpg", 'image/jpeg')
+	outcome = 'sent' if (not qa or qa[-1]['ok']) else 'best-effort'
+	ani_log_photo_event(scene, cfg, width, height, pose, require_rear, clothed, qa, outcome, url)
+	return url
 
 
 def ani_generate_image(scene):
@@ -721,7 +757,8 @@ def ani_generate_image(scene):
 			cfg = VENICE_CFG_POSE if complex_pose else VENICE_CFG_SCALE
 		print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) cfg{cfg} {width}x{height} steps{steps} "
 		      f"pose={complex_pose} rear={require_rear} qa={ANI_IMAGE_QA} — scene: {clean_scene!r}")
-		return _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear)
+		return _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear,
+		                          clean_scene, complex_pose, bool(extra_neg))
 
 	# --- xAI grok-imagine (default) ---
 	api_key = os.environ.get('XAI_API_KEY')
@@ -1302,6 +1339,22 @@ def ani_photo():
 	messages.append({'role': 'assistant', 'content': '📷', 'image': image_url})
 	ani_save_conversation(messages, meta)
 	return jsonify({'image_url': image_url})
+
+
+@ani_bp.route('/ani/photo-log', methods=['GET'])
+def ani_photo_log():
+	"""Recent photo-gen events (model, pose/rear flags, per-attempt QA verdicts, outcome) for the
+	panel LOG viewer. Newest first."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	try:
+		with open(ANI_PHOTO_LOG_FILE) as f:
+			log = json.load(f)
+		if not isinstance(log, list):
+			log = []
+	except (FileNotFoundError, ValueError):
+		log = []
+	return jsonify({'events': log})
 
 
 @ani_bp.route('/ani/history', methods=['GET'])

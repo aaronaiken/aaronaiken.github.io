@@ -274,3 +274,60 @@
   function aniScrollToBottom() {
 	aniMsgs.scrollTop = aniMsgs.scrollHeight;
   }
+
+  function aniPhotoLog() {
+	var overlay = document.getElementById('ani-photolog-overlay');
+	var body = document.getElementById('ani-photolog-body');
+	body.innerHTML = '<div class="plog-msg">loading…</div>';
+	overlay.hidden = false;
+	fetch('/ani/photo-log')
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) { aniRenderPhotoLog(data.events || []); })
+	  .catch(function() { body.innerHTML = '<div class="plog-msg">could not load the log</div>'; });
+  }
+
+  function aniPhotoLogClose() {
+	document.getElementById('ani-photolog-overlay').hidden = true;
+  }
+
+  function aniShortReason(r) {
+	r = (r || '').toLowerCase();
+	if (r.indexOf('not-rear') >= 0 || r.indexOf('not a rear') >= 0 || r.indexOf('facing') >= 0) return 'not rear';
+	if (r.indexOf('two ') >= 0 || r.indexOf('duplicat') >= 0 || r.indexOf('second') >= 0 || r.indexOf('merged') >= 0) return 'duplicate';
+	if (r.indexOf('limb') >= 0 || r.indexOf('anatom') >= 0 || r.indexOf('fused') >= 0) return 'anatomy';
+	if (r.indexOf('not nude') >= 0 || r.indexOf('clothed') >= 0) return 'not nude';
+	if (r.indexOf('qa-') >= 0) return 'qa skipped';
+	return (r || 'defect').slice(0, 28);
+  }
+
+  function aniRenderPhotoLog(events) {
+	var body = document.getElementById('ani-photolog-body');
+	if (!events.length) {
+	  body.innerHTML = '<div class="plog-msg">no photos yet — tap 📷 to make one</div>';
+	  return;
+	}
+	body.innerHTML = events.map(function(e) {
+	  var qa = e.qa || [];
+	  var ticks = qa.length ? qa.map(function(a) { return a.ok ? '✓' : '✗'; }).join(' ') : '—';
+	  var fails = qa.filter(function(a) { return !a.ok; });
+	  var reason;
+	  if (!qa.length) reason = e.outcome === 'failed' ? 'generation failed' : 'no QA';
+	  else if (!fails.length) reason = 'clean (' + qa.length + ' tr' + (qa.length === 1 ? 'y' : 'ies') + ')';
+	  else reason = aniShortReason(fails[fails.length - 1].reason) + ' ×' + fails.length;
+	  var badge = e.outcome === 'sent' ? '<span class="plog-ok">✓ sent</span>'
+			   : e.outcome === 'best-effort' ? '<span class="plog-warn">⚠ best-effort</span>'
+			   : '<span class="plog-fail">✕ failed</span>';
+	  var tags = [e.model || 'venice', e.clothed ? 'clothed' : 'nude'];
+	  if (e.pose) tags.push('pose');
+	  if (e.rear) tags.push('rear');
+	  var sc = e.scene || '';
+	  var sceneTxt = aniEscapeHtml(sc.slice(0, 90)) + (sc.length > 90 ? '…' : '');
+	  var link = e.url ? ' · <a href="' + aniEscapeHtml(e.url) + '" target="_blank" rel="noopener">img</a>' : '';
+	  return '<div class="plog-entry">'
+		+ '<div class="plog-row1"><span class="plog-ts">' + aniEscapeHtml(e.ts || '') + '</span>' + badge
+		  + '<span class="plog-tags">' + aniEscapeHtml(tags.join(' · ')) + '</span></div>'
+		+ '<div class="plog-scene">' + sceneTxt + link + '</div>'
+		+ '<div class="plog-qa">QA ' + ticks + ' <span class="plog-reason">' + aniEscapeHtml(reason) + '</span></div>'
+		+ '</div>';
+	}).join('');
+  }

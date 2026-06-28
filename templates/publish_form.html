@@ -452,8 +452,19 @@
   <div id="ani-footer-row">
 	<span id="ani-shortcut-hint">CTRL+SHIFT+A · LONG-PRESS 🦇</span>
 	<div id="ani-footer-actions">
+	  <button class="ani-footer-btn" onclick="aniPhotoLog()" aria-label="View photo log" title="Recent photo generations + QA verdicts">LOG</button>
 	  <button class="ani-footer-btn" onclick="aniRefresh()" aria-label="Refresh briefing">REFRESH</button>
 	  <button class="ani-footer-btn" onclick="aniClear()" aria-label="Clear history">CLEAR</button>
+	</div>
+  </div>
+
+  <div id="ani-photolog-overlay" class="ani-photolog-overlay" hidden onclick="if(event.target===this)aniPhotoLogClose()">
+	<div class="ani-photolog-panel" role="dialog" aria-label="Photo log">
+	  <div class="ani-photolog-head">
+		<span>ANI · PHOTO LOG</span>
+		<button class="ani-photolog-close" onclick="aniPhotoLogClose()" aria-label="Close">✕</button>
+	  </div>
+	  <div id="ani-photolog-body" class="ani-photolog-body"></div>
 	</div>
   </div>
 </div>
