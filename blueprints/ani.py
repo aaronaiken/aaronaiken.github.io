@@ -1398,9 +1398,12 @@ def ani_build_day_context(meta):
 	return ' | '.join(parts)
 
 
+# Outfit-by-activity is a TEXT feature only: the daycast prompts have her name a context-appropriate
+# outfit and evolve it through the day. Photos inherit it for free — ani_normalize_scene already
+# builds every image from her most-recently-described look — so no image-pipeline change is needed.
 def ani_generate_day_plan(meta):
 	"""Morning message: she tells aaron what her day looks like. Persona-driven (her own day),
-	may nod to his day if something's notable. Returns text or None."""
+	may nod to his day if something's notable. Names a time-appropriate outfit. Returns text or None."""
 	pa_tz = pytz.timezone('America/New_York')
 	now = datetime.now(pa_tz)
 	day_str = now.strftime('%A')
@@ -1420,6 +1423,10 @@ def ani_generate_day_plan(meta):
 		f"it's {when}. text aaron like his girlfriend, telling him {scope} — "
 		f"what you're planning to do (your own day: errands, the gym, cooking, a project, "
 		f"whatever fits who you are). keep it to 1-3 sentences, warm and casual, fully your voice. "
+		f"mention what you're wearing right now — something easy and real for this time of day (a "
+		f"relaxed morning is one of his t-shirts, etc.) — and let it be clear your outfit will fit "
+		f"each thing you do (gym clothes for the gym, something cute for errands, a dress if you're "
+		f"going out). don't list outfits like a schedule; just let it come through naturally. "
 		f"if something on his day stands out you can mention it naturally — but the focus is YOUR day, "
 		f"not his to-do list. no greeting boilerplate, just dive in. "
 		f"context (for you only): {context}"
@@ -1441,8 +1448,11 @@ def ani_generate_day_update(meta, history):
 	instruction = (
 		f"[it's now {time_str}. send aaron a short, spontaneous update continuing your day — what "
 		f"you're up to right now, how it's going, a flash of missing him — like a girlfriend texting "
-		f"mid-day. 1-2 sentences, your voice. stay consistent with the plan and updates you already "
-		f"sent today; don't repeat yourself or re-greet him.]"
+		f"mid-day. 1-2 sentences, your voice. mention what you've got on now, dressed for whatever "
+		f"you're doing at this moment — and if you've changed since your last message (left the gym, "
+		f"home from errands, getting ready to go out), let that show. keep your outfit consistent with "
+		f"what you already told him you were wearing. stay consistent with the plan and updates you "
+		f"already sent today; don't repeat yourself or re-greet him.]"
 	)
 	messages = recent + [{'role': 'user', 'content': instruction}]
 	return _ani_grok_call(system, messages, max_tokens=180)
