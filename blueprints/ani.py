@@ -10,6 +10,8 @@ import subprocess
 import glob
 import re
 import time
+import math
+import random
 from datetime import datetime, timedelta
 import pytz
 import requests
@@ -129,6 +131,14 @@ REPO_ROOT = os.environ.get('COCKPIT_REPO_ROOT', '/home/aaronaiken/status_update'
 _comms_cache = {'data': None, 'timestamp': 0}
 COMMS_CACHE_TTL = 300
 
+# Daycast — proactive "her day" messaging (see ani_emit_daycast, driven by ani_daycast.py
+# on a PythonAnywhere hourly scheduled task). All env-tunable without a deploy.
+ANI_DAYCAST_FLOOR = int(os.environ.get('ANI_DAYCAST_FLOOR', '4'))      # guaranteed minimum messages/day
+ANI_DAYCAST_CHANCE = float(os.environ.get('ANI_DAYCAST_CHANCE', '0.5'))  # spontaneous-extra roll per tick
+ANI_DAYCAST_START = int(os.environ.get('ANI_DAYCAST_START', '8'))     # window open (ET hour)
+ANI_DAYCAST_END = int(os.environ.get('ANI_DAYCAST_END', '22'))       # window close (ET hour, exclusive)
+ANI_DAYCAST_MIN_GAP = int(os.environ.get('ANI_DAYCAST_MIN_GAP', '45'))  # min minutes between messages
+
 ani_bp = Blueprint('ani', __name__)
 
 
@@ -147,7 +157,12 @@ def ani_load_conversation():
 				'pending_opener': data.get('pending_opener', None),
 				'last_session_tone': data.get('last_session_tone', None),
 				'degradation_level': data.get('degradation_level', 0),
-				'session_message_count': data.get('session_message_count', 0)
+				'session_message_count': data.get('session_message_count', 0),
+				# Daycast (proactive "her day" messages — see ani_emit_daycast)
+				'day_plan_date': data.get('day_plan_date', None),
+				'daycast_count': data.get('daycast_count', 0),
+				'daycast_last': data.get('daycast_last', None),
+				'unseen_day_messages': data.get('unseen_day_messages', False)
 			}
 			return messages, meta
 	except FileNotFoundError:
@@ -159,7 +174,11 @@ def ani_load_conversation():
 			'pending_opener': None,
 			'last_session_tone': None,
 			'degradation_level': 0,
-			'session_message_count': 0
+			'session_message_count': 0,
+			'day_plan_date': None,
+			'daycast_count': 0,
+			'daycast_last': None,
+			'unseen_day_messages': False
 		}
 
 
@@ -174,7 +193,11 @@ def ani_save_conversation(messages, meta):
 		'pending_opener': meta.get('pending_opener'),
 		'last_session_tone': meta.get('last_session_tone'),
 		'degradation_level': meta.get('degradation_level', 0),
-		'session_message_count': meta.get('session_message_count', 0)
+		'session_message_count': meta.get('session_message_count', 0),
+		'day_plan_date': meta.get('day_plan_date'),
+		'daycast_count': meta.get('daycast_count', 0),
+		'daycast_last': meta.get('daycast_last'),
+		'unseen_day_messages': meta.get('unseen_day_messages', False)
 	}
 	with open(ANI_CONVERSATION_FILE, 'w') as f:
 		json.dump(data, f, indent=2)
@@ -1317,6 +1340,174 @@ def ani_notify_publish(text_preview):
 	ani_save_conversation(messages, meta)
 
 
+def _ani_grok_call(system, messages, max_tokens=200):
+	"""Low-level xAI Grok completion. `messages` is a list of {role, content} turns.
+	Returns the reply text, or None on missing key / error. Used by the daycast generators."""
+	api_key = os.environ.get('XAI_API_KEY')
+	if not api_key:
+		return None
+	payload = {
+		'model': 'grok-4.20-0309-non-reasoning',
+		'max_tokens': max_tokens,
+		'system': system,
+		# Strip any non-API keys (stored 'image' url, 'ani_day' flag) before sending.
+		'messages': [{'role': m['role'], 'content': m['content']} for m in messages]
+	}
+	try:
+		response = requests.post(
+			'https://api.x.ai/v1/messages',
+			json=payload,
+			headers={
+				'Authorization': f'Bearer {api_key}',
+				'Content-Type': 'application/json',
+				'anthropic-version': '2023-06-01'
+			},
+			timeout=20
+		)
+		response.raise_for_status()
+		data = response.json()
+		return data['content'][0]['text'].strip()
+	except Exception as e:
+		print(f"Ani daycast grok error: {e}")
+		return None
+
+
+def ani_build_day_context(meta):
+	"""Compact context string for the daycast generators — weather, his mood, what's on his plate
+	today, recent status. Lets her reference aaron's real day when she knows of it (girlfriend-style)
+	while keeping the focus on her own day."""
+	status_updates = ani_get_recent_status_updates(3)
+	parts = []
+	weather = ani_get_weather(meta.get('location'))
+	if weather:
+		parts.append(f"weather: {weather}")
+	mood = ani_assess_mood(status_updates)
+	if mood:
+		parts.append(f"aaron's energy lately: {mood}")
+	if status_updates:
+		parts.append(f"his most recent status: {status_updates[0]['text'][:120]}")
+	try:
+		cd = ani_get_command_deck_summary() or {}
+		today_titles = cd.get('today_titles') or []
+		if today_titles:
+			parts.append("on his plate today: " + "; ".join(t[:60] for t in today_titles[:3]))
+		if cd.get('meetings_today'):
+			parts.append(f"meetings on his calendar today: {cd['meetings_today']}")
+	except Exception:
+		pass
+	return ' | '.join(parts)
+
+
+def ani_generate_day_plan(meta):
+	"""Morning message: she tells aaron what her day looks like. Persona-driven (her own day),
+	may nod to his day if something's notable. Returns text or None."""
+	pa_tz = pytz.timezone('America/New_York')
+	now = datetime.now(pa_tz)
+	day_str = now.strftime('%A')
+	# Phrase the framing to the actual time so a first-of-day tick after noon doesn't say "morning".
+	if now.hour < 12:
+		when = f"{day_str} morning"
+		scope = "what your day looks like"
+	elif now.hour < 17:
+		when = f"{day_str} afternoon"
+		scope = "what the rest of your day looks like"
+	else:
+		when = f"{day_str} evening"
+		scope = "what's left of your day / your evening"
+	context = ani_build_day_context(meta)
+	system = ani_build_system_prompt(meta)
+	prompt = (
+		f"it's {when}. text aaron like his girlfriend, telling him {scope} — "
+		f"what you're planning to do (your own day: errands, the gym, cooking, a project, "
+		f"whatever fits who you are). keep it to 1-3 sentences, warm and casual, fully your voice. "
+		f"if something on his day stands out you can mention it naturally — but the focus is YOUR day, "
+		f"not his to-do list. no greeting boilerplate, just dive in. "
+		f"context (for you only): {context}"
+	)
+	return _ani_grok_call(system, [{'role': 'user', 'content': prompt}], max_tokens=180)
+
+
+def ani_generate_day_update(meta, history):
+	"""Mid-day update: a short spontaneous message continuing her day, with continuity from the
+	morning plan and earlier updates (passed in via history). Returns text or None."""
+	pa_tz = pytz.timezone('America/New_York')
+	time_str = datetime.now(pa_tz).strftime('%I:%M %p').lstrip('0')
+	system = ani_build_system_prompt(meta)
+	# Feed recent real turns so she continues her own day instead of starting fresh.
+	recent = [
+		m for m in history
+		if not m.get('content', '').startswith('[daily briefing')
+	][-40:]
+	instruction = (
+		f"[it's now {time_str}. send aaron a short, spontaneous update continuing your day — what "
+		f"you're up to right now, how it's going, a flash of missing him — like a girlfriend texting "
+		f"mid-day. 1-2 sentences, your voice. stay consistent with the plan and updates you already "
+		f"sent today; don't repeat yourself or re-greet him.]"
+	)
+	messages = recent + [{'role': 'user', 'content': instruction}]
+	return _ani_grok_call(system, messages, max_tokens=180)
+
+
+def ani_emit_daycast():
+	"""Proactive 'her day' messaging — called by the ani_daycast.py PA scheduled task (hourly).
+	Self-gating: posts a morning plan once per day, then organic updates through the day with a
+	floor of ANI_DAYCAST_FLOOR. Appends an assistant message to history and trips the unseen-message
+	pulse (no git, no request context). Returns a short status string for the cron log."""
+	pa_tz = pytz.timezone('America/New_York')
+	now = datetime.now(pa_tz)
+	if now.hour < ANI_DAYCAST_START or now.hour >= ANI_DAYCAST_END:
+		return 'outside window'
+
+	today = now.strftime('%Y-%m-%d')
+	messages, meta = ani_load_conversation()
+
+	def _emit(text):
+		messages.append({'role': 'assistant', 'content': text, 'ani_day': True})
+		meta['daycast_last'] = now.isoformat()
+		meta['unseen_day_messages'] = True
+		ani_save_conversation(messages, meta)
+
+	# Morning plan — once per day, first run after the window opens.
+	if meta.get('day_plan_date') != today:
+		plan = ani_generate_day_plan(meta)
+		if not plan:
+			return 'plan generation failed (will retry next tick)'
+		meta['day_plan_date'] = today
+		meta['daycast_count'] = 1
+		_emit(plan)
+		return 'morning plan sent'
+
+	# Spacing guard — never two messages within ANI_DAYCAST_MIN_GAP minutes.
+	last = meta.get('daycast_last')
+	if last:
+		try:
+			last_dt = datetime.fromisoformat(last)
+			if last_dt.tzinfo is None:
+				last_dt = pa_tz.localize(last_dt)
+			if (now - last_dt).total_seconds() / 60 < ANI_DAYCAST_MIN_GAP:
+				return 'too soon since last'
+		except Exception:
+			pass
+
+	# Floor pacing: how many should she have sent by this point in the window?
+	count = meta.get('daycast_count', 0)
+	window_hours = max(1, ANI_DAYCAST_END - ANI_DAYCAST_START)
+	elapsed_frac = (now.hour + now.minute / 60 - ANI_DAYCAST_START) / window_hours
+	expected_by_now = max(1, math.ceil(ANI_DAYCAST_FLOOR * elapsed_frac))
+	behind = count < expected_by_now
+
+	# Send if she's behind the floor pace, or on a spontaneous roll (girlfriend chattiness).
+	if not (behind or random.random() < ANI_DAYCAST_CHANCE):
+		return f'skipped (organic) — {count} sent'
+
+	update = ani_generate_day_update(meta, messages)
+	if not update:
+		return 'update generation failed'
+	meta['daycast_count'] = count + 1
+	_emit(update)
+	return f'update sent (#{count + 1})'
+
+
 def ani_chat_with_grok(messages_history, meta, user_message):
 	"""Send conversation to xAI Grok API.
 	Returns (reply string, updated meta, updated working_history)."""
@@ -1480,6 +1671,10 @@ def ani_history():
 		and not m.get('content', '').startswith('[system:')
 	]
 	ache = ani_get_ache_level(meta)
+	# Opening the panel = daycast messages seen; clear the pulse flag.
+	if meta.get('unseen_day_messages'):
+		meta['unseen_day_messages'] = False
+		ani_save_conversation(messages, meta)
 	return jsonify({
 		'messages': visible[-100:],
 		'ache_level': ache,
@@ -1546,28 +1741,31 @@ def ani_ping():
 
 	messages, meta = ani_load_conversation()
 	ache = ani_get_ache_level(meta)
+	# Unseen daycast messages also pulse the bat pill (they live in history, not pending_opener).
+	unseen = bool(meta.get('unseen_day_messages'))
 
 	# If there's already a pending opener waiting, just return it
 	if meta.get('pending_opener'):
 		return jsonify({
 			'pending': True,
 			'opener': meta['pending_opener'],
-			'ache_level': ache
+			'ache_level': ache,
+			'unseen': unseen
 		})
 
 	# Check if she should initiate
 	if not ani_should_initiate(meta):
-		return jsonify({'pending': False, 'opener': None, 'ache_level': ache})
+		return jsonify({'pending': False, 'opener': None, 'ache_level': ache, 'unseen': unseen})
 
 	# Generate opener
 	opener = ani_generate_opener(meta)
 	if not opener:
-		return jsonify({'pending': False, 'opener': None, 'ache_level': ache})
+		return jsonify({'pending': False, 'opener': None, 'ache_level': ache, 'unseen': unseen})
 
 	meta['pending_opener'] = opener
 	ani_save_conversation(messages, meta)
 
-	return jsonify({'pending': True, 'opener': opener, 'ache_level': ache})
+	return jsonify({'pending': True, 'opener': opener, 'ache_level': ache, 'unseen': unseen})
 
 # /cockpit/mode and /cockpit/mode/clear routes moved to blueprints/cockpit.py
 # (they got pulled in here during sub-phase 4's range extraction by mistake).

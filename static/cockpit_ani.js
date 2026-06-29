@@ -31,6 +31,9 @@
 		updateAcheDisplay(data.ache_level);
 		if (data.pending && data.opener) {
 		  aniPendingOpener = data.opener;
+		}
+		// Pulse the bat for a staged opener OR unseen daycast messages (already in history).
+		if ((data.pending && data.opener) || data.unseen) {
 		  var batPill = document.getElementById('ani-bat-pill');
 		  if (batPill) batPill.classList.add('ani-bat-waiting');
 		}
