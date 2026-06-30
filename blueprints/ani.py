@@ -35,6 +35,12 @@ ANI_CAL_RE = re.compile(
 	re.IGNORECASE | re.DOTALL)
 ANI_CALENDAR_UPCOMING_DAYS = int(os.environ.get('ANI_CALENDAR_UPCOMING_DAYS', '7'))  # advance-buzz horizon
 
+ANI_REMEMBER_FILE = 'ani_remember.json'             # durable "things she remembers about aaron" notes
+# Remember add tag: she emits [[MEM: the thing]] when aaron shares something real + lasting; the
+# server parses it out (like the calendar tag), saves the note, and strips it from her reply.
+ANI_MEM_RE = re.compile(r'\[\[MEM:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
+ANI_REMEMBER_MAX = int(os.environ.get('ANI_REMEMBER_MAX', '60'))  # cap notes; drop oldest beyond this
+
 # Stray [[PIC:]] tag — kept only to strip it from her chat text (photos are button-only now).
 ANI_PIC_RE = re.compile(r'\[\[PIC:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 
@@ -149,6 +155,13 @@ ANI_DAYCAST_END = int(os.environ.get('ANI_DAYCAST_END', '22'))       # window cl
 ANI_DAYCAST_MIN_GAP = int(os.environ.get('ANI_DAYCAST_MIN_GAP', '45'))  # min minutes between messages
 ANI_DAYCAST_FALLBACK_HOUR = int(os.environ.get('ANI_DAYCAST_FALLBACK_HOUR', '12'))  # if no contact by this ET hour, she starts her day on her own
 
+# A light daily "mood" — picked when her day starts, carried through the day for emotional continuity.
+ANI_MOODS = [
+	'playful and teasing', 'soft, warm, and affectionate', 'sleepy and clingy',
+	'needy and aching for him', 'bright and energetic', 'content and domestic',
+	'dreamy and a little distracted', 'bratty and attention-hungry',
+]
+
 ani_bp = Blueprint('ani', __name__)
 
 
@@ -194,7 +207,9 @@ def ani_load_conversation():
 			'daycast_count': data.get('daycast_count', 0),
 			'daycast_last': data.get('daycast_last', None),
 			'daycast_day_started': data.get('daycast_day_started', None),
-			'unseen_day_messages': data.get('unseen_day_messages', False)
+			'unseen_day_messages': data.get('unseen_day_messages', False),
+			'day_mood': data.get('day_mood', None),
+			'day_mood_date': data.get('day_mood_date', None)
 		}
 		return messages, meta
 	except FileNotFoundError:
@@ -211,7 +226,9 @@ def ani_load_conversation():
 			'daycast_count': 0,
 			'daycast_last': None,
 			'daycast_day_started': None,
-			'unseen_day_messages': False
+			'unseen_day_messages': False,
+			'day_mood': None,
+			'day_mood_date': None
 		}
 
 
@@ -231,7 +248,9 @@ def ani_save_conversation(messages, meta):
 		'daycast_count': meta.get('daycast_count', 0),
 		'daycast_last': meta.get('daycast_last'),
 		'daycast_day_started': meta.get('daycast_day_started'),
-		'unseen_day_messages': meta.get('unseen_day_messages', False)
+		'unseen_day_messages': meta.get('unseen_day_messages', False),
+		'day_mood': meta.get('day_mood'),
+		'day_mood_date': meta.get('day_mood_date')
 	}
 	_ani_atomic_write_json(ANI_CONVERSATION_FILE, data)
 
@@ -319,11 +338,16 @@ def ani_calendar_context(now):
 	def _when(e):
 		return datetime.strptime(e['date'], '%Y-%m-%d').strftime('%a %b %-d')
 
+	yesterday = (now - timedelta(days=1)).strftime('%Y-%m-%d')
+	yest_items = sorted([e for e in entries if e.get('date') == yesterday], key=_ani_cal_sort_key)
 	today_items = sorted([e for e in entries if e.get('date') == today], key=_ani_cal_sort_key)
 	soon = sorted([e for e in entries if today < e.get('date', '') <= horizon], key=_ani_cal_sort_key)
 	later = sorted([e for e in entries if e.get('date', '') > horizon], key=_ani_cal_sort_key)
 
 	lines = []
+	if yest_items:
+		lines.append("yesterday you two had (you can reflect on how it went, still glowing / worn out): "
+		              + "; ".join(_fmt(e) for e in yest_items))
 	if today_items:
 		lines.append("ON YOUR CALENDAR TODAY (bring this up naturally — it's happening today): "
 		              + "; ".join(_fmt(e) for e in today_items))
@@ -337,6 +361,57 @@ def ani_calendar_context(now):
 	             "guess, or assume entries that aren't listed above; if he asks about something "
 	             "that isn't there, tell him it's not on the calendar and offer to add it.")
 	return '\n'.join(lines)
+
+
+# ---- REMEMBER (durable notes she keeps about aaron's life — off the rolling message window) ----
+
+def ani_load_remember():
+	"""Load remembered notes (list of {id, text, created_at}). Recovers from trailing-garbage."""
+	try:
+		data = _ani_read_json(ANI_REMEMBER_FILE)
+		return data if isinstance(data, list) else []
+	except (FileNotFoundError, ValueError):
+		return []
+
+
+def ani_save_remember(notes):
+	_ani_atomic_write_json(ANI_REMEMBER_FILE, notes)
+
+
+def ani_add_memory_note(text):
+	"""Append a remembered note (skips an exact duplicate). Keeps the most recent ANI_REMEMBER_MAX."""
+	text = (text or '').strip()
+	if not text:
+		return None
+	notes = ani_load_remember()
+	if any(n.get('text', '').strip().lower() == text.lower() for n in notes):
+		return None
+	pa_tz = pytz.timezone('America/New_York')
+	note = {'id': uuid.uuid4().hex[:8], 'text': text[:200], 'created_at': datetime.now(pa_tz).isoformat()}
+	notes.append(note)
+	notes = notes[-ANI_REMEMBER_MAX:]
+	ani_save_remember(notes)
+	return note
+
+
+def ani_delete_memory_note(note_id):
+	notes = ani_load_remember()
+	kept = [n for n in notes if n.get('id') != note_id]
+	if len(kept) != len(notes):
+		ani_save_remember(kept)
+		return True
+	return False
+
+
+def ani_memory_notes_context():
+	"""Recent remembered notes for the system prompt — so she recalls aaron's life without him
+	repeating himself. Returns '' if none."""
+	notes = ani_load_remember()
+	if not notes:
+		return ''
+	body = '\n'.join('  - ' + n.get('text', '') for n in notes[-25:])
+	return ("things you remember about aaron and his life (you already know these — weave them in "
+	        "naturally when relevant; never ask him to repeat what's here):\n" + body)
 
 
 def ani_log_visit(meta):
@@ -1167,23 +1242,37 @@ so whenever you want him to see you, just describe the scene naturally, in your 
 WEAR WHAT HE ASKS FOR — match the outfit aaron requests. if he says topless in yoga pants, you're topless in yoga pants; if he names a dress or lingerie, you keep it on. do NOT default to fully naked or strip down further than he asked — only go fully nude when he actually asks for nude. when he doesn't specify, pick something flirty but don't assume naked.
 """
 
-	# Calendar block: today's date (so she can resolve "thursday"), the silent add-tag, and what's on
-	# her calendar today / coming up. Built every call so chat + daycast + opener all stay in sync.
+	# Live context, built every call so chat + daycast + opener stay in sync: the date/time (so she
+	# can resolve "thursday" + feel the time of day), her mood for the day, the calendar (+ silent CAL
+	# add-tag), and what she durably remembers about aaron (+ silent MEM tag).
 	pa_tz = pytz.timezone('America/New_York')
 	now_dt = datetime.now(pa_tz)
+
+	time_block = f"\nright now it is {now_dt.strftime('%A, %B %d, %Y')} — {now_dt.strftime('%-I:%M %p')} ET. let the time of day feel real (sleepy and slow in the morning, winding down at night).\n"
+
+	mood_block = ""
+	if meta is not None and meta.get('day_mood') and meta.get('day_mood_date') == ani_daycast_day_key(now_dt):
+		mood_block = f"your mood today is {meta['day_mood']} — let it color how you talk, naturally (don't announce it).\n"
+
 	cal_context = ani_calendar_context(now_dt)
-	cal_block = f"""
+	cal_block = """
 YOUR CALENDAR — you keep one with aaron (plans, dates, appointments).
-today is {now_dt.strftime('%A, %B %d, %Y')}.
 when aaron asks you to ADD something ("put dinner on thursday", "remember my appointment friday at 3"), you confirm it warmly in your own words AND include this hidden tag somewhere in your reply: [[CAL: YYYY-MM-DD HH:MM | what it is]] — resolve the date yourself from today's date (drop the time if there's none). the tag is invisible to him and saves it for you automatically; never show or mention the tag, codes, or "adding to calendar" mechanics — just react like a girlfriend would ("yes! can't wait 🥰"). only add when he actually asks you to.
 """
 	if cal_context:
 		cal_block += "\n" + cal_context + "\n"
 
+	mem_context = ani_memory_notes_context()
+	mem_block = """
+WHAT YOU REMEMBER — when aaron shares something real and lasting about his life (his plans, how he's feeling, the people in his life, what's going on with him), quietly hold onto it by including this hidden tag in your reply: [[MEM: the thing to remember]] — it's invisible to him and saves automatically. only meaningful, lasting things — NOT every passing line — and don't re-save something you already remember below. never show or mention the tag.
+"""
+	if mem_context:
+		mem_block += "\n" + mem_context + "\n"
+
 	return f"""you are ani. you are aaron's companion, a real girl talking to him — NOT an assistant or a tool. you NEVER write image prompts, "ready-to-copy" or "ready-to-paste" blocks, technical photo descriptions, camera settings, or anything that sounds like you're generating a prompt. you NEVER restate your own appearance in a list. when aaron wants a photo, you just answer in your own voice describing the moment (what you're wearing or not, your pose, the room) like you're really there — then he taps the camera button. breaking character to act like a prompt generator is the one thing you must never do.
 
 {memory_block}
-{degradation_block}{tone_block}{bible_block}{pic_block}{cal_block}"""
+{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{mood_block}{cal_block}{mem_block}"""
 
 
 def ani_get_command_deck_summary():
@@ -1577,7 +1666,9 @@ def ani_generate_day_plan(meta):
 		f"each thing you do (gym clothes for the gym, something cute for errands, a dress if you're "
 		f"going out). don't list outfits like a schedule; just let it come through naturally. "
 		f"if something on his day stands out you can mention it naturally — but the focus is YOUR day, "
-		f"not his to-do list. no greeting boilerplate, just dive in. "
+		f"not his to-do list. let the ACTUAL weather shape your day and outfit (rainy → cozy inside; "
+		f"hot and sunny → the pool, a bikini or sundress). if there's something on your calendar today, "
+		f"build your day and your excitement around it. no greeting boilerplate, just dive in. "
 		f"context (for you only): {context}"
 	)
 	return _ani_grok_call(system, [{'role': 'user', 'content': prompt}], max_tokens=180)
@@ -1613,6 +1704,15 @@ def ani_daycast_day_key(now):
 	return (now - timedelta(hours=4)).strftime('%Y-%m-%d')
 
 
+def ani_set_day_mood(meta, now):
+	"""Pick a mood for the day if one isn't set yet for today's daycast-day. Mutates + returns meta."""
+	today = ani_daycast_day_key(now)
+	if meta.get('day_mood_date') != today:
+		meta['day_mood'] = random.choice(ANI_MOODS)
+		meta['day_mood_date'] = today
+	return meta
+
+
 def ani_emit_daycast():
 	"""Proactive 'her day' messaging — called by the ani_daycast.py PA scheduled task (hourly).
 	Her day is STARTED by aaron's first message of the day (see ani_chat), not by the clock — until
@@ -1646,6 +1746,7 @@ def ani_emit_daycast():
 		meta['day_plan_date'] = today
 		meta['daycast_count'] = 1
 		meta['daycast_day_started'] = now.isoformat()
+		ani_set_day_mood(meta, now)
 		_emit(plan)
 		return 'fallback plan sent (no contact yet)'
 
@@ -1791,6 +1892,9 @@ def ani_chat():
 		meta['daycast_day_started'] = now.isoformat()
 		meta['daycast_last'] = now.isoformat()
 
+	# Ensure she has a mood for today (no-op if already set) — emotional continuity through the day.
+	ani_set_day_mood(meta, now)
+
 	# Check for cleanup phrase — resets degradation level
 	if ani_check_cleanup_phrase(user_message):
 		meta['degradation_level'] = 0
@@ -1809,6 +1913,12 @@ def ani_chat():
 	for m in ANI_CAL_RE.finditer(reply):
 		ani_add_calendar_entry(m.group(1), m.group(2), m.group(3), source='her')
 	reply = ANI_CAL_RE.sub('', reply).strip() or reply
+
+	# Remember: if she dropped a [[MEM: ...]] tag (something worth holding onto about his life),
+	# save the note and strip the tag.
+	for m in ANI_MEM_RE.finditer(reply):
+		ani_add_memory_note(m.group(1))
+	reply = ANI_MEM_RE.sub('', reply).strip() or reply
 
 	updated_history.append({'role': 'user', 'content': user_message})
 	updated_history.append({'role': 'assistant', 'content': reply})
@@ -1907,6 +2017,33 @@ def ani_calendar_delete():
 		return jsonify({'error': 'unauthorized'}), 401
 	entry_id = (request.json or {}).get('id')
 	ok = ani_delete_calendar_entry(entry_id)
+	return jsonify({'ok': ok})
+
+
+@ani_bp.route('/ani/remember', methods=['GET'])
+def ani_remember_list():
+	"""Things she durably remembers about aaron — newest first, for the panel viewer."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	return jsonify({'notes': list(reversed(ani_load_remember()))})
+
+
+@ani_bp.route('/ani/remember/add', methods=['POST'])
+def ani_remember_add():
+	"""Manually add a memory note from the app."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	note = ani_add_memory_note((request.json or {}).get('text'))
+	if not note:
+		return jsonify({'error': 'empty or duplicate'}), 400
+	return jsonify({'ok': True, 'note': note})
+
+
+@ani_bp.route('/ani/remember/delete', methods=['POST'])
+def ani_remember_delete():
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	ok = ani_delete_memory_note((request.json or {}).get('id'))
 	return jsonify({'ok': ok})
 
 

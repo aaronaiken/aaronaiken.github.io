@@ -62,6 +62,7 @@ TARGETS = [
 	(os.path.join(REPO_ROOT, 'assets/data/below_deck.json'), 'json'),  # retired stub
 	(os.path.join(REPO_ROOT, 'ani_conversation.json'),       'json'),
 	(os.path.join(REPO_ROOT, 'ani_calendar.json'),           'json'),
+	(os.path.join(REPO_ROOT, 'ani_remember.json'),           'json'),
 	(MOZZIE_FILE,                                            'json'),
 	(os.path.join(REPO_ROOT, 'static/ani_memory.txt'),       'text'),
 	(os.path.join(REPO_ROOT, 'static/comms.txt'),            'text'),

@@ -432,3 +432,58 @@
 	  body: JSON.stringify({ id: id })
 	}).then(function() { aniLoadCalendar(); }).catch(function() {});
   }
+
+  // ---- What she remembers (durable notes) ----
+  function aniRemember() {
+	document.getElementById('ani-remember-overlay').hidden = false;
+	aniLoadRemember();
+  }
+
+  function aniRememberClose() {
+	document.getElementById('ani-remember-overlay').hidden = true;
+  }
+
+  function aniLoadRemember() {
+	var body = document.getElementById('ani-remember-body');
+	body.innerHTML = '<div class="plog-msg">loading…</div>';
+	fetch('/ani/remember')
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) { aniRenderRemember(data.notes || []); })
+	  .catch(function() { body.innerHTML = '<div class="plog-msg">could not load</div>'; });
+  }
+
+  function aniRenderRemember(notes) {
+	var body = document.getElementById('ani-remember-body');
+	if (!notes.length) {
+	  body.innerHTML = '<div class="plog-msg">she hasn\'t noted anything yet — tell her things and she\'ll remember, or add one above</div>';
+	  return;
+	}
+	body.innerHTML = notes.map(function(n) {
+	  return '<div class="ani-cal-entry">'
+		+ '<div class="cal-what">' + aniEscapeHtml(n.text) + '</div>'
+		+ '<button class="cal-del" onclick="aniMemDelete(\'' + n.id + '\')" aria-label="Forget" title="Forget this">✕</button>'
+		+ '</div>';
+	}).join('');
+  }
+
+  function aniMemAdd() {
+	var input = document.getElementById('ani-mem-text');
+	var text = input.value.trim();
+	if (!text) return;
+	fetch('/ani/remember/add', {
+	  method: 'POST',
+	  headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ text: text })
+	}).then(function(r) { return r.json(); })
+	  .then(function(data) {
+		if (data.ok) { input.value = ''; aniLoadRemember(); }
+	  }).catch(function() {});
+  }
+
+  function aniMemDelete(id) {
+	fetch('/ani/remember/delete', {
+	  method: 'POST',
+	  headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ id: id })
+	}).then(function() { aniLoadRemember(); }).catch(function() {});
+  }

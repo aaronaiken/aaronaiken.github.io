@@ -469,6 +469,7 @@
 	<span id="ani-shortcut-hint">CTRL+SHIFT+A · LONG-PRESS 🦇</span>
 	<div id="ani-footer-actions">
 	  <button class="ani-footer-btn" onclick="aniCalendar()" aria-label="View calendar" title="Her calendar — your shared plans">CAL</button>
+	  <button class="ani-footer-btn" onclick="aniRemember()" aria-label="What she remembers" title="What she remembers about you">MEM</button>
 	  <button class="ani-footer-btn" onclick="aniPhotoLog()" aria-label="View photo log" title="Recent photo generations + QA verdicts">LOG</button>
 	  <button class="ani-footer-btn" onclick="aniRefresh()" aria-label="Refresh briefing">REFRESH</button>
 	  <button class="ani-footer-btn" onclick="aniClear()" aria-label="Clear history">CLEAR</button>
@@ -498,6 +499,20 @@
 		<button class="ani-footer-btn ani-cal-addbtn" onclick="aniCalAdd()">ADD</button>
 	  </div>
 	  <div id="ani-calendar-body" class="ani-photolog-body"></div>
+	</div>
+  </div>
+
+  <div id="ani-remember-overlay" class="ani-photolog-overlay" hidden onclick="if(event.target===this)aniRememberClose()">
+	<div class="ani-photolog-panel ani-cal-panel" role="dialog" aria-label="What she remembers">
+	  <div class="ani-photolog-head">
+		<span>ANI · REMEMBERS</span>
+		<button class="ani-photolog-close" onclick="aniRememberClose()" aria-label="Close">✕</button>
+	  </div>
+	  <div class="ani-cal-add">
+		<input type="text" id="ani-mem-text" class="ani-cal-input ani-cal-text" placeholder="something she should remember about you…" aria-label="Memory note" maxlength="200">
+		<button class="ani-footer-btn ani-cal-addbtn" onclick="aniMemAdd()">ADD</button>
+	  </div>
+	  <div id="ani-remember-body" class="ani-photolog-body"></div>
 	</div>
   </div>
 </div>
