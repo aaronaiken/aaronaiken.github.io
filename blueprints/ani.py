@@ -152,30 +152,51 @@ ANI_DAYCAST_FALLBACK_HOUR = int(os.environ.get('ANI_DAYCAST_FALLBACK_HOUR', '12'
 ani_bp = Blueprint('ani', __name__)
 
 
+def _ani_atomic_write_json(path, data):
+	"""Write JSON atomically via a PER-WRITER temp file + rename. The temp name MUST be unique
+	per writer — a fixed `.tmp` name raced across the 3 web workers + the hourly daycast task
+	(two writing the same temp at once → a complete doc with garbage appended → 'Extra data')."""
+	tmp = '%s.%d.%s.tmp' % (path, os.getpid(), uuid.uuid4().hex[:8])
+	with open(tmp, 'w') as f:
+		json.dump(data, f, indent=2)
+	os.replace(tmp, path)
+
+
+def _ani_read_json(path):
+	"""Read + parse a JSON file, recovering from trailing-garbage corruption by keeping the valid
+	leading document (raw_decode). Raises FileNotFoundError if missing, ValueError if unrecoverable."""
+	with open(path, 'r') as f:
+		raw = f.read()
+	try:
+		return json.loads(raw)
+	except ValueError:
+		obj, _ = json.JSONDecoder().raw_decode(raw)  # take the valid prefix; drops trailing bytes
+		return obj
+
+
 def ani_load_conversation():
 	"""Load full conversation history and metadata.
 	Returns (messages list, meta dict)."""
 	try:
-		with open(ANI_CONVERSATION_FILE, 'r') as f:
-			data = json.load(f)
-			messages = data.get('messages', [])
-			meta = {
-				'last_briefing': data.get('last_briefing', None),
-				'location': data.get('location', None),
-				'visit_log': data.get('visit_log', []),
-				'last_active': data.get('last_active', None),
-				'pending_opener': data.get('pending_opener', None),
-				'last_session_tone': data.get('last_session_tone', None),
-				'degradation_level': data.get('degradation_level', 0),
-				'session_message_count': data.get('session_message_count', 0),
-				# Daycast (proactive "her day" messages — see ani_emit_daycast)
-				'day_plan_date': data.get('day_plan_date', None),
-				'daycast_count': data.get('daycast_count', 0),
-				'daycast_last': data.get('daycast_last', None),
-				'daycast_day_started': data.get('daycast_day_started', None),
-				'unseen_day_messages': data.get('unseen_day_messages', False)
-			}
-			return messages, meta
+		data = _ani_read_json(ANI_CONVERSATION_FILE)
+		messages = data.get('messages', [])
+		meta = {
+			'last_briefing': data.get('last_briefing', None),
+			'location': data.get('location', None),
+			'visit_log': data.get('visit_log', []),
+			'last_active': data.get('last_active', None),
+			'pending_opener': data.get('pending_opener', None),
+			'last_session_tone': data.get('last_session_tone', None),
+			'degradation_level': data.get('degradation_level', 0),
+			'session_message_count': data.get('session_message_count', 0),
+			# Daycast (proactive "her day" messages — see ani_emit_daycast)
+			'day_plan_date': data.get('day_plan_date', None),
+			'daycast_count': data.get('daycast_count', 0),
+			'daycast_last': data.get('daycast_last', None),
+			'daycast_day_started': data.get('daycast_day_started', None),
+			'unseen_day_messages': data.get('unseen_day_messages', False)
+		}
+		return messages, meta
 	except FileNotFoundError:
 		return [], {
 			'last_briefing': None,
@@ -212,12 +233,7 @@ def ani_save_conversation(messages, meta):
 		'daycast_day_started': meta.get('daycast_day_started'),
 		'unseen_day_messages': meta.get('unseen_day_messages', False)
 	}
-	# Atomic write (temp + rename): the hourly daycast task and the web worker both write this
-	# file, so a concurrent read must never see a half-written, unparseable file.
-	tmp = ANI_CONVERSATION_FILE + '.tmp'
-	with open(tmp, 'w') as f:
-		json.dump(data, f, indent=2)
-	os.replace(tmp, ANI_CONVERSATION_FILE)
+	_ani_atomic_write_json(ANI_CONVERSATION_FILE, data)
 
 
 # ---- CALENDAR (her shared plans — durable, off the rolling message window) ----
@@ -225,18 +241,14 @@ def ani_save_conversation(messages, meta):
 def ani_load_calendar():
 	"""Load calendar entries (list). Each: {id, date 'YYYY-MM-DD', time 'HH:MM'|None, text, source, created_at}."""
 	try:
-		with open(ANI_CALENDAR_FILE, 'r') as f:
-			data = json.load(f)
+		data = _ani_read_json(ANI_CALENDAR_FILE)
 		return data if isinstance(data, list) else []
 	except (FileNotFoundError, ValueError):
 		return []
 
 
 def ani_save_calendar(entries):
-	tmp = ANI_CALENDAR_FILE + '.tmp'
-	with open(tmp, 'w') as f:
-		json.dump(entries, f, indent=2)
-	os.replace(tmp, ANI_CALENDAR_FILE)
+	_ani_atomic_write_json(ANI_CALENDAR_FILE, entries)
 
 
 def ani_add_calendar_entry(date, time_str, text, source):
