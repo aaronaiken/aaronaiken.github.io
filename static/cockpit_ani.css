@@ -853,6 +853,27 @@ body.ani-fullscreen #ani-core-text { background: #0a0f24; border-top-color: #2a3
 body.ani-fullscreen #ani-core-controls { border-top-color: #2a3360; }
 body.ani-fullscreen #ani-core-status { color: #5a6fa0; }
 
+/* ---- Image lightbox (tap a photo to enlarge) ---- */
+.ani-msg-img { cursor: zoom-in; }
+#ani-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: rgba(0, 0, 0, 0.93);
+  cursor: zoom-out;
+}
+#ani-lightbox[hidden] { display: none; }
+#ani-lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  box-shadow: 0 0 48px rgba(0, 0, 0, 0.7);
+}
+
 /* Mobile: chat fills viewport, no LOOPS, no ad-panel */
 @media (max-width: 700px) {
   /* Fill the VISIBLE viewport — not the layout viewport that extends behind the browser's

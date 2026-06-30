@@ -258,6 +258,35 @@
 	aniMsgs.insertBefore(div, aniTyping);
   }
 
+  // Tap a photo to view it larger. Delegated so it works for every rendered image.
+  aniMsgs.addEventListener('click', function(e) {
+	var t = e.target;
+	if (t && t.classList && t.classList.contains('ani-msg-img')) {
+	  aniLightbox(t.getAttribute('src'));
+	}
+  });
+
+  function aniLightbox(src) {
+	if (!src) return;
+	document.getElementById('ani-lightbox-img').src = src;
+	document.getElementById('ani-lightbox').hidden = false;
+  }
+
+  function aniLightboxClose() {
+	var lb = document.getElementById('ani-lightbox');
+	if (lb) lb.hidden = true;
+	var img = document.getElementById('ani-lightbox-img');
+	if (img) img.src = '';
+  }
+
+  // Escape closes the lightbox first (capture phase, so it pre-empts the After Dark family-hide).
+  document.addEventListener('keydown', function(e) {
+	if (e.key === 'Escape') {
+	  var lb = document.getElementById('ani-lightbox');
+	  if (lb && !lb.hidden) { e.stopPropagation(); aniLightboxClose(); }
+	}
+  }, true);
+
   function aniRenderNotify(text) {
 	var div = document.createElement('div');
 	div.classList.add('ani-msg-notify');

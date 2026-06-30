@@ -532,6 +532,11 @@
   </div>
 </div>
 
+<!-- Image lightbox (outside #ani-panel so its transform doesn't trap the fixed overlay) -->
+<div id="ani-lightbox" hidden onclick="aniLightboxClose()">
+  <img id="ani-lightbox-img" src="" alt="">
+</div>
+
 	<script src="{{ url_for('static', filename='cockpit_ani.js') }}?v={{ asset_v }}"></script>
 
 <!-- ============================================================ -->
