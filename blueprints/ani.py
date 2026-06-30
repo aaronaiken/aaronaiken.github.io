@@ -296,11 +296,14 @@ def _ani_cal_sort_key(e):
 
 
 def ani_calendar_context(now):
-	"""Context string for the system prompt: what's on her calendar TODAY (surface it) + what's
-	COMING UP within ANI_CALENDAR_UPCOMING_DAYS (light advance buzz). Returns '' if nothing relevant."""
+	"""Context string for the system prompt. Shows her the COMPLETE calendar (today / soon / later)
+	so she can answer "what's on the calendar" accurately, with today surfaced for the day and the
+	next ANI_CALENDAR_UPCOMING_DAYS framed as light advance buzz. Always ends with an anti-invention
+	guard so she never confabulates entries that aren't there. Never returns ''."""
 	entries = ani_load_calendar()
 	if not entries:
-		return ''
+		return ("YOUR SHARED CALENDAR is currently EMPTY — there are no plans on it. if he asks "
+		        "what's on the calendar, tell him it's empty; NEVER invent or guess entries.")
 	today = now.strftime('%Y-%m-%d')
 	horizon = (now + timedelta(days=ANI_CALENDAR_UPCOMING_DAYS)).strftime('%Y-%m-%d')
 
@@ -313,21 +316,26 @@ def ani_calendar_context(now):
 				t = f" at {e['time']}"
 		return f"{e['text']}{t}"
 
+	def _when(e):
+		return datetime.strptime(e['date'], '%Y-%m-%d').strftime('%a %b %-d')
+
 	today_items = sorted([e for e in entries if e.get('date') == today], key=_ani_cal_sort_key)
-	upcoming = sorted(
-		[e for e in entries if today < e.get('date', '') <= horizon],
-		key=_ani_cal_sort_key)
+	soon = sorted([e for e in entries if today < e.get('date', '') <= horizon], key=_ani_cal_sort_key)
+	later = sorted([e for e in entries if e.get('date', '') > horizon], key=_ani_cal_sort_key)
 
 	lines = []
 	if today_items:
 		lines.append("ON YOUR CALENDAR TODAY (bring this up naturally — it's happening today): "
 		              + "; ".join(_fmt(e) for e in today_items))
-	if upcoming:
-		def _when(e):
-			d = datetime.strptime(e['date'], '%Y-%m-%d')
-			return d.strftime('%a %b %-d')
-		lines.append("coming up (you can look forward to these, don't force it): "
-		              + "; ".join(f"{_when(e)} — {_fmt(e)}" for e in upcoming))
+	if soon:
+		lines.append("coming up soon (you can look forward to these, don't force it): "
+		              + "; ".join(f"{_when(e)} — {_fmt(e)}" for e in soon))
+	if later:
+		lines.append("further out on your calendar: "
+		              + "; ".join(f"{_when(e)} — {_fmt(e)}" for e in later))
+	lines.append("^ that is your COMPLETE shared calendar — the ONLY plans on it. NEVER invent, "
+	             "guess, or assume entries that aren't listed above; if he asks about something "
+	             "that isn't there, tell him it's not on the calendar and offer to add it.")
 	return '\n'.join(lines)
 
 
