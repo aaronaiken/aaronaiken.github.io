@@ -826,11 +826,33 @@ body.ani-fullscreen .cal-badge { color: #a8d4ff; border-color: #4a5288; }
 
 /* Mobile: chat fills viewport, no LOOPS, no ad-panel */
 @media (max-width: 700px) {
+  /* Fill the VISIBLE viewport — not the layout viewport that extends behind the browser's
+     URL bar / toolbar — so the header and bottom controls stay on-screen and tappable.
+     (Was top/bottom:0 fixed, which stranded both rows behind the mobile browser chrome.) */
+  body.ani-fullscreen #ani-panel {
+	top: 0;
+	bottom: auto;
+	height: 100vh;     /* fallback for browsers without dvh */
+	height: 100dvh;    /* tracks the dynamic browser chrome */
+  }
   body.ani-fullscreen #ani-messages,
   body.ani-fullscreen #ani-input-row,
   body.ani-fullscreen #ani-footer-row {
 	padding-left: 16px;
 	padding-right: 16px;
   }
-  body.ani-fullscreen #ani-header { padding: 12px 16px; }
+  /* viewport-fit=cover lets content slide under the notch + home indicator —
+     pad the top header and bottom footer clear of the safe-area insets. */
+  body.ani-fullscreen #ani-header {
+	padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+  }
+  body.ani-fullscreen #ani-footer-row {
+	padding-bottom: calc(6px + env(safe-area-inset-bottom));
+  }
+  /* Same safe-area treatment for the slide-over viewers (calendar / photo log) so their
+     close button isn't under the notch and the list isn't under the home indicator. */
+  body.ani-fullscreen .ani-photolog-overlay {
+	padding-top: calc(10px + env(safe-area-inset-top));
+	padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
 }
