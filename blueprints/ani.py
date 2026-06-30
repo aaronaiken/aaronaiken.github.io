@@ -138,6 +138,7 @@ ANI_DAYCAST_CHANCE = float(os.environ.get('ANI_DAYCAST_CHANCE', '0.5'))  # spont
 ANI_DAYCAST_START = int(os.environ.get('ANI_DAYCAST_START', '8'))     # window open (ET hour)
 ANI_DAYCAST_END = int(os.environ.get('ANI_DAYCAST_END', '22'))       # window close (ET hour, exclusive)
 ANI_DAYCAST_MIN_GAP = int(os.environ.get('ANI_DAYCAST_MIN_GAP', '45'))  # min minutes between messages
+ANI_DAYCAST_FALLBACK_HOUR = int(os.environ.get('ANI_DAYCAST_FALLBACK_HOUR', '12'))  # if no contact by this ET hour, she starts her day on her own
 
 ani_bp = Blueprint('ani', __name__)
 
@@ -1487,12 +1488,21 @@ def ani_emit_daycast():
 		meta['unseen_day_messages'] = True
 		ani_save_conversation(messages, meta)
 
-	# Her day doesn't start until aaron reaches out first — his first message of the day establishes
-	# her plan + outfit (ani_chat sets day_plan_date). Until then, she waits; no broadcasting to an
-	# empty room. (ani_generate_day_plan is retained as the building block for an optional
-	# no-contact fallback, but is no longer auto-fired.)
+	# Her day normally starts when aaron reaches out first — his first message establishes her plan +
+	# outfit (ani_chat sets day_plan_date). She waits for him... but only until ANI_DAYCAST_FALLBACK_HOUR
+	# ET; if he still hasn't made contact by then, she starts her day on her own (auto-plan) so she's
+	# not silent all day. Pacing rebases to this start, so the floor spreads over the remaining hours.
 	if meta.get('day_plan_date') != today:
-		return 'awaiting his first message today'
+		if now.hour < ANI_DAYCAST_FALLBACK_HOUR:
+			return 'awaiting his first message today'
+		plan = ani_generate_day_plan(meta)
+		if not plan:
+			return 'fallback plan generation failed (will retry next tick)'
+		meta['day_plan_date'] = today
+		meta['daycast_count'] = 1
+		meta['daycast_day_started'] = now.isoformat()
+		_emit(plan)
+		return 'fallback plan sent (no contact yet)'
 
 	# Spacing guard — never two messages within ANI_DAYCAST_MIN_GAP minutes.
 	last = meta.get('daycast_last')
