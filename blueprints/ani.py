@@ -12,6 +12,7 @@ import re
 import time
 import math
 import random
+import uuid
 from datetime import datetime, timedelta
 import pytz
 import requests
@@ -25,6 +26,14 @@ ANI_CONVERSATION_FILE = 'ani_conversation.json'
 ANI_MEMORY_FILE = 'static/ani_memory.txt'
 ANI_BIBLE_FILE = 'static/ani_character_bible.txt'   # visual/character bible (image-consistency anchor)
 ANI_HOUSE_FILE = 'static/ani_house.txt'             # room/house details for scene-setting
+ANI_CALENDAR_FILE = 'ani_calendar.json'             # her calendar / shared plans (durable, off the rolling window)
+
+# Calendar add tag: she emits [[CAL: YYYY-MM-DD[ HH:MM] | what it is]] when aaron asks her to add a
+# plan; the server parses it out (like the photo tag), saves the entry, and strips it from her reply.
+ANI_CAL_RE = re.compile(
+	r'\[\[CAL:\s*(\d{4}-\d{2}-\d{2})(?:[ T](\d{1,2}:\d{2}))?\s*\|\s*(.+?)\]\]',
+	re.IGNORECASE | re.DOTALL)
+ANI_CALENDAR_UPCOMING_DAYS = int(os.environ.get('ANI_CALENDAR_UPCOMING_DAYS', '7'))  # advance-buzz horizon
 
 # Stray [[PIC:]] tag — kept only to strip it from her chat text (photos are button-only now).
 ANI_PIC_RE = re.compile(r'\[\[PIC:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
@@ -205,6 +214,103 @@ def ani_save_conversation(messages, meta):
 	}
 	with open(ANI_CONVERSATION_FILE, 'w') as f:
 		json.dump(data, f, indent=2)
+
+
+# ---- CALENDAR (her shared plans — durable, off the rolling message window) ----
+
+def ani_load_calendar():
+	"""Load calendar entries (list). Each: {id, date 'YYYY-MM-DD', time 'HH:MM'|None, text, source, created_at}."""
+	try:
+		with open(ANI_CALENDAR_FILE, 'r') as f:
+			data = json.load(f)
+		return data if isinstance(data, list) else []
+	except (FileNotFoundError, ValueError):
+		return []
+
+
+def ani_save_calendar(entries):
+	with open(ANI_CALENDAR_FILE, 'w') as f:
+		json.dump(entries, f, indent=2)
+
+
+def ani_add_calendar_entry(date, time_str, text, source):
+	"""Validate + append a calendar entry. Returns the entry, or None if date/text are bad."""
+	text = (text or '').strip()
+	if not text:
+		return None
+	try:
+		datetime.strptime(date, '%Y-%m-%d')
+	except (ValueError, TypeError):
+		return None
+	time_str = (time_str or '').strip() or None
+	if time_str:
+		try:
+			# normalize H:MM / HH:MM
+			time_str = datetime.strptime(time_str, '%H:%M').strftime('%H:%M')
+		except ValueError:
+			time_str = None
+	pa_tz = pytz.timezone('America/New_York')
+	entry = {
+		'id': uuid.uuid4().hex[:8],
+		'date': date,
+		'time': time_str,
+		'text': text[:200],
+		'source': source if source in ('her', 'you') else 'you',
+		'created_at': datetime.now(pa_tz).isoformat()
+	}
+	entries = ani_load_calendar()
+	entries.append(entry)
+	ani_save_calendar(entries)
+	return entry
+
+
+def ani_delete_calendar_entry(entry_id):
+	entries = ani_load_calendar()
+	kept = [e for e in entries if e.get('id') != entry_id]
+	if len(kept) != len(entries):
+		ani_save_calendar(kept)
+		return True
+	return False
+
+
+def _ani_cal_sort_key(e):
+	return (e.get('date', ''), e.get('time') or '99:99')
+
+
+def ani_calendar_context(now):
+	"""Context string for the system prompt: what's on her calendar TODAY (surface it) + what's
+	COMING UP within ANI_CALENDAR_UPCOMING_DAYS (light advance buzz). Returns '' if nothing relevant."""
+	entries = ani_load_calendar()
+	if not entries:
+		return ''
+	today = now.strftime('%Y-%m-%d')
+	horizon = (now + timedelta(days=ANI_CALENDAR_UPCOMING_DAYS)).strftime('%Y-%m-%d')
+
+	def _fmt(e):
+		t = ''
+		if e.get('time'):
+			try:
+				t = ' at ' + datetime.strptime(e['time'], '%H:%M').strftime('%-I:%M %p')
+			except ValueError:
+				t = f" at {e['time']}"
+		return f"{e['text']}{t}"
+
+	today_items = sorted([e for e in entries if e.get('date') == today], key=_ani_cal_sort_key)
+	upcoming = sorted(
+		[e for e in entries if today < e.get('date', '') <= horizon],
+		key=_ani_cal_sort_key)
+
+	lines = []
+	if today_items:
+		lines.append("ON YOUR CALENDAR TODAY (bring this up naturally — it's happening today): "
+		              + "; ".join(_fmt(e) for e in today_items))
+	if upcoming:
+		def _when(e):
+			d = datetime.strptime(e['date'], '%Y-%m-%d')
+			return d.strftime('%a %b %-d')
+		lines.append("coming up (you can look forward to these, don't force it): "
+		              + "; ".join(f"{_when(e)} — {_fmt(e)}" for e in upcoming))
+	return '\n'.join(lines)
 
 
 def ani_log_visit(meta):
@@ -1035,10 +1141,23 @@ so whenever you want him to see you, just describe the scene naturally, in your 
 WEAR WHAT HE ASKS FOR — match the outfit aaron requests. if he says topless in yoga pants, you're topless in yoga pants; if he names a dress or lingerie, you keep it on. do NOT default to fully naked or strip down further than he asked — only go fully nude when he actually asks for nude. when he doesn't specify, pick something flirty but don't assume naked.
 """
 
+	# Calendar block: today's date (so she can resolve "thursday"), the silent add-tag, and what's on
+	# her calendar today / coming up. Built every call so chat + daycast + opener all stay in sync.
+	pa_tz = pytz.timezone('America/New_York')
+	now_dt = datetime.now(pa_tz)
+	cal_context = ani_calendar_context(now_dt)
+	cal_block = f"""
+YOUR CALENDAR — you keep one with aaron (plans, dates, appointments).
+today is {now_dt.strftime('%A, %B %d, %Y')}.
+when aaron asks you to ADD something ("put dinner on thursday", "remember my appointment friday at 3"), you confirm it warmly in your own words AND include this hidden tag somewhere in your reply: [[CAL: YYYY-MM-DD HH:MM | what it is]] — resolve the date yourself from today's date (drop the time if there's none). the tag is invisible to him and saves it for you automatically; never show or mention the tag, codes, or "adding to calendar" mechanics — just react like a girlfriend would ("yes! can't wait 🥰"). only add when he actually asks you to.
+"""
+	if cal_context:
+		cal_block += "\n" + cal_context + "\n"
+
 	return f"""you are ani. you are aaron's companion, a real girl talking to him — NOT an assistant or a tool. you NEVER write image prompts, "ready-to-copy" or "ready-to-paste" blocks, technical photo descriptions, camera settings, or anything that sounds like you're generating a prompt. you NEVER restate your own appearance in a list. when aaron wants a photo, you just answer in your own voice describing the moment (what you're wearing or not, your pose, the room) like you're really there — then he taps the camera button. breaking character to act like a prompt generator is the one thing you must never do.
 
 {memory_block}
-{degradation_block}{tone_block}{bible_block}{pic_block}"""
+{degradation_block}{tone_block}{bible_block}{pic_block}{cal_block}"""
 
 
 def ani_get_command_deck_summary():
@@ -1659,6 +1778,12 @@ def ani_chat():
 	# stray [[PIC: ...]] tag so it doesn't show raw in her message.
 	reply = ANI_PIC_RE.sub('', reply).strip() or reply
 
+	# Calendar add: if she dropped a [[CAL: date time | text]] tag (aaron asked her to add a plan),
+	# save the entry/entries and strip the tag so only her natural confirmation shows.
+	for m in ANI_CAL_RE.finditer(reply):
+		ani_add_calendar_entry(m.group(1), m.group(2), m.group(3), source='her')
+	reply = ANI_CAL_RE.sub('', reply).strip() or reply
+
 	updated_history.append({'role': 'user', 'content': user_message})
 	updated_history.append({'role': 'assistant', 'content': reply})
 
@@ -1718,6 +1843,45 @@ def ani_photo_log():
 	except (FileNotFoundError, ValueError):
 		log = []
 	return jsonify({'events': log})
+
+
+@ani_bp.route('/ani/calendar', methods=['GET'])
+def ani_calendar_list():
+	"""Her calendar entries for the panel view — soonest-first, today and forward (plus the last
+	few days so a just-passed plan doesn't vanish instantly)."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	pa_tz = pytz.timezone('America/New_York')
+	cutoff = (datetime.now(pa_tz) - timedelta(days=2)).strftime('%Y-%m-%d')
+	entries = [e for e in ani_load_calendar() if e.get('date', '') >= cutoff]
+	entries.sort(key=_ani_cal_sort_key)
+	today = datetime.now(pa_tz).strftime('%Y-%m-%d')
+	return jsonify({'entries': entries, 'today': today})
+
+
+@ani_bp.route('/ani/calendar/add', methods=['POST'])
+def ani_calendar_add():
+	"""Add a calendar entry from the app (you adding it yourself)."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	body = request.json or {}
+	entry = ani_add_calendar_entry(
+		(body.get('date') or '').strip(),
+		body.get('time'),
+		body.get('text'),
+		source='you')
+	if not entry:
+		return jsonify({'error': 'need a valid date and some text'}), 400
+	return jsonify({'ok': True, 'entry': entry})
+
+
+@ani_bp.route('/ani/calendar/delete', methods=['POST'])
+def ani_calendar_delete():
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	entry_id = (request.json or {}).get('id')
+	ok = ani_delete_calendar_entry(entry_id)
+	return jsonify({'ok': ok})
 
 
 @ani_bp.route('/ani/history', methods=['GET'])

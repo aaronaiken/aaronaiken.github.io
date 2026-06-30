@@ -762,6 +762,68 @@ body.ani-fullscreen .plog-try { color: #7e8fc8; }
 body.ani-fullscreen .plog-meta { color: #5a6fa0; }
 body.ani-fullscreen .plog-meta a { color: #a8d4ff; }
 
+/* ---- Calendar (reuses .ani-photolog-overlay/panel/head/body) ---- */
+.ani-cal-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #2e1e08;
+}
+.ani-cal-input {
+  background: #0c0e08;
+  border: 1px solid #2e1e08;
+  color: #c89040;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  padding: 4px 6px;
+}
+.ani-cal-input:focus { outline: none; border-color: #6a4818; }
+.ani-cal-time { width: 78px; }
+.ani-cal-text { flex: 1; min-width: 120px; }
+.ani-cal-addbtn { align-self: stretch; }
+.ani-cal-entry {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 8px;
+  border-bottom: 1px solid #1a1206;
+  color: #b07820;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.cal-when { color: #9a6018; white-space: nowrap; min-width: 96px; }
+.cal-what { flex: 1; color: #c89040; word-break: break-word; }
+.cal-src { font-size: 10px; }
+.cal-del {
+  background: none;
+  border: none;
+  color: #6a4818;
+  cursor: pointer;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  padding: 0 2px;
+}
+.cal-del:hover { color: #c0502a; }
+.ani-cal-entry.cal-today { background: rgba(245, 179, 50, 0.06); }
+.cal-badge {
+  color: #f5b332;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  border: 1px solid #6a4818;
+  padding: 0 3px;
+  margin-left: 4px;
+}
+/* fullscreen "outer space" palette */
+body.ani-fullscreen .ani-cal-add { border-color: #2a3360; }
+body.ani-fullscreen .ani-cal-input { background: #0a0f24; border-color: #2a3360; color: #a8b8e8; }
+body.ani-fullscreen .ani-cal-input:focus { border-color: #4a5288; }
+body.ani-fullscreen .ani-cal-entry { color: #7e8fc8; border-color: #1a2240; }
+body.ani-fullscreen .cal-when { color: #6b7ab0; }
+body.ani-fullscreen .cal-what { color: #a8b8e8; }
+body.ani-fullscreen .ani-cal-entry.cal-today { background: rgba(120, 150, 230, 0.08); }
+body.ani-fullscreen .cal-badge { color: #a8d4ff; border-color: #4a5288; }
+
 /* Mobile: chat fills viewport, no LOOPS, no ad-panel */
 @media (max-width: 700px) {
   body.ani-fullscreen #ani-messages,

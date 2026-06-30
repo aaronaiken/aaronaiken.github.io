@@ -21,6 +21,7 @@ static/comms.txt
 .kt
 ani_conversation.json
 ani_photo_log.json
+ani_calendar.json
 static/ani_memory.txt
 static/ani_character_bible.txt
 static/ani_house.txt

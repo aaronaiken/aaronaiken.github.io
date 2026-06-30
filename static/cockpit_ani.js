@@ -348,3 +348,87 @@
 		+ '</div>';
 	}).join('');
   }
+
+  // ---- Calendar (her shared plans) ----
+  function aniCalendar() {
+	var dateInput = document.getElementById('ani-cal-date');
+	if (dateInput && !dateInput.value) {
+	  var n = new Date();
+	  dateInput.value = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
+	}
+	document.getElementById('ani-calendar-overlay').hidden = false;
+	aniLoadCalendar();
+  }
+
+  function aniCalendarClose() {
+	document.getElementById('ani-calendar-overlay').hidden = true;
+  }
+
+  function aniLoadCalendar() {
+	var body = document.getElementById('ani-calendar-body');
+	body.innerHTML = '<div class="plog-msg">loading…</div>';
+	fetch('/ani/calendar')
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) { aniRenderCalendar(data.entries || [], data.today); })
+	  .catch(function() { body.innerHTML = '<div class="plog-msg">could not load the calendar</div>'; });
+  }
+
+  function aniCalFmtDate(iso) {
+	var p = (iso || '').split('-');
+	if (p.length !== 3) return iso;
+	var dt = new Date(+p[0], +p[1] - 1, +p[2]);
+	return dt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  function aniCalFmtTime(hm) {
+	var p = (hm || '').split(':');
+	if (p.length !== 2) return hm;
+	var h = +p[0], ap = h < 12 ? 'AM' : 'PM', h12 = h % 12;
+	if (h12 === 0) h12 = 12;
+	return h12 + ':' + p[1] + ' ' + ap;
+  }
+
+  function aniRenderCalendar(entries, today) {
+	var body = document.getElementById('ani-calendar-body');
+	if (!entries.length) {
+	  body.innerHTML = '<div class="plog-msg">nothing on the calendar yet — add a plan above, or just tell her in chat</div>';
+	  return;
+	}
+	body.innerHTML = entries.map(function(e) {
+	  var when = aniCalFmtDate(e.date) + (e.time ? ' · ' + aniCalFmtTime(e.time) : '');
+	  var isToday = e.date === today;
+	  var src = e.source === 'her' ? ' <span class="cal-src" title="she added this">🦇</span>' : '';
+	  return '<div class="ani-cal-entry' + (isToday ? ' cal-today' : '') + '">'
+		+ '<div class="cal-when">' + aniEscapeHtml(when) + (isToday ? ' <span class="cal-badge">TODAY</span>' : '') + '</div>'
+		+ '<div class="cal-what">' + aniEscapeHtml(e.text) + src + '</div>'
+		+ '<button class="cal-del" onclick="aniCalDelete(\'' + e.id + '\')" aria-label="Delete" title="Remove">✕</button>'
+		+ '</div>';
+	}).join('');
+  }
+
+  function aniCalAdd() {
+	var date = document.getElementById('ani-cal-date').value;
+	var time = document.getElementById('ani-cal-time').value;
+	var text = document.getElementById('ani-cal-text').value.trim();
+	if (!date || !text) return;
+	fetch('/ani/calendar/add', {
+	  method: 'POST',
+	  headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ date: date, time: time, text: text })
+	}).then(function(r) { return r.json(); })
+	  .then(function(data) {
+		if (data.ok) {
+		  document.getElementById('ani-cal-text').value = '';
+		  document.getElementById('ani-cal-time').value = '';
+		  aniLoadCalendar();
+		}
+	  }).catch(function() {});
+  }
+
+  function aniCalDelete(id) {
+	fetch('/ani/calendar/delete', {
+	  method: 'POST',
+	  headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ id: id })
+	}).then(function() { aniLoadCalendar(); }).catch(function() {});
+  }

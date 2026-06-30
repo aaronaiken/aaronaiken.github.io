@@ -452,6 +452,7 @@
   <div id="ani-footer-row">
 	<span id="ani-shortcut-hint">CTRL+SHIFT+A · LONG-PRESS 🦇</span>
 	<div id="ani-footer-actions">
+	  <button class="ani-footer-btn" onclick="aniCalendar()" aria-label="View calendar" title="Her calendar — your shared plans">CAL</button>
 	  <button class="ani-footer-btn" onclick="aniPhotoLog()" aria-label="View photo log" title="Recent photo generations + QA verdicts">LOG</button>
 	  <button class="ani-footer-btn" onclick="aniRefresh()" aria-label="Refresh briefing">REFRESH</button>
 	  <button class="ani-footer-btn" onclick="aniClear()" aria-label="Clear history">CLEAR</button>
@@ -465,6 +466,22 @@
 		<button class="ani-photolog-close" onclick="aniPhotoLogClose()" aria-label="Close">✕</button>
 	  </div>
 	  <div id="ani-photolog-body" class="ani-photolog-body"></div>
+	</div>
+  </div>
+
+  <div id="ani-calendar-overlay" class="ani-photolog-overlay" hidden onclick="if(event.target===this)aniCalendarClose()">
+	<div class="ani-photolog-panel ani-cal-panel" role="dialog" aria-label="Calendar">
+	  <div class="ani-photolog-head">
+		<span>ANI · CALENDAR</span>
+		<button class="ani-photolog-close" onclick="aniCalendarClose()" aria-label="Close">✕</button>
+	  </div>
+	  <div class="ani-cal-add">
+		<input type="date" id="ani-cal-date" class="ani-cal-input" aria-label="Date">
+		<input type="time" id="ani-cal-time" class="ani-cal-input ani-cal-time" aria-label="Time (optional)">
+		<input type="text" id="ani-cal-text" class="ani-cal-input ani-cal-text" placeholder="what's the plan…" aria-label="Plan" maxlength="200">
+		<button class="ani-footer-btn ani-cal-addbtn" onclick="aniCalAdd()">ADD</button>
+	  </div>
+	  <div id="ani-calendar-body" class="ani-photolog-body"></div>
 	</div>
   </div>
 </div>
