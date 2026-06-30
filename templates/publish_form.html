@@ -90,6 +90,7 @@
 			<span id="ad-player-title">// VIEWER</span>
 			<div class="ad-player-tb-actions">
 				<button class="ad-player-tb-btn" onclick="adLibraryToggle()" id="ad-library-toggle-btn">LIB</button>
+				<button class="ad-player-tb-btn" onclick="adQueueToggle()" id="ad-queue-toggle-btn">QUEUE</button>
 				<button class="ad-player-tb-btn" onclick="adPlayNext()" id="ad-next-btn">NEXT</button>
 				<button class="ad-player-tb-btn" onclick="adPlayerMinimize()" id="ad-minimize-btn">—</button>
 				<button class="ad-player-tb-btn" onclick="adPlayerClose()">✕</button>
@@ -97,6 +98,21 @@
 		</div>
 		<div id="ad-player-library">
 			<div id="ad-player-library-grid" aria-label="Video library"></div>
+		</div>
+		<div id="ad-player-queue">
+			<div id="ad-player-queue-inner">
+				<textarea id="ad-queue-input" rows="3" spellcheck="false"
+				          placeholder="paste video URLs — one per line — then PLAY QUEUE"></textarea>
+				<div id="ad-queue-controls">
+					<button class="ad-player-tb-btn" onclick="adQueueLoad()">PLAY QUEUE</button>
+					<button class="ad-player-tb-btn" onclick="adQueueAddFromInput()">+ ADD</button>
+					<button class="ad-player-tb-btn" onclick="adQueueClear()">CLEAR</button>
+					<button class="ad-player-tb-btn" onclick="adQueueToggleAuto()" id="ad-queue-auto-btn">AUTO ○</button>
+					<input id="ad-queue-auto-min" type="number" min="1" max="180" value="10" title="auto-advance interval (minutes)">
+					<span id="ad-queue-status"></span>
+				</div>
+				<div id="ad-queue-list" aria-label="Queue"></div>
+			</div>
 		</div>
 		<div id="ad-player-video-wrap">
 			<iframe id="ad-viewer-iframe" allowfullscreen allow="autoplay; encrypted-media"

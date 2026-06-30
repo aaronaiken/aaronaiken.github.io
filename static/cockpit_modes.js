@@ -572,6 +572,13 @@
 	let adPlayerMinimized = false;
 	let adCurrentIdx = -1;
 
+	// Ad-hoc paste queue (ephemeral — not saved to the .txt library).
+	let adQueue = [];          // [{url, label}]
+	let adQueueIdx = -1;
+	let adQueueActive = false;
+	let adQueueVisible = false;
+	let adAutoTimer = null;
+
 	// ---- Drag ----
 	(function initAdPlayerDrag() {
 		const player = document.getElementById('ad-player');
@@ -1092,6 +1099,7 @@
 
 	function adPlayVideo(item, idx) {
 		adCurrentIdx = idx;
+		adQueueActive = false;   // playing a library item exits queue mode
 
 		// Close library drawer
 		adLibraryVisible = false;
@@ -1120,6 +1128,8 @@
 	}
 
 	function adPlayNext() {
+		// If a paste-queue is active, NEXT steps through it in order.
+		if (adQueueActive && adQueue.length > 0) { adQueueNext(); return; }
 		// Lazy-load the library on first NEXT so the player can be opened
 		// from outside the LIB drawer.
 		if (adLibraryItems.length === 0) {
@@ -1143,6 +1153,153 @@
 			nextIdx = Math.floor(Math.random() * adLibraryItems.length);
 		} while (nextIdx === adCurrentIdx);
 		adPlayVideo(adLibraryItems[nextIdx], nextIdx);
+	}
+
+	// ---- Ad-hoc paste queue ----------------------------------------
+	// Paste URLs, play through them in order. NEXT steps the queue; an
+	// optional AUTO timer advances hands-free (PH embeds are cross-origin,
+	// so we can't detect the actual video-end — the timer is the workaround).
+
+	function adQueueToggle() {
+		adQueueVisible = !adQueueVisible;
+		document.getElementById('ad-player-queue').classList.toggle('is-open', adQueueVisible);
+		document.getElementById('ad-queue-toggle-btn').style.color = adQueueVisible ? '#8b1a1a' : '';
+	}
+
+	// Parse one pasted line into a Pornhub embed entry, or null. Accepts a
+	// page/share URL (viewkey=…), an /embed/<key> URL, or a bare viewkey,
+	// with an optional '|label' suffix. Mirrors the server's after_dark_library.
+	function adParseEntry(line) {
+		line = (line || '').trim();
+		if (!line || line.charAt(0) === '#') return null;
+		let label = '';
+		const bar = line.indexOf('|');
+		if (bar >= 0) { label = line.slice(bar + 1).trim(); line = line.slice(0, bar).trim(); }
+		let vk = null, m;
+		if ((m = line.match(/viewkey=([A-Za-z0-9]+)/))) vk = m[1];
+		else if ((m = line.match(/\/embed\/([A-Za-z0-9]+)/))) vk = m[1];
+		else if (/^[A-Za-z0-9]+$/.test(line)) vk = line;
+		if (!vk) return null;
+		return { url: 'https://www.pornhub.com/embed/' + vk, label: label || vk };
+	}
+
+	function adParseInput() {
+		return document.getElementById('ad-queue-input').value
+			.split('\n').map(adParseEntry).filter(Boolean);
+	}
+
+	function adQueueLoad() {
+		const items = adParseInput();
+		if (items.length === 0) { adSetQueueStatus('no valid URLs'); return; }
+		adQueue = items;
+		adQueueIdx = -1;
+		adQueueActive = true;
+		adRenderQueue();
+		adQueuePlay(0);
+	}
+
+	// '+ ADD' appends pasted URLs to a running queue without restarting it.
+	function adQueueAddFromInput() {
+		const items = adParseInput();
+		if (items.length === 0) { adSetQueueStatus('no valid URLs'); return; }
+		const wasEmpty = adQueue.length === 0;
+		adQueue = adQueue.concat(items);
+		document.getElementById('ad-queue-input').value = '';
+		adQueueActive = true;
+		adRenderQueue();
+		if (wasEmpty) adQueuePlay(0);
+	}
+
+	function adQueuePlay(idx) {
+		if (idx < 0 || idx >= adQueue.length) return;
+		adQueueIdx = idx;
+		adQueueActive = true;
+
+		const player = document.getElementById('ad-player');
+		player.style.display = '';
+		if (adPlayerMinimized) adPlayerMinimize();
+
+		const frame = document.getElementById('ad-viewer-iframe');
+		const url = adQueue[idx].url;
+		const sep = url.indexOf('?') >= 0 ? '&' : '?';
+		frame.src = url + sep + 'autoplay=1&muted=1';
+		adRenderQueue();
+	}
+
+	function adQueueNext() {
+		if (adQueue.length === 0) return;
+		adQueuePlay((adQueueIdx + 1) % adQueue.length);   // loop at the end
+	}
+
+	function adQueuePrev() {
+		if (adQueue.length === 0) return;
+		adQueuePlay((adQueueIdx - 1 + adQueue.length) % adQueue.length);
+	}
+
+	function adQueueClear() {
+		adQueue = [];
+		adQueueIdx = -1;
+		adQueueActive = false;
+		adStopAuto();
+		document.getElementById('ad-queue-input').value = '';
+		adRenderQueue();
+	}
+
+	function adStopAuto() {
+		if (adAutoTimer) { clearInterval(adAutoTimer); adAutoTimer = null; }
+		const btn = document.getElementById('ad-queue-auto-btn');
+		if (btn) { btn.textContent = 'AUTO ○'; btn.style.color = ''; }
+	}
+
+	function adQueueToggleAuto() {
+		if (adAutoTimer) { adStopAuto(); adSetQueueStatus(''); return; }
+		if (adQueue.length === 0) { adSetQueueStatus('load a queue first'); return; }
+		let min = parseInt(document.getElementById('ad-queue-auto-min').value, 10);
+		if (!(min >= 1)) min = 10;
+		if (min > 180) min = 180;
+		adAutoTimer = setInterval(adQueueNext, min * 60000);
+		const btn = document.getElementById('ad-queue-auto-btn');
+		btn.textContent = 'AUTO ●';
+		btn.style.color = '#e05050';
+		adSetQueueStatus('auto every ' + min + ' min');
+	}
+
+	function adSetQueueStatus(msg) {
+		const el = document.getElementById('ad-queue-status');
+		if (el) el.textContent = msg || '';
+	}
+
+	function adRenderQueue() {
+		const list = document.getElementById('ad-queue-list');
+		if (!list) return;
+		list.innerHTML = '';
+		if (adQueue.length === 0) { adSetQueueStatus(''); return; }
+		adQueue.forEach(function(item, i) {
+			const row = document.createElement('div');
+			row.className = 'ad-queue-row' + (i === adQueueIdx ? ' is-playing' : '');
+			const label = document.createElement('span');
+			label.className = 'ad-queue-label';
+			label.textContent = (i + 1) + '. ' + item.label;
+			label.onclick = function() { adQueuePlay(i); };
+			const del = document.createElement('button');
+			del.className = 'ad-queue-del';
+			del.textContent = '✕';
+			del.title = 'remove';
+			del.onclick = function(e) { e.stopPropagation(); adQueueRemove(i); };
+			row.appendChild(label);
+			row.appendChild(del);
+			list.appendChild(row);
+		});
+		if (!adAutoTimer) adSetQueueStatus('▶ ' + (adQueueIdx + 1) + ' / ' + adQueue.length);
+	}
+
+	function adQueueRemove(i) {
+		if (i < 0 || i >= adQueue.length) return;
+		adQueue.splice(i, 1);
+		if (adQueue.length === 0) { adQueueClear(); return; }
+		if (i < adQueueIdx) adQueueIdx--;
+		else if (i === adQueueIdx) adQueueIdx = Math.min(adQueueIdx, adQueue.length - 1);
+		adRenderQueue();
 	}
 
 	// ============================================================

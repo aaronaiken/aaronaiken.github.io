@@ -196,6 +196,7 @@
 
 	#ad-player.is-minimized #ad-player-video-wrap,
 	#ad-player.is-minimized #ad-player-library,
+	#ad-player.is-minimized #ad-player-queue,
 	#ad-player.is-minimized #ad-player-resize-grip { display: none; }
 
 	/* ---- FLOATING YOUTUBE PLAYER ----
@@ -390,6 +391,76 @@
 
 	.ad-library-tile:hover { border-color: #8b1a1a; color: #c04040; }
 	.ad-library-tile.is-playing { border-color: #c04040; color: #e05050; }
+
+	/* Ad-hoc paste queue drawer — mirrors the library drawer */
+	#ad-player-queue {
+		max-height: 0;
+		overflow: hidden;
+		transition: max-height 0.25s ease;
+		background: #0e0508;
+		border-bottom: 1px solid #4a1818;
+	}
+	#ad-player-queue.is-open { max-height: 260px; }
+	#ad-player-queue-inner { padding: 10px; overflow-y: auto; max-height: 260px; }
+	#ad-queue-input {
+		width: 100%;
+		box-sizing: border-box;
+		background: #140808;
+		border: 1px solid #4a1818;
+		border-radius: 2px;
+		color: #c04040;
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.6rem;
+		letter-spacing: 0.04em;
+		padding: 6px 8px;
+		resize: vertical;
+	}
+	#ad-queue-input:focus { outline: none; border-color: #8b1a1a; }
+	#ad-queue-input::placeholder { color: #5a2424; }
+	#ad-queue-controls {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px;
+		margin: 7px 0;
+	}
+	#ad-queue-auto-min {
+		width: 46px;
+		background: #140808;
+		border: 1px solid #4a1818;
+		color: #c04040;
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.55rem;
+		padding: 2px 4px;
+	}
+	#ad-queue-status { color: #6a2828; font-size: 0.52rem; letter-spacing: 0.1em; margin-left: auto; }
+	#ad-queue-list { display: flex; flex-direction: column; gap: 4px; }
+	.ad-queue-row {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		background: #140808;
+		border: 1px solid #4a1818;
+		border-radius: 2px;
+		padding: 5px 8px;
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.55rem;
+		color: #a03838;
+		letter-spacing: 0.05em;
+	}
+	.ad-queue-label { flex: 1; cursor: pointer; word-break: break-all; line-height: 1.4; }
+	.ad-queue-row:hover { border-color: #8b1a1a; }
+	.ad-queue-row.is-playing { border-color: #c04040; color: #e05050; }
+	.ad-queue-del {
+		background: none;
+		border: none;
+		color: #5a2424;
+		cursor: pointer;
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.6rem;
+		padding: 0 2px;
+	}
+	.ad-queue-del:hover { color: #c04040; }
 
 	#ad-player-video-wrap {
 		position: relative;
