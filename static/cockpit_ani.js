@@ -266,18 +266,101 @@
 	}
   });
 
+  // Lightbox with zoom (pinch / wheel / double-tap) + pan.
+  var lbScale = 1, lbX = 0, lbY = 0;
+  function lbApply() {
+	var img = document.getElementById('ani-lightbox-img');
+	if (!img) return;
+	img.style.transform = 'translate(' + lbX + 'px,' + lbY + 'px) scale(' + lbScale + ')';
+	img.style.cursor = lbScale > 1 ? 'grab' : 'zoom-out';
+  }
+  function lbClamp(s) { return Math.max(1, Math.min(5, s)); }
+  function lbReset() { lbScale = 1; lbX = 0; lbY = 0; lbApply(); }
+  function lbDist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
+  function lbZoomTo(newScale, cx, cy) {
+	var img = document.getElementById('ani-lightbox-img');
+	var r = img.getBoundingClientRect();
+	var ix = cx - (r.left + r.width / 2), iy = cy - (r.top + r.height / 2);
+	newScale = lbClamp(newScale);
+	var ratio = newScale / lbScale;
+	lbX -= ix * (ratio - 1); lbY -= iy * (ratio - 1);
+	lbScale = newScale; lbApply();
+  }
+
   function aniLightbox(src) {
 	if (!src) return;
 	document.getElementById('ani-lightbox-img').src = src;
 	document.getElementById('ani-lightbox').hidden = false;
+	lbReset();
   }
-
   function aniLightboxClose() {
 	var lb = document.getElementById('ani-lightbox');
 	if (lb) lb.hidden = true;
 	var img = document.getElementById('ani-lightbox-img');
 	if (img) img.src = '';
+	lbReset();
   }
+
+  (function lbInit() {
+	var lb = document.getElementById('ani-lightbox');
+	var img = document.getElementById('ani-lightbox-img');
+	if (!lb || !img) return;
+	// backdrop tap closes; image gestures don't bubble to it
+	lb.addEventListener('click', function(e) { if (e.target === lb) aniLightboxClose(); });
+
+	// desktop: wheel zoom, double-click toggle, drag to pan
+	img.addEventListener('wheel', function(e) {
+	  e.preventDefault();
+	  lbZoomTo(lbScale * (e.deltaY < 0 ? 1.15 : 0.87), e.clientX, e.clientY);
+	}, { passive: false });
+	img.addEventListener('dblclick', function(e) {
+	  e.preventDefault();
+	  if (lbScale > 1) lbReset(); else lbZoomTo(2.5, e.clientX, e.clientY);
+	});
+	var mDown = false, mX = 0, mY = 0;
+	img.addEventListener('mousedown', function(e) {
+	  if (lbScale <= 1) return;
+	  mDown = true; mX = e.clientX; mY = e.clientY; e.preventDefault();
+	});
+	window.addEventListener('mousemove', function(e) {
+	  if (!mDown) return;
+	  lbX += e.clientX - mX; lbY += e.clientY - mY; mX = e.clientX; mY = e.clientY; lbApply();
+	});
+	window.addEventListener('mouseup', function() { mDown = false; });
+
+	// touch: pinch zoom, one-finger pan when zoomed, single-tap close / double-tap zoom
+	var startDist = 0, startScale = 1, sx = 0, sy = 0, px = 0, py = 0;
+	var moved = false, lastTap = 0, tapTimer = null;
+	img.addEventListener('touchstart', function(e) {
+	  if (e.touches.length === 2) {
+		startDist = lbDist(e.touches); startScale = lbScale; moved = true;
+	  } else if (e.touches.length === 1) {
+		sx = e.touches[0].clientX; sy = e.touches[0].clientY; px = lbX; py = lbY; moved = false;
+	  }
+	}, { passive: false });
+	img.addEventListener('touchmove', function(e) {
+	  if (e.touches.length === 2) {
+		e.preventDefault();
+		lbScale = lbClamp(startScale * (lbDist(e.touches) / startDist)); lbApply(); moved = true;
+	  } else if (e.touches.length === 1 && lbScale > 1) {
+		e.preventDefault();
+		lbX = px + (e.touches[0].clientX - sx); lbY = py + (e.touches[0].clientY - sy); lbApply(); moved = true;
+	  }
+	}, { passive: false });
+	img.addEventListener('touchend', function(e) {
+	  if (e.touches.length > 0) return;
+	  if (moved) { moved = false; return; }
+	  var now = Date.now(), t = e.changedTouches[0];
+	  if (now - lastTap < 300) {
+		if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
+		if (lbScale > 1) lbReset(); else lbZoomTo(2.5, t.clientX, t.clientY);
+		lastTap = 0;
+	  } else {
+		lastTap = now;
+		tapTimer = setTimeout(function() { if (lbScale <= 1) aniLightboxClose(); }, 300);
+	  }
+	});
+  })();
 
   // Escape closes the lightbox first (capture phase, so it pre-empts the After Dark family-hide).
   document.addEventListener('keydown', function(e) {

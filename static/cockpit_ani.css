@@ -872,7 +872,28 @@ body.ani-fullscreen #ani-core-status { color: #5a6fa0; }
   max-height: 100%;
   object-fit: contain;
   box-shadow: 0 0 48px rgba(0, 0, 0, 0.7);
+  touch-action: none;          /* we own pinch/pan, don't let the browser hijack it */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  will-change: transform;
 }
+#ani-lightbox-close {
+  position: absolute;
+  top: calc(8px + env(safe-area-inset-top));
+  right: 12px;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  color: #fff;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 16px;
+  line-height: 1;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+#ani-lightbox-close:hover { background: rgba(0, 0, 0, 0.8); }
 
 /* Mobile: chat fills viewport, no LOOPS, no ad-panel */
 @media (max-width: 700px) {
