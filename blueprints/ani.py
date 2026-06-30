@@ -212,8 +212,12 @@ def ani_save_conversation(messages, meta):
 		'daycast_day_started': meta.get('daycast_day_started'),
 		'unseen_day_messages': meta.get('unseen_day_messages', False)
 	}
-	with open(ANI_CONVERSATION_FILE, 'w') as f:
+	# Atomic write (temp + rename): the hourly daycast task and the web worker both write this
+	# file, so a concurrent read must never see a half-written, unparseable file.
+	tmp = ANI_CONVERSATION_FILE + '.tmp'
+	with open(tmp, 'w') as f:
 		json.dump(data, f, indent=2)
+	os.replace(tmp, ANI_CONVERSATION_FILE)
 
 
 # ---- CALENDAR (her shared plans — durable, off the rolling message window) ----
@@ -229,8 +233,10 @@ def ani_load_calendar():
 
 
 def ani_save_calendar(entries):
-	with open(ANI_CALENDAR_FILE, 'w') as f:
+	tmp = ANI_CALENDAR_FILE + '.tmp'
+	with open(tmp, 'w') as f:
 		json.dump(entries, f, indent=2)
+	os.replace(tmp, ANI_CALENDAR_FILE)
 
 
 def ani_add_calendar_entry(date, time_str, text, source):
