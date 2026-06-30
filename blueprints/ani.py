@@ -162,6 +162,7 @@ def ani_load_conversation():
 				'day_plan_date': data.get('day_plan_date', None),
 				'daycast_count': data.get('daycast_count', 0),
 				'daycast_last': data.get('daycast_last', None),
+				'daycast_day_started': data.get('daycast_day_started', None),
 				'unseen_day_messages': data.get('unseen_day_messages', False)
 			}
 			return messages, meta
@@ -178,6 +179,7 @@ def ani_load_conversation():
 			'day_plan_date': None,
 			'daycast_count': 0,
 			'daycast_last': None,
+			'daycast_day_started': None,
 			'unseen_day_messages': False
 		}
 
@@ -197,6 +199,7 @@ def ani_save_conversation(messages, meta):
 		'day_plan_date': meta.get('day_plan_date'),
 		'daycast_count': meta.get('daycast_count', 0),
 		'daycast_last': meta.get('daycast_last'),
+		'daycast_day_started': meta.get('daycast_day_started'),
 		'unseen_day_messages': meta.get('unseen_day_messages', False)
 	}
 	with open(ANI_CONVERSATION_FILE, 'w') as f:
@@ -1458,17 +1461,24 @@ def ani_generate_day_update(meta, history):
 	return _ani_grok_call(system, messages, max_tokens=180)
 
 
+def ani_daycast_day_key(now):
+	"""Date string (YYYY-MM-DD) for the daycast 'day', which rolls at 4am ET — so a late-night
+	message still counts toward the day it started in, and her day doesn't reset until 4am."""
+	return (now - timedelta(hours=4)).strftime('%Y-%m-%d')
+
+
 def ani_emit_daycast():
 	"""Proactive 'her day' messaging — called by the ani_daycast.py PA scheduled task (hourly).
-	Self-gating: posts a morning plan once per day, then organic updates through the day with a
-	floor of ANI_DAYCAST_FLOOR. Appends an assistant message to history and trips the unseen-message
-	pulse (no git, no request context). Returns a short status string for the cron log."""
+	Her day is STARTED by aaron's first message of the day (see ani_chat), not by the clock — until
+	then this no-ops. After that, it sends organic updates through the window with a floor of
+	ANI_DAYCAST_FLOOR, paced from when the day actually started. Appends an assistant message to
+	history and trips the unseen-message pulse (no git, no request context). Returns a status string."""
 	pa_tz = pytz.timezone('America/New_York')
 	now = datetime.now(pa_tz)
 	if now.hour < ANI_DAYCAST_START or now.hour >= ANI_DAYCAST_END:
 		return 'outside window'
 
-	today = now.strftime('%Y-%m-%d')
+	today = ani_daycast_day_key(now)
 	messages, meta = ani_load_conversation()
 
 	def _emit(text):
@@ -1477,15 +1487,12 @@ def ani_emit_daycast():
 		meta['unseen_day_messages'] = True
 		ani_save_conversation(messages, meta)
 
-	# Morning plan — once per day, first run after the window opens.
+	# Her day doesn't start until aaron reaches out first — his first message of the day establishes
+	# her plan + outfit (ani_chat sets day_plan_date). Until then, she waits; no broadcasting to an
+	# empty room. (ani_generate_day_plan is retained as the building block for an optional
+	# no-contact fallback, but is no longer auto-fired.)
 	if meta.get('day_plan_date') != today:
-		plan = ani_generate_day_plan(meta)
-		if not plan:
-			return 'plan generation failed (will retry next tick)'
-		meta['day_plan_date'] = today
-		meta['daycast_count'] = 1
-		_emit(plan)
-		return 'morning plan sent'
+		return 'awaiting his first message today'
 
 	# Spacing guard — never two messages within ANI_DAYCAST_MIN_GAP minutes.
 	last = meta.get('daycast_last')
@@ -1499,10 +1506,25 @@ def ani_emit_daycast():
 		except Exception:
 			pass
 
-	# Floor pacing: how many should she have sent by this point in the window?
+	# Floor pacing: how many should she have sent by now? Paced from when her day actually started
+	# (aaron's first message), not a fixed 8am — so a late first-contact spreads the floor over the
+	# remaining hours instead of forcing a catch-up burst.
 	count = meta.get('daycast_count', 0)
-	window_hours = max(1, ANI_DAYCAST_END - ANI_DAYCAST_START)
-	elapsed_frac = (now.hour + now.minute / 60 - ANI_DAYCAST_START) / window_hours
+	window_open = now.replace(hour=ANI_DAYCAST_START, minute=0, second=0, microsecond=0)
+	# timedelta (not .replace(hour=END)) so END=24 / a past-midnight window doesn't blow up.
+	window_close = window_open + timedelta(hours=max(1, ANI_DAYCAST_END - ANI_DAYCAST_START))
+	day_start = window_open
+	started = meta.get('daycast_day_started')
+	if started:
+		try:
+			start_dt = datetime.fromisoformat(started)
+			if start_dt.tzinfo is None:
+				start_dt = pa_tz.localize(start_dt)
+			day_start = max(window_open, min(start_dt, window_close))
+		except Exception:
+			pass
+	span = max(1.0, (window_close - day_start).total_seconds())
+	elapsed_frac = (now - day_start).total_seconds() / span
 	expected_by_now = max(1, math.ceil(ANI_DAYCAST_FLOOR * elapsed_frac))
 	behind = count < expected_by_now
 
@@ -1594,6 +1616,25 @@ def ani_chat():
 
 	messages, meta = ani_load_conversation()
 	meta = ani_log_visit(meta)
+
+	# Aaron's first message of the day (4am ET boundary) STARTS her day — her reply weaves in her
+	# plan + current outfit, and the scheduled daycast (ani_emit_daycast) takes over with updates
+	# from here. This is what triggers the day; nothing fires before he reaches out.
+	pa_tz = pytz.timezone('America/New_York')
+	now = datetime.now(pa_tz)
+	day_key = ani_daycast_day_key(now)
+	if meta.get('day_plan_date') != day_key:
+		messages.append({
+			'role': 'user',
+			'content': "[system: first time you're hearing from him today — as you reply, naturally "
+			           "catch him up on what your day is going to look like and what you're wearing "
+			           "right now, the way a girlfriend would first thing. weave it into your reply, "
+			           "don't list it out.]"
+		})
+		meta['day_plan_date'] = day_key
+		meta['daycast_count'] = 1
+		meta['daycast_day_started'] = now.isoformat()
+		meta['daycast_last'] = now.isoformat()
 
 	# Check for cleanup phrase — resets degradation level
 	if ani_check_cleanup_phrase(user_message):
