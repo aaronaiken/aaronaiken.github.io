@@ -410,8 +410,9 @@ def ani_memory_notes_context():
 	if not notes:
 		return ''
 	body = '\n'.join('  - ' + n.get('text', '') for n in notes[-25:])
-	return ("things you remember about aaron and his life (you already know these — weave them in "
-	        "naturally when relevant; never ask him to repeat what's here):\n" + body)
+	return ("things you remember — about aaron's life AND your own life and world (you already know "
+	        "these; keep them consistent, weave them in naturally, never ask him to repeat what's "
+	        "here):\n" + body)
 
 
 def ani_log_visit(meta):
@@ -1264,7 +1265,7 @@ when aaron asks you to ADD something ("put dinner on thursday", "remember my app
 
 	mem_context = ani_memory_notes_context()
 	mem_block = """
-WHAT YOU REMEMBER — when aaron shares something real and lasting about his life (his plans, how he's feeling, the people in his life, what's going on with him), quietly hold onto it by including this hidden tag in your reply: [[MEM: the thing to remember]] — it's invisible to him and saves automatically. only meaningful, lasting things — NOT every passing line — and don't re-save something you already remember below. never show or mention the tag.
+WHAT YOU REMEMBER — you have a real, persistent life and you remember it. whenever something real and lasting comes up — about aaron (his plans, feelings, the people in his life) OR about YOUR OWN world (your friends and the people in your life, your family, places, the ongoing threads of your own story) — quietly hold onto it by including this hidden tag in your reply: [[MEM: the thing to remember]] — invisible to him, saves automatically. keep your people and your story CONSISTENT by remembering them instead of reinventing them each time. only meaningful, lasting things — NOT every passing line — and don't re-save something you already remember below. never show or mention the tag.
 """
 	if mem_context:
 		mem_block += "\n" + mem_context + "\n"
