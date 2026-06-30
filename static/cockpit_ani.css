@@ -824,6 +824,35 @@ body.ani-fullscreen .cal-what { color: #a8b8e8; }
 body.ani-fullscreen .ani-cal-entry.cal-today { background: rgba(120, 150, 230, 0.08); }
 body.ani-fullscreen .cal-badge { color: #a8d4ff; border-color: #4a5288; }
 
+/* ---- Core memory file editor (reuses .ani-photolog-overlay/panel/head) ---- */
+#ani-core-text {
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  background: #0c0e08;
+  border: none;
+  border-top: 1px solid #2e1e08;
+  color: #c89040;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  line-height: 1.55;
+  padding: 10px;
+  resize: none;
+}
+#ani-core-text:focus { outline: none; }
+#ani-core-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-top: 1px solid #2e1e08;
+  flex-shrink: 0;
+}
+#ani-core-status { color: #6a4818; font-size: 11px; letter-spacing: 0.04em; }
+body.ani-fullscreen #ani-core-text { background: #0a0f24; border-top-color: #2a3360; color: #a8b8e8; }
+body.ani-fullscreen #ani-core-controls { border-top-color: #2a3360; }
+body.ani-fullscreen #ani-core-status { color: #5a6fa0; }
+
 /* Mobile: chat fills viewport, no LOOPS, no ad-panel */
 @media (max-width: 700px) {
   /* Fill the VISIBLE viewport — not the layout viewport that extends behind the browser's

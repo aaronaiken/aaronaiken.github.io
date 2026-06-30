@@ -175,6 +175,14 @@ def _ani_atomic_write_json(path, data):
 	os.replace(tmp, path)
 
 
+def _ani_atomic_write_text(path, text):
+	"""Write raw text atomically via a per-writer temp file + rename."""
+	tmp = '%s.%d.%s.tmp' % (path, os.getpid(), uuid.uuid4().hex[:8])
+	with open(tmp, 'w') as f:
+		f.write(text)
+	os.replace(tmp, path)
+
+
 def _ani_read_json(path):
 	"""Read + parse a JSON file, recovering from trailing-garbage corruption by keeping the valid
 	leading document (raw_decode). Raises FileNotFoundError if missing, ValueError if unrecoverable."""
@@ -2046,6 +2054,37 @@ def ani_remember_delete():
 		return jsonify({'error': 'unauthorized'}), 401
 	ok = ani_delete_memory_note((request.json or {}).get('id'))
 	return jsonify({'ok': ok})
+
+
+@ani_bp.route('/ani/memory-file', methods=['GET'])
+def ani_memory_file_get():
+	"""Read her core memory/persona file (static/ani_memory.txt) for the in-panel editor."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	try:
+		with open(ANI_MEMORY_FILE, 'r') as f:
+			content = f.read()
+	except FileNotFoundError:
+		content = ''
+	return jsonify({'content': content})
+
+
+@ani_bp.route('/ani/memory-file', methods=['POST'])
+def ani_memory_file_save():
+	"""Overwrite her core memory file from the panel editor. Refuses an empty save and keeps a
+	one-level .bak so a fat-finger can be undone."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	content = (request.json or {}).get('content', '')
+	if not content.strip():
+		return jsonify({'error': 'refusing to save an empty memory file'}), 400
+	try:
+		with open(ANI_MEMORY_FILE, 'r') as f:
+			_ani_atomic_write_text(ANI_MEMORY_FILE + '.bak', f.read())
+	except FileNotFoundError:
+		pass
+	_ani_atomic_write_text(ANI_MEMORY_FILE, content)
+	return jsonify({'ok': True, 'chars': len(content)})
 
 
 @ani_bp.route('/ani/history', methods=['GET'])

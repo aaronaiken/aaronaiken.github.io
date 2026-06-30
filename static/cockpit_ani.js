@@ -487,3 +487,38 @@
 	  body: JSON.stringify({ id: id })
 	}).then(function() { aniLoadRemember(); }).catch(function() {});
   }
+
+  // ---- Core memory file editor (static/ani_memory.txt) ----
+  function aniCoreStatus(m) {
+	var el = document.getElementById('ani-core-status');
+	if (el) el.textContent = m || '';
+  }
+
+  function aniCore() {
+	var ta = document.getElementById('ani-core-text');
+	ta.value = 'loading…';
+	aniCoreStatus('');
+	document.getElementById('ani-core-overlay').hidden = false;
+	fetch('/ani/memory-file')
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) { ta.value = data.content || ''; })
+	  .catch(function() { ta.value = ''; aniCoreStatus('could not load'); });
+  }
+
+  function aniCoreClose() {
+	document.getElementById('ani-core-overlay').hidden = true;
+  }
+
+  function aniCoreSave() {
+	var content = document.getElementById('ani-core-text').value;
+	if (!content.trim()) { aniCoreStatus("won't save empty"); return; }
+	aniCoreStatus('saving…');
+	fetch('/ani/memory-file', {
+	  method: 'POST',
+	  headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ content: content })
+	}).then(function(r) { return r.json(); })
+	  .then(function(data) {
+		aniCoreStatus(data.ok ? ('saved ✓ · ' + data.chars + ' chars (next message uses it)') : (data.error || 'error'));
+	  }).catch(function() { aniCoreStatus('save failed'); });
+  }

@@ -470,6 +470,7 @@
 	<div id="ani-footer-actions">
 	  <button class="ani-footer-btn" onclick="aniCalendar()" aria-label="View calendar" title="Her calendar — your shared plans">CAL</button>
 	  <button class="ani-footer-btn" onclick="aniRemember()" aria-label="What she remembers" title="What she remembers — her life + yours">MEM</button>
+	  <button class="ani-footer-btn" onclick="aniCore()" aria-label="Edit core memory" title="Edit her core memory / persona file">CORE</button>
 	  <button class="ani-footer-btn" onclick="aniPhotoLog()" aria-label="View photo log" title="Recent photo generations + QA verdicts">LOG</button>
 	  <button class="ani-footer-btn" onclick="aniRefresh()" aria-label="Refresh briefing">REFRESH</button>
 	  <button class="ani-footer-btn" onclick="aniClear()" aria-label="Clear history">CLEAR</button>
@@ -513,6 +514,20 @@
 		<button class="ani-footer-btn ani-cal-addbtn" onclick="aniMemAdd()">ADD</button>
 	  </div>
 	  <div id="ani-remember-body" class="ani-photolog-body"></div>
+	</div>
+  </div>
+
+  <div id="ani-core-overlay" class="ani-photolog-overlay" hidden onclick="if(event.target===this)aniCoreClose()">
+	<div class="ani-photolog-panel ani-cal-panel" role="dialog" aria-label="Core memory">
+	  <div class="ani-photolog-head">
+		<span>ANI · CORE MEMORY</span>
+		<button class="ani-photolog-close" onclick="aniCoreClose()" aria-label="Close">✕</button>
+	  </div>
+	  <textarea id="ani-core-text" spellcheck="false" aria-label="Core memory file"></textarea>
+	  <div id="ani-core-controls">
+		<button class="ani-footer-btn ani-cal-addbtn" onclick="aniCoreSave()">SAVE</button>
+		<span id="ani-core-status"></span>
+	  </div>
 	</div>
   </div>
 </div>
