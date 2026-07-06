@@ -603,8 +603,13 @@
 	  return;
 	}
 	body.innerHTML = notes.map(function(n) {
+	  var tag = '';
+	  if (n.category && n.category !== 'misc') {
+		var core = (n.importance >= 3) ? ' ani-mem-core' : '';
+		tag = '<span class="ani-mem-cat' + core + '">' + aniEscapeHtml(n.category.replace('_', ' ')) + '</span>';
+	  }
 	  return '<div class="ani-cal-entry">'
-		+ '<div class="cal-what">' + aniEscapeHtml(n.text) + '</div>'
+		+ '<div class="cal-what">' + tag + aniEscapeHtml(n.text) + '</div>'
 		+ '<button class="cal-del" onclick="aniMemDelete(\'' + n.id + '\')" aria-label="Forget" title="Forget this">✕</button>'
 		+ '</div>';
 	}).join('');

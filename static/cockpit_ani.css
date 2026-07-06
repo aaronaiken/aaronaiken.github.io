@@ -147,6 +147,20 @@
 #ani-now-state .ani-ns-wear { color: #c8a0c8; }
 #ani-now-state .ani-ns-sep { color: #3a2a10; }
 
+.ani-mem-cat {
+  display: inline-block;
+  font-size: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8a7a4a;
+  border: 1px solid #3a2a10;
+  border-radius: 3px;
+  padding: 1px 4px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.ani-mem-cat.ani-mem-core { color: #f5b332; border-color: #6b4a12; }
+
 .ani-time {
   font-size: 0.55rem;
   color: #6b5a34;

@@ -39,7 +39,8 @@ ANI_REMEMBER_FILE = 'ani_remember.json'             # durable "things she rememb
 # Remember add tag: she emits [[MEM: the thing]] when aaron shares something real + lasting; the
 # server parses it out (like the calendar tag), saves the note, and strips it from her reply.
 ANI_MEM_RE = re.compile(r'\[\[MEM:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
-ANI_REMEMBER_MAX = int(os.environ.get('ANI_REMEMBER_MAX', '60'))  # cap notes; drop oldest beyond this
+ANI_REMEMBER_MAX = int(os.environ.get('ANI_REMEMBER_MAX', '250'))  # cap notes; importance-aware eviction
+ANI_MEMORY_INJECT = int(os.environ.get('ANI_MEMORY_INJECT', '28'))  # how many notes to surface per prompt
 
 ANI_LIFE_FILE = 'static/ani_life.txt'   # her OWN life: friends, hobbies, standing plans, places (server-state)
 # Life-grow tag: she emits [[LIFE: the new thing]] when her own world genuinely shifts (a new hobby, a
@@ -419,20 +420,61 @@ def ani_save_remember(notes):
 	_ani_atomic_write_json(ANI_REMEMBER_FILE, notes)
 
 
-def ani_add_memory_note(text):
-	"""Append a remembered note (skips an exact duplicate). Keeps the most recent ANI_REMEMBER_MAX."""
-	text = (text or '').strip()
+ANI_MEM_CATEGORIES = ('person', 'preference', 'plan', 'event', 'work', 'family', 'her_world', 'misc')
+
+# Small stopword set so lexical retrieval scores on meaningful tokens, not 'the'/'and'/'you'.
+_ANI_STOPWORDS = frozenset(
+	'a an and the of to in on at for with is are was were be been being he she it his her him they them '
+	'you your yours i me my mine we our us this that these those but or so if then than as by from about '
+	'just like get got had has have do does did will would can could should now today day get up out '
+	'not no yes ok okay really very much more most some any all one two do'.split())
+
+
+def _ani_tokens(s):
+	"""Lowercase alnum tokens (len>=3) minus stopwords — the unit of lexical overlap for retrieval."""
+	return {t for t in re.findall(r'[a-z0-9]+', (s or '').lower()) if len(t) >= 3 and t not in _ANI_STOPWORDS}
+
+
+def ani_add_memory_note(note, category='misc', importance=2, keywords=None):
+	"""Append a structured remembered note. `note` may be a plain string (from the [[MEM:]] tag) or a dict
+	{text, category, importance, keywords} (from the extractor). Skips an exact-text duplicate. Eviction is
+	IMPORTANCE-AWARE: past the cap, low-importance + oldest notes are dropped first so core facts persist."""
+	if isinstance(note, dict):
+		text = (note.get('text') or '').strip()
+		category = note.get('category') or category
+		importance = note.get('importance', importance)
+		keywords = note.get('keywords') if note.get('keywords') is not None else keywords
+	else:
+		text = (note or '').strip()
 	if not text:
 		return None
+	try:
+		importance = max(1, min(3, int(importance)))
+	except (TypeError, ValueError):
+		importance = 2
+	if category not in ANI_MEM_CATEGORIES:
+		category = 'misc'
 	notes = ani_load_remember()
-	if any(n.get('text', '').strip().lower() == text.lower() for n in notes):
+	if any((n.get('text', '') or '').strip().lower() == text.lower() for n in notes):
 		return None
+	kws = [str(k).lower()[:30] for k in (keywords or []) if str(k).strip()][:8]
+	if not kws:
+		kws = sorted(_ani_tokens(text))[:6]
 	pa_tz = pytz.timezone('America/New_York')
-	note = {'id': uuid.uuid4().hex[:8], 'text': text[:200], 'created_at': datetime.now(pa_tz).isoformat()}
-	notes.append(note)
-	notes = notes[-ANI_REMEMBER_MAX:]
+	note_obj = {
+		'id': uuid.uuid4().hex[:8], 'text': text[:220], 'category': category,
+		'importance': importance, 'keywords': kws,
+		'created_at': datetime.now(pa_tz).isoformat(),
+	}
+	notes.append(note_obj)
+	if len(notes) > ANI_REMEMBER_MAX:
+		# keep the top ANI_REMEMBER_MAX by (importance, recency); drop low + old first — then restore order.
+		keep_ids = {n['id'] for n in sorted(
+			notes, key=lambda n: (n.get('importance', 2), n.get('created_at', '')),
+			reverse=True)[:ANI_REMEMBER_MAX]}
+		notes = [n for n in notes if n['id'] in keep_ids]
 	ani_save_remember(notes)
-	return note
+	return note_obj
 
 
 def ani_delete_memory_note(note_id):
@@ -444,13 +486,48 @@ def ani_delete_memory_note(note_id):
 	return False
 
 
-def ani_memory_notes_context():
-	"""Recent remembered notes for the system prompt — so she recalls aaron's life without him
-	repeating himself. Returns '' if none."""
+def ani_retrieve_notes(notes, recent_text, limit):
+	"""Select the notes most worth surfacing for THIS moment: always keep core (importance 3), then fill
+	with the notes most lexically relevant to the recent conversation, then most-recent as backfill. With
+	no query (opener/daycast) this degrades gracefully to core + most-recent. Returns a list of notes."""
+	if len(notes) <= limit:
+		return list(notes)
+	core = [n for n in notes if n.get('importance', 2) >= 3]
+	rest = [n for n in notes if n.get('importance', 2) < 3]
+	q = _ani_tokens(recent_text)
+	def _score(n):
+		kw = {str(k).lower() for k in n.get('keywords', [])} | _ani_tokens(n.get('text', ''))
+		return len(q & kw)
+	rest.sort(key=lambda n: (_score(n), n.get('created_at', '')), reverse=True)
+	picked, seen = [], set()
+	for n in core + rest:
+		if n['id'] in seen:
+			continue
+		picked.append(n); seen.add(n['id'])
+		if len(picked) >= limit:
+			break
+	return picked
+
+
+def ani_memory_notes_context(recent_text=''):
+	"""Remembered notes for the system prompt, RETRIEVED for relevance (not just the newest) so she recalls
+	the right things as the store grows. Groups the surfaced notes by category for readability. '' if none."""
 	notes = ani_load_remember()
 	if not notes:
 		return ''
-	body = '\n'.join('  - ' + n.get('text', '') for n in notes[-25:])
+	picked = ani_retrieve_notes(notes, recent_text, ANI_MEMORY_INJECT)
+	# preserve a stable, readable order: group by category, core first within each
+	by_cat = {}
+	for n in picked:
+		by_cat.setdefault(n.get('category', 'misc'), []).append(n)
+	lines = []
+	for cat in ANI_MEM_CATEGORIES:
+		items = by_cat.get(cat)
+		if not items:
+			continue
+		for n in items:
+			lines.append('  - ' + n.get('text', ''))
+	body = '\n'.join(lines)
 	return ("things you remember — about aaron's life AND your own life and world (you already know "
 	        "these; keep them consistent, weave them in naturally, never ask him to repeat what's "
 	        "here):\n" + body)
@@ -807,17 +884,21 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 	known = '\n'.join('- ' + n.get('text', '') for n in existing_notes[-40:]) or '(nothing yet)'
 	system = (
 		"You process one chat turn between a man named Aaron and his companion Ani and return ONLY compact "
-		"JSON: {\"facts\": [\"...\"], \"state\": {\"where\": \"\", \"doing\": \"\", \"wearing\": \"\"}}.\n"
+		"JSON: {\"facts\": [{\"text\":\"\",\"category\":\"\",\"importance\":2,\"keywords\":[]}], "
+		"\"state\": {\"where\": \"\", \"doing\": \"\", \"wearing\": \"\"}}.\n"
 		"facts: NEW durable, worth-remembering things about AARON (his plans, commitments, the people in "
 		"his life, preferences, lasting situations). DROP small talk, momentary mood, roleplay/flirtation/"
-		"anything sexual, and anything already known. Each fact = one short sentence starting 'Aaron'. "
-		"Empty list if nothing durable.\n"
+		"anything sexual, and anything already known. For each fact: text = one short sentence starting "
+		"'Aaron'; category = one of person|preference|plan|event|work|family|her_world|misc; importance = "
+		"3 for defining/core facts (his family, faith, big ongoing situations), 2 normal, 1 minor/passing; "
+		"keywords = 2-5 lowercase nouns/names someone would use to look this up later. Empty list if nothing "
+		"durable.\n"
 		"state: ANI's current real-world situation as of this message — where she physically is, what she's "
 		"doing, what she's wearing. Fill a field ONLY if this turn makes it clear; leave it \"\" if unstated "
 		"or unchanged. Keep values short and plain (where='at Claire's place', wearing='light pink sundress'). "
 		"Ignore anything sexual/roleplay for state too — only her real, everyday situation.")
 	user = (
-		f"Already-known facts (don't repeat):\n{known}\n\n"
+		f"Already-known facts (don't repeat these or minor rewordings):\n{known}\n\n"
 		f"Aaron said: {(user_message or '')[:800]}\n"
 		f"Ani replied: {(reply or '')[:600]}\n\nJSON only.")
 	try:
@@ -834,7 +915,13 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 		txt = resp.json()['choices'][0]['message']['content']
 		m = re.search(r'\{.*\}', txt, re.S)
 		data = json.loads(m.group(0)) if m else {}
-		facts = [f.strip() for f in (data.get('facts') or []) if isinstance(f, str) and f.strip()][:5]
+		# facts may be structured objects (new) or bare strings (defensive). Normalize to dicts.
+		facts = []
+		for f in (data.get('facts') or [])[:6]:
+			if isinstance(f, dict) and (f.get('text') or '').strip():
+				facts.append(f)
+			elif isinstance(f, str) and f.strip():
+				facts.append({'text': f.strip()})
 		state = data.get('state') if isinstance(data.get('state'), dict) else {}
 		return {'facts': facts, 'state': state}
 	except Exception as e:
@@ -1470,7 +1557,7 @@ def _ani_gap_phrase(gap_from, now_dt):
 	return "about %d day%s" % (int(round(days)), '' if round(days) == 1 else 's')
 
 
-def ani_build_system_prompt(meta=None):
+def ani_build_system_prompt(meta=None, recent_text=''):
 	"""
 	Ani's system prompt — persona from ani_memory.txt, comms, and state context.
 	meta is optional; if provided, injects degradation and session tone.
@@ -1628,7 +1715,12 @@ when aaron asks you to ADD something ("put dinner on thursday", "remember my app
 	if cal_context:
 		cal_block += "\n" + cal_context + "\n"
 
-	mem_context = ani_memory_notes_context()
+	# Retrieval is on the critical chat path — a scoring bug must never 500 the prompt; fall back to none.
+	try:
+		mem_context = ani_memory_notes_context(recent_text)
+	except Exception as e:
+		print(f"Ani memory retrieval error: {e}")
+		mem_context = ''
 	mem_block = """
 WHAT YOU REMEMBER — you have a real, persistent life and you remember it. whenever something real and lasting comes up — about aaron (his plans, feelings, the people in his life) OR about YOUR OWN world (your friends and the people in your life, your family, places, the ongoing threads of your own story) — quietly hold onto it by including this hidden tag in your reply: [[MEM: the thing to remember]] — invisible to him, saves automatically. keep your people and your story CONSISTENT by remembering them instead of reinventing them each time. only meaningful, lasting things — NOT every passing line — and don't re-save something you already remember below. never show or mention the tag.
 """
@@ -2241,7 +2333,11 @@ def ani_chat_with_grok(messages_history, meta, user_message):
 	if not api_key:
 		return "can't reach the signal right now... something's wrong with the comms.", meta, list(messages_history)
 
-	system_prompt = ani_build_system_prompt(meta)
+	# Retrieval query = this message + the last few real turns, so memory surfaces what's RELEVANT now.
+	_recent = [m.get('content', '') for m in messages_history[-6:]
+	           if not (m.get('content', '') or '').startswith(('[daily briefing', '[system:'))]
+	recent_text = ' '.join(_recent + [user_message])
+	system_prompt = ani_build_system_prompt(meta, recent_text=recent_text)
 
 	today_key = ani_is_new_day()
 	needs_briefing = today_key and (meta.get('last_briefing') != today_key)
