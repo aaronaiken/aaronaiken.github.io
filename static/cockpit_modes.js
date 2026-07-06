@@ -1358,7 +1358,7 @@
 		const drawer = document.getElementById('ad-player-library');
 		drawer.classList.toggle('is-open', adLibraryVisible);
 		document.getElementById('ad-library-toggle-btn').style.color =
-			adLibraryVisible ? '#8b1a1a' : '';
+			adLibraryVisible ? '#b45309' : '';
 		if (adLibraryVisible && adLibraryItems.length === 0) {
 			adLoadLibrary();
 		}
@@ -1498,7 +1498,7 @@
 	function adQueueToggle() {
 		adQueueVisible = !adQueueVisible;
 		document.getElementById('ad-player-queue').classList.toggle('is-open', adQueueVisible);
-		document.getElementById('ad-queue-toggle-btn').style.color = adQueueVisible ? '#8b1a1a' : '';
+		document.getElementById('ad-queue-toggle-btn').style.color = adQueueVisible ? '#b45309' : '';
 	}
 
 	// Parse one pasted line into a Pornhub embed entry, or null. Accepts a
@@ -1595,7 +1595,7 @@
 		adAutoTimer = setInterval(adQueueNext, min * 60000);
 		const btn = document.getElementById('ad-queue-auto-btn');
 		btn.textContent = 'AUTO ●';
-		btn.style.color = '#e05050';
+		btn.style.color = '#b45309';
 		adSetQueueStatus('auto every ' + min + ' min');
 	}
 
