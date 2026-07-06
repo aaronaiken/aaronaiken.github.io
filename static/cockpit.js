@@ -562,6 +562,9 @@
 			var _fb = document.getElementById('focus-btn');
 			if (_fb) _fb.classList.add('is-active');
 		}
+		if (localStorage.getItem('cockpit-nav-newtab') === '1' && typeof applyNavNewTab === 'function') {
+			applyNavNewTab(true);
+		}
 
 		// ---- COLLAPSIBLE ----
 		function toggleTasks() {
@@ -658,10 +661,28 @@
 			settingsRenderPresets();
 		}
 
+		// ---- Open-in-new-tab nav (keeps this tab + the player alive when you jump into an app) ----
+		function applyNavNewTab(on) {
+			document.querySelectorAll('a.cockpit__ctrl-btn, #below-deck-badge a').forEach(function (a) {
+				if (on) a.setAttribute('target', '_blank'); else a.removeAttribute('target');
+			});
+			var b = document.getElementById('settings-navtab-btn');
+			if (b) b.textContent = 'Open nav links in new tabs: ' + (on ? 'ON' : 'OFF');
+		}
+		function toggleNavNewTab() {
+			var on = localStorage.getItem('cockpit-nav-newtab') !== '1';
+			localStorage.setItem('cockpit-nav-newtab', on ? '1' : '0');
+			applyNavNewTab(on);
+		}
+
 		// ---- Settings overlay ----
 		function settingsOpen() {
 			var o = document.getElementById('settings-overlay');
-			if (o) { o.classList.add('is-open'); settingsRenderPresets(); }
+			if (o) {
+				o.classList.add('is-open');
+				settingsRenderPresets();
+				applyNavNewTab(localStorage.getItem('cockpit-nav-newtab') === '1');
+			}
 		}
 		function settingsClose() {
 			var o = document.getElementById('settings-overlay');

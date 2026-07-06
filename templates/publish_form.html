@@ -222,7 +222,7 @@
 	<!-- Command Palette (Ctrl+K) -->
 	<div id="cmd-palette-overlay" role="dialog" aria-label="Command palette">
 		<div id="cmd-palette-box">
-			<input type="text" id="cmd-palette-input" placeholder="where to..." autocomplete="off" oninput="cmdFilter()" onkeydown="cmdKeydown(event)">
+			<input type="text" id="cmd-palette-input" placeholder="go anywhere · search tasks, tickets, projects, posts, updates…" autocomplete="off" oninput="cmdFilter()" onkeydown="cmdKeydown(event)">
 			<div id="cmd-palette-list"></div>
 		</div>
 	</div>
@@ -239,6 +239,11 @@
 				<div class="settings-hint">Apply a saved layout, or snapshot your current one. Also on Ctrl+K.</div>
 				<div id="settings-preset-list"></div>
 				<button class="settings-save-btn" onclick="settingsSaveCurrent()">+ SAVE CURRENT LAYOUT</button>
+			</div>
+			<div class="settings-section">
+				<div class="settings-label">// Navigation</div>
+				<div class="settings-hint">Open Command Deck / Below Deck / Ledger in a new tab — keeps this tab (and any music) alive while you jump into an app.</div>
+				<button class="settings-save-btn" id="settings-navtab-btn" onclick="toggleNavNewTab()">Open nav links in new tabs: OFF</button>
 			</div>
 			<div class="settings-section">
 				<div class="settings-label">// Shortcuts</div>

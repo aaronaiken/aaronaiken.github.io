@@ -461,6 +461,93 @@ def after_dark_youtube():
 	return jsonify({'items': items})
 
 
+# ---- UNIVERSAL SEARCH — one endpoint the Ctrl+K palette searches across everything the Cockpit owns.
+# Extensible: add a source here (or, later, a federated adapter for an external app). Each query is
+# wrapped so one bad source can't sink the search. ----
+
+@cockpit_bp.route('/cockpit/search')
+def cockpit_search():
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	q = (request.args.get('q') or '').strip()
+	if len(q) < 2:
+		return jsonify({'results': []})
+	like = '%' + q + '%'
+	ql = q.lower()
+	results = []
+
+	try:
+		from helpers.db import get_db
+		conn = get_db()
+	except Exception:
+		conn = None
+	if conn is not None:
+		try:
+			for r in conn.execute("SELECT title, status FROM tasks WHERE title LIKE ? "
+			                      "ORDER BY (status='open') DESC, created DESC LIMIT 8", (like,)):
+				results.append({'type': 'task', 'title': r[0], 'sub': 'Below Deck · ' + (r[1] or ''), 'url': '/below-deck'})
+		except Exception:
+			pass
+		try:
+			for r in conn.execute("SELECT ticket_number, title, status FROM tickets "
+			                      "WHERE title LIKE ? OR description LIKE ? ORDER BY created DESC LIMIT 6", (like, like)):
+				num = (str(r[0]) + ' · ') if r[0] else ''
+				results.append({'type': 'ticket', 'title': num + (r[1] or ''), 'sub': 'Ticket · ' + (r[2] or ''),
+				                'url': '/command-deck/tickets/'})
+		except Exception:
+			pass
+		try:
+			for r in conn.execute("SELECT title, slug FROM projects WHERE (title LIKE ? OR description LIKE ?) "
+			                      "AND archived_at IS NULL LIMIT 6", (like, like)):
+				results.append({'type': 'project', 'title': r[0], 'sub': 'Project',
+				                'url': '/command-deck/projects/' + (r[1] or '')})
+		except Exception:
+			pass
+		try:
+			for r in conn.execute("SELECT title, meeting_date FROM meetings WHERE title LIKE ? OR notes LIKE ? "
+			                      "ORDER BY meeting_date DESC LIMIT 6", (like, like)):
+				results.append({'type': 'meeting', 'title': r[0], 'sub': 'Meeting · ' + (r[1] or '')[:10],
+				                'url': '/command-deck/'})
+		except Exception:
+			pass
+		try:
+			conn.close()
+		except Exception:
+			pass
+
+	try:
+		n = 0
+		for path in sorted(glob.glob('_posts/*.md') + glob.glob('_posts/*.markdown'), reverse=True):
+			with open(path) as f:
+				raw = f.read()
+			if ql in raw.lower():
+				mt = re.search(r'^title:\s*["\']?(.+?)["\']?\s*$', raw, re.M)
+				results.append({'type': 'post', 'title': (mt.group(1).strip() if mt else os.path.basename(path)),
+				                'sub': 'Blog post', 'url': '/blog/'})
+				n += 1
+				if n >= 6:
+					break
+	except Exception:
+		pass
+
+	try:
+		n = 0
+		for path in sorted(glob.glob('_status_updates/*.markdown'), reverse=True)[:250]:
+			with open(path) as f:
+				raw = f.read()
+			if ql in raw.lower():
+				parts = raw.split('---')
+				body = (parts[2].strip() if len(parts) >= 3 else raw).replace('\n', ' ').strip()
+				results.append({'type': 'status', 'title': body[:90] or 'status update', 'sub': 'Status update', 'url': '/'})
+				n += 1
+				if n >= 6:
+					break
+	except Exception:
+		pass
+
+	return jsonify({'results': results[:40], 'q': q})
+
+
 # ---- library editing (add current / delete) — the .txt files are server-state ----
 
 def _ad_read_raw(path):

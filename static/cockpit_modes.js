@@ -2224,11 +2224,42 @@
 		if (e.target === this) cmdClose();
 	});
 
+	var cmdSearchTimer = null, cmdSearchToken = 0;
+	var CMD_TYPE_ICON = { task: '✓', ticket: '▤', project: '⌘', meeting: '▦', post: '⌇', status: '›' };
+
+	function cmdActionMatches(q) {
+		return getAllCmdItems().filter(function (item) { return item.label.toLowerCase().includes(q); });
+	}
+
 	function cmdFilter() {
-		const q = document.getElementById('cmd-palette-input').value.toLowerCase();
-		cmdFiltered = getAllCmdItems().filter(item => item.label.toLowerCase().includes(q));
+		var raw = document.getElementById('cmd-palette-input').value;
+		var q = raw.toLowerCase();
+		cmdFiltered = cmdActionMatches(q);
 		cmdSelected = 0;
 		cmdRender();
+		// Universal search (debounced) — merge content results (tasks, tickets, projects, posts,
+		// status updates…) below the action matches. Results open in a NEW TAB (keeps this tab + player alive).
+		if (cmdSearchTimer) clearTimeout(cmdSearchTimer);
+		if (raw.trim().length < 2) return;
+		var myToken = ++cmdSearchToken;
+		cmdSearchTimer = setTimeout(function () {
+			fetch('/cockpit/search?q=' + encodeURIComponent(raw.trim()))
+				.then(function (r) { return r.json(); })
+				.then(function (data) {
+					if (myToken !== cmdSearchToken) return;                                   // stale response
+					if (document.getElementById('cmd-palette-input').value !== raw) return;   // query moved on
+					var items = (data.results || []).map(function (res) {
+						return {
+							icon: CMD_TYPE_ICON[res.type] || '›',
+							label: res.title,
+							hint: res.sub || res.type,
+							action: function () { cmdClose(); window.open(res.url, '_blank'); }
+						};
+					});
+					if (items.length) { cmdFiltered = cmdActionMatches(q).concat(items); cmdRender(); }
+				})
+				.catch(function () {});
+		}, 220);
 	}
 
 	function cmdRender() {
