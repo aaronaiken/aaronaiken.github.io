@@ -137,7 +137,7 @@
 		var messages = data.messages || [];
 		if (messages.length > 0) {
 		  aniEmpty.style.display = 'none';
-		  messages.forEach(function(m) { aniRenderMessage(m.role, m.content, m.image); });
+		  messages.forEach(function(m) { aniRenderMessage(m.role, m.content, m.image, m.ts); });
 		}
 		if (aniPendingOpener) {
 		  aniEmpty.style.display = 'none';
@@ -153,7 +153,7 @@
 	var text = aniInput.value.trim();
 	if (!text || aniSendBtn.disabled) return;
 	aniEmpty.style.display = 'none';
-	aniRenderMessage('user', text);
+	aniRenderMessage('user', text, null, new Date().toISOString());
 	aniInput.value = '';
 	aniInput.style.height = 'auto';
 	aniSendBtn.disabled = true;
@@ -169,7 +169,7 @@
 	  aniShowTyping(false);
 	  aniSendBtn.disabled = false;
 	  if (data.reply || data.image_url) {
-		aniRenderMessage('assistant', data.reply || '', data.image_url);
+		aniRenderMessage('assistant', data.reply || '', data.image_url, new Date().toISOString());
 		updateAcheDisplay(0);
 	  }
 	  if (data.image_error) {
@@ -203,7 +203,7 @@
 		aniPhotoBtn.disabled = false;
 		aniSendBtn.disabled = false;
 		if (data.image_url) {
-		  aniRenderMessage('assistant', '', data.image_url);
+		  aniRenderMessage('assistant', '', data.image_url, new Date().toISOString());
 		} else if (data.error === 'blocked') {
 		  aniRenderNotify('photo blocked by the filter — describe a tamer scene and tap 📷 again');
 		} else {
@@ -241,17 +241,29 @@
 	  .catch(function() {});
   }
 
-  function aniRenderMessage(role, content, image) {
+  function aniFmtMsgTime(iso) {
+	if (!iso) return '';
+	var d = new Date(iso);
+	if (isNaN(d.getTime())) return '';
+	var t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+	if (d.toDateString() === new Date().toDateString()) return t;
+	return d.toLocaleDateString([], { weekday: 'short' }) + ' ' + t;
+  }
+
+  function aniRenderMessage(role, content, image, ts) {
 	content = content || '';
 	if (content.startsWith('[daily briefing') || content.startsWith('[system:')) return;
+	var when = aniFmtMsgTime(ts);
 	var div = document.createElement('div');
 	div.classList.add('ani-msg');
 	if (role === 'user') {
 	  div.classList.add('ani-msg-user');
 	  div.textContent = content;
+	  if (when) { var s = document.createElement('span'); s.className = 'ani-time'; s.textContent = when; div.appendChild(s); }
 	} else {
 	  div.classList.add('ani-msg-ani');
-	  var html = '<div class="ani-name">ANI</div>' + aniEscapeHtml(content).replace(/\n/g, '<br>');
+	  var name = 'ANI' + (when ? ' <span class="ani-time">' + when + '</span>' : '');
+	  var html = '<div class="ani-name">' + name + '</div>' + aniEscapeHtml(content).replace(/\n/g, '<br>');
 	  if (image) html += '<img class="ani-msg-img" src="' + aniEscapeHtml(image) + '" alt="" loading="lazy">';
 	  div.innerHTML = html;
 	}

@@ -133,6 +133,26 @@
   text-shadow: 0 0 8px rgba(245, 179, 50, 0.3);
 }
 
+.ani-time {
+  font-size: 0.55rem;
+  color: #6b5a34;
+  letter-spacing: 0.08em;
+  font-weight: normal;
+  text-transform: none;
+  text-shadow: none;
+}
+
+.ani-msg-ani .ani-name .ani-time {
+  margin-left: 6px;
+}
+
+.ani-msg-user .ani-time {
+  display: block;
+  margin-top: 4px;
+  text-align: right;
+  color: #7a5a1e;
+}
+
 .ani-msg-img {
   display: block;
   max-width: 100%;

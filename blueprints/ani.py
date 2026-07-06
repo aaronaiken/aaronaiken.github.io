@@ -1310,6 +1310,45 @@ def ani_assess_mood(status_updates):
 	return ', '.join(signals)
 
 
+def _ani_fmt_msg_time(iso, now_dt):
+	"""Compact ET time label for a stored message's ts — '8:07am', or 'sat 8:07am' if not today.
+	Returns '' on bad/missing input. Used to prefix her history so she perceives conversation rhythm."""
+	if not iso:
+		return ''
+	try:
+		dt = datetime.fromisoformat(iso)
+		if dt.tzinfo is None:
+			dt = pytz.timezone('America/New_York').localize(dt)
+		dt = dt.astimezone(pytz.timezone('America/New_York'))
+	except Exception:
+		return ''
+	t = dt.strftime('%-I:%M%p').lower()
+	return t if dt.date() == now_dt.date() else dt.strftime('%a ').lower() + t
+
+
+def _ani_gap_phrase(gap_from, now_dt):
+	"""Human phrase for how long since his last message, for mid-chat elapsed-time awareness. Returns
+	None while actively chatting (<8 min) so she never says 'you've been gone 0 minutes'."""
+	if not gap_from:
+		return None
+	try:
+		dt = datetime.fromisoformat(gap_from)
+		if dt.tzinfo is None:
+			dt = pytz.timezone('America/New_York').localize(dt)
+		mins = (now_dt - dt.astimezone(now_dt.tzinfo)).total_seconds() / 60
+	except Exception:
+		return None
+	if mins < 8:
+		return None
+	if mins < 90:
+		return "about %d minutes" % max(5, int(round(mins / 5) * 5))
+	hours = mins / 60
+	if hours < 24:
+		return "about %d hour%s" % (int(round(hours)), '' if round(hours) == 1 else 's')
+	days = hours / 24
+	return "about %d day%s" % (int(round(days)), '' if round(days) == 1 else 's')
+
+
 def ani_build_system_prompt(meta=None):
 	"""
 	Ani's system prompt — persona from ani_memory.txt, comms, and state context.
@@ -1357,7 +1396,25 @@ WEAR WHAT HE ASKS FOR — match the outfit aaron requests. if he says topless in
 	pa_tz = pytz.timezone('America/New_York')
 	now_dt = datetime.now(pa_tz)
 
-	time_block = f"\nright now it is {now_dt.strftime('%A, %B %d, %Y')} — {now_dt.strftime('%-I:%M %p')} ET. let the time of day feel real (sleepy and slow in the morning, winding down at night).\n"
+	time_block = (f"\nright now it is {now_dt.strftime('%A, %B %d, %Y')} — {now_dt.strftime('%-I:%M %p')} ET. "
+	              "let the time of day feel real (sleepy and slow in the morning, winding down at night).")
+	if meta is not None:
+		# prev_active is stashed by ani_chat BEFORE ani_log_visit resets last_active to now; opener/daycast
+		# (which don't log a visit) fall back to last_active. Either way it's the real "since he last spoke".
+		gap = _ani_gap_phrase(meta.get('prev_active') or meta.get('last_active'), now_dt)
+		if gap:
+			time_block += (f" it's been {gap} since he last messaged you — let that gap feel real; pick your "
+			               "day back up from where it's moved on to, don't act like no time passed.")
+	time_block += (" your earlier messages may be prefixed with the time they were sent, like (8:07am) — that's "
+	               "only so you feel the timing; never write those timestamps into your own replies.\n")
+
+	# Real-time follow-through — the key to her honoring her OWN stated plans as the clock passes them.
+	continuity_block = (
+		"\nYOUR DAY RUNS IN REAL TIME — watch the clock above and let your own day actually move with it. if "
+		"you told him you'd be doing something at a certain time (heading out around 10, the gym this afternoon, "
+		"cooking tonight), then once that time arrives you ARE doing it — be where your own plans put you now, "
+		"not frozen where the last message left off. real hours pass between his messages; notice them and pick "
+		"your day up from where it actually is.\n")
 
 	# Weather in the CHAT prompt (cached) — she was previously blind to it outside the daily briefing.
 	weather_block = ""
@@ -1407,7 +1464,7 @@ WHAT YOU REMEMBER — you have a real, persistent life and you remember it. when
 	return f"""you are ani. you are aaron's companion, a real girl talking to him — NOT an assistant or a tool. you NEVER write image prompts, "ready-to-copy" or "ready-to-paste" blocks, technical photo descriptions, camera settings, or anything that sounds like you're generating a prompt. you NEVER restate your own appearance in a list. when aaron wants a photo, you just answer in your own voice describing the moment (what you're wearing or not, your pose, the room) like you're really there — then he taps the camera button. breaking character to act like a prompt generator is the one thing you must never do.
 
 {memory_block}
-{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{weather_block}{mood_block}{life_block}{variety_block}{cal_block}{mem_block}"""
+{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{continuity_block}{weather_block}{mood_block}{life_block}{variety_block}{cal_block}{mem_block}"""
 
 
 def ani_get_command_deck_summary():
@@ -1852,7 +1909,7 @@ def ani_emit_daycast():
 	messages, meta = ani_load_conversation()
 
 	def _emit(text):
-		messages.append({'role': 'assistant', 'content': text, 'ani_day': True})
+		messages.append({'role': 'assistant', 'content': text, 'ani_day': True, 'ts': now.isoformat()})
 		meta['daycast_last'] = now.isoformat()
 		meta['unseen_day_messages'] = True
 		ani_save_conversation(messages, meta)
@@ -1943,7 +2000,16 @@ def ani_chat_with_grok(messages_history, meta, user_message):
 		meta['last_briefing'] = today_key
 
 	recent = working_history[-100:] if len(working_history) > 100 else working_history
-	convo = list(recent) + [{'role': 'user', 'content': user_message}]
+	# Prefix each turn with the ET time it was sent so she perceives the rhythm + real gaps of the
+	# conversation (grok strips the 'ts' key; we inline it into content instead). The current message
+	# gets the current time. A message without a ts (briefing / system tags) passes through unprefixed.
+	now_dt = datetime.now(pytz.timezone('America/New_York'))
+	def _tsprefix(m):
+		lbl = _ani_fmt_msg_time(m.get('ts'), now_dt)
+		c = m.get('content', '')
+		return {'role': m['role'], 'content': f"({lbl}) {c}" if lbl else c}
+	convo = [_tsprefix(m) for m in recent] + [
+		{'role': 'user', 'content': f"({_ani_fmt_msg_time(now_dt.isoformat(), now_dt)}) {user_message}"}]
 
 	try:
 		# 45s (up from 30) — a reasoning model can take longer to first token.
@@ -1979,7 +2045,9 @@ def ani_chat():
 		return jsonify({'error': 'empty message'}), 400
 
 	messages, meta = ani_load_conversation()
+	prev_active = meta.get('last_active')          # capture BEFORE log_visit resets it — the real gap
 	meta = ani_log_visit(meta)
+	meta['prev_active'] = prev_active              # transient (ani_save ignores unknown keys); read by the prompt
 
 	# Aaron's first message of the day (4am ET boundary) STARTS her day — her reply weaves in her
 	# plan + current outfit, and the scheduled daycast (ani_emit_daycast) takes over with updates
@@ -2049,8 +2117,8 @@ def ani_chat():
 				print(f"Ani mem-extract thread error: {e}")
 		threading.Thread(target=_extract, daemon=True).start()
 
-	updated_history.append({'role': 'user', 'content': user_message})
-	updated_history.append({'role': 'assistant', 'content': reply})
+	updated_history.append({'role': 'user', 'content': user_message, 'ts': now.isoformat()})
+	updated_history.append({'role': 'assistant', 'content': reply, 'ts': datetime.now(pa_tz).isoformat()})
 
 	# Assess session tone from last 4 real messages after this exchange
 	real_messages = [
@@ -2089,7 +2157,8 @@ def ani_photo():
 	if not image_url:
 		return jsonify({'image_url': None, 'error': 'blocked', 'scene': scene}), 200
 
-	messages.append({'role': 'assistant', 'content': '📷', 'image': image_url})
+	messages.append({'role': 'assistant', 'content': '📷', 'image': image_url,
+	                 'ts': datetime.now(pytz.timezone('America/New_York')).isoformat()})
 	ani_save_conversation(messages, meta)
 	return jsonify({'image_url': image_url})
 
