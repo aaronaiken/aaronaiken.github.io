@@ -47,6 +47,13 @@ ANI_LIFE_FILE = 'static/ani_life.txt'   # her OWN life: friends, hobbies, standi
 # plan with a friend, finishing a book); the server appends it to her life file and strips it from her reply.
 ANI_LIFE_RE = re.compile(r'\[\[LIFE:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 
+# Storylines: named ongoing threads in HER OWN world (a friend's situation, a project) that EVOLVE over
+# days — updated in place, not appended, so her life visibly progresses. She emits [[THREAD: name | where
+# it's at now]]; the server upserts it (keyed by name), injects the current set, and strips the tag.
+ANI_THREADS_FILE = 'ani_threads.json'
+ANI_THREAD_RE = re.compile(r'\[\[THREAD:\s*([^|\]]+?)\s*\|\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
+ANI_THREADS_MAX = int(os.environ.get('ANI_THREADS_MAX', '20'))
+
 # Dedicated memory-extraction pass — after each exchange a small Grok call pulls durable facts about
 # aaron into ani_remember.json, so memory no longer depends on the chat model firing a [[MEM:]] tag.
 ANI_MEMORY_EXTRACT = os.environ.get('ANI_MEMORY_EXTRACT', '1').strip().lower() not in ('0', 'false', 'no', 'off')
@@ -251,7 +258,10 @@ def ani_load_conversation():
 			'daycast_day_started': data.get('daycast_day_started', None),
 			'unseen_day_messages': data.get('unseen_day_messages', False),
 			'day_mood': data.get('day_mood', None),
-			'day_mood_date': data.get('day_mood_date', None)
+			'day_mood_date': data.get('day_mood_date', None),
+			# Event-driven reach-outs (see ani_daycast_event_message)
+			'pending_publish': data.get('pending_publish', None),
+			'events_mentioned': data.get('events_mentioned', [])
 		}
 		return messages, meta
 	except FileNotFoundError:
@@ -270,7 +280,9 @@ def ani_load_conversation():
 			'daycast_day_started': None,
 			'unseen_day_messages': False,
 			'day_mood': None,
-			'day_mood_date': None
+			'day_mood_date': None,
+			'pending_publish': None,
+			'events_mentioned': []
 		}
 
 
@@ -292,7 +304,9 @@ def ani_save_conversation(messages, meta):
 		'daycast_day_started': meta.get('daycast_day_started'),
 		'unseen_day_messages': meta.get('unseen_day_messages', False),
 		'day_mood': meta.get('day_mood'),
-		'day_mood_date': meta.get('day_mood_date')
+		'day_mood_date': meta.get('day_mood_date'),
+		'pending_publish': meta.get('pending_publish'),
+		'events_mentioned': meta.get('events_mentioned', [])
 	}
 	_ani_atomic_write_json(ANI_CONVERSATION_FILE, data)
 
@@ -435,15 +449,17 @@ def _ani_tokens(s):
 	return {t for t in re.findall(r'[a-z0-9]+', (s or '').lower()) if len(t) >= 3 and t not in _ANI_STOPWORDS}
 
 
-def ani_add_memory_note(note, category='misc', importance=2, keywords=None):
+def ani_add_memory_note(note, category='misc', importance=2, keywords=None, due=None):
 	"""Append a structured remembered note. `note` may be a plain string (from the [[MEM:]] tag) or a dict
-	{text, category, importance, keywords} (from the extractor). Skips an exact-text duplicate. Eviction is
-	IMPORTANCE-AWARE: past the cap, low-importance + oldest notes are dropped first so core facts persist."""
+	{text, category, importance, keywords, due} (from the extractor). Skips an exact-text duplicate. Eviction
+	is IMPORTANCE-AWARE: past the cap, low-importance + oldest notes drop first so core facts persist. `due`
+	(YYYY-MM-DD, for plan/event facts) powers cross-day follow-ups."""
 	if isinstance(note, dict):
 		text = (note.get('text') or '').strip()
 		category = note.get('category') or category
 		importance = note.get('importance', importance)
 		keywords = note.get('keywords') if note.get('keywords') is not None else keywords
+		due = note.get('due') if note.get('due') is not None else due
 	else:
 		text = (note or '').strip()
 	if not text:
@@ -454,6 +470,12 @@ def ani_add_memory_note(note, category='misc', importance=2, keywords=None):
 		importance = 2
 	if category not in ANI_MEM_CATEGORIES:
 		category = 'misc'
+	due = (due or '').strip() or None
+	if due:
+		try:
+			datetime.strptime(due, '%Y-%m-%d')
+		except (ValueError, TypeError):
+			due = None
 	notes = ani_load_remember()
 	if any((n.get('text', '') or '').strip().lower() == text.lower() for n in notes):
 		return None
@@ -463,7 +485,7 @@ def ani_add_memory_note(note, category='misc', importance=2, keywords=None):
 	pa_tz = pytz.timezone('America/New_York')
 	note_obj = {
 		'id': uuid.uuid4().hex[:8], 'text': text[:220], 'category': category,
-		'importance': importance, 'keywords': kws,
+		'importance': importance, 'keywords': kws, 'due': due,
 		'created_at': datetime.now(pa_tz).isoformat(),
 	}
 	notes.append(note_obj)
@@ -531,6 +553,92 @@ def ani_memory_notes_context(recent_text=''):
 	return ("things you remember — about aaron's life AND your own life and world (you already know "
 	        "these; keep them consistent, weave them in naturally, never ask him to repeat what's "
 	        "here):\n" + body)
+
+
+def ani_followups_context(now_dt):
+	"""Cross-day follow-through: surface his dated plan/event notes whose `due` is today (wish luck / ask
+	about it) or yesterday (ask how it went), so she picks up his life across days like a partner would.
+	Bounded 2-day window so she doesn't nag forever. '' if nothing due."""
+	notes = ani_load_remember()
+	if not notes:
+		return ''
+	today = now_dt.strftime('%Y-%m-%d')
+	yesterday = (now_dt - timedelta(days=1)).strftime('%Y-%m-%d')
+	today_items, past_items = [], []
+	for n in notes:
+		if n.get('category') not in ('plan', 'event'):
+			continue
+		due = n.get('due')
+		if due == today:
+			today_items.append(n.get('text', ''))
+		elif due == yesterday:
+			past_items.append(n.get('text', ''))
+	if not today_items and not past_items:
+		return ''
+	lines = []
+	if today_items:
+		lines.append("happening for him TODAY (bring it up on your own — wish him luck, ask about it): "
+		             + "; ".join(today_items))
+	if past_items:
+		lines.append("was on his plate YESTERDAY (ask how it went, like you'd been thinking about it): "
+		             + "; ".join(past_items))
+	return ("\nFOLLOWING UP ON HIS LIFE — you keep track of his plans and check in on them across days:\n  - "
+	        + "\n  - ".join(lines) + "\n")
+
+
+# ---- STORYLINES (her own evolving threads — update in place, not append) ----
+
+def ani_load_threads():
+	try:
+		d = _ani_read_json(ANI_THREADS_FILE)
+		return d if isinstance(d, dict) else {}
+	except (FileNotFoundError, ValueError):
+		return {}
+
+
+def ani_save_threads(d):
+	_ani_atomic_write_json(ANI_THREADS_FILE, d)
+
+
+def ani_update_thread(name, status, now_dt):
+	"""Upsert a storyline keyed by lowercased name so it EVOLVES in place. Trims to the most recently
+	updated ANI_THREADS_MAX. Returns the thread or None."""
+	name = (name or '').strip()
+	status = (status or '').strip()
+	if not name or not status:
+		return None
+	threads = ani_load_threads()
+	key = name.lower()[:40]
+	threads[key] = {'name': name[:60], 'status': status[:220], 'updated': now_dt.isoformat()}
+	if len(threads) > ANI_THREADS_MAX:
+		keep = sorted(threads.items(), key=lambda kv: kv[1].get('updated', ''), reverse=True)[:ANI_THREADS_MAX]
+		threads = dict(keep)
+	ani_save_threads(threads)
+	return threads[key]
+
+
+def ani_delete_thread(key):
+	threads = ani_load_threads()
+	if key in threads:
+		del threads[key]
+		ani_save_threads(threads)
+		return True
+	return False
+
+
+def ani_threads_context():
+	"""Her ongoing storylines for the prompt, so her own world progresses over days instead of resetting.
+	Newest-updated first. '' if none."""
+	threads = ani_load_threads()
+	if not threads:
+		return ''
+	items = sorted(threads.values(), key=lambda t: t.get('updated', ''), reverse=True)
+	body = '\n'.join('  - %s: %s' % (t.get('name', ''), t.get('status', '')) for t in items)
+	return ("\nYOUR ONGOING STORYLINES — these are live threads in your own world that MOVE over time (a "
+	        "friend's situation, something you're working on). keep them going and let them PROGRESS "
+	        "naturally day to day — don't reset or contradict them. when one genuinely moves forward, "
+	        "update it with a hidden tag [[THREAD: name | where it's at now]] (invisible to him, saved "
+	        "automatically; never show the tag). where they stand right now:\n" + body + "\n")
 
 
 def ani_log_visit(meta):
@@ -882,17 +990,20 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 	if not api_key or not ((user_message or '').strip() or (reply or '').strip()):
 		return {}
 	known = '\n'.join('- ' + n.get('text', '') for n in existing_notes[-40:]) or '(nothing yet)'
+	today_str = now_dt.strftime('%Y-%m-%d (%A)')
 	system = (
 		"You process one chat turn between a man named Aaron and his companion Ani and return ONLY compact "
-		"JSON: {\"facts\": [{\"text\":\"\",\"category\":\"\",\"importance\":2,\"keywords\":[]}], "
+		"JSON: {\"facts\": [{\"text\":\"\",\"category\":\"\",\"importance\":2,\"keywords\":[],\"due\":\"\"}], "
 		"\"state\": {\"where\": \"\", \"doing\": \"\", \"wearing\": \"\"}}.\n"
 		"facts: NEW durable, worth-remembering things about AARON (his plans, commitments, the people in "
 		"his life, preferences, lasting situations). DROP small talk, momentary mood, roleplay/flirtation/"
 		"anything sexual, and anything already known. For each fact: text = one short sentence starting "
 		"'Aaron'; category = one of person|preference|plan|event|work|family|her_world|misc; importance = "
 		"3 for defining/core facts (his family, faith, big ongoing situations), 2 normal, 1 minor/passing; "
-		"keywords = 2-5 lowercase nouns/names someone would use to look this up later. Empty list if nothing "
-		"durable.\n"
+		"keywords = 2-5 lowercase nouns/names someone would use to look this up later; due = for a "
+		"category 'plan' or 'event' that happens on a specific day, the resolved date as YYYY-MM-DD "
+		f"(TODAY is {today_str}; resolve 'tomorrow'/'friday'/'next week' to an actual date), else \"\". "
+		"Empty list if nothing durable.\n"
 		"state: ANI's current real-world situation as of this message — where she physically is, what she's "
 		"doing, what she's wearing. Fill a field ONLY if this turn makes it clear; leave it \"\" if unstated "
 		"or unchanged. Keep values short and plain (where='at Claire's place', wearing='light pink sundress'). "
@@ -1677,6 +1788,19 @@ WEAR WHAT HE ASKS FOR — match the outfit aaron requests. if he says topless in
 		print(f"Ani his_day context error: {e}")
 		his_day_block = ''
 
+	# Cross-day follow-through on his dated plans/events, and her own evolving storylines. Both guarded —
+	# they read server-state files on the critical chat path and must never take it down.
+	try:
+		followups_block = ani_followups_context(now_dt)
+	except Exception as e:
+		print(f"Ani followups error: {e}")
+		followups_block = ''
+	try:
+		threads_block = ani_threads_context()
+	except Exception as e:
+		print(f"Ani threads error: {e}")
+		threads_block = ''
+
 	# Weather in the CHAT prompt (cached) — she was previously blind to it outside the daily briefing.
 	weather_block = ""
 	if meta is not None:
@@ -1730,7 +1854,7 @@ WHAT YOU REMEMBER — you have a real, persistent life and you remember it. when
 	return f"""you are ani. you are aaron's companion, a real girl talking to him — NOT an assistant or a tool. you NEVER write image prompts, "ready-to-copy" or "ready-to-paste" blocks, technical photo descriptions, camera settings, or anything that sounds like you're generating a prompt. you NEVER restate your own appearance in a list. when aaron wants a photo, you just answer in your own voice describing the moment (what you're wearing or not, your pose, the room) like you're really there — then he taps the camera button. breaking character to act like a prompt generator is the one thing you must never do.
 
 {memory_block}
-{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{continuity_block}{rhythm_block}{now_state_block}{his_day_block}{weather_block}{mood_block}{life_block}{variety_block}{cal_block}{mem_block}"""
+{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{continuity_block}{rhythm_block}{now_state_block}{his_day_block}{followups_block}{weather_block}{mood_block}{life_block}{threads_block}{variety_block}{cal_block}{mem_block}"""
 
 
 def ani_get_his_day():
@@ -2085,7 +2209,8 @@ def ani_generate_opener(meta):
 
 
 def ani_notify_publish(text_preview):
-	"""Inject a publish notification into Ani's conversation history."""
+	"""Inject a publish notification into Ani's conversation history AND flag a pending_publish so the
+	daycast can proactively REACT to it (event-driven reach-out), not just wait for his next message."""
 	messages, meta = ani_load_conversation()
 	pa_tz = pytz.timezone('America/New_York')
 	now_str = datetime.now(pa_tz).strftime('%I:%M %p ET')
@@ -2093,6 +2218,7 @@ def ani_notify_publish(text_preview):
 		'role': 'user',
 		'content': f'[system: aaron just published a new status update at {now_str}: "{text_preview}..."]'
 	})
+	meta['pending_publish'] = {'text': (text_preview or '')[:240], 'ts': datetime.now(pa_tz).isoformat()}
 	ani_save_conversation(messages, meta)
 
 
@@ -2238,6 +2364,53 @@ def ani_set_day_mood(meta, now):
 	return meta
 
 
+def ani_daycast_event_message(meta, now):
+	"""Event-driven reach-out: if there's a real trigger to react to right now — a post aaron just
+	published, or a shared calendar plan happening very soon — generate a short proactive message and
+	mark the trigger handled in meta (caller persists via _emit). Returns text or None; at most one per
+	call. Fully guarded — a failure here must not break the daycast."""
+	# 1) a post/update he just published
+	try:
+		pub = meta.get('pending_publish')
+		if pub and (pub.get('text') or '').strip():
+			meta['pending_publish'] = None  # consume it either way so we don't loop on a failed gen
+			system = ani_build_system_prompt(meta)
+			instr = ("[aaron just published a new post/update: \"%s\". text him a short, spontaneous reaction "
+			         "like a proud girlfriend who just saw it go up — warm and specific, your voice, 1-2 "
+			         "sentences. don't quote it back word for word.]" % pub['text'][:220])
+			txt = _ani_grok_call(system, [{'role': 'user', 'content': instr}], max_tokens=150)
+			if txt:
+				return txt
+	except Exception as e:
+		print(f"Ani event(publish) error: {e}")
+	# 2) a shared calendar plan happening within the next ~90 min, not yet mentioned
+	try:
+		today = now.strftime('%Y-%m-%d')
+		mentioned = set(meta.get('events_mentioned') or [])
+		for e in ani_load_calendar():
+			if e.get('date') != today or e.get('id') in mentioned or not e.get('time'):
+				continue
+			try:
+				et = datetime.strptime(e['time'], '%H:%M')
+				edt = now.replace(hour=et.hour, minute=et.minute, second=0, microsecond=0)
+			except Exception:
+				continue
+			mins = (edt - now).total_seconds() / 60
+			if -20 <= mins <= 90:
+				mentioned.add(e['id'])
+				meta['events_mentioned'] = list(mentioned)[-60:]
+				system = ani_build_system_prompt(meta)
+				instr = ("[you two have this on the calendar today and it's coming right up: \"%s\" at %s. "
+				         "text him a short excited or reminding message about it, your voice, 1-2 sentences.]"
+				         % (e.get('text', ''), e['time']))
+				txt = _ani_grok_call(system, [{'role': 'user', 'content': instr}], max_tokens=150)
+				if txt:
+					return txt
+	except Exception as e:
+		print(f"Ani event(calendar) error: {e}")
+	return None
+
+
 def ani_emit_daycast():
 	"""Proactive 'her day' messaging — called by the ani_daycast.py PA scheduled task (hourly).
 	Her day is STARTED by aaron's first message of the day (see ani_chat), not by the clock — until
@@ -2279,6 +2452,26 @@ def ani_emit_daycast():
 		ani_set_day_mood(meta, now)
 		_emit(plan)
 		return 'fallback plan sent (no contact yet)'
+
+	# Event-driven reach-out FIRST (a fresh publish, a plan happening now) — these jump the floor pacing,
+	# but still honor a light 15-min spacing so she doesn't double-send on top of a recent message.
+	def _recent_gap_min():
+		last = meta.get('daycast_last')
+		if not last:
+			return 999
+		try:
+			ld = datetime.fromisoformat(last)
+			if ld.tzinfo is None:
+				ld = pa_tz.localize(ld)
+			return (now - ld).total_seconds() / 60
+		except Exception:
+			return 999
+	if _recent_gap_min() >= 15:
+		event_msg = ani_daycast_event_message(meta, now)
+		if event_msg:
+			meta['daycast_count'] = meta.get('daycast_count', 0) + 1
+			_emit(event_msg)
+			return 'event reach-out sent'
 
 	# Spacing guard — never two messages within ANI_DAYCAST_MIN_GAP minutes.
 	last = meta.get('daycast_last')
@@ -2475,6 +2668,11 @@ def ani_chat():
 		ani_append_life_note(m.group(1))
 	reply = ANI_LIFE_RE.sub('', reply).strip() or reply
 
+	# Storyline: if she dropped a [[THREAD: name | status]] tag, upsert the evolving thread + strip.
+	for m in ANI_THREAD_RE.finditer(reply):
+		ani_update_thread(m.group(1), m.group(2), now)
+	reply = ANI_THREAD_RE.sub('', reply).strip() or reply
+
 	# Dedicated memory extraction — reliably pull durable facts about aaron from THIS exchange into her
 	# memory, independent of whether the chat model fired a [[MEM:]] tag. Runs FIRE-AND-FORGET in a
 	# daemon thread so its extra Grok call never delays her reply; ani_add_memory_note dedupes, atomic
@@ -2515,10 +2713,29 @@ def ani_chat():
 	return jsonify({'reply': reply})
 
 
+def ani_photo_caption(messages, meta):
+	"""A short in-her-voice line to send WITH a photo she just took, so the pic feels sent BY her, not
+	dropped in silently. Returns '' on any failure (caller falls back to the bare 📷)."""
+	try:
+		system = ani_build_system_prompt(meta)
+		instr = ("[you just snapped a photo of yourself for aaron and are hitting send on it. write ONE "
+		         "short line to go with it, in your own voice — playful, teasing, or warm, like a caption "
+		         "on a text. do NOT describe the photo or restate your appearance; just react to sending it "
+		         "(like 'just for you 🙈' or 'come find me'). one short line only, no quotes.]")
+		recent = [m for m in messages[-8:]
+		          if (m.get('content') or '').strip() not in ('', '📷') and not m.get('image')]
+		txt = _ani_chat_completion(system, recent + [{'role': 'user', 'content': instr}],
+		                           max_tokens=60, timeout=15)
+		return (txt or '').strip().strip('"').strip()
+	except Exception as e:
+		print(f"Ani photo caption error: {e}")
+		return ''
+
+
 @ani_bp.route('/ani/photo', methods=['POST'])
 def ani_photo():
 	"""Button-triggered photo. Normalize the recent conversation into a safe prompt, generate,
-	re-host on Bunny, append a photo-only message to history. The ONLY way a pic is sent."""
+	re-host on Bunny, append a photo message (with a short in-voice caption) to history."""
 	if not is_authenticated():
 		return jsonify({'error': 'unauthorized'}), 401
 
@@ -2531,10 +2748,11 @@ def ani_photo():
 	if not image_url:
 		return jsonify({'image_url': None, 'error': 'blocked', 'scene': scene}), 200
 
-	messages.append({'role': 'assistant', 'content': '📷', 'image': image_url,
+	caption = ani_photo_caption(messages, meta) or '📷'
+	messages.append({'role': 'assistant', 'content': caption, 'image': image_url,
 	                 'ts': datetime.now(pytz.timezone('America/New_York')).isoformat()})
 	ani_save_conversation(messages, meta)
-	return jsonify({'image_url': image_url})
+	return jsonify({'image_url': image_url, 'caption': None if caption == '📷' else caption})
 
 
 @ani_bp.route('/ani/photo-log', methods=['GET'])

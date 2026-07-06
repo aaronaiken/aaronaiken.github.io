@@ -222,7 +222,7 @@
 		aniPhotoBtn.disabled = false;
 		aniSendBtn.disabled = false;
 		if (data.image_url) {
-		  aniRenderMessage('assistant', '', data.image_url, new Date().toISOString());
+		  aniRenderMessage('assistant', data.caption || '', data.image_url, new Date().toISOString());
 		} else if (data.error === 'blocked') {
 		  aniRenderNotify('photo blocked by the filter — describe a tamer scene and tap 📷 again');
 		} else {
