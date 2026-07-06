@@ -226,6 +226,7 @@
 
 	#yt-player.is-minimized #yt-player-video-wrap,
 	#yt-player.is-minimized #yt-player-library,
+	#yt-player.is-minimized #yt-player-queue,
 	#yt-player.is-minimized #yt-player-resize-grip { display: none; }
 
 	#yt-player-titlebar {
@@ -461,6 +462,43 @@
 		padding: 0 2px;
 	}
 	.ad-queue-del:hover { color: #c04040; }
+
+	/* YT smart-queue drawer (mirrors the AD queue palette) */
+	#yt-player-queue {
+		max-height: 0;
+		overflow: hidden;
+		transition: max-height 0.25s ease;
+		background: #0e0508;
+		border-bottom: 1px solid #4a1818;
+	}
+	#yt-player-queue.is-open { max-height: 290px; }
+	#yt-player-queue-inner { padding: 10px; overflow-y: auto; max-height: 290px; }
+	#yt-queue-input {
+		width: 100%;
+		box-sizing: border-box;
+		background: #140808;
+		border: 1px solid #4a1818;
+		border-radius: 2px;
+		color: #c04040;
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.6rem;
+		letter-spacing: 0.04em;
+		padding: 6px 8px;
+		resize: vertical;
+	}
+	#yt-queue-input:focus { outline: none; border-color: #8b1a1a; }
+	#yt-queue-input::placeholder { color: #5a2424; }
+	#yt-queue-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 7px 0; }
+	#yt-queue-status { color: #6a2828; font-size: 0.52rem; letter-spacing: 0.1em; margin-left: auto; }
+	#yt-now-playing {
+		color: #e05050;
+		font-size: 0.55rem;
+		letter-spacing: 0.06em;
+		margin: 2px 0 8px;
+		min-height: 0.8rem;
+		word-break: break-all;
+	}
+	#yt-queue-list { display: flex; flex-direction: column; gap: 4px; }
 
 	#ad-player-video-wrap {
 		position: relative;

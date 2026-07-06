@@ -128,6 +128,7 @@
 			<span id="yt-player-title">// STREAM</span>
 			<div class="ad-player-tb-actions">
 				<button class="ad-player-tb-btn" onclick="ytLibraryToggle()" id="yt-library-toggle-btn">LIB</button>
+				<button class="ad-player-tb-btn" onclick="ytQueueToggle()" id="yt-queue-toggle-btn">QUEUE</button>
 				<button class="ad-player-tb-btn" onclick="ytPlayNext()">NEXT</button>
 				<button class="ad-player-tb-btn" onclick="ytPlayerMinimize()" id="yt-minimize-btn">—</button>
 				<button class="ad-player-tb-btn" onclick="ytPlayerClose()">✕</button>
@@ -136,9 +137,24 @@
 		<div id="yt-player-library">
 			<div id="yt-player-library-grid" aria-label="YouTube library"></div>
 		</div>
+		<div id="yt-player-queue">
+			<div id="yt-player-queue-inner">
+				<textarea id="yt-queue-input" rows="3" spellcheck="false"
+				          placeholder="paste YouTube video OR playlist URLs — one per line — then PLAY QUEUE"></textarea>
+				<div id="yt-queue-controls">
+					<button class="ad-player-tb-btn" onclick="ytQueueLoad()">PLAY QUEUE</button>
+					<button class="ad-player-tb-btn" onclick="ytQueueAddFromInput()">+ ADD</button>
+					<button class="ad-player-tb-btn" onclick="ytQueueClear()">CLEAR</button>
+					<button class="ad-player-tb-btn" onclick="ytQueueToggleShuffle()" id="yt-queue-shuffle-btn">SHUFFLE ○</button>
+					<button class="ad-player-tb-btn" onclick="ytQueueToggleLoop()" id="yt-queue-loop-btn">LOOP ○</button>
+					<span id="yt-queue-status"></span>
+				</div>
+				<div id="yt-now-playing"></div>
+				<div id="yt-queue-list" aria-label="Queue"></div>
+			</div>
+		</div>
 		<div id="yt-player-video-wrap">
-			<iframe id="yt-viewer-iframe" allowfullscreen allow="autoplay; encrypted-media"
-			        frameborder="0" scrolling="no"></iframe>
+			<div id="yt-viewer-iframe"></div>
 		</div>
 		<div id="yt-player-resize-grip" title="Drag to resize">⟋</div>
 	</div>
