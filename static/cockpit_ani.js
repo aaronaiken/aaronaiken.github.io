@@ -53,6 +53,7 @@
 	  aniSendLocation();
 	}
 	if (aniIsOpen) {
+	  aniLoadState();
 	  setTimeout(function() { aniInput.focus(); }, 300);
 	} else {
 	  // Closing: drop fullscreen state so reopen returns to docked view
@@ -128,6 +129,23 @@
 	}, function() {});
   }
 
+  function aniLoadState() {
+	fetch('/ani/state')
+	  .then(function(r) { return r.json(); })
+	  .then(function(s) {
+		var el = document.getElementById('ani-now-state');
+		if (!el) return;
+		var parts = [];
+		if (s.where)   parts.push('<span class="ani-ns-where">' + aniEscapeHtml(s.where) + '</span>');
+		if (s.doing)   parts.push(aniEscapeHtml(s.doing));
+		if (s.wearing) parts.push('<span class="ani-ns-wear">' + aniEscapeHtml(s.wearing) + '</span>');
+		if (!parts.length) { el.hidden = true; el.innerHTML = ''; return; }
+		el.innerHTML = '<span class="ani-ns-dot">◉</span> ' + parts.join(' <span class="ani-ns-sep">·</span> ');
+		el.hidden = false;
+	  })
+	  .catch(function() {});
+  }
+
   function aniLoadHistory() {
 	aniLoaded = true;
 	fetch('/ani/history')
@@ -171,6 +189,7 @@
 	  if (data.reply || data.image_url) {
 		aniRenderMessage('assistant', data.reply || '', data.image_url, new Date().toISOString());
 		updateAcheDisplay(0);
+		setTimeout(aniLoadState, 3500);   // her state is extracted async ~2s after the reply
 	  }
 	  if (data.image_error) {
 		var note = 'photo blocked by the content filter (likely too explicit) — ask her for a tamer scene';
@@ -237,6 +256,7 @@
 		Array.from(aniMsgs.querySelectorAll('.ani-msg, .ani-msg-notify')).forEach(function(el) { el.remove(); });
 		aniEmpty.style.display = 'block';
 		aniLoaded = false;
+		var ns = document.getElementById('ani-now-state'); if (ns) { ns.hidden = true; ns.innerHTML = ''; }
 	  })
 	  .catch(function() {});
   }

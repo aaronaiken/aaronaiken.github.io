@@ -133,6 +133,20 @@
   text-shadow: 0 0 8px rgba(245, 179, 50, 0.3);
 }
 
+#ani-now-state {
+  padding: 6px 14px;
+  border-bottom: 1px solid #2e1e08;
+  background: #0a0c08;
+  color: #8a7a4a;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+}
+#ani-now-state .ani-ns-dot { color: #6fae4f; margin-right: 4px; }
+#ani-now-state .ani-ns-where { color: #d4880a; }
+#ani-now-state .ani-ns-wear { color: #c8a0c8; }
+#ani-now-state .ani-ns-sep { color: #3a2a10; }
+
 .ani-time {
   font-size: 0.55rem;
   color: #6b5a34;

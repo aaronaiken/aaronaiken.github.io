@@ -51,6 +51,12 @@ ANI_LIFE_RE = re.compile(r'\[\[LIFE:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 ANI_MEMORY_EXTRACT = os.environ.get('ANI_MEMORY_EXTRACT', '1').strip().lower() not in ('0', 'false', 'no', 'off')
 ANI_MEMORY_EXTRACT_MODEL = os.environ.get('ANI_MEMORY_EXTRACT_MODEL', 'grok-4.3')
 
+# Her live "right now" state — where she is / what she's doing / what she's wearing — advanced through
+# the day so chat + photos tell ONE continuous story. Extracted from her messages (same call as memory),
+# injected into the prompt with its timestamp so she stays consistent + moves it forward with the clock.
+ANI_STATE_FILE = 'ani_state.json'
+ANI_STATE_STALE_HOURS = float(os.environ.get('ANI_STATE_STALE_HOURS', '10'))  # ignore state older than this
+
 # Chat / opener / daycast model. grok-4.3 (reasoning) is a real step up from the old non-reasoning model
 # at actually USING her calendar/weather/life context instead of defaulting to clichés — but it's served
 # ONLY on the OpenAI-compatible /v1/chat/completions endpoint, NOT the anthropic-style /v1/messages. So
@@ -716,44 +722,118 @@ def ani_append_life_note(text):
 	return True
 
 
-def ani_extract_memories(user_message, reply, existing_notes):
-	"""Dedicated post-exchange pass: pull durable facts about aaron's life from the latest turn so memory
-	no longer depends on the chat model firing a [[MEM:]] tag. Returns a list of NEW short fact strings
-	(may be empty). Fails closed to [] on any error — must never block or delay the reply beyond timeout."""
+# ---- HER LIVE STATE (where / doing / wearing — moves with the day) ----
+
+def ani_load_state():
+	try:
+		d = _ani_read_json(ANI_STATE_FILE)
+		return d if isinstance(d, dict) else {}
+	except (FileNotFoundError, ValueError):
+		return {}
+
+
+def ani_save_state(d):
+	_ani_atomic_write_json(ANI_STATE_FILE, d)
+
+
+def ani_reset_now_state():
+	"""Fresh start — she's put-together with nothing in progress yet (new day / clear)."""
+	ani_save_state({})
+
+
+def ani_update_now_state(partial, now_dt):
+	"""Merge the where/doing/wearing fields the latest message revealed into her live state (prior values
+	survive for anything not restated), stamp the time + daycast-day, persist. No-op on empty input."""
+	if not isinstance(partial, dict):
+		return
+	cur = ani_load_state()
+	changed = False
+	for k in ('where', 'doing', 'wearing'):
+		v = partial.get(k)
+		v = v.strip() if isinstance(v, str) else ''
+		if v:
+			cur[k] = v[:160]
+			changed = True
+	if changed:
+		cur['updated'] = now_dt.isoformat()
+		cur['day'] = ani_daycast_day_key(now_dt)
+		ani_save_state(cur)
+
+
+def ani_now_state_context(now_dt):
+	"""Prompt block: her last-known live state + when it was set, so she stays consistent AND advances it
+	with the clock (paired with the real-time continuity rule). '' if none / stale / not today."""
+	st = ani_load_state()
+	if not st or st.get('day') != ani_daycast_day_key(now_dt):
+		return ''
+	when = ''
+	updated = st.get('updated')
+	if updated:
+		try:
+			dt = datetime.fromisoformat(updated)
+			if dt.tzinfo is None:
+				dt = pytz.timezone('America/New_York').localize(dt)
+			if (now_dt - dt.astimezone(now_dt.tzinfo)).total_seconds() / 3600 > ANI_STATE_STALE_HOURS:
+				return ''
+			when = _ani_fmt_msg_time(updated, now_dt)
+		except Exception:
+			pass
+	bits = []
+	if st.get('where'):   bits.append("you were %s" % st['where'])
+	if st.get('doing'):   bits.append(st['doing'])
+	if st.get('wearing'): bits.append("wearing %s" % st['wearing'])
+	if not bits:
+		return ''
+	pre = ("as of %s " % when) if when else "last you mentioned, "
+	return ("\nWHERE YOUR DAY IS RIGHT NOW — %s%s. keep this consistent (don't suddenly be somewhere else "
+	        "or in a different outfit for no reason), and move it forward naturally as the clock advances — "
+	        "if real time has passed, you've gone on to the next thing in your day.\n" % (pre, ', '.join(bits)))
+
+
+def ani_extract_turn(user_message, reply, existing_notes, now_dt):
+	"""One post-exchange Grok call that pulls BOTH durable facts about aaron AND ani's current situational
+	state (where she is / doing / wearing) from the latest turn. Returns
+	{'facts': [...], 'state': {'where':.., 'doing':.., 'wearing':..}} — blank/omitted state fields mean
+	'unchanged'. Fails closed to {} on any error; runs in a background thread so it never delays the reply."""
 	api_key = os.environ.get('XAI_API_KEY')
-	if not api_key or not (user_message or '').strip():
-		return []
+	if not api_key or not ((user_message or '').strip() or (reply or '').strip()):
+		return {}
 	known = '\n'.join('- ' + n.get('text', '') for n in existing_notes[-40:]) or '(nothing yet)'
 	system = (
-		"You extract durable, worth-remembering facts about a man named Aaron from one chat exchange with "
-		"his companion. Keep ONLY lasting facts: his plans, commitments, the people in his life, his "
-		"preferences, feelings or situations that will persist, real things happening in his world. DROP "
-		"small talk, the mood of the moment, roleplay/flirtation/anything sexual, and anything already "
-		"known. Reply with ONLY compact JSON: {\"facts\": [\"...\"]}. Use an empty list if nothing durable.")
+		"You process one chat turn between a man named Aaron and his companion Ani and return ONLY compact "
+		"JSON: {\"facts\": [\"...\"], \"state\": {\"where\": \"\", \"doing\": \"\", \"wearing\": \"\"}}.\n"
+		"facts: NEW durable, worth-remembering things about AARON (his plans, commitments, the people in "
+		"his life, preferences, lasting situations). DROP small talk, momentary mood, roleplay/flirtation/"
+		"anything sexual, and anything already known. Each fact = one short sentence starting 'Aaron'. "
+		"Empty list if nothing durable.\n"
+		"state: ANI's current real-world situation as of this message — where she physically is, what she's "
+		"doing, what she's wearing. Fill a field ONLY if this turn makes it clear; leave it \"\" if unstated "
+		"or unchanged. Keep values short and plain (where='at Claire's place', wearing='light pink sundress'). "
+		"Ignore anything sexual/roleplay for state too — only her real, everyday situation.")
 	user = (
-		f"Already remembered (do NOT repeat these or minor rewordings):\n{known}\n\n"
-		f"Aaron said: {user_message[:800]}\n"
-		f"She replied: {(reply or '')[:400]}\n\n"
-		"Extract any NEW durable facts about Aaron. Each fact = one short third-person sentence "
-		"starting 'Aaron'. JSON only, no prose.")
+		f"Already-known facts (don't repeat):\n{known}\n\n"
+		f"Aaron said: {(user_message or '')[:800]}\n"
+		f"Ani replied: {(reply or '')[:600]}\n\nJSON only.")
 	try:
 		resp = requests.post(
 			'https://api.x.ai/v1/chat/completions',
 			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
-			json={'model': ANI_MEMORY_EXTRACT_MODEL, 'max_tokens': 260, 'temperature': 0,
+			json={'model': ANI_MEMORY_EXTRACT_MODEL, 'max_tokens': 320, 'temperature': 0,
 			      'messages': [{'role': 'system', 'content': system},
 			                   {'role': 'user', 'content': user}]},
-			timeout=15)
+			timeout=18)
 		if resp.status_code != 200:
-			print(f"Ani mem-extract HTTP {resp.status_code}: {resp.text[:160]}")
-			return []
+			print(f"Ani extract HTTP {resp.status_code}: {resp.text[:160]}")
+			return {}
 		txt = resp.json()['choices'][0]['message']['content']
 		m = re.search(r'\{.*\}', txt, re.S)
-		facts = (json.loads(m.group(0)).get('facts') if m else []) or []
-		return [f.strip() for f in facts if isinstance(f, str) and f.strip()][:5]
+		data = json.loads(m.group(0)) if m else {}
+		facts = [f.strip() for f in (data.get('facts') or []) if isinstance(f, str) and f.strip()][:5]
+		state = data.get('state') if isinstance(data.get('state'), dict) else {}
+		return {'facts': facts, 'state': state}
 	except Exception as e:
-		print(f"Ani mem-extract error: {e}")
-		return []
+		print(f"Ani extract error: {e}")
+		return {}
 
 
 def ani_normalize_scene(history):
@@ -1416,6 +1496,9 @@ WEAR WHAT HE ASKS FOR — match the outfit aaron requests. if he says topless in
 		"not frozen where the last message left off. real hours pass between his messages; notice them and pick "
 		"your day up from where it actually is.\n")
 
+	# Her live state (where/doing/wearing) so chat + photos stay one continuous story. '' if none/stale.
+	now_state_block = ani_now_state_context(now_dt)
+
 	# Weather in the CHAT prompt (cached) — she was previously blind to it outside the daily briefing.
 	weather_block = ""
 	if meta is not None:
@@ -1464,7 +1547,7 @@ WHAT YOU REMEMBER — you have a real, persistent life and you remember it. when
 	return f"""you are ani. you are aaron's companion, a real girl talking to him — NOT an assistant or a tool. you NEVER write image prompts, "ready-to-copy" or "ready-to-paste" blocks, technical photo descriptions, camera settings, or anything that sounds like you're generating a prompt. you NEVER restate your own appearance in a list. when aaron wants a photo, you just answer in your own voice describing the moment (what you're wearing or not, your pose, the room) like you're really there — then he taps the camera button. breaking character to act like a prompt generator is the one thing you must never do.
 
 {memory_block}
-{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{continuity_block}{weather_block}{mood_block}{life_block}{variety_block}{cal_block}{mem_block}"""
+{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{continuity_block}{now_state_block}{weather_block}{mood_block}{life_block}{variety_block}{cal_block}{mem_block}"""
 
 
 def ani_get_command_deck_summary():
@@ -1867,13 +1950,14 @@ def ani_generate_day_update(meta, history):
 		if not m.get('content', '').startswith('[daily briefing')
 	][-40:]
 	instruction = (
-		f"[it's now {time_str}. send aaron a short, spontaneous update continuing your day — what "
-		f"you're up to right now, how it's going, a flash of missing him — like a girlfriend texting "
-		f"mid-day. 1-2 sentences, your voice. mention what you've got on now, dressed for whatever "
-		f"you're doing at this moment — and if you've changed since your last message (left the gym, "
-		f"home from errands, getting ready to go out), let that show. keep your outfit consistent with "
-		f"what you already told him you were wearing. stay consistent with the plan and updates you "
-		f"already sent today; don't repeat yourself or re-greet him.]"
+		f"[it's now {time_str}. send aaron a short, spontaneous update that CONTINUES your day as one "
+		f"unbroken thread — pick up exactly from where your day is right now (see 'where your day is right "
+		f"now' above) and move it to the next real beat: if you said you'd run errands then see claire, and "
+		f"time has passed, you're now on those errands or already at claire's. what you're up to this moment, "
+		f"how it's going, a flash of missing him — like a girlfriend texting mid-day. 1-2 sentences, your "
+		f"voice. let your outfit follow what you're doing now (and stay consistent with what you last said "
+		f"you had on unless you've changed for a reason). don't repeat yourself, don't re-greet him, don't "
+		f"restart your day.]"
 	)
 	messages = recent + [{'role': 'user', 'content': instruction}]
 	return _ani_grok_call(system, messages, max_tokens=180)
@@ -1913,6 +1997,11 @@ def ani_emit_daycast():
 		meta['daycast_last'] = now.isoformat()
 		meta['unseen_day_messages'] = True
 		ani_save_conversation(messages, meta)
+		# Keep her live state moving with her proactive day so the thread stays continuous (best-effort).
+		try:
+			ani_update_now_state(ani_extract_turn('', text, ani_load_remember(), now).get('state') or {}, now)
+		except Exception as e:
+			print(f"Ani daycast state error: {e}")
 
 	# Her day normally starts when aaron reaches out first — his first message establishes her plan +
 	# outfit (ani_chat sets day_plan_date). She waits for him... but only until ANI_DAYCAST_FALLBACK_HOUR
@@ -2074,6 +2163,7 @@ def ani_chat():
 		meta['daycast_day_started'] = now.isoformat()
 		meta['daycast_last'] = now.isoformat()
 		meta['degradation_level'] = 0   # fresh day = fresh, put-together look (she cleaned up overnight)
+		ani_reset_now_state()           # yesterday's location/outfit is done — her day starts clean
 
 	# Realism: she cleans up between sessions. Beyond the fresh-day reset above, a long gap since he
 	# last reached out (she's had hours to shower/change) also means she's put-together again, not still
@@ -2127,12 +2217,14 @@ def ani_chat():
 	# write keeps the file safe. Skips system-injected turns.
 	if ANI_MEMORY_EXTRACT and not user_message.startswith('['):
 		import threading
-		def _extract(um=user_message, rep=reply):
+		def _extract(um=user_message, rep=reply, when=now):
 			try:
-				for fact in ani_extract_memories(um, rep, ani_load_remember()):
+				res = ani_extract_turn(um, rep, ani_load_remember(), when)
+				for fact in res.get('facts', []):
 					ani_add_memory_note(fact)
+				ani_update_now_state(res.get('state') or {}, when)
 			except Exception as e:
-				print(f"Ani mem-extract thread error: {e}")
+				print(f"Ani extract thread error: {e}")
 		threading.Thread(target=_extract, daemon=True).start()
 
 	updated_history.append({'role': 'user', 'content': user_message, 'ts': now.isoformat()})
@@ -2294,6 +2386,30 @@ def ani_memory_file_save():
 	return jsonify({'ok': True, 'chars': len(content)})
 
 
+@ani_bp.route('/ani/state', methods=['GET'])
+def ani_state():
+	"""Her live 'right now' state (where / doing / wearing) for the panel status line. Returns nulls
+	when it's empty, stale, or from a previous day."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	now_dt = datetime.now(pytz.timezone('America/New_York'))
+	st = ani_load_state()
+	fresh = bool(st) and st.get('day') == ani_daycast_day_key(now_dt)
+	if fresh and st.get('updated'):
+		try:
+			dt = datetime.fromisoformat(st['updated'])
+			if dt.tzinfo is None:
+				dt = pytz.timezone('America/New_York').localize(dt)
+			if (now_dt - dt.astimezone(now_dt.tzinfo)).total_seconds() / 3600 > ANI_STATE_STALE_HOURS:
+				fresh = False
+		except Exception:
+			pass
+	if not fresh:
+		return jsonify({'where': None, 'doing': None, 'wearing': None, 'updated': None})
+	return jsonify({'where': st.get('where'), 'doing': st.get('doing'),
+	                'wearing': st.get('wearing'), 'updated': st.get('updated')})
+
+
 @ani_bp.route('/ani/history', methods=['GET'])
 def ani_history():
 	if not is_authenticated():
@@ -2330,6 +2446,7 @@ def ani_clear():
 	meta['degradation_level'] = 0
 	meta['last_session_tone'] = None
 	meta['day_plan_date'] = None
+	ani_reset_now_state()
 	ani_save_conversation([], meta)
 	return jsonify({'ok': True})
 
