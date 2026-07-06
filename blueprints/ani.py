@@ -1721,7 +1721,8 @@ def ani_get_command_deck_summary():
 	except Exception:
 		pass
 	try:
-		today = et_now().strftime('%Y-%m-%d')
+		# et_now() returns an ISO STRING (no .strftime) — compute the date directly, like elsewhere.
+		today = datetime.now(pytz.timezone('America/New_York')).strftime('%Y-%m-%d')
 		row = conn.execute("""
 			SELECT COUNT(*) FROM meetings
 			WHERE substr(meeting_date, 1, 10) = ? AND status = 'scheduled'
