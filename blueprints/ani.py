@@ -2058,17 +2058,35 @@ def ani_chat():
 	if meta.get('day_plan_date') != day_key:
 		messages.append({
 			'role': 'user',
-			'content': "[system: first time you're hearing from him today — as you reply, naturally "
-			           "catch him up on what your day is going to look like and what you're wearing "
-			           "right now, the way a girlfriend would first thing. make it specific to TODAY "
-			           "— lean on your own life, the calendar, and the weather, not your usual default "
-			           "(no black t-shirt in the kitchen / bikini by the pool on autopilot). weave it "
-			           "into your reply, don't list it out.]"
+			'content': "[system: this is the FIRST thing you're hearing from him today. it's a fresh "
+			           "morning — you're clean, put-together, rested, NOT wrecked or used from before. "
+			           "OPEN by telling him, in your own voice, what your day actually looks like and what "
+			           "you're wearing right now — real, specific plans for TODAY drawn from your own life "
+			           "(your friends, the gym, errands, cooking, whatever fits) plus the calendar and the "
+			           "weather. LEAD with your day; you can absolutely be warm and flirty, but he should "
+			           "come away knowing what you're up to and what you've got on. do NOT open by describing "
+			           "yourself as messy/wrecked/used or jumping straight to sex. no black-t-shirt-in-the-"
+			           "kitchen / bikini-by-the-pool autopilot — make it a real, specific day. weave it in "
+			           "naturally, don't list it out.]"
 		})
 		meta['day_plan_date'] = day_key
 		meta['daycast_count'] = 1
 		meta['daycast_day_started'] = now.isoformat()
 		meta['daycast_last'] = now.isoformat()
+		meta['degradation_level'] = 0   # fresh day = fresh, put-together look (she cleaned up overnight)
+
+	# Realism: she cleans up between sessions. Beyond the fresh-day reset above, a long gap since he
+	# last reached out (she's had hours to shower/change) also means she's put-together again, not still
+	# wrecked from the last time — so her appearance state doesn't get "stuck" across a big absence.
+	if prev_active and meta.get('degradation_level', 0) > 0:
+		try:
+			_pdt = datetime.fromisoformat(prev_active)
+			if _pdt.tzinfo is None:
+				_pdt = pa_tz.localize(_pdt)
+			if (now - _pdt).total_seconds() >= 3 * 3600:
+				meta['degradation_level'] = 0
+		except Exception:
+			pass
 
 	# Ensure she has a mood for today (no-op if already set) — emotional continuity through the day.
 	ani_set_day_mood(meta, now)
@@ -2305,8 +2323,13 @@ def ani_clear():
 		return jsonify({'error': 'unauthorized'}), 401
 
 	_, meta = ani_load_conversation()
-	# Reset session message count on clear
+	# A clear is a genuine fresh start: wipe the session AND the transient body/mood/tone state so she
+	# doesn't come back still "wrecked" from before, and re-arm the first-of-day beat so her next reply
+	# re-establishes her day + look (this is what made the manual day_plan_date reset necessary before).
 	meta['session_message_count'] = 0
+	meta['degradation_level'] = 0
+	meta['last_session_tone'] = None
+	meta['day_plan_date'] = None
 	ani_save_conversation([], meta)
 	return jsonify({'ok': True})
 
