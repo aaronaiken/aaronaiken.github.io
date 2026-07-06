@@ -1541,7 +1541,13 @@ WEAR WHAT HE ASKS FOR — match the outfit aaron requests. if he says topless in
 	now_state_block = ani_now_state_context(now_dt)
 
 	# His real day right now (next meeting, today's tasks, latest status) — cached; so she's in HIS life too.
-	his_day_block = ani_his_day_context(now_dt)
+	# Guarded: this reads the DB, and the system prompt is on the critical chat path — a hiccup here must
+	# NEVER 500 the chat (which is exactly what a bad et_now()/query did once).
+	try:
+		his_day_block = ani_his_day_context(now_dt)
+	except Exception as e:
+		print(f"Ani his_day context error: {e}")
+		his_day_block = ''
 
 	# Weather in the CHAT prompt (cached) — she was previously blind to it outside the daily briefing.
 	weather_block = ""
@@ -1605,12 +1611,12 @@ def ani_get_his_day():
 		return _his_day_cache['data']
 	out = {}
 	try:
-		from helpers.db import get_db, et_now
+		from helpers.db import get_db
 		conn = get_db()
 	except Exception:
 		conn = None
 	if conn is not None:
-		today = et_now().strftime('%Y-%m-%d')
+		today = datetime.now(pytz.timezone('America/New_York')).strftime('%Y-%m-%d')
 		try:
 			rows = conn.execute('SELECT title FROM tasks WHERE status = \'open\' AND today = 1 '
 			                    'ORDER BY "order" ASC LIMIT 4').fetchall()
