@@ -1347,8 +1347,10 @@
 	function adPlayerToggle() {
 		const p = document.getElementById('ad-player');
 		if (!p) return;
-		const hidden = getComputedStyle(p).display === 'none';
-		p.style.display = hidden ? '' : 'none';
+		// Base CSS hides #ad-player (shown only in after-dark), so an explicit 'block' is needed to
+		// reveal it in normal/work modes — '' would just fall back to the hidden default.
+		const shown = getComputedStyle(p).display !== 'none';
+		p.style.display = shown ? 'none' : 'block';
 	}
 
 	function adLibraryToggle() {

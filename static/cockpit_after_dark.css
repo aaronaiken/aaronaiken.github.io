@@ -192,7 +192,8 @@
 	}
 
 	.mode-after-dark #ad-player { display: block; }
-	.mode-work #ad-player { display: none !important; }
+	/* Hidden by default in normal/work (base display:none), but summonable anywhere via
+	   Cmd/Ctrl+Shift+V — so no !important hide that an inline 'block' can't override. */
 
 	#ad-player.is-minimized #ad-player-video-wrap,
 	#ad-player.is-minimized #ad-player-library,
