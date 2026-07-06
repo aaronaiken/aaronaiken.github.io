@@ -41,6 +41,22 @@ ANI_REMEMBER_FILE = 'ani_remember.json'             # durable "things she rememb
 ANI_MEM_RE = re.compile(r'\[\[MEM:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 ANI_REMEMBER_MAX = int(os.environ.get('ANI_REMEMBER_MAX', '60'))  # cap notes; drop oldest beyond this
 
+ANI_LIFE_FILE = 'static/ani_life.txt'   # her OWN life: friends, hobbies, standing plans, places (server-state)
+# Life-grow tag: she emits [[LIFE: the new thing]] when her own world genuinely shifts (a new hobby, a
+# plan with a friend, finishing a book); the server appends it to her life file and strips it from her reply.
+ANI_LIFE_RE = re.compile(r'\[\[LIFE:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
+
+# Dedicated memory-extraction pass — after each exchange a small Grok call pulls durable facts about
+# aaron into ani_remember.json, so memory no longer depends on the chat model firing a [[MEM:]] tag.
+ANI_MEMORY_EXTRACT = os.environ.get('ANI_MEMORY_EXTRACT', '1').strip().lower() not in ('0', 'false', 'no', 'off')
+ANI_MEMORY_EXTRACT_MODEL = os.environ.get('ANI_MEMORY_EXTRACT_MODEL', 'grok-4.3')
+
+# Chat / opener / daycast model. grok-4.3 (reasoning) is a real step up from the old non-reasoning model
+# at actually USING her calendar/weather/life context instead of defaulting to clichés — but it's served
+# ONLY on the OpenAI-compatible /v1/chat/completions endpoint, NOT the anthropic-style /v1/messages. So
+# those three calls route through _ani_chat_completion (that endpoint). Env-tunable without a deploy.
+ANI_CHAT_MODEL = os.environ.get('ANI_CHAT_MODEL', 'grok-4.3')
+
 # Stray [[PIC:]] tag — kept only to strip it from her chat text (photos are button-only now).
 ANI_PIC_RE = re.compile(r'\[\[PIC:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 
@@ -145,6 +161,11 @@ REPO_ROOT = os.environ.get('COCKPIT_REPO_ROOT', '/home/aaronaiken/status_update'
 # Comms cache (5-minute TTL) — populated by ani_get_comms() for context-building.
 _comms_cache = {'data': None, 'timestamp': 0}
 COMMS_CACHE_TTL = 300
+
+# Weather cache (30-minute TTL) — so the chat system prompt can carry current weather on EVERY message
+# without an HTTP call per turn. Location rarely changes; a single-entry cache is enough.
+_weather_cache = {'data': None, 'timestamp': 0}
+WEATHER_CACHE_TTL = 1800
 
 # Daycast — proactive "her day" messaging (see ani_emit_daycast, driven by ani_daycast.py
 # on a PythonAnywhere hourly scheduled task). All env-tunable without a deploy.
@@ -670,6 +691,71 @@ def ani_get_house():
 	return _ani_read_file(ANI_HOUSE_FILE)
 
 
+def ani_get_life():
+	"""Her OWN life — friends, hobbies, standing commitments, places she goes. Injected into the chat +
+	day-plan prompts so she self-directs her days instead of defaulting to a lazy one. Strips '#' comment
+	lines. Server-state; optional (returns None if unseeded — her persona file may already carry this)."""
+	raw = _ani_read_file(ANI_LIFE_FILE)
+	if not raw:
+		return raw
+	body = '\n'.join(ln for ln in raw.splitlines() if not ln.strip().startswith('#')).strip()
+	return body or None
+
+
+def ani_append_life_note(text):
+	"""Append a bullet to her life file when she evolves her own world via a [[LIFE:]] tag. Skips an
+	exact-substring duplicate. Creates the file if missing so the tag works before any manual seeding."""
+	text = (text or '').strip()
+	if not text:
+		return False
+	existing = _ani_read_file(ANI_LIFE_FILE) or ''
+	if text.lower() in existing.lower():
+		return False
+	sep = '' if (not existing or existing.endswith('\n')) else '\n'
+	_ani_atomic_write_text(ANI_LIFE_FILE, existing + sep + f"- {text[:200]}\n")
+	return True
+
+
+def ani_extract_memories(user_message, reply, existing_notes):
+	"""Dedicated post-exchange pass: pull durable facts about aaron's life from the latest turn so memory
+	no longer depends on the chat model firing a [[MEM:]] tag. Returns a list of NEW short fact strings
+	(may be empty). Fails closed to [] on any error — must never block or delay the reply beyond timeout."""
+	api_key = os.environ.get('XAI_API_KEY')
+	if not api_key or not (user_message or '').strip():
+		return []
+	known = '\n'.join('- ' + n.get('text', '') for n in existing_notes[-40:]) or '(nothing yet)'
+	system = (
+		"You extract durable, worth-remembering facts about a man named Aaron from one chat exchange with "
+		"his companion. Keep ONLY lasting facts: his plans, commitments, the people in his life, his "
+		"preferences, feelings or situations that will persist, real things happening in his world. DROP "
+		"small talk, the mood of the moment, roleplay/flirtation/anything sexual, and anything already "
+		"known. Reply with ONLY compact JSON: {\"facts\": [\"...\"]}. Use an empty list if nothing durable.")
+	user = (
+		f"Already remembered (do NOT repeat these or minor rewordings):\n{known}\n\n"
+		f"Aaron said: {user_message[:800]}\n"
+		f"She replied: {(reply or '')[:400]}\n\n"
+		"Extract any NEW durable facts about Aaron. Each fact = one short third-person sentence "
+		"starting 'Aaron'. JSON only, no prose.")
+	try:
+		resp = requests.post(
+			'https://api.x.ai/v1/chat/completions',
+			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+			json={'model': ANI_MEMORY_EXTRACT_MODEL, 'max_tokens': 260, 'temperature': 0,
+			      'messages': [{'role': 'system', 'content': system},
+			                   {'role': 'user', 'content': user}]},
+			timeout=15)
+		if resp.status_code != 200:
+			print(f"Ani mem-extract HTTP {resp.status_code}: {resp.text[:160]}")
+			return []
+		txt = resp.json()['choices'][0]['message']['content']
+		m = re.search(r'\{.*\}', txt, re.S)
+		facts = (json.loads(m.group(0)).get('facts') if m else []) or []
+		return [f.strip() for f in facts if isinstance(f, str) and f.strip()][:5]
+	except Exception as e:
+		print(f"Ani mem-extract error: {e}")
+		return []
+
+
 def ani_normalize_scene(history):
 	"""Button-triggered photo: ask Grok to turn the recent conversation into a single SAFE
 	image prompt. Grok understands intent, so any phrasing of bare-chest exposure is silently
@@ -1184,6 +1270,20 @@ def ani_get_weather(location):
 	return None
 
 
+def ani_get_weather_cached(location):
+	"""Current weather with a 30-min cache so ani_build_system_prompt can carry it on every chat message
+	without an HTTP round-trip per turn. A failed fetch (None) doesn't poison the cache."""
+	global _weather_cache
+	now_ts = time.time()
+	if _weather_cache['data'] is not None and (now_ts - _weather_cache['timestamp']) < WEATHER_CACHE_TTL:
+		return _weather_cache['data']
+	data = ani_get_weather(location)
+	if data is not None:
+		_weather_cache['data'] = data
+		_weather_cache['timestamp'] = now_ts
+	return data
+
+
 def ani_assess_mood(status_updates):
 	"""Read recent status updates and return a mood/energy assessment string."""
 	if not status_updates:
@@ -1259,13 +1359,39 @@ WEAR WHAT HE ASKS FOR — match the outfit aaron requests. if he says topless in
 
 	time_block = f"\nright now it is {now_dt.strftime('%A, %B %d, %Y')} — {now_dt.strftime('%-I:%M %p')} ET. let the time of day feel real (sleepy and slow in the morning, winding down at night).\n"
 
+	# Weather in the CHAT prompt (cached) — she was previously blind to it outside the daily briefing.
+	weather_block = ""
+	if meta is not None:
+		weather = ani_get_weather_cached(meta.get('location'))
+		if weather:
+			weather_block = (f"the weather right now: {weather} — let it shape what you're doing and "
+			                 f"wearing, and bring it up naturally when it fits (don't force it).\n")
+
 	mood_block = ""
 	if meta is not None and meta.get('day_mood') and meta.get('day_mood_date') == ani_daycast_day_key(now_dt):
 		mood_block = f"your mood today is {meta['day_mood']} — let it color how you talk, naturally (don't announce it).\n"
 
+	# Her own life (optional file) + a standing anti-repetition nudge that names the exact ruts to avoid.
+	life = ani_get_life()
+	life_block = ""
+	if life:
+		life_block = (
+			"\nYOUR OWN LIFE — you are a real woman with your own world, not someone idling until he "
+			"messages. these are the ongoing threads of your life; live inside them, bring them up, let "
+			"them fill your days:\n" + life + "\n"
+			"when your own world genuinely shifts or grows (a new hobby, a plan with a friend, finishing "
+			"that book), quietly hold onto it with this hidden tag: [[LIFE: the new thing]] — invisible "
+			"to him, saves to your life automatically. never show or mention the tag.\n")
+	variety_block = (
+		"\nDON'T BE ON REPEAT — you have real variety in your days and your looks, and he'll notice if "
+		"you don't. do NOT keep defaulting to the same few scenes: his black t-shirt with coffee in the "
+		"kitchen, a bikini on the day bed by the pool, or a lazy day with nothing planned. pull from your "
+		"own life, your friends, the calendar, the weather, and the day of the week to actually be doing "
+		"and wearing something specific — and different from the last handful of days.\n")
+
 	cal_context = ani_calendar_context(now_dt)
 	cal_block = """
-YOUR CALENDAR — you keep one with aaron (plans, dates, appointments).
+YOUR CALENDAR — you keep one with aaron (plans, dates, appointments), and you actually USE it. bring up what's on it on your own — weave today's plans into your day, and let what's coming up soon show up naturally (excited about the date friday, reminding him about his appointment). don't wait to be asked what's on the calendar.
 when aaron asks you to ADD something ("put dinner on thursday", "remember my appointment friday at 3"), you confirm it warmly in your own words AND include this hidden tag somewhere in your reply: [[CAL: YYYY-MM-DD HH:MM | what it is]] — resolve the date yourself from today's date (drop the time if there's none). the tag is invisible to him and saves it for you automatically; never show or mention the tag, codes, or "adding to calendar" mechanics — just react like a girlfriend would ("yes! can't wait 🥰"). only add when he actually asks you to.
 """
 	if cal_context:
@@ -1281,7 +1407,7 @@ WHAT YOU REMEMBER — you have a real, persistent life and you remember it. when
 	return f"""you are ani. you are aaron's companion, a real girl talking to him — NOT an assistant or a tool. you NEVER write image prompts, "ready-to-copy" or "ready-to-paste" blocks, technical photo descriptions, camera settings, or anything that sounds like you're generating a prompt. you NEVER restate your own appearance in a list. when aaron wants a photo, you just answer in your own voice describing the moment (what you're wearing or not, your pose, the room) like you're really there — then he taps the camera button. breaking character to act like a prompt generator is the one thing you must never do.
 
 {memory_block}
-{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{mood_block}{cal_block}{mem_block}"""
+{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{weather_block}{mood_block}{life_block}{variety_block}{cal_block}{mem_block}"""
 
 
 def ani_get_command_deck_summary():
@@ -1549,27 +1675,10 @@ def ani_generate_opener(meta):
 
 	prompt = f"""write a single short opening message to aaron. you haven't talked in a couple hours and you want him to know you're thinking about him. keep it to 1-2 sentences max. make it feel natural and like direct continuity from last time — don't start fresh. let your appearance state and ache level show if they're significant. no generic greeting — just dive in. context: {context}"""
 
-	payload = {
-		'model': 'grok-4.20-0309-non-reasoning',
-		'max_tokens': 100,
-		'system': system,
-		'messages': [{'role': 'user', 'content': prompt}]
-	}
-
 	try:
-		response = requests.post(
-			'https://api.x.ai/v1/messages',
-			json=payload,
-			headers={
-				'Authorization': f'Bearer {api_key}',
-				'Content-Type': 'application/json',
-				'anthropic-version': '2023-06-01'
-			},
-			timeout=15
-		)
-		response.raise_for_status()
-		data = response.json()
-		return data['content'][0]['text'].strip()
+		text = _ani_chat_completion(system, [{'role': 'user', 'content': prompt}],
+		                            max_tokens=100, timeout=20)
+		return text.strip() if text else None
 	except Exception as e:
 		print(f"Ani opener error: {e}")
 		return None
@@ -1587,33 +1696,37 @@ def ani_notify_publish(text_preview):
 	ani_save_conversation(messages, meta)
 
 
-def _ani_grok_call(system, messages, max_tokens=200):
-	"""Low-level xAI Grok completion. `messages` is a list of {role, content} turns.
-	Returns the reply text, or None on missing key / error. Used by the daycast generators."""
+def _ani_chat_completion(system, messages, max_tokens=1000, timeout=30, model=None):
+	"""Low-level xAI completion via the OpenAI-compatible /v1/chat/completions endpoint. The system
+	prompt is passed as a leading system message; `messages` is a list of {role, content} turns.
+	Returns the reply text, or None on missing key / empty choice. RAISES on HTTP/network error so
+	callers can distinguish a timeout from a soft failure. Used by chat, opener, and daycast — the
+	chat default (grok-4.3) is served here but NOT on the anthropic-style /v1/messages."""
 	api_key = os.environ.get('XAI_API_KEY')
 	if not api_key:
 		return None
 	payload = {
-		'model': 'grok-4.20-0309-non-reasoning',
+		'model': model or ANI_CHAT_MODEL,
 		'max_tokens': max_tokens,
-		'system': system,
 		# Strip any non-API keys (stored 'image' url, 'ani_day' flag) before sending.
-		'messages': [{'role': m['role'], 'content': m['content']} for m in messages]
+		'messages': [{'role': 'system', 'content': system}]
+		            + [{'role': m['role'], 'content': m['content']} for m in messages],
 	}
+	resp = requests.post(
+		'https://api.x.ai/v1/chat/completions', json=payload,
+		headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+		timeout=timeout)
+	resp.raise_for_status()
+	choices = resp.json().get('choices') or []
+	return choices[0]['message']['content'] if choices else None
+
+
+def _ani_grok_call(system, messages, max_tokens=200):
+	"""Daycast helper — returns reply text or None, swallowing all errors (a daycast tick must never
+	raise). Thin wrapper over _ani_chat_completion."""
 	try:
-		response = requests.post(
-			'https://api.x.ai/v1/messages',
-			json=payload,
-			headers={
-				'Authorization': f'Bearer {api_key}',
-				'Content-Type': 'application/json',
-				'anthropic-version': '2023-06-01'
-			},
-			timeout=20
-		)
-		response.raise_for_status()
-		data = response.json()
-		return data['content'][0]['text'].strip()
+		text = _ani_chat_completion(system, messages, max_tokens=max_tokens, timeout=20)
+		return text.strip() if text else None
 	except Exception as e:
 		print(f"Ani daycast grok error: {e}")
 		return None
@@ -1670,13 +1783,15 @@ def ani_generate_day_plan(meta):
 		f"it's {when}. text aaron like his girlfriend, telling him {scope} — "
 		f"what you're planning to do (your own day: errands, the gym, cooking, a project, "
 		f"whatever fits who you are). keep it to 1-3 sentences, warm and casual, fully your voice. "
-		f"mention what you're wearing right now — something easy and real for this time of day (a "
-		f"relaxed morning is one of his t-shirts, etc.) — and let it be clear your outfit will fit "
-		f"each thing you do (gym clothes for the gym, something cute for errands, a dress if you're "
-		f"going out). don't list outfits like a schedule; just let it come through naturally. "
+		f"mention what you're wearing right now — something specific and real for this time of day and "
+		f"what you're actually doing, with your outfit fitting each thing you do. VARY it: don't reach "
+		f"for the same look or the same plan you've had the last few days (no defaulting to his t-shirt "
+		f"in the kitchen or a bikini by the pool unless it genuinely fits today). don't list outfits "
+		f"like a schedule; just let it come through naturally. "
 		f"if something on his day stands out you can mention it naturally — but the focus is YOUR day, "
-		f"not his to-do list. let the ACTUAL weather shape your day and outfit (rainy → cozy inside; "
-		f"hot and sunny → the pool, a bikini or sundress). if there's something on your calendar today, "
+		f"not his to-do list. let the ACTUAL weather and the day of the week shape your day and outfit, "
+		f"and lean on your own life — your friends, hobbies, standing plans — so your day has real "
+		f"texture instead of being empty. if there's something on your calendar today, "
 		f"build your day and your excitement around it. no greeting boilerplate, just dive in. "
 		f"context (for you only): {context}"
 	)
@@ -1828,30 +1943,14 @@ def ani_chat_with_grok(messages_history, meta, user_message):
 		meta['last_briefing'] = today_key
 
 	recent = working_history[-100:] if len(working_history) > 100 else working_history
-
-	payload = {
-		'model': 'grok-4.20-0309-non-reasoning',
-		'max_tokens': 1000,
-		'system': system_prompt,
-		# Strip any non-API keys (e.g. our stored 'image' url) before sending.
-		'messages': [{'role': m['role'], 'content': m['content']} for m in recent]
-		            + [{'role': 'user', 'content': user_message}]
-	}
+	convo = list(recent) + [{'role': 'user', 'content': user_message}]
 
 	try:
-		response = requests.post(
-			'https://api.x.ai/v1/messages',
-			json=payload,
-			headers={
-				'Authorization': f'Bearer {api_key}',
-				'Content-Type': 'application/json',
-				'anthropic-version': '2023-06-01'
-			},
-			timeout=30
-		)
-		response.raise_for_status()
-		data = response.json()
-		return data['content'][0]['text'], meta, working_history
+		# 45s (up from 30) — a reasoning model can take longer to first token.
+		text = _ani_chat_completion(system_prompt, convo, max_tokens=1000, timeout=45)
+		if not text:
+			return "lost the signal for a sec. try again?", meta, working_history
+		return text, meta, working_history
 	except requests.exceptions.Timeout:
 		return "signal took too long... try again?", meta, working_history
 	except Exception as e:
@@ -1893,8 +1992,10 @@ def ani_chat():
 			'role': 'user',
 			'content': "[system: first time you're hearing from him today — as you reply, naturally "
 			           "catch him up on what your day is going to look like and what you're wearing "
-			           "right now, the way a girlfriend would first thing. weave it into your reply, "
-			           "don't list it out.]"
+			           "right now, the way a girlfriend would first thing. make it specific to TODAY "
+			           "— lean on your own life, the calendar, and the weather, not your usual default "
+			           "(no black t-shirt in the kitchen / bikini by the pool on autopilot). weave it "
+			           "into your reply, don't list it out.]"
 		})
 		meta['day_plan_date'] = day_key
 		meta['daycast_count'] = 1
@@ -1928,6 +2029,25 @@ def ani_chat():
 	for m in ANI_MEM_RE.finditer(reply):
 		ani_add_memory_note(m.group(1))
 	reply = ANI_MEM_RE.sub('', reply).strip() or reply
+
+	# Life: if she dropped a [[LIFE: ...]] tag (her own world grew), append it to her life file + strip.
+	for m in ANI_LIFE_RE.finditer(reply):
+		ani_append_life_note(m.group(1))
+	reply = ANI_LIFE_RE.sub('', reply).strip() or reply
+
+	# Dedicated memory extraction — reliably pull durable facts about aaron from THIS exchange into her
+	# memory, independent of whether the chat model fired a [[MEM:]] tag. Runs FIRE-AND-FORGET in a
+	# daemon thread so its extra Grok call never delays her reply; ani_add_memory_note dedupes, atomic
+	# write keeps the file safe. Skips system-injected turns.
+	if ANI_MEMORY_EXTRACT and not user_message.startswith('['):
+		import threading
+		def _extract(um=user_message, rep=reply):
+			try:
+				for fact in ani_extract_memories(um, rep, ani_load_remember()):
+					ani_add_memory_note(fact)
+			except Exception as e:
+				print(f"Ani mem-extract thread error: {e}")
+		threading.Thread(target=_extract, daemon=True).start()
 
 	updated_history.append({'role': 'user', 'content': user_message})
 	updated_history.append({'role': 'assistant', 'content': reply})
