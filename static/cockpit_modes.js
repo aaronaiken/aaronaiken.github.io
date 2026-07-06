@@ -961,6 +961,14 @@
 		if (!window.YT) return;
 		if (e.data === YT.PlayerState.PLAYING) cockpitUpdateChipIcon(true);
 		else if (e.data === YT.PlayerState.PAUSED) cockpitUpdateChipIcon(false);
+		// Fill the chip with the real title once the (possibly resumed) video loads.
+		if ((e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.CUED) && activeMediaPlayer === 'yt') {
+			try {
+				var _title = (ytPlayer.getVideoData() || {}).title;
+				var _lab = document.getElementById('np-label');
+				if (_title && _lab) _lab.textContent = _title;
+			} catch (e2) {}
+		}
 		if (e.data !== YT.PlayerState.ENDED) return;
 		if (ytQueueActive && ytQueue[ytQueueIdx] && ytQueue[ytQueueIdx].type === 'playlist') {
 			try {
@@ -1129,7 +1137,13 @@
 			if (ytQueue.length) ytSetQueueStatus(ytQueue.length + ' saved — PLAY QUEUE to resume');
 		} catch (e) {}
 	}
-	document.addEventListener('DOMContentLoaded', ytLoadQueue);
+	document.addEventListener('DOMContentLoaded', function () {
+		ytLoadQueue();
+		ytRestoreProgress();   // resume YT at the saved position (cued; a tap plays)
+		adRestoreLast();       // restore the PH chip to the last item
+		setInterval(ytSaveProgress, 5000);
+		window.addEventListener('pagehide', ytSaveProgress);
+	});
 
 	// ============================================================
 	// Shared NOW-PLAYING chip — surfaces the active media player in
@@ -1169,14 +1183,67 @@
 	function cockpitMediaShow() {
 		if (activeMediaPlayer === 'ad') {
 			var p = document.getElementById('ad-player'); if (p) p.style.display = 'block';
+			// after a refresh the iframe is empty — reload the last item (PH can't resume position)
+			var f = document.getElementById('ad-viewer-iframe');
+			if (f && !f.getAttribute('src') && adResumeUrl) {
+				var sep = adResumeUrl.indexOf('?') >= 0 ? '&' : '?';
+				f.src = adResumeUrl + sep + 'autoplay=1&muted=1';
+			}
 		} else {
 			var y = document.getElementById('yt-player'); if (y) y.style.display = '';
+			if (ytPlayer && ytPlayer.playVideo) { try { ytPlayer.playVideo(); } catch (e) {} }
 		}
 	}
 
 	function cockpitUpdateChipIcon(playing) {
 		var pp = document.getElementById('np-playpause');
 		if (pp && activeMediaPlayer === 'yt') pp.textContent = playing ? '❚❚' : '▶';
+	}
+
+	// ---- Resume-across-refresh ----
+	// YT: the IFrame API gives us the video id + exact position, so we save both periodically and on
+	// unload, then CUE the video at that spot on load (a tap resumes — autoplay-on-load is browser-blocked).
+	let adResumeUrl = null;   // PH: last-played embed url (no API → position can't be recovered)
+
+	function ytSaveProgress() {
+		try {
+			if (!ytPlayer || !ytPlayer.getCurrentTime) return;
+			var vid = (ytPlayer.getVideoData() || {}).video_id;
+			if (!vid) return;
+			localStorage.setItem('cockpit-yt-progress', JSON.stringify({
+				videoId: vid, time: Math.floor(ytPlayer.getCurrentTime() || 0),
+				queueActive: ytQueueActive, queueIdx: ytQueueIdx
+			}));
+		} catch (e) {}
+	}
+
+	function ytRestoreProgress() {
+		try {
+			var d = JSON.parse(localStorage.getItem('cockpit-yt-progress') || 'null');
+			if (!d || !d.videoId) return;
+			if (d.queueActive && ytQueue.length && typeof d.queueIdx === 'number'
+			    && d.queueIdx >= 0 && d.queueIdx < ytQueue.length) {
+				ytQueueIdx = d.queueIdx; ytQueueActive = true; ytSource = 'queue';
+			} else {
+				ytSource = 'lib';
+			}
+			ytEnsurePlayer(function () {
+				try { ytPlayer.cueVideoById({ videoId: d.videoId, startSeconds: d.time || 0 }); } catch (e) {}
+			});
+			var lbl = (ytQueueActive && ytQueue[ytQueueIdx]) ? ytQueue[ytQueueIdx].label : 'your last video';
+			cockpitSetNowPlaying('yt', lbl);
+			cockpitUpdateChipIcon(false);   // cued/paused — tap to resume
+			ytRenderQueue();
+		} catch (e) {}
+	}
+
+	function adRestoreLast() {
+		try {
+			var d = JSON.parse(localStorage.getItem('cockpit-ad-lastplayed') || 'null');
+			if (!d || !d.url) return;
+			adResumeUrl = d.url;
+			cockpitSetNowPlaying('ad', d.label || 'video');
+		} catch (e) {}
 	}
 
 	// The YouTube player starts hidden on load (style="display:none" in the
@@ -1511,6 +1578,7 @@
 		const sep = item.url.indexOf('?') >= 0 ? '&' : '?';
 		frame.src = item.url + sep + 'autoplay=1&muted=1';
 		cockpitSetNowPlaying('ad', item.name);
+		try { localStorage.setItem('cockpit-ad-lastplayed', JSON.stringify({ url: item.url, label: item.name })); adResumeUrl = item.url; } catch (e) {}
 
 		// Highlight active tile
 		document.querySelectorAll('.ad-library-tile').forEach(function(t, i) {
@@ -1615,6 +1683,7 @@
 		const sep = url.indexOf('?') >= 0 ? '&' : '?';
 		frame.src = url + sep + 'autoplay=1&muted=1';
 		cockpitSetNowPlaying('ad', (adQueue[idx] || {}).label);
+		try { localStorage.setItem('cockpit-ad-lastplayed', JSON.stringify({ url: url, label: (adQueue[idx] || {}).label })); adResumeUrl = url; } catch (e) {}
 		adRenderQueue();
 	}
 
