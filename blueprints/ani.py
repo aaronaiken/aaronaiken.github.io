@@ -41,6 +41,7 @@ ANI_REMEMBER_FILE = 'ani_remember.json'             # durable "things she rememb
 ANI_MEM_RE = re.compile(r'\[\[MEM:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 ANI_REMEMBER_MAX = int(os.environ.get('ANI_REMEMBER_MAX', '250'))  # cap notes; importance-aware eviction
 ANI_MEMORY_INJECT = int(os.environ.get('ANI_MEMORY_INJECT', '28'))  # how many notes to surface per prompt
+ANI_CONSOLIDATE_MIN = int(os.environ.get('ANI_CONSOLIDATE_MIN', '25'))  # only consolidate when the pool is this big
 
 ANI_LIFE_FILE = 'static/ani_life.txt'   # her OWN life: friends, hobbies, standing plans, places (server-state)
 # Life-grow tag: she emits [[LIFE: the new thing]] when her own world genuinely shifts (a new hobby, a
@@ -271,7 +272,8 @@ def ani_load_conversation():
 			'pending_publish': data.get('pending_publish', None),
 			'events_mentioned': data.get('events_mentioned', []),
 			'proactive_photo_count': data.get('proactive_photo_count', 0),
-			'proactive_photo_date': data.get('proactive_photo_date', None)
+			'proactive_photo_date': data.get('proactive_photo_date', None),
+			'memory_consolidated_date': data.get('memory_consolidated_date', None)
 		}
 		return messages, meta
 	except FileNotFoundError:
@@ -294,7 +296,8 @@ def ani_load_conversation():
 			'pending_publish': None,
 			'events_mentioned': [],
 			'proactive_photo_count': 0,
-			'proactive_photo_date': None
+			'proactive_photo_date': None,
+			'memory_consolidated_date': None
 		}
 
 
@@ -320,7 +323,8 @@ def ani_save_conversation(messages, meta):
 		'pending_publish': meta.get('pending_publish'),
 		'events_mentioned': meta.get('events_mentioned', []),
 		'proactive_photo_count': meta.get('proactive_photo_count', 0),
-		'proactive_photo_date': meta.get('proactive_photo_date')
+		'proactive_photo_date': meta.get('proactive_photo_date'),
+		'memory_consolidated_date': meta.get('memory_consolidated_date')
 	}
 	_ani_atomic_write_json(ANI_CONVERSATION_FILE, data)
 
@@ -567,6 +571,81 @@ def ani_memory_notes_context(recent_text=''):
 	return ("things you remember — about aaron's life AND your own life and world (you already know "
 	        "these; keep them consistent, weave them in naturally, never ask him to repeat what's "
 	        "here):\n" + body)
+
+
+def ani_consolidate_memory():
+	"""Housekeeping: merge duplicate / near-duplicate / contradictory memory notes into a cleaner set,
+	re-categorized, keeping the most recent truth. Heavily guarded — LLM-driven, but the file is only
+	replaced if the result passes sanity checks (non-empty, no catastrophic shrink, no lost core facts).
+	Plan/event notes with a `due` are PROTECTED (never touched, so pending follow-ups survive). Returns
+	(before_count, after_count) or None if skipped/failed."""
+	api_key = os.environ.get('XAI_API_KEY')
+	notes = ani_load_remember()
+	if not api_key or not notes:
+		return None
+	protected_ids = {n['id'] for n in notes if n.get('category') in ('plan', 'event') and n.get('due')}
+	protected = [n for n in notes if n['id'] in protected_ids]
+	pool = [n for n in notes if n['id'] not in protected_ids]
+	if len(pool) < ANI_CONSOLIDATE_MIN:
+		return None
+	items = [{'text': n.get('text', ''), 'category': n.get('category', 'misc'),
+	          'importance': n.get('importance', 2)} for n in pool]
+	system = (
+		"You clean up a companion's memory notes (about a man named Aaron and her own world). MERGE exact "
+		"duplicates and near-duplicates into one clear note; reconcile contradictions by keeping the most "
+		"recent / most-likely-true version; fix an obviously wrong category. Do NOT invent new facts, do "
+		"NOT drop any DISTINCT fact, and NEVER drop a note with importance 3. Return ONLY JSON: "
+		"{\"notes\": [{\"text\":\"\",\"category\":\"\",\"importance\":2}]} — category from: "
+		+ '|'.join(ANI_MEM_CATEGORIES) + ".")
+	try:
+		resp = requests.post(
+			'https://api.x.ai/v1/chat/completions',
+			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+			json={'model': ANI_MEMORY_EXTRACT_MODEL, 'max_tokens': 3500, 'temperature': 0,
+			      'messages': [{'role': 'system', 'content': system},
+			                   {'role': 'user', 'content': "Notes:\n" + json.dumps(items, ensure_ascii=False)}]},
+			timeout=90)
+		if resp.status_code != 200:
+			print(f"Ani consolidate HTTP {resp.status_code}: {resp.text[:160]}")
+			return None
+		txt = resp.json()['choices'][0]['message']['content']
+		m = re.search(r'\{.*\}', txt, re.S)
+		out = (json.loads(m.group(0)).get('notes') if m else None) or []
+	except Exception as e:
+		print(f"Ani consolidate error: {e}")
+		return None
+	clean = [x for x in out if isinstance(x, dict) and (x.get('text') or '').strip()]
+	# Sanity gates: reject a nonsense result rather than clobber real memory.
+	if not clean or len(clean) < max(1, int(len(pool) * 0.4)):
+		print(f"Ani consolidate: rejected result ({len(clean)} from {len(pool)} pool)")
+		return None
+	core_before = sum(1 for n in pool if n.get('importance', 2) >= 3)
+	core_after = sum(1 for x in clean if _ani_imp(x) >= 3)
+	if core_after < core_before:
+		print(f"Ani consolidate: rejected — core shrank {core_before}->{core_after}")
+		return None
+	pa_tz = pytz.timezone('America/New_York')
+	now_iso = datetime.now(pa_tz).isoformat()
+	rebuilt = list(protected)
+	for x in clean:
+		cat = x.get('category') if x.get('category') in ANI_MEM_CATEGORIES else 'misc'
+		text = str(x.get('text', '')).strip()[:220]
+		rebuilt.append({'id': uuid.uuid4().hex[:8], 'text': text, 'category': cat,
+		                'importance': _ani_imp(x), 'keywords': sorted(_ani_tokens(text))[:6],
+		                'due': None, 'created_at': now_iso})
+	if len(rebuilt) > ANI_REMEMBER_MAX:
+		keep = {n['id'] for n in sorted(rebuilt, key=lambda n: (n.get('importance', 2),
+		        n.get('created_at', '')), reverse=True)[:ANI_REMEMBER_MAX]}
+		rebuilt = [n for n in rebuilt if n['id'] in keep]
+	ani_save_remember(rebuilt)
+	return (len(notes), len(rebuilt))
+
+
+def _ani_imp(x):
+	try:
+		return max(1, min(3, int(x.get('importance', 2))))
+	except (TypeError, ValueError):
+		return 2
 
 
 def ani_followups_context(now_dt):
@@ -2590,6 +2669,18 @@ def ani_emit_daycast():
 	today = ani_daycast_day_key(now)
 	messages, meta = ani_load_conversation()
 
+	# Once-a-day memory housekeeping (background). Mark the day BEFORE running so a slow/failed pass never
+	# loops; ani_consolidate_memory writes the remember file separately + is self-guarded.
+	if meta.get('memory_consolidated_date') != today:
+		meta['memory_consolidated_date'] = today
+		ani_save_conversation(messages, meta)
+		try:
+			r = ani_consolidate_memory()
+			if r:
+				print(f"Ani memory consolidated: {r[0]} -> {r[1]}")
+		except Exception as e:
+			print(f"Ani auto-consolidate error: {e}")
+
 	def _emit(text):
 		messages.append({'role': 'assistant', 'content': text, 'ani_day': True, 'ts': now.isoformat()})
 		meta['daycast_last'] = now.isoformat()
@@ -3017,6 +3108,18 @@ def ani_remember_delete():
 		return jsonify({'error': 'unauthorized'}), 401
 	ok = ani_delete_memory_note((request.json or {}).get('id'))
 	return jsonify({'ok': ok})
+
+
+@ani_bp.route('/ani/remember/consolidate', methods=['POST'])
+def ani_remember_consolidate():
+	"""Manually run the memory housekeeping pass (dedupe/merge/re-categorize). Also runs once daily on
+	its own via the daycast."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	res = ani_consolidate_memory()
+	if not res:
+		return jsonify({'ok': False, 'message': 'nothing to tidy (not enough notes, or no change)'})
+	return jsonify({'ok': True, 'before': res[0], 'after': res[1]})
 
 
 @ani_bp.route('/ani/memory-file', methods=['GET'])

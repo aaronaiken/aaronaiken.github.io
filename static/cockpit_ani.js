@@ -615,6 +615,18 @@
 	}).join('');
   }
 
+  function aniMemTidy(btn) {
+	if (btn) { btn.disabled = true; btn.textContent = 'TIDYING…'; }
+	fetch('/ani/remember/consolidate', { method: 'POST' })
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		if (btn) { btn.disabled = false; btn.textContent = 'TIDY'; }
+		if (data.ok) { aniRenderNotify('memory tidied — ' + data.before + ' → ' + data.after + ' notes'); aniLoadRemember(); }
+		else { aniRenderNotify(data.message || 'nothing to tidy'); }
+	  })
+	  .catch(function() { if (btn) { btn.disabled = false; btn.textContent = 'TIDY'; } });
+  }
+
   function aniMemAdd() {
 	var input = document.getElementById('ani-mem-text');
 	var text = input.value.trim();
