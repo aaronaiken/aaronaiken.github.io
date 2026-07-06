@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-07-06 10:49:25 -0400
+layout: status_update
+author: aaron
+source: web
+---
+👨🏻‍💻 2026 season of Mindsteward is wrapped. Will have my fair share of work to prepare for 2027's season, but back to the normal work week for now.
