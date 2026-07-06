@@ -1102,7 +1102,10 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 		"state: ANI's current real-world situation as of this message — where she physically is, what she's "
 		"doing, what she's wearing. Fill a field ONLY if this turn makes it clear; leave it \"\" if unstated "
 		"or unchanged. Keep values short and plain (where='at Claire's place', wearing='light pink sundress'). "
-		"Ignore anything sexual/roleplay for state too — only her real, everyday situation.")
+		"IMPORTANT: still capture her real LOCATION and OUTFIT even when the message is flirty or suggestive "
+		"(e.g. 'in the car with claire', 'at the store', 'home in the kitchen') — a flirty tone must NOT wipe "
+		"her whereabouts. Only for an explicit SEX act, leave 'doing' blank (or use the neutral surrounding "
+		"activity) — but ALWAYS still record WHERE she is if the message makes it clear.")
 	user = (
 		f"Already-known facts (don't repeat these or minor rewordings):\n{known}\n\n"
 		f"Aaron said: {(user_message or '')[:800]}\n"

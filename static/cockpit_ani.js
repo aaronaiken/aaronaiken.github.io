@@ -9,6 +9,8 @@
   let aniIsOpen        = false;
   let aniLoaded        = false;
   let aniPendingOpener = null;
+  var aniSeen          = new Set();   // signatures of rendered messages, for dedup-safe live polling
+  function aniSig(role, content, image) { return (role || '') + '|' + (content || '') + '|' + (image || ''); }
 
   function updateAcheDisplay(level) {
 	if (level === null || level === undefined) return;
@@ -41,7 +43,32 @@
 	  .catch(function() {});
   }
 
+  // Live poll — while the panel is open, append any NEW messages (proactive daycast msgs arrive
+  // server-side) without a page refresh; while closed, just update the ache + bat-pill pulse.
+  function aniPoll() {
+	if (aniIsOpen && aniLoaded) {
+	  fetch('/ani/history')
+		.then(function(r) { return r.json(); })
+		.then(function(data) {
+		  updateAcheDisplay(data.ache_level);
+		  var appended = false;
+		  (data.messages || []).forEach(function(m) {
+			if (!aniSeen.has(aniSig(m.role, m.content, m.image))) {
+			  aniEmpty.style.display = 'none';
+			  aniRenderMessage(m.role, m.content, m.image, m.ts);
+			  appended = true;
+			}
+		  });
+		  if (appended) { aniLoadState(); aniScrollToBottom(); }
+		})
+		.catch(function() {});
+	} else {
+	  aniPing();
+	}
+  }
+
   setTimeout(aniPing, 1500);
+  setInterval(aniPoll, 20000);
 
   function aniToggle() {
 	aniIsOpen = !aniIsOpen;
@@ -51,6 +78,8 @@
 	if (aniIsOpen && !aniLoaded) {
 	  aniLoadHistory();
 	  aniSendLocation();
+	} else if (aniIsOpen) {
+	  aniPoll();   // catch up on anything that arrived while the panel was closed
 	}
 	if (aniIsOpen) {
 	  aniLoadState();
@@ -273,6 +302,7 @@
   function aniRenderMessage(role, content, image, ts) {
 	content = content || '';
 	if (content.startsWith('[daily briefing') || content.startsWith('[system:')) return;
+	aniSeen.add(aniSig(role, content, image));   // mark rendered so the poller won't re-append it
 	var when = aniFmtMsgTime(ts);
 	var div = document.createElement('div');
 	div.classList.add('ani-msg');
