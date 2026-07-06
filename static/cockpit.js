@@ -552,6 +552,16 @@
 			if (_cb) _cb.classList.add('is-collapsed');
 			if (_ca) _ca.classList.add('is-collapsed');
 		}
+		if (localStorage.getItem('cockpit-quickinsert-collapsed') === '1') {
+			var _qb = document.getElementById('quickinsert-body'), _qa = document.getElementById('quickinsert-arrow');
+			if (_qb) _qb.classList.add('is-collapsed');
+			if (_qa) _qa.classList.add('is-collapsed');
+		}
+		if (localStorage.getItem('cockpit-focus') === '1') {
+			document.body.classList.add('cockpit-focus');
+			var _fb = document.getElementById('focus-btn');
+			if (_fb) _fb.classList.add('is-active');
+		}
 
 		// ---- COLLAPSIBLE ----
 		function toggleTasks() {
@@ -571,5 +581,23 @@
 			body.classList.toggle('is-collapsed');
 			arrow.classList.toggle('is-collapsed');
 			localStorage.setItem('cockpit-comms-collapsed', isCollapsed ? '0' : '1');
+		}
+
+		function toggleQuickInsert() {
+			const body = document.getElementById('quickinsert-body');
+			const arrow = document.getElementById('quickinsert-arrow');
+			if (!body || !arrow) return;
+			const isCollapsed = arrow.classList.contains('is-collapsed');
+			body.classList.toggle('is-collapsed');
+			arrow.classList.toggle('is-collapsed');
+			localStorage.setItem('cockpit-quickinsert-collapsed', isCollapsed ? '0' : '1');
+		}
+
+		// Focus mode — collapse everything but the transmission box (a lightweight 'work mode').
+		function toggleFocus() {
+			const on = document.body.classList.toggle('cockpit-focus');
+			const btn = document.getElementById('focus-btn');
+			if (btn) btn.classList.toggle('is-active', on);
+			localStorage.setItem('cockpit-focus', on ? '1' : '0');
 		}
 

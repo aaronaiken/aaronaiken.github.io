@@ -958,7 +958,10 @@
 	// Real auto-advance: when a video truly ENDS, move on. A loaded playlist advances itself
 	// internally, so only step MY queue once its last item finishes.
 	function ytOnStateChange(e) {
-		if (!window.YT || e.data !== YT.PlayerState.ENDED) return;
+		if (!window.YT) return;
+		if (e.data === YT.PlayerState.PLAYING) cockpitUpdateChipIcon(true);
+		else if (e.data === YT.PlayerState.PAUSED) cockpitUpdateChipIcon(false);
+		if (e.data !== YT.PlayerState.ENDED) return;
 		if (ytQueueActive && ytQueue[ytQueueIdx] && ytQueue[ytQueueIdx].type === 'playlist') {
 			try {
 				var pl = ytPlayer.getPlaylist() || [];
@@ -1067,7 +1070,11 @@
 	}
 
 	function ytSetQueueStatus(msg) { var el = document.getElementById('yt-queue-status'); if (el) el.textContent = msg || ''; }
-	function ytSetNowPlaying(txt) { var el = document.getElementById('yt-now-playing'); if (el) el.textContent = txt ? ('now: ' + txt) : ''; }
+	function ytSetNowPlaying(txt) {
+		var el = document.getElementById('yt-now-playing');
+		if (el) el.textContent = txt ? ('now: ' + txt) : '';
+		cockpitSetNowPlaying('yt', txt);
+	}
 
 	function ytRenderQueue() {
 		var list = document.getElementById('yt-queue-list');
@@ -1123,6 +1130,54 @@
 		} catch (e) {}
 	}
 	document.addEventListener('DOMContentLoaded', ytLoadQueue);
+
+	// ============================================================
+	// Shared NOW-PLAYING chip — surfaces the active media player in
+	// the status bar with mini controls. Both players feed it.
+	// ============================================================
+	let activeMediaPlayer = null;   // 'yt' | 'ad'
+
+	function cockpitSetNowPlaying(source, label) {
+		activeMediaPlayer = source;
+		var chip = document.getElementById('now-playing-chip');
+		if (!chip) return;
+		var txt = (label || '').trim();
+		if (!txt || txt === 'queue ended') { chip.style.display = 'none'; return; }
+		var lab = document.getElementById('np-label');
+		var icon = document.getElementById('np-icon');
+		var pp = document.getElementById('np-playpause');
+		if (lab) lab.textContent = txt;
+		if (icon) icon.textContent = (source === 'ad') ? '▤' : '♪';
+		// play/pause only works for YouTube (its API); the PH embed owns its own playback.
+		if (pp) pp.style.display = (source === 'yt') ? '' : 'none';
+		chip.style.display = '';
+	}
+
+	function cockpitMediaNext() {
+		if (activeMediaPlayer === 'ad') { (adQueueActive ? adQueueNext : adPlayNext)(); }
+		else if (activeMediaPlayer === 'yt') { if (ytQueueActive) ytQueueAdvance(); else ytPlayNext(); }
+	}
+
+	function cockpitMediaPlayPause() {
+		if (activeMediaPlayer !== 'yt' || !ytPlayer) return;
+		try {
+			if (ytPlayer.getPlayerState() === 1) ytPlayer.pauseVideo();
+			else ytPlayer.playVideo();
+		} catch (e) {}
+	}
+
+	function cockpitMediaShow() {
+		if (activeMediaPlayer === 'ad') {
+			var p = document.getElementById('ad-player'); if (p) p.style.display = 'block';
+		} else {
+			var y = document.getElementById('yt-player'); if (y) y.style.display = '';
+		}
+	}
+
+	function cockpitUpdateChipIcon(playing) {
+		var pp = document.getElementById('np-playpause');
+		if (pp && activeMediaPlayer === 'yt') pp.textContent = playing ? '❚❚' : '▶';
+	}
 
 	// The YouTube player starts hidden on load (style="display:none" in the
 	// template) and is summoned with Cmd/Ctrl+Shift+Y or the Ctrl+K palette —
@@ -1455,6 +1510,7 @@
 		// preference — the embed has its own unmute control.
 		const sep = item.url.indexOf('?') >= 0 ? '&' : '?';
 		frame.src = item.url + sep + 'autoplay=1&muted=1';
+		cockpitSetNowPlaying('ad', item.name);
 
 		// Highlight active tile
 		document.querySelectorAll('.ad-library-tile').forEach(function(t, i) {
@@ -1558,6 +1614,7 @@
 		const url = adQueue[idx].url;
 		const sep = url.indexOf('?') >= 0 ? '&' : '?';
 		frame.src = url + sep + 'autoplay=1&muted=1';
+		cockpitSetNowPlaying('ad', (adQueue[idx] || {}).label);
 		adRenderQueue();
 	}
 
@@ -2020,6 +2077,10 @@
 		{ icon: '✦', label: 'Brain Dump',     hint: 'Ctrl+Space',     action: () => { cmdClose(); brainDumpOpen(); } },
 		{ icon: '▶', label: 'Toggle YouTube Player', hint: 'Ctrl+Shift+Y', action: () => { cmdClose(); ytPlayerToggle(); } },
 		{ icon: '▹', label: 'Toggle Video Player', hint: 'Ctrl+Shift+V', action: () => { cmdClose(); adPlayerToggle(); } },
+		{ icon: '◱', label: 'Toggle Focus Mode', hint: 'Ctrl+Shift+F', action: () => { cmdClose(); if (typeof toggleFocus === 'function') toggleFocus(); } },
+		{ icon: '🦇', label: 'Toggle Ani',    hint: 'Ctrl+Shift+A',   action: () => { cmdClose(); if (typeof aniToggle === 'function') aniToggle(); } },
+		{ icon: '$', label: 'The Ledger',     hint: '/ledger/',       action: () => window.location.href = '/ledger/' },
+		{ icon: '🙏', label: 'Insert Grateful Log', hint: '',         action: () => { cmdClose(); if (typeof insertGratefulLog === 'function') insertGratefulLog(); } },
 		{ icon: '⏎', label: 'Refresh',        hint: '',               action: () => window.location.reload() },
 	];
 
@@ -2047,6 +2108,11 @@
 			const t = e.target;
 			const editable = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
 			if (!editable) { e.preventDefault(); adPlayerToggle(); }
+		}
+		// Cmd/Ctrl+Shift+F — focus mode (collapse everything but the transmission box)
+		if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
+			e.preventDefault();
+			if (typeof toggleFocus === 'function') toggleFocus();
 		}
 	});
 

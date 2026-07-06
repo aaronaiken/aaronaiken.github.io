@@ -521,6 +521,47 @@
 	.tasks-body.is-collapsed { display: none; }
 	.history-body.is-collapsed { display: none; }
 
+	/* Focus mode — collapse everything but the transmission box (lightweight 'work mode') */
+	body.cockpit-focus .focus-hide,
+	body.cockpit-focus .scratch-section { display: none !important; }
+	#focus-btn.is-active { color: var(--amber-hi); text-shadow: 0 0 8px rgba(212, 136, 10, 0.4); }
+
+	/* Now-playing chip — active media player + mini controls, in the amber theme */
+	#now-playing-chip {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 8px 4px 0;
+		padding: 5px 10px;
+		border: 1px solid var(--border-hi);
+		border-radius: 3px;
+		background: var(--bg2);
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.6rem;
+		letter-spacing: 0.06em;
+	}
+	#np-icon { color: var(--amber-hi); }
+	#np-label {
+		flex: 1;
+		color: var(--muted);
+		cursor: pointer;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	#np-label:hover { color: var(--amber); }
+	#now-playing-chip button {
+		background: none;
+		border: none;
+		cursor: pointer;
+		color: var(--muted);
+		font-size: 0.72rem;
+		line-height: 1;
+		padding: 0 3px;
+		transition: color 0.15s;
+	}
+	#now-playing-chip button:hover { color: var(--amber-hi); }
+
 	/* ---- SCRATCH PAD ---- */
 	.scratch-section { margin-top: 36px; }
 

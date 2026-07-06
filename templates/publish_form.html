@@ -258,6 +258,7 @@
 				</div>
 			</div>
 			<div class="cockpit__controls">
+				<button class="cockpit__ctrl-btn" id="focus-btn" onclick="toggleFocus()" title="Focus mode — collapse everything but the transmission box (Ctrl+Shift+F)">◱ FOCUS</button>
 				<button class="cockpit__ctrl-btn" onclick="window.location.reload()">REFRESH</button>
 				<a class="cockpit__ctrl-btn" href="/below-deck" style="text-decoration:none;">BELOW DECK</a>
 				<a href="/command-deck/" class="cockpit__ctrl-btn">COMMAND DECK</a>
@@ -265,15 +266,28 @@
 			</div>
 		</div>
 
+		<!-- Now-playing chip — surfaces the active media player with mini controls. Hidden until playback. -->
+		<div id="now-playing-chip" style="display:none;">
+			<span id="np-icon">♪</span>
+			<span id="np-label" onclick="cockpitMediaShow()" title="Show the player"></span>
+			<button id="np-playpause" onclick="cockpitMediaPlayPause()" title="Play / pause">❚❚</button>
+			<button id="np-next" onclick="cockpitMediaNext()" title="Next">⏭</button>
+		</div>
+
 		{# LEDGER total nag — own row, right-aligned, breathing room.
 		   Quiet always-visible reminder per Aaron's spec; sits between
 		   the status-bar and the Quick Insert section so it never
 		   collides with the floating today panel or wraps the controls row. #}
-		<div style="display:flex; justify-content:flex-end; padding:10px 4px 4px;">
+		<div class="focus-hide" style="display:flex; justify-content:flex-end; padding:10px 4px 4px;">
 			{% include 'includes/ledger_footer_badge.html' %}
 		</div>
 
-		<div class="section-label">// Quick Insert</div>
+		<div class="quickinsert-section focus-hide">
+		<div class="section-label tasks-toggle" onclick="toggleQuickInsert()">
+			// Quick Insert
+			<span class="tasks-toggle-arrow" id="quickinsert-arrow">▾</span>
+		</div>
+		<div class="tasks-body" id="quickinsert-body">
 		<div class="scroller">
 			<button class="pill" onclick="insertText('🚀')">🚀</button>
 			<button class="pill"
@@ -304,6 +318,8 @@
 			<button class="pill util" onclick="smartURL()" title="Link (⌘/Ctrl+K)">🔗 LINK</button>
 			<button class="pill util" onclick="insertGratefulLog()" title="Insert grateful-log template">🙏 GRATEFUL</button>
 		</div>
+		</div><!-- end quickinsert-body -->
+		</div><!-- end quickinsert-section -->
 
 		<div class="section-label">// Transmission</div>
 		{% with messages = get_flashed_messages(with_categories=true) %}
@@ -349,7 +365,7 @@
 		</div>
 
 		{% if history %}
-		<div class="history-section">
+		<div class="history-section focus-hide">
 			<div class="log-header tasks-toggle" onclick="toggleComms()">
 				// Recent Comms Log
 				<span class="tasks-toggle-arrow" id="comms-arrow">▾</span>
@@ -363,7 +379,7 @@
 		{% endif %}
 
 		<!-- TASKS -->
-		<div class="tasks-section">
+		<div class="tasks-section focus-hide">
 			<div class="log-header tasks-toggle" onclick="toggleTasks()">
 				// Mission Log
 				<span class="tasks-toggle-arrow" id="tasks-arrow">▾</span>
