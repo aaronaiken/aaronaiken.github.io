@@ -2149,13 +2149,25 @@
 		{ icon: '◱', label: 'Toggle Focus Mode', hint: 'Ctrl+Shift+F', action: () => { cmdClose(); if (typeof toggleFocus === 'function') toggleFocus(); } },
 		{ icon: '🦇', label: 'Toggle Ani',    hint: 'Ctrl+Shift+A',   action: () => { cmdClose(); if (typeof aniToggle === 'function') aniToggle(); } },
 		{ icon: '$', label: 'The Ledger',     hint: '/ledger/',       action: () => window.location.href = '/ledger/' },
+		{ icon: '⚙', label: 'Settings',       hint: 'Ctrl+,',         action: () => { cmdClose(); if (typeof settingsOpen === 'function') settingsOpen(); } },
 		{ icon: '🙏', label: 'Insert Grateful Log', hint: '',         action: () => { cmdClose(); if (typeof insertGratefulLog === 'function') insertGratefulLog(); } },
+		{ icon: '▦', label: 'Toggle Quick Insert', hint: '',          action: () => { cmdClose(); if (typeof toggleQuickInsert === 'function') toggleQuickInsert(); } },
+		{ icon: '▦', label: 'Toggle Comms Log', hint: '',             action: () => { cmdClose(); if (typeof toggleComms === 'function') toggleComms(); } },
+		{ icon: '▦', label: 'Toggle Mission Log', hint: '',           action: () => { cmdClose(); if (typeof toggleTasks === 'function') toggleTasks(); } },
+		{ icon: '▦', label: 'Toggle Scratch Pad', hint: '',           action: () => { cmdClose(); if (typeof scratchToggle === 'function') scratchToggle(); } },
+		{ icon: '↗', label: 'Command Deck — new tab', hint: '',       action: () => window.open('/command-deck/', '_blank') },
+		{ icon: '↗', label: 'Below Deck — new tab', hint: '',         action: () => window.open('/below-deck', '_blank') },
+		{ icon: '↗', label: 'Ledger — new tab', hint: '',            action: () => window.open('/ledger/', '_blank') },
 		{ icon: '⏎', label: 'Refresh',        hint: '',               action: () => window.location.reload() },
 	];
 
 	function getAllCmdItems() {
 		const timerItems = (typeof window.getTimerCmdItems === 'function') ? window.getTimerCmdItems() : [];
-		return CMD_ITEMS.concat(timerItems);
+		var presetItems = (typeof getAllPresets === 'function' ? getAllPresets() : []).map(function (p) {
+			return { icon: '▦', label: 'Layout: ' + p.name, hint: 'preset',
+			         action: function () { cmdClose(); if (typeof applyPreset === 'function') applyPreset(p.config); } };
+		});
+		return CMD_ITEMS.concat(presetItems).concat(timerItems);
 	}
 
 	let cmdFiltered = [...CMD_ITEMS];
@@ -2182,6 +2194,11 @@
 		if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
 			e.preventDefault();
 			if (typeof toggleFocus === 'function') toggleFocus();
+		}
+		// Cmd/Ctrl+, — settings
+		if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+			e.preventDefault();
+			if (typeof settingsOpen === 'function') settingsOpen();
 		}
 	});
 

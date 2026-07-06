@@ -601,3 +601,133 @@
 			localStorage.setItem('cockpit-focus', on ? '1' : '0');
 		}
 
+		// ============================================================
+		// LAYOUT PRESETS + SETTINGS
+		// ============================================================
+		var COCKPIT_SECTIONS = [
+			{ key: 'quickinsert', body: 'quickinsert-body', arrow: 'quickinsert-arrow', store: 'cockpit-quickinsert-collapsed', label: 'Quick Insert' },
+			{ key: 'comms',       body: 'comms-body',       arrow: 'comms-arrow',        store: 'cockpit-comms-collapsed',       label: 'Comms Log' },
+			{ key: 'tasks',       body: 'tasks-body',       arrow: 'tasks-arrow',         store: 'cockpit-tasks-collapsed',        label: 'Mission Log' },
+			{ key: 'scratch',     body: 'scratch-body',     arrow: 'scratch-arrow',       store: 'cockpit-scratch-collapsed',      label: 'Scratch' }
+		];
+
+		function cockpitSetSectionCollapsed(sec, collapsed) {
+			var b = document.getElementById(sec.body), a = document.getElementById(sec.arrow);
+			if (b) b.classList.toggle('is-collapsed', collapsed);
+			if (a) a.classList.toggle('is-collapsed', collapsed);
+			localStorage.setItem(sec.store, collapsed ? '1' : '0');
+		}
+		function cockpitSetFocus(on) {
+			document.body.classList.toggle('cockpit-focus', on);
+			var btn = document.getElementById('focus-btn');
+			if (btn) btn.classList.toggle('is-active', on);
+			localStorage.setItem('cockpit-focus', on ? '1' : '0');
+		}
+
+		// Built-ins. Section values: 1 = collapsed, 0 = open.
+		var BUILTIN_PRESETS = {
+			'Write':   { focus: true },
+			'Triage':  { focus: false, quickinsert: 1, comms: 0, tasks: 0, scratch: 1 },
+			'Full':    { focus: false, quickinsert: 0, comms: 0, tasks: 0, scratch: 0 },
+			'Minimal': { focus: false, quickinsert: 1, comms: 1, tasks: 1, scratch: 1 }
+		};
+
+		function applyPreset(cfg) {
+			if (!cfg) return;
+			cockpitSetFocus(!!cfg.focus);
+			COCKPIT_SECTIONS.forEach(function (sec) {
+				if (cfg[sec.key] !== undefined) cockpitSetSectionCollapsed(sec, cfg[sec.key] === 1 || cfg[sec.key] === true);
+			});
+		}
+		function getCurrentLayout() {
+			var cfg = { focus: document.body.classList.contains('cockpit-focus') };
+			COCKPIT_SECTIONS.forEach(function (sec) {
+				var b = document.getElementById(sec.body);
+				cfg[sec.key] = (b && b.classList.contains('is-collapsed')) ? 1 : 0;
+			});
+			return cfg;
+		}
+		function loadUserPresets() { try { return JSON.parse(localStorage.getItem('cockpit-presets') || '[]'); } catch (e) { return []; } }
+		function saveUserPresets(list) { try { localStorage.setItem('cockpit-presets', JSON.stringify(list)); } catch (e) {} }
+		function getAllPresets() {
+			var built = Object.keys(BUILTIN_PRESETS).map(function (n) { return { name: n, config: BUILTIN_PRESETS[n], builtin: true }; });
+			return built.concat(loadUserPresets());
+		}
+		function deleteUserPreset(name) {
+			saveUserPresets(loadUserPresets().filter(function (x) { return x.name !== name; }));
+			settingsRenderPresets();
+		}
+
+		// ---- Settings overlay ----
+		function settingsOpen() {
+			var o = document.getElementById('settings-overlay');
+			if (o) { o.classList.add('is-open'); settingsRenderPresets(); }
+		}
+		function settingsClose() {
+			var o = document.getElementById('settings-overlay');
+			if (o) o.classList.remove('is-open');
+		}
+		function settingsSaveCurrent() {
+			var name = prompt('Name this layout:');
+			if (!name) return;
+			name = name.trim().slice(0, 24);
+			if (!name || BUILTIN_PRESETS[name]) { alert('Pick a different name (not a built-in).'); return; }
+			var list = loadUserPresets().filter(function (x) { return x.name !== name; });
+			list.push({ name: name, config: getCurrentLayout() });
+			saveUserPresets(list);
+			settingsRenderPresets();
+		}
+		function settingsRenderPresets() {
+			var list = document.getElementById('settings-preset-list');
+			if (!list) return;
+			list.innerHTML = '';
+			getAllPresets().forEach(function (p) {
+				var row = document.createElement('div');
+				row.className = 'settings-preset-row';
+				var apply = document.createElement('button');
+				apply.className = 'settings-preset-apply';
+				apply.textContent = p.name + (p.builtin ? '' : ' ·');
+				apply.title = 'Apply this layout';
+				apply.onclick = function () { applyPreset(p.config); };
+				row.appendChild(apply);
+				if (!p.builtin) {
+					var del = document.createElement('button');
+					del.className = 'settings-preset-del';
+					del.textContent = '✕';
+					del.title = 'Delete preset';
+					del.onclick = function (e) { e.stopPropagation(); deleteUserPreset(p.name); };
+					row.appendChild(del);
+				}
+				list.appendChild(row);
+			});
+		}
+
+		// ---- Paste (or drop) an image straight into the transmission box → attaches it ----
+		(function () {
+			var box = document.getElementById('status-input');
+			if (!box) return;
+			function attach(file) {
+				try {
+					var dt = new DataTransfer();
+					dt.items.add(file);
+					var input = document.getElementById('image-upload');
+					input.files = dt.files;
+					if (typeof updatePayloadStatus === 'function') updatePayloadStatus();
+				} catch (e) {}
+			}
+			box.addEventListener('paste', function (e) {
+				var items = (e.clipboardData || {}).items || [];
+				for (var i = 0; i < items.length; i++) {
+					if (items[i].type && items[i].type.indexOf('image') === 0) {
+						var f = items[i].getAsFile();
+						if (f) { attach(f); e.preventDefault(); break; }
+					}
+				}
+			});
+			box.addEventListener('dragover', function (e) { e.preventDefault(); });
+			box.addEventListener('drop', function (e) {
+				var files = (e.dataTransfer || {}).files || [];
+				if (files.length && files[0].type.indexOf('image') === 0) { attach(files[0]); e.preventDefault(); }
+			});
+		})();
+

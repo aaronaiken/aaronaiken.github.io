@@ -1035,6 +1035,49 @@
 	.cmd-item:last-child { border-bottom: none; }
 	.cmd-item:hover, .cmd-item.is-selected { background: var(--amber-dim); }
 
+	/* Settings overlay — mirrors the command palette */
+	#settings-overlay {
+		display: none;
+		position: fixed;
+		inset: 0;
+		background: rgba(0,0,0,0.75);
+		z-index: 10015;
+		align-items: flex-start;
+		justify-content: center;
+		padding-top: 12vh;
+	}
+	#settings-overlay.is-open { display: flex; }
+	#settings-box {
+		background: var(--bg2);
+		border: 1px solid var(--border-hi);
+		border-radius: 3px;
+		width: 420px;
+		max-width: 92vw;
+		max-height: 76vh;
+		overflow-y: auto;
+		box-shadow: 0 0 40px rgba(0,0,0,0.9);
+		font-family: 'Share Tech Mono', monospace;
+	}
+	.settings-head {
+		display: flex; align-items: center; justify-content: space-between;
+		padding: 10px 16px; border-bottom: 1px solid var(--border);
+		color: var(--amber-hi); font-size: 0.7rem; letter-spacing: 0.15em;
+	}
+	.settings-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace; }
+	.settings-close:hover { color: var(--amber); }
+	.settings-section { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+	.settings-section:last-child { border-bottom: none; }
+	.settings-label { color: var(--amber); font-size: 0.62rem; letter-spacing: 0.15em; margin-bottom: 6px; }
+	.settings-hint { color: var(--muted); font-size: 0.58rem; letter-spacing: 0.05em; line-height: 1.5; margin-bottom: 10px; }
+	#settings-preset-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+	.settings-preset-row { display: inline-flex; align-items: center; border: 1px solid var(--border-hi); border-radius: 3px; overflow: hidden; }
+	.settings-preset-apply { background: var(--bg); border: none; color: var(--text-body); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; letter-spacing: 0.08em; padding: 6px 10px; }
+	.settings-preset-apply:hover { background: var(--amber-dim); color: var(--amber-hi); }
+	.settings-preset-del { background: var(--bg); border: none; border-left: 1px solid var(--border); color: var(--muted); cursor: pointer; font-size: 0.6rem; padding: 6px 7px; }
+	.settings-preset-del:hover { color: var(--amber); }
+	.settings-save-btn { background: none; border: 1px dashed var(--border-hi); border-radius: 3px; color: var(--muted); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; padding: 7px 12px; }
+	.settings-save-btn:hover { color: var(--amber-hi); border-color: var(--amber); }
+
 	.cmd-item-icon {
 		font-size: 0.8rem;
 		width: 16px;

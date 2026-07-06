@@ -227,6 +227,29 @@
 		</div>
 	</div>
 
+	<!-- Settings overlay -->
+	<div id="settings-overlay" role="dialog" aria-label="Settings" onclick="if(event.target===this)settingsClose()">
+		<div id="settings-box">
+			<div class="settings-head">
+				<span>// SETTINGS</span>
+				<button class="settings-close" onclick="settingsClose()" aria-label="Close">✕</button>
+			</div>
+			<div class="settings-section">
+				<div class="settings-label">// Layout Presets</div>
+				<div class="settings-hint">Apply a saved layout, or snapshot your current one. Also on Ctrl+K.</div>
+				<div id="settings-preset-list"></div>
+				<button class="settings-save-btn" onclick="settingsSaveCurrent()">+ SAVE CURRENT LAYOUT</button>
+			</div>
+			<div class="settings-section">
+				<div class="settings-label">// Shortcuts</div>
+				<div class="settings-hint">
+					Ctrl+K command palette · Ctrl+Shift+F focus · Ctrl+Shift+A Ani ·
+					Ctrl+Shift+Y YouTube · Ctrl+Shift+V video player · Ctrl+, settings
+				</div>
+			</div>
+		</div>
+	</div>
+
 	<div id="secret-comm">
 		<div id="secret-text"></div>
 	</div>
@@ -258,6 +281,7 @@
 				</div>
 			</div>
 			<div class="cockpit__controls">
+				<button class="cockpit__ctrl-btn" onclick="settingsOpen()" title="Settings (Ctrl+,)">⚙</button>
 				<button class="cockpit__ctrl-btn" id="focus-btn" onclick="toggleFocus()" title="Focus mode — collapse everything but the transmission box (Ctrl+Shift+F)">◱ FOCUS</button>
 				<button class="cockpit__ctrl-btn" onclick="window.location.reload()">REFRESH</button>
 				<a class="cockpit__ctrl-btn" href="/below-deck" style="text-decoration:none;">BELOW DECK</a>
