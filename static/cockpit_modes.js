@@ -774,8 +774,14 @@
 		const drawer = document.getElementById('yt-player-library');
 		drawer.classList.toggle('is-open', ytLibraryVisible);
 		document.getElementById('yt-library-toggle-btn').style.color =
-			ytLibraryVisible ? '#8b1a1a' : '';
+			ytLibraryVisible ? '#b45309' : '';
 		if (ytLibraryVisible && ytLibraryItems.length === 0) ytLoadLibrary();
+		// Drawers overlay the video — only one open at a time.
+		if (ytLibraryVisible && ytQueueVisible) {
+			ytQueueVisible = false;
+			document.getElementById('yt-player-queue').classList.remove('is-open');
+			document.getElementById('yt-queue-toggle-btn').style.color = '';
+		}
 	}
 
 	function ytLoadLibrary(cb) {
@@ -916,7 +922,13 @@
 	function ytQueueToggle() {
 		ytQueueVisible = !ytQueueVisible;
 		document.getElementById('yt-player-queue').classList.toggle('is-open', ytQueueVisible);
-		document.getElementById('yt-queue-toggle-btn').style.color = ytQueueVisible ? '#8b1a1a' : '';
+		document.getElementById('yt-queue-toggle-btn').style.color = ytQueueVisible ? '#b45309' : '';
+		// Drawers overlay the video — only one open at a time.
+		if (ytQueueVisible && ytLibraryVisible) {
+			ytLibraryVisible = false;
+			document.getElementById('yt-player-library').classList.remove('is-open');
+			document.getElementById('yt-library-toggle-btn').style.color = '';
+		}
 	}
 
 	// Parse one pasted line into a queue entry (video or playlist), or null. Optional '|label' suffix.
@@ -993,14 +1005,14 @@
 	function ytQueueToggleShuffle() {
 		ytShuffle = !ytShuffle;
 		var b = document.getElementById('yt-queue-shuffle-btn');
-		b.textContent = 'SHUFFLE ' + (ytShuffle ? '●' : '○'); b.style.color = ytShuffle ? '#e05050' : '';
+		b.textContent = 'SHUFFLE ' + (ytShuffle ? '●' : '○'); b.style.color = ytShuffle ? '#b45309' : '';
 		ytSaveQueue();
 	}
 
 	function ytQueueToggleLoop() {
 		ytLoop = !ytLoop;
 		var b = document.getElementById('yt-queue-loop-btn');
-		b.textContent = 'LOOP ' + (ytLoop ? '●' : '○'); b.style.color = ytLoop ? '#e05050' : '';
+		b.textContent = 'LOOP ' + (ytLoop ? '●' : '○'); b.style.color = ytLoop ? '#b45309' : '';
 		ytSaveQueue();
 	}
 
@@ -1053,9 +1065,9 @@
 			if (typeof d.idx === 'number') ytQueueIdx = d.idx;
 			ytShuffle = !!d.shuffle; ytLoop = !!d.loop;
 			var sb = document.getElementById('yt-queue-shuffle-btn');
-			if (sb) { sb.textContent = 'SHUFFLE ' + (ytShuffle ? '●' : '○'); sb.style.color = ytShuffle ? '#e05050' : ''; }
+			if (sb) { sb.textContent = 'SHUFFLE ' + (ytShuffle ? '●' : '○'); sb.style.color = ytShuffle ? '#b45309' : ''; }
 			var lb = document.getElementById('yt-queue-loop-btn');
-			if (lb) { lb.textContent = 'LOOP ' + (ytLoop ? '●' : '○'); lb.style.color = ytLoop ? '#e05050' : ''; }
+			if (lb) { lb.textContent = 'LOOP ' + (ytLoop ? '●' : '○'); lb.style.color = ytLoop ? '#b45309' : ''; }
 			ytRenderQueue();
 			if (ytQueue.length) ytSetQueueStatus(ytQueue.length + ' saved — PLAY QUEUE to resume');
 		} catch (e) {}
@@ -1277,6 +1289,16 @@
 		const frame = document.getElementById('ad-viewer-iframe');
 		if (frame) frame.src = '';
 		document.getElementById('ad-player').style.display = 'none';
+	}
+
+	// Show/hide the After Dark video player without touching playback (unlike Close,
+	// which clears the iframe). Bound to Cmd/Ctrl+Shift+V + the command palette, so it
+	// can be summoned from any mode — not just after-dark.
+	function adPlayerToggle() {
+		const p = document.getElementById('ad-player');
+		if (!p) return;
+		const hidden = getComputedStyle(p).display === 'none';
+		p.style.display = hidden ? '' : 'none';
 	}
 
 	function adLibraryToggle() {
@@ -1903,6 +1925,7 @@
 		{ icon: '⌇', label: 'Publish Status', hint: '/publish',       action: () => window.location.href = '/publish' },
 		{ icon: '✦', label: 'Brain Dump',     hint: 'Ctrl+Space',     action: () => { cmdClose(); brainDumpOpen(); } },
 		{ icon: '▶', label: 'Toggle YouTube Player', hint: 'Ctrl+Shift+Y', action: () => { cmdClose(); ytPlayerToggle(); } },
+		{ icon: '▹', label: 'Toggle Video Player', hint: 'Ctrl+Shift+V', action: () => { cmdClose(); adPlayerToggle(); } },
 		{ icon: '⏎', label: 'Refresh',        hint: '',               action: () => window.location.reload() },
 	];
 
@@ -1923,6 +1946,13 @@
 		if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'y' || e.key === 'Y')) {
 			e.preventDefault();
 			ytPlayerToggle();
+		}
+		// Cmd/Ctrl+Shift+V — show/hide the After Dark video player (any mode). Skipped
+		// while typing in a field so it doesn't hijack paste-as-plain-text.
+		if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'v' || e.key === 'V')) {
+			const t = e.target;
+			const editable = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+			if (!editable) { e.preventDefault(); adPlayerToggle(); }
 		}
 	});
 

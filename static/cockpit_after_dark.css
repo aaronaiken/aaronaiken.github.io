@@ -463,16 +463,22 @@
 	}
 	.ad-queue-del:hover { color: #c04040; }
 
-	/* YT smart-queue drawer (mirrors the AD queue palette) */
+	/* YT smart-queue drawer — absolute overlay (like the library) so it doesn't
+	   compete with the flex-1 video-wrap for vertical space. */
 	#yt-player-queue {
+		position: absolute;
+		top: 24px; /* below titlebar */
+		left: 0;
+		right: 0;
+		z-index: 3;
 		max-height: 0;
 		overflow: hidden;
 		transition: max-height 0.25s ease;
 		background: #0e0508;
 		border-bottom: 1px solid #4a1818;
 	}
-	#yt-player-queue.is-open { max-height: 290px; }
-	#yt-player-queue-inner { padding: 10px; overflow-y: auto; max-height: 290px; }
+	#yt-player-queue.is-open { max-height: 300px; overflow-y: auto; }
+	#yt-player-queue-inner { padding: 10px; }
 	#yt-queue-input {
 		width: 100%;
 		box-sizing: border-box;
@@ -499,6 +505,52 @@
 		word-break: break-all;
 	}
 	#yt-queue-list { display: flex; flex-direction: column; gap: 4px; }
+
+	/* ============================================================
+	   YT PLAYER — LIGHT THEME (legible warm-paper look; overrides the
+	   dark base above. The AD/PH player stays dark.) Accent: #b45309.
+	   ============================================================ */
+	#yt-player {
+		background: #f4f0e6;
+		border: 1px solid #d8cfb8;
+		box-shadow: 0 8px 32px rgba(40, 30, 10, 0.28), 0 0 0 1px #e6dfcc;
+	}
+	#yt-player-titlebar { background: #eae3d2; border-bottom: 1px solid #d8cfb8; }
+	#yt-player-title { color: #8a5a1a; }
+	#yt-player .ad-player-tb-btn { color: #7a6a48; }
+	#yt-player .ad-player-tb-btn:hover { color: #b45309; }
+	#yt-player-resize-grip { color: #b8a982; }
+
+	#yt-player-library,
+	#yt-player-queue { background: #f4f0e6; border-bottom: 1px solid #d8cfb8; }
+
+	#yt-player .ad-library-tile {
+		background: #fffdf7;
+		border: 1px solid #d8cfb8;
+		color: #5a4a2a;
+	}
+	#yt-player .ad-library-tile:hover { border-color: #b45309; }
+	#yt-player .ad-library-tile.is-playing { border-color: #b45309; color: #b45309; }
+
+	#yt-queue-input {
+		background: #fffdf7;
+		border: 1px solid #d8cfb8;
+		color: #4a3d22;
+	}
+	#yt-queue-input:focus { border-color: #b45309; }
+	#yt-queue-input::placeholder { color: #a8997a; }
+	#yt-queue-status { color: #8a7d5e; }
+	#yt-now-playing { color: #b45309; }
+
+	#yt-player .ad-queue-row {
+		background: #fffdf7;
+		border: 1px solid #d8cfb8;
+		color: #5a4a2a;
+	}
+	#yt-player .ad-queue-row:hover { border-color: #b45309; }
+	#yt-player .ad-queue-row.is-playing { border-color: #b45309; color: #b45309; }
+	#yt-player .ad-queue-del { color: #a8997a; }
+	#yt-player .ad-queue-del:hover { color: #b45309; }
 
 	#ad-player-video-wrap {
 		position: relative;
