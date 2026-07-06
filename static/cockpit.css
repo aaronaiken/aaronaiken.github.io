@@ -519,6 +519,7 @@
 
 	.tasks-body { overflow: hidden; }
 	.tasks-body.is-collapsed { display: none; }
+	.history-body.is-collapsed { display: none; }
 
 	/* ---- SCRATCH PAD ---- */
 	.scratch-section { margin-top: 36px; }

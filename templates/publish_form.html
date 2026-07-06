@@ -350,10 +350,15 @@
 
 		{% if history %}
 		<div class="history-section">
-			<div class="log-header">// Recent Comms Log</div>
-			{% for post in history %}
-			<div class="history-item">{{ post }}</div>
-			{% endfor %}
+			<div class="log-header tasks-toggle" onclick="toggleComms()">
+				// Recent Comms Log
+				<span class="tasks-toggle-arrow" id="comms-arrow">▾</span>
+			</div>
+			<div class="history-body" id="comms-body">
+				{% for post in history %}
+				<div class="history-item">{{ post }}</div>
+				{% endfor %}
+			</div>
 		</div>
 		{% endif %}
 

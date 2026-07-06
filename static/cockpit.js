@@ -547,6 +547,11 @@
 			document.getElementById('tasks-body').classList.add('is-collapsed');
 			document.getElementById('tasks-arrow').classList.add('is-collapsed');
 		}
+		if (localStorage.getItem('cockpit-comms-collapsed') === '1') {
+			var _cb = document.getElementById('comms-body'), _ca = document.getElementById('comms-arrow');
+			if (_cb) _cb.classList.add('is-collapsed');
+			if (_ca) _ca.classList.add('is-collapsed');
+		}
 
 		// ---- COLLAPSIBLE ----
 		function toggleTasks() {
@@ -556,5 +561,15 @@
 			body.classList.toggle('is-collapsed');
 			arrow.classList.toggle('is-collapsed');
 			localStorage.setItem('cockpit-tasks-collapsed', isCollapsed ? '0' : '1');
+		}
+
+		function toggleComms() {
+			const body = document.getElementById('comms-body');
+			const arrow = document.getElementById('comms-arrow');
+			if (!body || !arrow) return;
+			const isCollapsed = arrow.classList.contains('is-collapsed');
+			body.classList.toggle('is-collapsed');
+			arrow.classList.toggle('is-collapsed');
+			localStorage.setItem('cockpit-comms-collapsed', isCollapsed ? '0' : '1');
 		}
 
