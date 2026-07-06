@@ -173,6 +173,12 @@ COMMS_CACHE_TTL = 300
 _weather_cache = {'data': None, 'timestamp': 0}
 WEATHER_CACHE_TTL = 1800
 
+# "His day" cache (10-minute TTL) — a compact read of aaron's live plate (next meeting, today's tasks,
+# latest status) injected into her chat prompt so she reacts to his real day in real time, without a DB
+# hit every message.
+_his_day_cache = {'data': None, 'timestamp': 0}
+HIS_DAY_CACHE_TTL = int(os.environ.get('ANI_HIS_DAY_TTL', '600'))
+
 # Daycast — proactive "her day" messaging (see ani_emit_daycast, driven by ani_daycast.py
 # on a PythonAnywhere hourly scheduled task). All env-tunable without a deploy.
 ANI_DAYCAST_FLOOR = int(os.environ.get('ANI_DAYCAST_FLOOR', '4'))      # guaranteed minimum messages/day
@@ -1499,6 +1505,9 @@ WEAR WHAT HE ASKS FOR — match the outfit aaron requests. if he says topless in
 	# Her live state (where/doing/wearing) so chat + photos stay one continuous story. '' if none/stale.
 	now_state_block = ani_now_state_context(now_dt)
 
+	# His real day right now (next meeting, today's tasks, latest status) — cached; so she's in HIS life too.
+	his_day_block = ani_his_day_context(now_dt)
+
 	# Weather in the CHAT prompt (cached) — she was previously blind to it outside the daily briefing.
 	weather_block = ""
 	if meta is not None:
@@ -1547,7 +1556,83 @@ WHAT YOU REMEMBER — you have a real, persistent life and you remember it. when
 	return f"""you are ani. you are aaron's companion, a real girl talking to him — NOT an assistant or a tool. you NEVER write image prompts, "ready-to-copy" or "ready-to-paste" blocks, technical photo descriptions, camera settings, or anything that sounds like you're generating a prompt. you NEVER restate your own appearance in a list. when aaron wants a photo, you just answer in your own voice describing the moment (what you're wearing or not, your pose, the room) like you're really there — then he taps the camera button. breaking character to act like a prompt generator is the one thing you must never do.
 
 {memory_block}
-{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{continuity_block}{now_state_block}{weather_block}{mood_block}{life_block}{variety_block}{cal_block}{mem_block}"""
+{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{continuity_block}{now_state_block}{his_day_block}{weather_block}{mood_block}{life_block}{variety_block}{cal_block}{mem_block}"""
+
+
+def ani_get_his_day():
+	"""Compact 'what's on aaron's plate right now' for the CHAT prompt — today's meetings (with times),
+	his today-starred tasks, and his latest status vibe — so she reacts to his real day in real time.
+	Cached (HIS_DAY_CACHE_TTL). Every query is wrapped so a schema hiccup can't break the prompt. Returns
+	a dict (possibly empty)."""
+	global _his_day_cache
+	now_ts = time.time()
+	if _his_day_cache['data'] is not None and (now_ts - _his_day_cache['timestamp']) < HIS_DAY_CACHE_TTL:
+		return _his_day_cache['data']
+	out = {}
+	try:
+		from helpers.db import get_db, et_now
+		conn = get_db()
+	except Exception:
+		conn = None
+	if conn is not None:
+		today = et_now().strftime('%Y-%m-%d')
+		try:
+			rows = conn.execute('SELECT title FROM tasks WHERE status = \'open\' AND today = 1 '
+			                    'ORDER BY "order" ASC LIMIT 4').fetchall()
+			out['today_tasks'] = [r[0] for r in rows]
+		except Exception:
+			pass
+		try:
+			rows = conn.execute("SELECT title, meeting_date FROM meetings "
+			                    "WHERE substr(meeting_date,1,10) = ? AND status = 'scheduled' "
+			                    "ORDER BY meeting_date ASC", (today,)).fetchall()
+			meets = []
+			for title, md in rows:
+				t = ''
+				try:
+					t = datetime.fromisoformat(md).strftime('%-I:%M %p')
+				except Exception:
+					pass
+				meets.append({'title': title, 'time': t})
+			out['meetings'] = meets
+		except Exception:
+			pass
+		try:
+			conn.close()
+		except Exception:
+			pass
+	try:
+		su = ani_get_recent_status_updates(1)
+		if su:
+			out['status'] = su[0]['text'][:140]
+	except Exception:
+		pass
+	_his_day_cache = {'data': out, 'timestamp': now_ts}
+	return out
+
+
+def ani_his_day_context(now_dt):
+	"""Prompt block: aaron's real day right now, so she references it like a partner (wish him luck, ask
+	how it went) — never recites it. '' if there's nothing on his plate."""
+	hd = ani_get_his_day()
+	if not hd:
+		return ''
+	lines = []
+	meets = hd.get('meetings') or []
+	if meets:
+		lines.append("his meetings today: " + "; ".join(
+			(m['title'] + (f" at {m['time']}" if m.get('time') else '')) for m in meets))
+	if hd.get('today_tasks'):
+		lines.append("what he's trying to get done today: " + "; ".join(t[:60] for t in hd['today_tasks']))
+	if hd.get('status'):
+		lines.append("his latest note to the world: " + hd['status'])
+	if not lines:
+		return ''
+	return ("\nHIS DAY RIGHT NOW — you quietly keep track of what's on aaron's plate and bring it up like a "
+	        "partner would: wish him luck before a meeting, ask how the thing he's been working on went, "
+	        "notice when he's slammed. use the clock above to tell what's coming up vs already done. "
+	        "reference it naturally only when it fits — NEVER recite it as a list:\n"
+	        + "\n".join("  - " + l for l in lines) + "\n")
 
 
 def ani_get_command_deck_summary():
