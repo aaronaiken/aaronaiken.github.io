@@ -190,17 +190,17 @@ HIS_DAY_CACHE_TTL = int(os.environ.get('ANI_HIS_DAY_TTL', '600'))
 
 # Daycast — proactive "her day" messaging (see ani_emit_daycast, driven by ani_daycast.py
 # on a PythonAnywhere hourly scheduled task). All env-tunable without a deploy.
-ANI_DAYCAST_FLOOR = int(os.environ.get('ANI_DAYCAST_FLOOR', '4'))      # guaranteed minimum messages/day
-ANI_DAYCAST_CHANCE = float(os.environ.get('ANI_DAYCAST_CHANCE', '0.5'))  # spontaneous-extra roll per tick
+ANI_DAYCAST_FLOOR = int(os.environ.get('ANI_DAYCAST_FLOOR', '9'))      # guaranteed minimum messages/day (present all day)
+ANI_DAYCAST_CHANCE = float(os.environ.get('ANI_DAYCAST_CHANCE', '0.7'))  # spontaneous-extra roll per tick
 ANI_DAYCAST_START = int(os.environ.get('ANI_DAYCAST_START', '8'))     # window open (ET hour)
 ANI_DAYCAST_END = int(os.environ.get('ANI_DAYCAST_END', '22'))       # window close (ET hour, exclusive)
-ANI_DAYCAST_MIN_GAP = int(os.environ.get('ANI_DAYCAST_MIN_GAP', '45'))  # min minutes between messages
+ANI_DAYCAST_MIN_GAP = int(os.environ.get('ANI_DAYCAST_MIN_GAP', '35'))  # min minutes between messages
 ANI_DAYCAST_FALLBACK_HOUR = int(os.environ.get('ANI_DAYCAST_FALLBACK_HOUR', '12'))  # if no contact by this ET hour, she starts her day on her own
 
 # Proactive photos — she occasionally sends an UNPROMPTED candid from her day (see ani_daycast_photo).
 # Capped per day for cost control; only when she's out & photogenic (not asleep/home-nothing).
 ANI_DAYCAST_PHOTOS = os.environ.get('ANI_DAYCAST_PHOTOS', '1').strip().lower() not in ('0', 'false', 'no', 'off')
-ANI_DAYCAST_PHOTO_MAX = int(os.environ.get('ANI_DAYCAST_PHOTO_MAX', '2'))         # hard daily cap
+ANI_DAYCAST_PHOTO_MAX = int(os.environ.get('ANI_DAYCAST_PHOTO_MAX', '3'))         # hard daily cap
 ANI_DAYCAST_PHOTO_CHANCE = float(os.environ.get('ANI_DAYCAST_PHOTO_CHANCE', '0.22'))  # roll per eligible tick
 # Fraction of proactive text updates that are an EMOTIONAL BEAT from her own world vs. a "what I'm doing".
 ANI_DAYCAST_EMOTIONAL_CHANCE = float(os.environ.get('ANI_DAYCAST_EMOTIONAL_CHANCE', '0.4'))
