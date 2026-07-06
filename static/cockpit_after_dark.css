@@ -552,6 +552,26 @@
 	#yt-player .ad-queue-del { color: #a8997a; }
 	#yt-player .ad-queue-del:hover { color: #b45309; }
 
+	/* Per-tile delete ✕ on library tiles (both players). Dark default (PH); YT light below. */
+	.ad-library-tile { position: relative; }
+	.lib-tile-label { display: block; padding-right: 12px; word-break: break-word; }
+	.lib-tile-del {
+		position: absolute;
+		top: 2px;
+		right: 3px;
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-family: 'Share Tech Mono', monospace;
+		font-size: 0.58rem;
+		line-height: 1;
+		padding: 0 2px;
+		color: #5a2424;
+	}
+	.lib-tile-del:hover { color: #c04040; }
+	#yt-player .lib-tile-del { color: #a8997a; }
+	#yt-player .lib-tile-del:hover { color: #b45309; }
+
 	#ad-player-video-wrap {
 		position: relative;
 		width: 100%;

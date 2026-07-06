@@ -419,6 +419,7 @@ def after_dark_library():
 					continue
 				viewkey = m.group(1)
 				items.append({
+					'id': viewkey,
 					'name': label or viewkey,
 					'url': f'https://www.pornhub.com/embed/{viewkey}',
 				})
@@ -450,6 +451,7 @@ def after_dark_youtube():
 					continue
 				vid = m.group(1)
 				items.append({
+					'id': vid,
 					'name': label or vid,
 					'url': f'https://www.youtube.com/embed/{vid}',
 				})
@@ -457,6 +459,97 @@ def after_dark_youtube():
 		pass
 	random.shuffle(items)
 	return jsonify({'items': items})
+
+
+# ---- library editing (add current / delete) — the .txt files are server-state ----
+
+def _ad_read_raw(path):
+	try:
+		with open(path, 'r') as f:
+			return [ln.rstrip('\n') for ln in f]
+	except FileNotFoundError:
+		return []
+
+
+def _ad_write_lines(path, lines):
+	with open(path, 'w') as f:
+		f.write('\n'.join(lines) + ('\n' if lines else ''))
+
+
+def _ad_lib_add(path, id_re, vid, label, canonical):
+	"""Append a canonical library line for `vid` (+ optional label) unless its id is already present.
+	Returns True if present/added, False on a bad id."""
+	if not vid:
+		return False
+	lines = _ad_read_raw(path)
+	for ln in lines:
+		m = id_re.search(ln)
+		if m and m.group(1) == vid:
+			return True  # already in the library — idempotent
+	label = (label or '').strip().replace('|', '/').replace('\n', ' ')[:80]
+	lines.append(canonical + (' | ' + label if label else ''))
+	_ad_write_lines(path, lines)
+	return True
+
+
+def _ad_lib_delete(path, id_re, vid):
+	"""Drop every line whose extracted id matches `vid`. Returns the count removed."""
+	if not vid:
+		return 0
+	lines = _ad_read_raw(path)
+	kept, removed = [], 0
+	for ln in lines:
+		m = id_re.search(ln)
+		if m and m.group(1) == vid:
+			removed += 1
+			continue
+		kept.append(ln)
+	if removed:
+		_ad_write_lines(path, kept)
+	return removed
+
+
+@cockpit_bp.route('/cockpit/after-dark/youtube/add', methods=['POST'])
+def after_dark_youtube_add():
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	body = request.json or {}
+	vid = (body.get('id') or '').strip()
+	if not re.fullmatch(r'[A-Za-z0-9_-]{11}', vid):
+		return jsonify({'ok': False, 'error': 'bad id'}), 400
+	ok = _ad_lib_add(AD_YOUTUBE_FILE, _YT_ID_RE, vid, body.get('label'), f'https://youtu.be/{vid}')
+	return jsonify({'ok': ok, 'id': vid})
+
+
+@cockpit_bp.route('/cockpit/after-dark/youtube/delete', methods=['POST'])
+def after_dark_youtube_delete():
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	vid = ((request.json or {}).get('id') or '').strip()
+	removed = _ad_lib_delete(AD_YOUTUBE_FILE, _YT_ID_RE, vid)
+	return jsonify({'ok': removed > 0, 'removed': removed})
+
+
+@cockpit_bp.route('/cockpit/after-dark/library/add', methods=['POST'])
+def after_dark_library_add():
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	body = request.json or {}
+	vk = (body.get('id') or '').strip()
+	if not re.fullmatch(r'[A-Za-z0-9]{6,30}', vk):
+		return jsonify({'ok': False, 'error': 'bad id'}), 400
+	ok = _ad_lib_add(AD_VIDEOS_FILE, _VIEWKEY_RE, vk, body.get('label'),
+	                 f'https://www.pornhub.com/view_video.php?viewkey={vk}')
+	return jsonify({'ok': ok, 'id': vk})
+
+
+@cockpit_bp.route('/cockpit/after-dark/library/delete', methods=['POST'])
+def after_dark_library_delete():
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	vk = ((request.json or {}).get('id') or '').strip()
+	removed = _ad_lib_delete(AD_VIDEOS_FILE, _VIEWKEY_RE, vk)
+	return jsonify({'ok': removed > 0, 'removed': removed})
 
 
 @cockpit_bp.route('/cockpit/after-dark/music')

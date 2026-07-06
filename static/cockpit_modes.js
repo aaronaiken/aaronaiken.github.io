@@ -825,10 +825,60 @@
 		ytLibraryItems.forEach(function (item, idx) {
 			const tile = document.createElement('div');
 			tile.className = 'ad-library-tile';
-			tile.textContent = item.name;
-			tile.onclick = function () { ytPlayVideo(item, idx); };
+			const label = document.createElement('span');
+			label.className = 'lib-tile-label';
+			label.textContent = item.name;
+			label.onclick = function () { ytPlayVideo(item, idx); };
+			const del = document.createElement('button');
+			del.className = 'lib-tile-del';
+			del.textContent = '✕';
+			del.title = 'remove from library';
+			del.onclick = function (e) { e.stopPropagation(); ytLibDelete(item, del); };
+			tile.appendChild(label);
+			tile.appendChild(del);
 			grid.appendChild(tile);
 		});
+	}
+
+	// Save the CURRENT video to the persistent library (works from queue or a playlist —
+	// uses what's actually playing). Feedback flashes on the +LIB button.
+	function ytAddCurrentToLib(btn) {
+		var id = null, label = '';
+		try {
+			if (ytPlayer && ytPlayer.getVideoData) {
+				var d = ytPlayer.getVideoData() || {};
+				id = d.video_id || null; label = d.title || '';
+			}
+		} catch (e) {}
+		if (!id) {
+			var cur = ytQueueActive ? ytQueue[ytQueueIdx] : ytLibraryItems[ytCurrentIdx];
+			if (cur) { id = cur.id || ytVideoId(cur.url); label = cur.label || cur.name || ''; }
+		}
+		if (!id) { ytFlashBtn(btn, 'NOTHING'); return; }
+		fetch('/cockpit/after-dark/youtube/add', {
+			method: 'POST', headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ id: id, label: label })
+		}).then(function (r) { return r.json(); }).then(function (res) {
+			ytFlashBtn(btn, res.ok ? 'SAVED ✓' : 'ERR');
+			if (ytLibraryVisible) ytLoadLibrary();
+		}).catch(function () { ytFlashBtn(btn, 'ERR'); });
+	}
+
+	function ytLibDelete(item, btn) {
+		if (!item || !item.id) return;
+		if (!confirm('remove "' + (item.name || item.id) + '" from the library?')) return;
+		if (btn) btn.disabled = true;
+		fetch('/cockpit/after-dark/youtube/delete', {
+			method: 'POST', headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ id: item.id })
+		}).then(function (r) { return r.json(); }).then(function () { ytLoadLibrary(); })
+			.catch(function () { if (btn) btn.disabled = false; });
+	}
+
+	function ytFlashBtn(btn, txt) {
+		if (!btn) return;
+		btn.textContent = txt;
+		setTimeout(function () { btn.textContent = '+LIB'; }, 1400);
 	}
 
 	function ytPlayVideo(item, idx) {
@@ -1332,10 +1382,52 @@
 		adLibraryItems.forEach(function(item, idx) {
 			const tile = document.createElement('div');
 			tile.className = 'ad-library-tile';
-			tile.textContent = item.name;
-			tile.onclick = function() { adPlayVideo(item, idx); };
+			const label = document.createElement('span');
+			label.className = 'lib-tile-label';
+			label.textContent = item.name;
+			label.onclick = function() { adPlayVideo(item, idx); };
+			const del = document.createElement('button');
+			del.className = 'lib-tile-del';
+			del.textContent = '✕';
+			del.title = 'remove from library';
+			del.onclick = function(e) { e.stopPropagation(); adLibDelete(item, del); };
+			tile.appendChild(label);
+			tile.appendChild(del);
 			grid.appendChild(tile);
 		});
+	}
+
+	// Save the current video (queue or library) to the persistent library.
+	function adAddCurrentToLib(btn) {
+		var cur = adQueueActive ? adQueue[adQueueIdx] : adLibraryItems[adCurrentIdx];
+		if (!cur || !cur.url) { adFlashBtn(btn, 'NOTHING'); return; }
+		var m = cur.url.match(/(?:viewkey=|\/embed\/)([A-Za-z0-9]+)/);
+		var vk = m ? m[1] : null;
+		if (!vk) { adFlashBtn(btn, 'NOTHING'); return; }
+		fetch('/cockpit/after-dark/library/add', {
+			method: 'POST', headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ id: vk, label: cur.label || cur.name || '' })
+		}).then(function(r) { return r.json(); }).then(function(res) {
+			adFlashBtn(btn, res.ok ? 'SAVED ✓' : 'ERR');
+			if (adLibraryVisible) adLoadLibrary();
+		}).catch(function() { adFlashBtn(btn, 'ERR'); });
+	}
+
+	function adLibDelete(item, btn) {
+		if (!item || !item.id) return;
+		if (!confirm('remove "' + (item.name || item.id) + '" from the library?')) return;
+		if (btn) btn.disabled = true;
+		fetch('/cockpit/after-dark/library/delete', {
+			method: 'POST', headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ id: item.id })
+		}).then(function(r) { return r.json(); }).then(function() { adLoadLibrary(); })
+			.catch(function() { if (btn) btn.disabled = false; });
+	}
+
+	function adFlashBtn(btn, txt) {
+		if (!btn) return;
+		btn.textContent = txt;
+		setTimeout(function() { btn.textContent = '+LIB'; }, 1400);
 	}
 
 	function adPlayVideo(item, idx) {
