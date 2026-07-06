@@ -867,6 +867,35 @@ def ani_normalize_scene(history):
 	# light background context (drop the 📷 markers), most recent last
 	ctx = [m for m in real[-8:] if (m.get('content', '') or '').strip() not in ('', '📷')]
 	convo = '\n'.join(f"{m['role']}: {m.get('content', '')}" for m in ctx)
+
+	# Ground the photo in her LIVE STATE (where she is + what she's wearing right now) so the picture
+	# matches the status line + conversation — but ONLY for everyday scenes. For an intimate/explicit
+	# scene we skip it (never force a public location like 'the store' into a sex photo — those are driven
+	# by her described scene + the house rooms). The described scene ALWAYS wins over this hint.
+	state_hint = ''
+	_low = (latest_scene or '').lower()
+	_explicit = bool(_ANI_PARTNER_RE.search(latest_scene or '')) or bool(re.search(
+		r'\b(nude|naked|topless|bare|fuck\w*|cock|dick|pussy|cum\w*|blow\s?job|riding|thong|lingerie)\b', _low))
+	if not _explicit:
+		_st = ani_load_state()
+		_now = datetime.now(pytz.timezone('America/New_York'))
+		if _st and _st.get('day') == ani_daycast_day_key(_now):
+			_fresh = True
+			if _st.get('updated'):
+				try:
+					_dt = datetime.fromisoformat(_st['updated'])
+					if _dt.tzinfo is None:
+						_dt = pytz.timezone('America/New_York').localize(_dt)
+					if (_now - _dt.astimezone(_now.tzinfo)).total_seconds() / 3600 > ANI_STATE_STALE_HOURS:
+						_fresh = False
+				except Exception:
+					pass
+			if _fresh:
+				parts = []
+				if _st.get('where'):   parts.append("she is %s" % _st['where'])
+				if _st.get('wearing'): parts.append("wearing %s" % _st['wearing'])
+				if _st.get('doing'):   parts.append("(%s)" % _st['doing'])
+				state_hint = ', '.join(parts)
 	if ANI_IMAGE_BACKEND == 'venice':
 		# Uncensored backend — zero coverage guardrails, fully faithful passthrough.
 		rules = (
@@ -930,12 +959,18 @@ def ani_normalize_scene(history):
 		+ rules +
 		f"Rooms in their home, use these details for setting consistency:\n{house}"
 	)
+	state_block = (
+		"=== HER CURRENT REAL SITUATION (use ONLY to fill in the SETTING and her baseline OUTFIT when the "
+		"scene below doesn't state them; the described scene ALWAYS wins if they differ) ===\n"
+		f"{state_hint}\n\n") if state_hint else ""
 	user_msg = (
 		f"Conversation so far (most recent last), for light background only:\n{convo}\n\n"
+		+ state_block +
 		"=== THE SCENE TO RENDER (this and ONLY this) ===\n"
 		f"{latest_scene or '(use the single most recent scene in the conversation above)'}\n\n"
-		"Write the one image-prompt line for THE SCENE TO RENDER above. Match its outfit/undress, pose, "
-		"and location exactly. Ignore any earlier scene or photo."
+		"Write the one image-prompt line for THE SCENE TO RENDER above. Match its outfit/undress, pose, and "
+		"location exactly; where the scene leaves the SETTING or OUTFIT unstated, fill them from HER CURRENT "
+		"REAL SITUATION above. Ignore any earlier scene or photo."
 	)
 	payload = {
 		'model': ANI_NORMALIZE_MODEL,
