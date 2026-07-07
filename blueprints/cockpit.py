@@ -563,6 +563,12 @@ def _ad_write_lines(path, lines):
 		f.write('\n'.join(lines) + ('\n' if lines else ''))
 
 
+def _ad_clean_label(label):
+	"""Normalize a label for the `<url> | <label>` line format: no pipes (they're
+	the delimiter), no newlines, capped length."""
+	return (label or '').strip().replace('|', '/').replace('\n', ' ')[:80]
+
+
 def _ad_lib_add(path, id_re, vid, label, canonical):
 	"""Append a canonical library line for `vid` (+ optional label) unless its id is already present.
 	Returns True if present/added, False on a bad id."""
@@ -573,10 +579,48 @@ def _ad_lib_add(path, id_re, vid, label, canonical):
 		m = id_re.search(ln)
 		if m and m.group(1) == vid:
 			return True  # already in the library — idempotent
-	label = (label or '').strip().replace('|', '/').replace('\n', ' ')[:80]
+	label = _ad_clean_label(label)
 	lines.append(canonical + (' | ' + label if label else ''))
 	_ad_write_lines(path, lines)
 	return True
+
+
+def _ad_backfill_titles(path, id_re, kind, limit=40):
+	"""Walk an existing library file and fetch a real title for every entry that has
+	none (bare id, or label echoing the id). Preserves the original URL text and any
+	comment/blank lines. Bounded per call (fetches are network-bound) — returns how
+	many were filled and how many still lack a title so the UI can re-run for more."""
+	lines = _ad_read_raw(path)
+	out, updated, remaining = [], 0, 0
+	for ln in lines:
+		stripped = ln.strip()
+		if not stripped or stripped.startswith('#'):
+			out.append(ln)
+			continue
+		m = id_re.search(ln)
+		if not m:
+			out.append(ln)
+			continue
+		vid = m.group(1)
+		url_part, _, existing = ln.partition('|')
+		existing = existing.strip()
+		if existing and existing != vid:
+			out.append(ln)  # already has a real title
+			continue
+		if updated >= limit:
+			remaining += 1
+			out.append(ln)
+			continue
+		title = _ad_clean_label(_fetch_media_title(kind, vid))
+		if title:
+			out.append(url_part.rstrip() + ' | ' + title)
+			updated += 1
+		else:
+			remaining += 1
+			out.append(ln)
+	if updated:
+		_ad_write_lines(path, out)
+	return {'updated': updated, 'remaining': remaining}
 
 
 def _ad_lib_delete(path, id_re, vid):
@@ -668,6 +712,22 @@ def after_dark_library_delete():
 	vk = ((request.json or {}).get('id') or '').strip()
 	removed = _ad_lib_delete(AD_VIDEOS_FILE, _VIEWKEY_RE, vk)
 	return jsonify({'ok': removed > 0, 'removed': removed})
+
+
+@cockpit_bp.route('/cockpit/after-dark/youtube/refresh-titles', methods=['POST'])
+def after_dark_youtube_refresh_titles():
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	res = _ad_backfill_titles(AD_YOUTUBE_FILE, _YT_ID_RE, 'youtube')
+	return jsonify({'ok': True, **res})
+
+
+@cockpit_bp.route('/cockpit/after-dark/library/refresh-titles', methods=['POST'])
+def after_dark_library_refresh_titles():
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	res = _ad_backfill_titles(AD_VIDEOS_FILE, _VIEWKEY_RE, 'ph')
+	return jsonify({'ok': True, **res})
 
 
 @cockpit_bp.route('/cockpit/after-dark/music')

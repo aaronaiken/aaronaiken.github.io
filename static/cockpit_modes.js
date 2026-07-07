@@ -864,6 +864,36 @@
 		}).catch(function () { ytFlashBtn(btn, 'ERR'); });
 	}
 
+	// Backfill real titles for already-saved YouTube items that only show an id.
+	// Bounded server-side; re-run automatically while there's more to fill.
+	function ytRefreshTitles(btn) {
+		var status = document.getElementById('yt-library-refresh-status');
+		if (btn) btn.disabled = true;
+		if (status) status.textContent = 'fetching…';
+		fetch('/cockpit/after-dark/youtube/refresh-titles', { method: 'POST' })
+			.then(function (r) { return r.json(); }).then(function (res) {
+				if (ytLibraryVisible) ytLoadLibrary();
+				// Only auto-continue when we hit the per-call cap (more to fill).
+				// A leftover 'remaining' otherwise means unresolvable (private /
+				// deleted) — don't loop on those.
+				if (res.updated >= 40 && res.remaining > 0) {
+					if (status) status.textContent = 'updated ' + res.updated + ' — continuing…';
+					setTimeout(function () { ytRefreshTitles(btn); }, 400);
+					return;
+				}
+				if (btn) btn.disabled = false;
+				if (status) {
+					var msg = res.updated > 0 ? 'done — updated ' + res.updated : 'nothing to update';
+					if (res.remaining > 0) msg += ' — ' + res.remaining + ' couldn’t resolve';
+					status.textContent = msg;
+				}
+				setTimeout(function () { if (status) status.textContent = ''; }, 4000);
+			}).catch(function () {
+				if (btn) btn.disabled = false;
+				if (status) status.textContent = 'error';
+			});
+	}
+
 	function ytLibDelete(item, btn) {
 		if (!item || !item.id) return;
 		if (!confirm('remove "' + (item.name || item.id) + '" from the library?')) return;
@@ -1535,6 +1565,36 @@
 			adFlashBtn(btn, res.ok ? 'SAVED ✓' : 'ERR');
 			if (adLibraryVisible) adLoadLibrary();
 		}).catch(function() { adFlashBtn(btn, 'ERR'); });
+	}
+
+	// Backfill real titles for already-saved PH items showing only a viewkey.
+	// PH is best-effort server-side; some may stay unresolved.
+	function adRefreshTitles(btn) {
+		var status = document.getElementById('ad-library-refresh-status');
+		if (btn) btn.disabled = true;
+		if (status) status.textContent = 'fetching…';
+		fetch('/cockpit/after-dark/library/refresh-titles', { method: 'POST' })
+			.then(function (r) { return r.json(); }).then(function (res) {
+				if (adLibraryVisible) adLoadLibrary();
+				if (res.updated > 0 && res.remaining > 0 && res.updated >= 40) {
+					// Only auto-continue when we hit the per-call cap (there's
+					// definitely more we could fill). Otherwise remaining ones
+					// are just unresolvable — don't hammer.
+					if (status) status.textContent = 'updated ' + res.updated + ' — continuing…';
+					setTimeout(function () { adRefreshTitles(btn); }, 400);
+					return;
+				}
+				if (btn) btn.disabled = false;
+				if (status) {
+					var msg = res.updated > 0 ? 'updated ' + res.updated : 'nothing updated';
+					if (res.remaining > 0) msg += ' — ' + res.remaining + ' couldn’t resolve';
+					status.textContent = msg;
+				}
+				setTimeout(function () { if (status) status.textContent = ''; }, 4000);
+			}).catch(function () {
+				if (btn) btn.disabled = false;
+				if (status) status.textContent = 'error';
+			});
 	}
 
 	function adLibDelete(item, btn) {

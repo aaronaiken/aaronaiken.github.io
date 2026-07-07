@@ -274,6 +274,20 @@
 		padding: 8px;
 	}
 
+	.ad-library-bar {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 6px 8px 0;
+	}
+	.ad-library-bar .ad-player-tb-btn { font-size: 9px; }
+	.ad-library-bar span {
+		font-size: 9px;
+		letter-spacing: 0.04em;
+		color: #9a7b52;
+		font-family: 'IBM Plex Mono', monospace;
+	}
+
 	#yt-player-video-wrap {
 		position: relative;
 		width: 100%;

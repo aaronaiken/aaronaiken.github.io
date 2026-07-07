@@ -98,6 +98,10 @@
 			</div>
 		</div>
 		<div id="ad-player-library">
+			<div class="ad-library-bar">
+				<button class="ad-player-tb-btn" onclick="adRefreshTitles(this)" title="Fetch real titles for saved videos that only show an id">REFRESH TITLES</button>
+				<span id="ad-library-refresh-status"></span>
+			</div>
 			<div id="ad-player-library-grid" aria-label="Video library"></div>
 		</div>
 		<div id="ad-player-queue">
@@ -137,6 +141,10 @@
 			</div>
 		</div>
 		<div id="yt-player-library">
+			<div class="ad-library-bar">
+				<button class="ad-player-tb-btn" onclick="ytRefreshTitles(this)" title="Fetch real titles for saved videos that only show an id">REFRESH TITLES</button>
+				<span id="yt-library-refresh-status"></span>
+			</div>
 			<div id="yt-player-library-grid" aria-label="YouTube library"></div>
 		</div>
 		<div id="yt-player-queue">
