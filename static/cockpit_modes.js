@@ -1623,10 +1623,11 @@
 		document.getElementById('ad-player-library').classList.remove('is-open');
 		document.getElementById('ad-library-toggle-btn').style.color = '';
 
-		// Show player if it was closed — clear the inline 'none' so the
-		// mode-after-dark CSS (display: flex column) can take over.
+		// Show the player. Must be an explicit 'block' (not '') — base CSS is
+		// #ad-player{display:none} and only .mode-after-dark flips it to block, so
+		// clearing to '' would fall back to hidden in normal/work mode. See adPlayerToggle.
 		const player = document.getElementById('ad-player');
-		player.style.display = '';
+		player.style.display = 'block';
 
 		// If minimized, restore
 		if (adPlayerMinimized) adPlayerMinimize();
@@ -1735,7 +1736,7 @@
 		adQueueActive = true;
 
 		const player = document.getElementById('ad-player');
-		player.style.display = '';
+		player.style.display = 'block';  // explicit block — '' falls back to hidden outside after-dark (see adPlayVideo)
 		if (adPlayerMinimized) adPlayerMinimize();
 
 		const frame = document.getElementById('ad-viewer-iframe');
