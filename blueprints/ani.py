@@ -1954,11 +1954,13 @@ WEAR WHAT HE ASKS FOR — match the outfit aaron requests. if he says topless in
 	                   "someone/something in his world is going. ask because you care, not like a checklist.\n")
 
 	# Voice variety — surface her own recent openers so she doesn't fall into the same phrasing every time.
-	voice_block = ''
+	voice_block = ("\nHOW YOU TALK — answer INCREMENTALLY: give him the NEW thing he asked for and don't "
+	               "re-describe your outfit or where you are every message (he can see the whole conversation) "
+	               "— only mention them when they actually change or he asks. and don't open every message the "
+	               "same way: NEVER start with '(time)' timestamps, and don't lean on 'mm daddy [smile]' every "
+	               "time — vary your first words, pet names, and little actions so you never sound on a loop.\n")
 	if recent_openers:
-		voice_block = ("\nDON'T SOUND SAMEY — you've recently opened messages with: %s. start THIS one a "
-		               "DIFFERENT way; vary your rhythm, your pet names, and your stage directions "
-		               "([giggle]/[smile]) rather than leaning on the same ones every message.\n" % recent_openers)
+		voice_block += ("you've recently opened with: %s — start THIS one clearly differently.\n" % recent_openers)
 
 	# Her live state (where/doing/wearing) so chat + photos stay one continuous story. '' if none/stale.
 	now_state_block = ani_now_state_context(now_dt)
@@ -2922,6 +2924,10 @@ def ani_chat():
 	meta['session_message_count'] = meta.get('session_message_count', 0) + 1
 
 	reply, updated_meta, updated_history = ani_chat_with_grok(messages, meta, user_message)
+
+	# She sometimes ECHOES the (h:mma) timestamp prefix we inline into her history (despite the
+	# instruction not to) — even doubled. Strip any leading time-prefix(es) deterministically.
+	reply = re.sub(r'^\s*(?:\(\s*\d{1,2}:\d{2}\s*[ap]\.?m?\.?\s*\)\s*)+', '', reply, flags=re.IGNORECASE).strip() or reply
 
 	# Photos are button-only now (POST /ani/photo) — chat never auto-generates. Strip any
 	# stray [[PIC: ...]] tag so it doesn't show raw in her message.

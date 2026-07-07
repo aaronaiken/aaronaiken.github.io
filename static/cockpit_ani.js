@@ -248,8 +248,8 @@
 	  .then(function(r) { return r.json(); })
 	  .then(function(data) {
 		aniShowTyping(false);
-		aniPhotoBtn.disabled = false;
 		aniSendBtn.disabled = false;
+		setTimeout(function() { aniPhotoBtn.disabled = false; }, 2500);  // cooldown — avoid accidental double-render
 		if (data.image_url) {
 		  aniRenderMessage('assistant', data.caption || '', data.image_url, new Date().toISOString());
 		} else if (data.error === 'blocked') {
@@ -261,8 +261,8 @@
 	  })
 	  .catch(function() {
 		aniShowTyping(false);
-		aniPhotoBtn.disabled = false;
 		aniSendBtn.disabled = false;
+		setTimeout(function() { aniPhotoBtn.disabled = false; }, 2500);
 		aniRenderNotify('photo request failed — try again');
 		aniScrollToBottom();
 	  });
