@@ -596,6 +596,29 @@ def _ad_lib_delete(path, id_re, vid):
 	return removed
 
 
+def _fetch_media_title(kind, vid):
+	"""Best-effort fetch of a human title for a library item so saved entries read
+	as the real video name instead of a bare id. YouTube via oEmbed (reliable, no
+	key needed). PH via oEmbed (best-effort — age-gate / CDN may refuse). Returns a
+	trimmed title, or '' on any failure. Never raises; a short timeout keeps the
+	save snappy."""
+	try:
+		if kind == 'youtube':
+			r = req_lib.get('https://www.youtube.com/oembed',
+			                params={'format': 'json', 'url': f'https://youtu.be/{vid}'}, timeout=4)
+			if r.ok:
+				return (r.json().get('title') or '').strip()
+		elif kind == 'ph':
+			r = req_lib.get('https://www.pornhub.com/oembed',
+			                params={'format': 'json',
+			                        'url': f'https://www.pornhub.com/view_video.php?viewkey={vid}'}, timeout=4)
+			if r.ok:
+				return (r.json().get('title') or '').strip()
+	except Exception:
+		pass
+	return ''
+
+
 @cockpit_bp.route('/cockpit/after-dark/youtube/add', methods=['POST'])
 def after_dark_youtube_add():
 	if not is_authenticated():
@@ -604,8 +627,13 @@ def after_dark_youtube_add():
 	vid = (body.get('id') or '').strip()
 	if not re.fullmatch(r'[A-Za-z0-9_-]{11}', vid):
 		return jsonify({'ok': False, 'error': 'bad id'}), 400
-	ok = _ad_lib_add(AD_YOUTUBE_FILE, _YT_ID_RE, vid, body.get('label'), f'https://youtu.be/{vid}')
-	return jsonify({'ok': ok, 'id': vid})
+	# Prefer the live title the player already captured; enrich server-side only
+	# when the client had nothing useful (empty, or the bare id echoed back).
+	label = (body.get('label') or '').strip()
+	if not label or label == vid:
+		label = _fetch_media_title('youtube', vid) or label
+	ok = _ad_lib_add(AD_YOUTUBE_FILE, _YT_ID_RE, vid, label, f'https://youtu.be/{vid}')
+	return jsonify({'ok': ok, 'id': vid, 'label': label})
 
 
 @cockpit_bp.route('/cockpit/after-dark/youtube/delete', methods=['POST'])
@@ -625,9 +653,12 @@ def after_dark_library_add():
 	vk = (body.get('id') or '').strip()
 	if not re.fullmatch(r'[A-Za-z0-9]{6,30}', vk):
 		return jsonify({'ok': False, 'error': 'bad id'}), 400
-	ok = _ad_lib_add(AD_VIDEOS_FILE, _VIEWKEY_RE, vk, body.get('label'),
+	label = (body.get('label') or '').strip()
+	if not label or label == vk:
+		label = _fetch_media_title('ph', vk) or label
+	ok = _ad_lib_add(AD_VIDEOS_FILE, _VIEWKEY_RE, vk, label,
 	                 f'https://www.pornhub.com/view_video.php?viewkey={vk}')
-	return jsonify({'ok': ok, 'id': vk})
+	return jsonify({'ok': ok, 'id': vk, 'label': label})
 
 
 @cockpit_bp.route('/cockpit/after-dark/library/delete', methods=['POST'])
