@@ -316,6 +316,29 @@
 .day-row.is-done { opacity: 0.55; }
 .day-row.is-done .day-row-title { text-decoration: line-through; }
 
+/* Per-row area (colored tag) + project context */
+.day-ctx { display: inline-flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
+.day-ctx-area {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  color: var(--cd-text-dim);
+  font-family: var(--cd-font-mono, 'Share Tech Mono', monospace);
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.day-ctx-proj {
+  color: var(--cd-text-dim);
+  font-family: var(--cd-font-mono, 'Share Tech Mono', monospace);
+  font-size: 0.66rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .day-handle { color: rgba(212,136,10,0.25); font-size: 0.7rem; flex-shrink: 0; cursor: grab; }
 .day-row-title {
   font-family: var(--cd-font-mono, 'Share Tech Mono', monospace);
@@ -562,6 +585,21 @@ a.day-row-title:hover { color: var(--cd-amber-hi, #f5b332); }
     return h;
   }
 
+  // Area + project context for a row — the area (parent project) as a colored tag,
+  // the project as muted text. '' when there's no project (e.g. a plain Below Deck task).
+  function entryContextHtml(e) {
+    var area = e.area_title, proj = e.project_title;
+    if (!area && !proj) return '';
+    var parts = [];
+    if (area) {
+      var col = e.area_color || '';
+      var style = col ? (' style="color:' + escAttr(col) + ';border-color:' + escAttr(col) + '"') : '';
+      parts.push('<span class="day-ctx-area"' + style + '>' + escHtml(area) + '</span>');
+    }
+    if (proj && proj !== area) parts.push('<span class="day-ctx-proj">' + escHtml(proj) + '</span>');
+    return '<span class="day-ctx">' + parts.join('') + '</span>';
+  }
+
   // A My Day row reuses the canonical Command Deck checklist-row look:
   // .cd-checklist-item gives the checkbox + serif label + due pill + ⏱ timer
   // styling for free (command_deck.css is loaded here). `.day-row` is just our
@@ -589,6 +627,9 @@ a.day-row-title:hover { color: var(--cd-amber-hi, #f5b332); }
     } else {
       h += '<label>' + escHtml(entryLabel(e)) + '</label>';
     }
+
+    // Area + project context — surfaces where each task belongs (area gets its color)
+    h += entryContextHtml(e);
 
     // Due — the real cd-due-wrapper badge + native date input
     h += dueWrapperHtml(e);
