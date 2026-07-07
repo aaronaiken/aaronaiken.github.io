@@ -850,10 +850,81 @@
 		if (state.group === 'timesheet' && state.data) renderRollup();
 	}
 
+	// ---- Add a time entry after the fact (retroactive, from the Reports page) ----
+	async function populateAddEntry() {
+		const proj = document.getElementById('aeProject');
+		const cat = document.getElementById('aeCategory');
+		const date = document.getElementById('aeDate');
+		if (proj && !proj.dataset.loaded) {
+			try {
+				const d = await (await fetch('/time/projects', { credentials: 'same-origin' })).json();
+				let html = '<option value="">— project —</option>';
+				(d.areas || []).forEach((a) => {
+					if (!(a.subprojects || []).length) return;
+					html += `<optgroup label="${escapeHtml(a.title)}">`;
+					a.subprojects.forEach((s) => { html += `<option value="${s.id}">${escapeHtml(s.title)}</option>`; });
+					html += '</optgroup>';
+				});
+				if ((d.personal || []).length) {
+					html += '<optgroup label="Personal">' +
+						d.personal.map((p) => `<option value="${p.id}">${escapeHtml(p.title)}</option>`).join('') + '</optgroup>';
+				}
+				proj.innerHTML = html;
+				proj.dataset.loaded = '1';
+			} catch (_e) {}
+		}
+		if (cat && !cat.dataset.loaded) {
+			const cats = await getCategories();
+			cat.innerHTML = '<option value="">— category —</option>' +
+				cats.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+			cat.dataset.loaded = '1';
+		}
+		if (date && !date.value) date.value = new Date().toISOString().slice(0, 10);
+	}
+
+	async function submitManualEntry() {
+		const status = document.getElementById('aeStatus');
+		const payload = {
+			project_id: document.getElementById('aeProject').value,
+			date: document.getElementById('aeDate').value,
+			start_time: document.getElementById('aeStart').value,
+			end_time: document.getElementById('aeEnd').value,
+			time_category_id: document.getElementById('aeCategory').value || '',
+			description: document.getElementById('aeDesc').value,
+		};
+		if (!payload.project_id || !payload.date || !payload.start_time || !payload.end_time) {
+			if (status) status.textContent = 'project, date, start & end required';
+			return;
+		}
+		if (status) status.textContent = 'saving…';
+		try {
+			const d = await (await fetch('/time/manual', {
+				method: 'POST', headers: { 'Content-Type': 'application/json' },
+				credentials: 'same-origin', body: JSON.stringify(payload),
+			})).json();
+			if (d.success) {
+				if (status) status.textContent = 'added ✓';
+				document.getElementById('aeDesc').value = '';
+				load();
+				setTimeout(() => { if (status) status.textContent = ''; }, 2000);
+			} else {
+				if (status) status.textContent = 'error: ' + (d.error || 'failed');
+			}
+		} catch (_e) { if (status) status.textContent = 'request failed'; }
+	}
+
 	document.addEventListener('DOMContentLoaded', () => {
 		document.getElementById('reportsPrev').addEventListener('click', () => shiftPeriod(-1));
 		document.getElementById('reportsNext').addEventListener('click', () => shiftPeriod(+1));
 		document.getElementById('reportsJump').addEventListener('change', (e) => jumpToDate(e.target.value));
+		const addToggle = document.getElementById('addEntryToggle');
+		if (addToggle) addToggle.addEventListener('click', () => {
+			const f = document.getElementById('addEntryForm');
+			f.hidden = !f.hidden;
+			if (!f.hidden) populateAddEntry();
+		});
+		const aeSubmit = document.getElementById('aeSubmit');
+		if (aeSubmit) aeSubmit.addEventListener('click', submitManualEntry);
 
 		document.querySelectorAll('.cd-reports-preset').forEach((b) => {
 			b.addEventListener('click', () => setPreset(b.dataset.period));

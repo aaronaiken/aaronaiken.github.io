@@ -111,7 +111,33 @@
 
     <!-- CHRONOLOGICAL ENTRIES -->
     <section class="cd-reports-entries" id="reportsEntries">
-      <h2 class="cd-reports-entries-title">// Entries</h2>
+      <h2 class="cd-reports-entries-title">// Entries
+        <button type="button" id="addEntryToggle" class="cd-reports-subgroup" title="Add a time entry after the fact">+ ADD ENTRY</button>
+      </h2>
+
+      <style>
+        #addEntryToggle { margin-left: 10px; font-size: 0.6rem; vertical-align: middle; }
+        #addEntryForm { margin: 8px 0 14px; padding: 10px 12px; border: 1px solid var(--cd-border, #d8cfb8); border-radius: 4px; background: var(--cd-bg-2, rgba(0,0,0,0.03)); }
+        .add-entry-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+        .add-entry-row select, .add-entry-row input { padding: 5px 7px; border: 1px solid var(--cd-border, #d8cfb8); border-radius: 3px; background: var(--cd-bg, #fffdf7); color: var(--cd-text, #3a2a10); font-family: inherit; font-size: 0.8rem; }
+        .add-entry-row #aeDesc { flex: 1; min-width: 150px; }
+        .ae-arrow { color: var(--cd-text-dim, #8a7d5e); }
+        #aeStatus { font-size: 0.75rem; color: var(--cd-text-dim, #8a7d5e); }
+      </style>
+      <div id="addEntryForm" hidden>
+        <div class="add-entry-row">
+          <select id="aeProject" title="Project"></select>
+          <input type="date" id="aeDate" title="Date">
+          <input type="time" id="aeStart" title="Start time">
+          <span class="ae-arrow">→</span>
+          <input type="time" id="aeEnd" title="End time">
+          <select id="aeCategory" title="Category"></select>
+          <input type="text" id="aeDesc" placeholder="description (optional)" maxlength="200">
+          <button type="button" id="aeSubmit" class="cd-reports-preset">ADD</button>
+          <span id="aeStatus"></span>
+        </div>
+      </div>
+
       <table class="cd-reports-entries-table">
         <thead>
           <tr>

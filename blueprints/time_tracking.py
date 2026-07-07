@@ -706,6 +706,76 @@ def time_today_total():
 	})
 
 
+@time_tracking_bp.route('/time/manual', methods=['POST'])
+def time_manual():
+	"""Add a completed time entry after the fact (from the Reports page). Takes an ET date + start/end
+	clock times, converts to UTC, computes duration, inserts a finished entry. Optional task_id (must be
+	on the project) inherits the task's default category when none is passed — mirrors time_start."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 403
+	data = request.get_json(silent=True) or request.form
+	project_id = data.get('project_id')
+	date = (data.get('date') or '').strip()
+	start_time = (data.get('start_time') or '').strip()
+	end_time = (data.get('end_time') or '').strip()
+	description = (data.get('description') or '').strip()
+	time_category_id = data.get('time_category_id')
+	task_id = data.get('task_id')
+	if not (project_id and date and start_time and end_time):
+		return jsonify({'error': 'project_id, date, start_time and end_time are required'}), 400
+	eastern = pytz.timezone('US/Eastern')
+	try:
+		d = datetime.strptime(date, '%Y-%m-%d').date()
+		st = datetime.strptime(start_time, '%H:%M').time()
+		en = datetime.strptime(end_time, '%H:%M').time()
+	except ValueError:
+		return jsonify({'error': 'bad_date_or_time'}), 400
+	start_et = eastern.localize(datetime.combine(d, st))
+	end_et = eastern.localize(datetime.combine(d, en))
+	if end_et <= start_et:
+		return jsonify({'error': 'end_must_be_after_start'}), 400
+	duration = int((end_et - start_et).total_seconds())
+
+	conn = get_db()
+	project = conn.execute('SELECT id, project_type FROM projects WHERE id = ?', (project_id,)).fetchone()
+	if not project:
+		conn.close()
+		return jsonify({'error': 'project_not_found'}), 404
+	if project['project_type'] not in _TRACKABLE_TYPES:
+		conn.close()
+		return jsonify({'error': 'project_not_trackable'}), 400
+	tid = None
+	if task_id:
+		task = conn.execute('SELECT id, project_id, time_category_id FROM tasks WHERE id = ?', (task_id,)).fetchone()
+		if task and task['project_id'] == int(project_id):
+			tid = task['id']
+			if not time_category_id and task['time_category_id']:
+				cat = conn.execute('SELECT id, is_active FROM time_categories WHERE id = ?',
+				                   (task['time_category_id'],)).fetchone()
+				if cat and cat['is_active']:
+					time_category_id = task['time_category_id']
+
+	now = _utc_now_iso()
+	cur = conn.execute('''
+		INSERT INTO time_entries
+			(project_id, task_id, checklist_item_id, meeting_id, ticket_id,
+			 time_category_id, description, started_at, ended_at, duration_seconds, created, updated)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	''', (
+		project_id, tid, None, None, None,
+		int(time_category_id) if time_category_id else None,
+		description,
+		start_et.astimezone(pytz.UTC).strftime(_UTC_FORMAT),
+		end_et.astimezone(pytz.UTC).strftime(_UTC_FORMAT),
+		max(0, duration), now, now,
+	))
+	new_id = cur.lastrowid
+	conn.commit()
+	row = _fetch_entry_with_context(conn, new_id)
+	conn.close()
+	return jsonify({'success': True, 'entry': _serialize_entry(row)})
+
+
 @time_tracking_bp.route('/time/<int:entry_id>/delete', methods=['POST'])
 def time_delete(entry_id):
 	if not is_authenticated():
