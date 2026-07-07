@@ -1169,6 +1169,7 @@
 	}
 	document.addEventListener('DOMContentLoaded', function () {
 		ytLoadQueue();
+		adLoadQueue();         // restore the PH queue saved from a previous session
 		ytRestoreProgress();   // resume YT at the saved position (cued; a tap plays)
 		adRestoreLast();       // restore the PH chip to the last item
 		setInterval(ytSaveProgress, 5000);
@@ -1212,7 +1213,7 @@
 
 	function cockpitMediaShow() {
 		if (activeMediaPlayer === 'ad') {
-			var p = document.getElementById('ad-player'); if (p) p.style.display = 'block';
+			var p = document.getElementById('ad-player'); if (p) p.style.display = 'flex';  // flex column (see adPlayVideo)
 			// after a refresh the iframe is empty — reload the last item (PH can't resume position)
 			var f = document.getElementById('ad-viewer-iframe');
 			if (f && !f.getAttribute('src') && adResumeUrl) {
@@ -1499,10 +1500,10 @@
 	function adPlayerToggle() {
 		const p = document.getElementById('ad-player');
 		if (!p) return;
-		// Base CSS hides #ad-player (shown only in after-dark), so an explicit 'block' is needed to
-		// reveal it in normal/work modes — '' would just fall back to the hidden default.
+		// Base CSS hides #ad-player (shown only in after-dark), so an explicit 'flex' is needed to
+		// reveal it in normal/work modes — the shown layout is a flex column ('block'/'' break the video).
 		const shown = getComputedStyle(p).display !== 'none';
-		p.style.display = shown ? 'none' : 'block';
+		p.style.display = shown ? 'none' : 'flex';
 	}
 
 	function adLibraryToggle() {
@@ -1623,11 +1624,11 @@
 		document.getElementById('ad-player-library').classList.remove('is-open');
 		document.getElementById('ad-library-toggle-btn').style.color = '';
 
-		// Show the player. Must be an explicit 'block' (not '') — base CSS is
-		// #ad-player{display:none} and only .mode-after-dark flips it to block, so
-		// clearing to '' would fall back to hidden in normal/work mode. See adPlayerToggle.
+		// Show the player. Must be an explicit 'flex' (not '' or 'block') — base CSS is
+		// #ad-player{display:none}, only .mode-after-dark reveals it, and the shown layout is a
+		// flex COLUMN (video-wrap uses flex:1 for its height). 'block' collapses the video to 0px.
 		const player = document.getElementById('ad-player');
-		player.style.display = 'block';
+		player.style.display = 'flex';
 
 		// If minimized, restore
 		if (adPlayerMinimized) adPlayerMinimize();
@@ -1715,6 +1716,7 @@
 		adQueueIdx = -1;
 		adQueueActive = true;
 		adRenderQueue();
+		adSaveQueue();
 		adQueuePlay(0);
 	}
 
@@ -1727,6 +1729,7 @@
 		document.getElementById('ad-queue-input').value = '';
 		adQueueActive = true;
 		adRenderQueue();
+		adSaveQueue();
 		if (wasEmpty) adQueuePlay(0);
 	}
 
@@ -1736,7 +1739,7 @@
 		adQueueActive = true;
 
 		const player = document.getElementById('ad-player');
-		player.style.display = 'block';  // explicit block — '' falls back to hidden outside after-dark (see adPlayVideo)
+		player.style.display = 'flex';  // flex column — 'block'/'' break the video-wrap height (see adPlayVideo)
 		if (adPlayerMinimized) adPlayerMinimize();
 
 		const frame = document.getElementById('ad-viewer-iframe');
@@ -1746,6 +1749,7 @@
 		cockpitSetNowPlaying('ad', (adQueue[idx] || {}).label);
 		try { localStorage.setItem('cockpit-ad-lastplayed', JSON.stringify({ url: url, label: (adQueue[idx] || {}).label })); adResumeUrl = url; } catch (e) {}
 		adRenderQueue();
+		adSaveQueue();   // persist the moved playhead so a reload resumes at the right item
 	}
 
 	function adQueueNext() {
@@ -1765,6 +1769,7 @@
 		adStopAuto();
 		document.getElementById('ad-queue-input').value = '';
 		adRenderQueue();
+		adSaveQueue();   // clears the persisted queue too
 	}
 
 	function adStopAuto() {
@@ -1822,6 +1827,28 @@
 		if (i < adQueueIdx) adQueueIdx--;
 		else if (i === adQueueIdx) adQueueIdx = Math.min(adQueueIdx, adQueue.length - 1);
 		adRenderQueue();
+		adSaveQueue();
+	}
+
+	// ---- Persistence: the PH queue survives reloads (localStorage), mirroring the YT player. ----
+	// Playback isn't auto-resumed — the saved queue is re-rendered and a click / NEXT picks it back up.
+	function adSaveQueue() {
+		try {
+			localStorage.setItem('cockpit-ad-queue', JSON.stringify({
+				queue: adQueue, idx: adQueueIdx
+			}));
+		} catch (e) {}
+	}
+
+	function adLoadQueue() {
+		try {
+			var d = JSON.parse(localStorage.getItem('cockpit-ad-queue') || 'null');
+			if (!d || !Array.isArray(d.queue) || d.queue.length === 0) return;
+			adQueue = d.queue;
+			if (typeof d.idx === 'number') adQueueIdx = d.idx;
+			adRenderQueue();
+			adSetQueueStatus(adQueue.length + ' saved — click one to resume');
+		} catch (e) {}
 	}
 
 	// ============================================================
