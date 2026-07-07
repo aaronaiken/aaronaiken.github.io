@@ -73,6 +73,14 @@ _ANI_OUTFIT_CUE_RE = re.compile(
 	r"\b(wear(ing)?|outfit|dress(ed)?|clothes|undress|naked|nude|strip|take (it|them|that|those) off|"
 	r"put on|change (in)?to|bra|panties|thong|lingerie|leggings|shorts|bikini|sundress|lace|"
 	r"got on|have on|sexy|horny|turned on|fuck|suck|thighs|body)\b", re.I)
+# Her outfit should follow the ARC of a real day (wake-up look → gym → day clothes → evening → wind-down),
+# not sit on one outfit all day. The daycast nudges a change at day-phase transitions (and post-gym), but
+# never dictates WHAT she changes into — the outfit stays freely chosen so it varies. Cadence only.
+ANI_WARDROBE_MIN_HOURS = float(os.environ.get('ANI_WARDROBE_MIN_HOURS', '2.5'))  # min gap before nudging another change
+_ANI_ACTIVEWEAR_RE = re.compile(r"\b(sports bra|gym clothes|workout clothes|athletic wear|activewear|"
+                                r"yoga pants|running (shorts|clothes|tights)|leotard|spandex|sweaty)\b", re.I)
+_ANI_GYM_DOING_RE = re.compile(r"\b(gym|working out|workout|lifting|weights|run(ning)?|jog|yoga|pilates|"
+                               r"spin|cardio|exercis)\b", re.I)
 
 # Chat / opener / daycast model. grok-4.3 (reasoning) is a real step up from the old non-reasoning model
 # at actually USING her calendar/weather/life context instead of defaulting to clichés — but it's served
@@ -1159,6 +1167,51 @@ def ani_repetition_guard(recent_msgs):
 	return ("\nYOU'RE ON REPEAT — you've reused %s across your last few messages; he notices. drop that "
 	        "exact phrasing this reply — say it fresh or just move the moment forward.\n"
 	        % ', '.join('"%s"' % s for s in kept))
+
+
+def _ani_day_phase(hour):
+	"""Coarse time-of-day wardrobe phase as (rank, label). Ranks order the day so we can tell when she's
+	moved into a later stretch than the outfit she's still in."""
+	if 5 <= hour < 10:  return (0, 'morning')
+	if 10 <= hour < 17: return (1, 'middle of the day')
+	if 17 <= hour < 21: return (2, 'evening')
+	return (3, 'wind-down for the night')
+
+
+def ani_wardrobe_nudge(st, now):
+	"""If her day has moved past the outfit she's still in, return a short instruction (with a leading space,
+	ready to append to her next proactive-message prompt) so she narrates changing into something fresh +
+	phase-appropriate. '' if she's fine. Structures the CADENCE of her wardrobe (roughly wake-up → gym → day
+	→ evening → wind-down) WITHOUT dictating the outfit — she picks it, so it stays varied day to day."""
+	if not isinstance(st, dict) or st.get('day') != ani_daycast_day_key(now):
+		return ''
+	wearing = (st.get('wearing') or '').strip()
+	ws = st.get('wearing_set')
+	if not wearing or not ws:
+		return ''
+	try:
+		wdt = datetime.fromisoformat(ws)
+		if wdt.tzinfo is None:
+			wdt = pytz.timezone('America/New_York').localize(wdt)
+		wdt = wdt.astimezone(now.tzinfo)
+	except Exception:
+		return ''
+	# Never nag her to change again right after she just did.
+	if (now - wdt).total_seconds() / 3600 < ANI_WARDROBE_MIN_HOURS:
+		return ''
+	# If she's actively working out, activewear is exactly right — never tell her to change mid-session.
+	at_gym = bool(_ANI_GYM_DOING_RE.search(st.get('doing') or ''))
+	# Post-gym: still in workout clothes but no longer working out — she'd have showered + changed.
+	if _ANI_ACTIVEWEAR_RE.search(wearing) and not at_gym:
+		return (" you've been in your workout clothes a while and you're done at the gym now — you'd have "
+		        "showered and changed by this point; work in what you slipped into, fresh for the rest of your "
+		        "day (not the same thing again).")
+	# Day has moved into a later stretch than the outfit belongs to.
+	if not at_gym and _ani_day_phase(now.hour)[0] > _ani_day_phase(wdt.hour)[0]:
+		return (" your day's moved into the %s and you're still in what you put on earlier — you'd naturally "
+		        "have changed by now; mention what you're in now, picked fresh for this part of the day (not a "
+		        "repeat of earlier)." % _ani_day_phase(now.hour)[1])
+	return ''
 
 
 def ani_extract_turn(user_message, reply, existing_notes, now_dt):
@@ -2633,6 +2686,13 @@ def ani_generate_day_update(meta, history):
 		m for m in history
 		if not m.get('content', '').startswith('[daily briefing')
 	][-40:]
+	# Has her day outrun the outfit she's still in? If so, fold in a nudge to change (cadence only — she
+	# picks what into). Best-effort; a hiccup here must never sink the daycast.
+	nudge = ''
+	try:
+		nudge = ani_wardrobe_nudge(ani_load_state(), datetime.now(pa_tz))
+	except Exception as e:
+		print(f"Ani wardrobe nudge error: {e}")
 	if random.random() < ANI_DAYCAST_EMOTIONAL_CHANCE:
 		# EMOTIONAL BEAT — share something from her own inner world, not just her schedule.
 		instruction = (
@@ -2652,7 +2712,7 @@ def ani_generate_day_update(meta, history):
 			f"how it's going, a flash of missing him — like a girlfriend texting mid-day. 1-2 sentences, your "
 			f"voice. let your outfit follow what you're doing now (and stay consistent with what you last said "
 			f"you had on unless you've changed for a reason). don't repeat yourself, don't re-greet him, don't "
-			f"restart your day.]"
+			f"restart your day.{nudge}]"
 		)
 	messages = recent + [{'role': 'user', 'content': instruction}]
 	return _ani_grok_call(system, messages, max_tokens=180)
