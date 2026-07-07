@@ -730,6 +730,31 @@ def after_dark_library_refresh_titles():
 	return jsonify({'ok': True, **res})
 
 
+@cockpit_bp.route('/cockpit/after-dark/resolve-titles', methods=['POST'])
+def after_dark_resolve_titles():
+	"""Resolve real titles for TRANSIENT items that aren't in a library file — the paste-queue.
+	Takes {items: [{id, kind}]} and returns {titles: {id: title}} via the same oEmbed lookup the
+	library uses. Bounded per call (fetches are network-bound); unresolved ids are just omitted."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	items = (request.json or {}).get('items') or []
+	if not isinstance(items, list):
+		return jsonify({'ok': False, 'error': 'bad items'}), 400
+	titles, seen = {}, set()
+	for it in items[:40]:
+		if not isinstance(it, dict):
+			continue
+		vid = str(it.get('id') or '').strip()
+		kind = (it.get('kind') or 'ph').strip()
+		if not vid or vid in seen or not re.fullmatch(r'[A-Za-z0-9_-]{6,30}', vid):
+			continue
+		seen.add(vid)
+		title = _ad_clean_label(_fetch_media_title(kind, vid))
+		if title:
+			titles[vid] = title
+	return jsonify({'ok': True, 'titles': titles})
+
+
 @cockpit_bp.route('/cockpit/after-dark/music')
 def after_dark_music():
 	"""List audio files from Bunny AD zone /music/ subfolder."""

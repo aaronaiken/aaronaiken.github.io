@@ -1701,7 +1701,7 @@
 		else if ((m = line.match(/\/embed\/([A-Za-z0-9]+)/))) vk = m[1];
 		else if (/^[A-Za-z0-9]+$/.test(line)) vk = line;
 		if (!vk) return null;
-		return { url: 'https://www.pornhub.com/embed/' + vk, label: label || vk };
+		return { url: 'https://www.pornhub.com/embed/' + vk, label: label || vk, id: vk };
 	}
 
 	function adParseInput() {
@@ -1717,6 +1717,7 @@
 		adQueueActive = true;
 		adRenderQueue();
 		adSaveQueue();
+		adResolveQueueTitles();
 		adQueuePlay(0);
 	}
 
@@ -1730,6 +1731,7 @@
 		adQueueActive = true;
 		adRenderQueue();
 		adSaveQueue();
+		adResolveQueueTitles();
 		if (wasEmpty) adQueuePlay(0);
 	}
 
@@ -1848,7 +1850,40 @@
 			if (typeof d.idx === 'number') adQueueIdx = d.idx;
 			adRenderQueue();
 			adSetQueueStatus(adQueue.length + ' saved — click one to resume');
+			adResolveQueueTitles();   // fill real titles for any restored items still on a bare viewkey
 		} catch (e) {}
+	}
+
+	// The viewkey for a queue item — from its stored id, or recovered from the /embed/<key> URL
+	// for older saved items that predate the id field.
+	function adItemViewkey(item) {
+		if (item && item.id) return item.id;
+		var m = ((item && item.url) || '').match(/\/embed\/([A-Za-z0-9]+)/);
+		return m ? m[1] : null;
+	}
+
+	// Resolve real video titles (server-side oEmbed, same source as the library) for any queue items
+	// still labeled with a bare viewkey. Best-effort + non-blocking — playback never waits on it;
+	// it patches labels in place, then re-renders + re-saves so the names persist.
+	function adResolveQueueTitles() {
+		var need = [];
+		adQueue.forEach(function (item) {
+			var vk = adItemViewkey(item);
+			if (vk && (!item.label || item.label === vk)) need.push(vk);
+		});
+		if (need.length === 0) return;
+		fetch('/cockpit/after-dark/resolve-titles', {
+			method: 'POST', headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ items: need.map(function (id) { return { id: id, kind: 'ph' }; }) })
+		}).then(function (r) { return r.json(); }).then(function (res) {
+			var titles = (res && res.titles) || {};
+			var changed = false;
+			adQueue.forEach(function (item) {
+				var vk = adItemViewkey(item);
+				if (vk && titles[vk] && (!item.label || item.label === vk)) { item.label = titles[vk]; changed = true; }
+			});
+			if (changed) { adRenderQueue(); adSaveQueue(); }
+		}).catch(function () {});
 	}
 
 	// ============================================================
