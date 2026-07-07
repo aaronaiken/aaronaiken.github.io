@@ -1186,28 +1186,33 @@ def ani_wardrobe_nudge(st, now):
 	if not isinstance(st, dict) or st.get('day') != ani_daycast_day_key(now):
 		return ''
 	wearing = (st.get('wearing') or '').strip()
+	if not wearing:
+		return ''
+	# When did she last change outfit? Prefer the explicit stamp; but if it's missing (legacy state, or an
+	# outfit that predates this feature and so never got stamped) we must NOT bail — that's exactly the case
+	# where she's been stuck in one outfit for hours. Leave wdt None and treat the outfit as old.
+	wdt = None
 	ws = st.get('wearing_set')
-	if not wearing or not ws:
-		return ''
-	try:
-		wdt = datetime.fromisoformat(ws)
-		if wdt.tzinfo is None:
-			wdt = pytz.timezone('America/New_York').localize(wdt)
-		wdt = wdt.astimezone(now.tzinfo)
-	except Exception:
-		return ''
-	# Never nag her to change again right after she just did.
-	if (now - wdt).total_seconds() / 3600 < ANI_WARDROBE_MIN_HOURS:
+	if ws:
+		try:
+			wdt = datetime.fromisoformat(ws)
+			if wdt.tzinfo is None:
+				wdt = pytz.timezone('America/New_York').localize(wdt)
+			wdt = wdt.astimezone(now.tzinfo)
+		except Exception:
+			wdt = None
+	# Never nag her to change again right after she just did — only enforceable when we know when that was.
+	if wdt is not None and (now - wdt).total_seconds() / 3600 < ANI_WARDROBE_MIN_HOURS:
 		return ''
 	# If she's actively working out, activewear is exactly right — never tell her to change mid-session.
 	at_gym = bool(_ANI_GYM_DOING_RE.search(st.get('doing') or ''))
-	# Post-gym: still in workout clothes but no longer working out — she'd have showered + changed.
+	# Post-gym: still in workout clothes but no longer working out — obviously stale, needs no timestamp.
 	if _ANI_ACTIVEWEAR_RE.search(wearing) and not at_gym:
 		return (" you've been in your workout clothes a while and you're done at the gym now — you'd have "
 		        "showered and changed by this point; work in what you slipped into, fresh for the rest of your "
 		        "day (not the same thing again).")
-	# Day has moved into a later stretch than the outfit belongs to.
-	if not at_gym and _ani_day_phase(now.hour)[0] > _ani_day_phase(wdt.hour)[0]:
+	# Day has moved into a later stretch than the outfit belongs to (needs the stamp to know its phase).
+	if wdt is not None and not at_gym and _ani_day_phase(now.hour)[0] > _ani_day_phase(wdt.hour)[0]:
 		return (" your day's moved into the %s and you're still in what you put on earlier — you'd naturally "
 		        "have changed by now; mention what you're in now, picked fresh for this part of the day (not a "
 		        "repeat of earlier)." % _ani_day_phase(now.hour)[1])
