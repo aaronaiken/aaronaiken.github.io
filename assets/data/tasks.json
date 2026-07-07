@@ -1,6 +1,13 @@
 {
   "tasks": [
     {
+      "id": "1783446334",
+      "title": "Tidy Away",
+      "status": "open",
+      "created": "2026-07-07T13:45:34.232262-04:00",
+      "completed": null
+    },
+    {
       "id": "1782424732",
       "title": "Mindsteward Abacus",
       "status": "open",
