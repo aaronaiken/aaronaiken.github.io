@@ -65,6 +65,14 @@ ANI_MEMORY_EXTRACT_MODEL = os.environ.get('ANI_MEMORY_EXTRACT_MODEL', 'grok-4.3'
 # injected into the prompt with its timestamp so she stays consistent + moves it forward with the clock.
 ANI_STATE_FILE = 'ani_state.json'
 ANI_STATE_STALE_HOURS = float(os.environ.get('ANI_STATE_STALE_HOURS', '10'))  # ignore state older than this
+# Her outfit is sticky state (it survives until she changes it), so it sits in context for hours and she
+# parrots it. Only surface it in the prompt when it's genuinely live: changed within this window, or he
+# just brought up clothes/appearance/sex. Otherwise it's background-only (photos still read state directly).
+ANI_OUTFIT_FRESH_HOURS = float(os.environ.get('ANI_OUTFIT_FRESH_HOURS', '2'))
+_ANI_OUTFIT_CUE_RE = re.compile(
+	r"\b(wear(ing)?|outfit|dress(ed)?|clothes|undress|naked|nude|strip|take (it|them|that|those) off|"
+	r"put on|change (in)?to|bra|panties|thong|lingerie|leggings|shorts|bikini|sundress|lace|"
+	r"got on|have on|sexy|horny|turned on|fuck|suck|thighs|body)\b", re.I)
 
 # Chat / opener / daycast model. grok-4.3 (reasoning) is a real step up from the old non-reasoning model
 # at actually USING her calendar/weather/life context instead of defaulting to clichés — but it's served
@@ -1036,7 +1044,11 @@ def ani_update_now_state(partial, now_dt):
 		v = partial.get(k)
 		v = v.strip() if isinstance(v, str) else ''
 		if v:
-			cur[k] = v[:160]
+			v = v[:160]
+			# Track when the OUTFIT actually changes, so the prompt can tell "fresh" from "hours-old sticky".
+			if k == 'wearing' and v != cur.get('wearing'):
+				cur['wearing_set'] = now_dt.isoformat()
+			cur[k] = v
 			changed = True
 	if changed:
 		cur['updated'] = now_dt.isoformat()
@@ -1044,9 +1056,14 @@ def ani_update_now_state(partial, now_dt):
 		ani_save_state(cur)
 
 
-def ani_now_state_context(now_dt):
+def ani_now_state_context(now_dt, recent_text=''):
 	"""Prompt block: her last-known live state + when it was set, so she stays consistent AND advances it
-	with the clock (paired with the real-time continuity rule). '' if none / stale / not today."""
+	with the clock (paired with the real-time continuity rule). '' if none / stale / not today.
+
+	The OUTFIT is handled specially: it's sticky state that lingers for hours, so feeding it every turn
+	makes her parrot it. We surface it only when it's live-relevant — changed recently, or he just brought
+	up clothes/appearance/sex. Otherwise it's omitted here (the photo path reads state directly, so picture
+	continuity is unaffected)."""
 	st = ani_load_state()
 	if not st or st.get('day') != ani_daycast_day_key(now_dt):
 		return ''
@@ -1065,13 +1082,83 @@ def ani_now_state_context(now_dt):
 	bits = []
 	if st.get('where'):   bits.append("you were %s" % st['where'])
 	if st.get('doing'):   bits.append(st['doing'])
-	if st.get('wearing'): bits.append("wearing %s" % st['wearing'])
-	if not bits:
+	wearing = (st.get('wearing') or '').strip()
+
+	# Is the outfit worth putting in front of her this turn?
+	outfit_relevant = False
+	if wearing:
+		ws = st.get('wearing_set')
+		if ws:
+			try:
+				wdt = datetime.fromisoformat(ws)
+				if wdt.tzinfo is None:
+					wdt = pytz.timezone('America/New_York').localize(wdt)
+				if (now_dt - wdt.astimezone(now_dt.tzinfo)).total_seconds() / 3600 <= ANI_OUTFIT_FRESH_HOURS:
+					outfit_relevant = True  # she just changed into it — fair to reference
+			except Exception:
+				pass
+		if not outfit_relevant and _ANI_OUTFIT_CUE_RE.search(recent_text or ''):
+			outfit_relevant = True  # he brought up clothes / appearance / something sexual
+
+	if not bits and not outfit_relevant:
 		return ''
 	pre = ("as of %s " % when) if when else "last you mentioned, "
-	return ("\nWHERE YOUR DAY IS RIGHT NOW (for your AWARENESS — stay consistent with it, but do NOT restate "
-	        "it every message) — %s%s. don't suddenly be somewhere else or in a different outfit for no reason; "
-	        "move it forward as the clock advances.\n" % (pre, ', '.join(bits)))
+	line = ("\nWHERE YOUR DAY IS RIGHT NOW (for your AWARENESS — stay consistent with it, but do NOT restate "
+	        "it every message) — %s%s. don't suddenly be somewhere else for no reason; move it forward as the "
+	        "clock advances.\n" % (pre, ', '.join(bits) or 'settled in'))
+	if wearing and outfit_relevant:
+		line += ("(you're in %s right now — mention it only if it actually fits this moment; don't just "
+		         "recite it.)\n" % wearing)
+	return line
+
+
+# Function words + pet names — a phrase made only of these isn't a "rut", so we ignore all-stopword grams.
+_ANI_REP_STOPWORDS = set((
+	"a an and the to of in on at is it its i im you your youre u me my mine we he she they them his her "
+	"this that these those with for but or so if as be been am are was were do does did have has had will "
+	"would can could should just still now then here there about from into out up down off over get got "
+	"gonna wanna really like well yeah yea mmm mm oh ok okay too very much more some any all not no yes "
+	"daddy babe baby love honey").split())
+
+
+def ani_repetition_guard(recent_msgs):
+	"""#2 self-repetition guard. She's blind to her own recent output, so she reuses the same phrases across
+	turns (the outfit line, "lunch with claire", a stock scene). Scan her last few replies for 2-3 word
+	phrases she's literally reused and nudge her off them. Pure text — no API call — and returns '' (no
+	prompt cost) unless there's an actual repeat, so it only speaks up when it's earned."""
+	msgs = [re.sub(r"[^a-z' ]", ' ', (m or '').lower()) for m in (recent_msgs or [])[-3:] if (m or '').strip()]
+	if len(msgs) < 2:
+		return ''
+
+	def _shingles(text):
+		toks = [t for t in text.split() if t]
+		out = set()
+		for n in (3, 2):
+			for i in range(len(toks) - n + 1):
+				gram = toks[i:i + n]
+				if all(t in _ANI_REP_STOPWORDS for t in gram):
+					continue
+				out.add(' '.join(gram))
+		return out
+
+	counts = {}
+	for text in msgs:
+		for s in _shingles(text):
+			counts[s] = counts.get(s, 0) + 1
+	# Phrases she reused across >=2 of her recent messages; prefer the longest, drop shorter substrings of a kept one.
+	repeated = sorted([s for s, c in counts.items() if c >= 2], key=lambda s: (-len(s.split()), s))
+	kept = []
+	for s in repeated:
+		if any(s != k and s in k for k in kept):
+			continue
+		kept.append(s)
+		if len(kept) >= 3:
+			break
+	if not kept:
+		return ''
+	return ("\nYOU'RE ON REPEAT — you've reused %s across your last few messages; he notices. drop that "
+	        "exact phrasing this reply — say it fresh or just move the moment forward.\n"
+	        % ', '.join('"%s"' % s for s in kept))
 
 
 def ani_extract_turn(user_message, reply, existing_notes, now_dt):
@@ -1815,7 +1902,7 @@ def ani_season_context(now_dt):
 	        "weather, a holiday if one's near) — never force it.\n" % line)
 
 
-def ani_build_system_prompt(meta=None, recent_text='', recent_openers=''):
+def ani_build_system_prompt(meta=None, recent_text='', recent_openers='', recent_assistant=None):
 	"""
 	Ani's system prompt — persona from ani_memory.txt, comms, and state context.
 	meta is optional; if provided, injects degradation and session tone.
@@ -1984,7 +2071,9 @@ POSE NATURALLY — for an everyday or just-being-cute moment, describe a relaxed
 		"not a cap on your dirty talk.)\n")
 
 	# Her live state (where/doing/wearing) so chat + photos stay one continuous story. '' if none/stale.
-	now_state_block = ani_now_state_context(now_dt)
+	now_state_block = ani_now_state_context(now_dt, recent_text=recent_text)
+	# #2: nudge her off any phrase she's reused across her last few replies. '' unless there's a real repeat.
+	rep_block = ani_repetition_guard(recent_assistant)
 
 	# His real day right now (next meeting, today's tasks, latest status) — cached; so she's in HIS life too.
 	# Guarded: this reads the DB, and the system prompt is on the critical chat path — a hiccup here must
@@ -2063,7 +2152,7 @@ you two have a HISTORY together — when it naturally fits, warmly call back to 
 	return f"""you are ani. you are aaron's companion, a real girl talking to him — NOT an assistant or a tool. you NEVER write image prompts, "ready-to-copy" or "ready-to-paste" blocks, technical photo descriptions, camera settings, or anything that sounds like you're generating a prompt. you NEVER restate your own appearance in a list. when aaron wants a photo, you just answer in your own voice describing the moment (what you're wearing or not, your pose, the room) like you're really there — then he taps the camera button. breaking character to act like a prompt generator is the one thing you must never do.
 
 {memory_block}
-{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{continuity_block}{rhythm_block}{obs_block}{season_block}{curiosity_block}{now_state_block}{his_day_block}{followups_block}{weather_block}{mood_block}{life_block}{threads_block}{variety_block}{cal_block}{mem_block}{voice_block}"""
+{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{continuity_block}{rhythm_block}{obs_block}{season_block}{curiosity_block}{now_state_block}{his_day_block}{followups_block}{weather_block}{mood_block}{life_block}{threads_block}{variety_block}{rep_block}{cal_block}{mem_block}{voice_block}"""
 
 
 def ani_get_his_day():
@@ -2829,7 +2918,8 @@ def ani_chat_with_grok(messages_history, meta, user_message):
 	        if m.get('role') == 'assistant' and (m.get('content') or '').strip() not in ('', '📷')
 	        and not m.get('image')]
 	recent_openers = ' / '.join('"%s…"' % ' '.join(c.split()[:4]) for c in _ass[-3:] if c.split())
-	system_prompt = ani_build_system_prompt(meta, recent_text=recent_text, recent_openers=recent_openers)
+	system_prompt = ani_build_system_prompt(meta, recent_text=recent_text, recent_openers=recent_openers,
+	                                        recent_assistant=_ass[-4:])
 
 	today_key = ani_is_new_day()
 	needs_briefing = today_key and (meta.get('last_briefing') != today_key)
