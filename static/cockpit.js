@@ -562,8 +562,8 @@
 			var _fb = document.getElementById('focus-btn');
 			if (_fb) _fb.classList.add('is-active');
 		}
-		if (localStorage.getItem('cockpit-nav-newtab') === '1' && typeof applyNavNewTab === 'function') {
-			applyNavNewTab(true);
+		if (typeof applyNavNewTab === 'function') {
+			applyNavNewTab(localStorage.getItem('cockpit-nav-newtab') !== '0');  // default ON
 		}
 
 		// ---- COLLAPSIBLE ----
@@ -670,7 +670,7 @@
 			if (b) b.textContent = 'Open nav links in new tabs: ' + (on ? 'ON' : 'OFF');
 		}
 		function toggleNavNewTab() {
-			var on = localStorage.getItem('cockpit-nav-newtab') !== '1';
+			var on = localStorage.getItem('cockpit-nav-newtab') === '0';  // currently off → turn on (default is ON)
 			localStorage.setItem('cockpit-nav-newtab', on ? '1' : '0');
 			applyNavNewTab(on);
 		}
@@ -681,7 +681,7 @@
 			if (o) {
 				o.classList.add('is-open');
 				settingsRenderPresets();
-				applyNavNewTab(localStorage.getItem('cockpit-nav-newtab') === '1');
+				applyNavNewTab(localStorage.getItem('cockpit-nav-newtab') !== '0');
 			}
 		}
 		function settingsClose() {

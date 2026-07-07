@@ -2139,25 +2139,29 @@
 	// COMMAND PALETTE — Ctrl+K
 	// ============================================================
 
+	// Open an external app respecting the "open nav in new tabs" setting (default ON) — keeps THIS tab
+	// (and whatever's playing in the Cockpit) alive.
+	function cmdGo(url) {
+		if (localStorage.getItem('cockpit-nav-newtab') !== '0') window.open(url, '_blank');
+		else window.location.href = url;
+	}
+
 	const CMD_ITEMS = [
-		{ icon: '⌘', label: 'Command Deck',   hint: '/command-deck/', action: () => window.location.href = '/command-deck/' },
-		{ icon: '▼', label: 'Below Deck',     hint: '/below-deck',    action: () => window.location.href = '/below-deck' },
+		{ icon: '⌘', label: 'Command Deck',   hint: '/command-deck/', action: () => cmdGo('/command-deck/') },
+		{ icon: '▼', label: 'Below Deck',     hint: '/below-deck',    action: () => cmdGo('/below-deck') },
 		{ icon: '⌇', label: 'Publish Status', hint: '/publish',       action: () => window.location.href = '/publish' },
 		{ icon: '✦', label: 'Brain Dump',     hint: 'Ctrl+Space',     action: () => { cmdClose(); brainDumpOpen(); } },
 		{ icon: '▶', label: 'Toggle YouTube Player', hint: 'Ctrl+Shift+Y', action: () => { cmdClose(); ytPlayerToggle(); } },
 		{ icon: '▹', label: 'Toggle Video Player', hint: 'Ctrl+Shift+V', action: () => { cmdClose(); adPlayerToggle(); } },
 		{ icon: '◱', label: 'Toggle Focus Mode', hint: 'Ctrl+Shift+F', action: () => { cmdClose(); if (typeof toggleFocus === 'function') toggleFocus(); } },
 		{ icon: '🦇', label: 'Toggle Ani',    hint: 'Ctrl+Shift+A',   action: () => { cmdClose(); if (typeof aniToggle === 'function') aniToggle(); } },
-		{ icon: '$', label: 'The Ledger',     hint: '/ledger/',       action: () => window.location.href = '/ledger/' },
+		{ icon: '$', label: 'The Ledger',     hint: '/ledger/',       action: () => cmdGo('/ledger/') },
 		{ icon: '⚙', label: 'Settings',       hint: 'Ctrl+,',         action: () => { cmdClose(); if (typeof settingsOpen === 'function') settingsOpen(); } },
 		{ icon: '🙏', label: 'Insert Grateful Log', hint: '',         action: () => { cmdClose(); if (typeof insertGratefulLog === 'function') insertGratefulLog(); } },
 		{ icon: '▦', label: 'Toggle Quick Insert', hint: '',          action: () => { cmdClose(); if (typeof toggleQuickInsert === 'function') toggleQuickInsert(); } },
 		{ icon: '▦', label: 'Toggle Comms Log', hint: '',             action: () => { cmdClose(); if (typeof toggleComms === 'function') toggleComms(); } },
 		{ icon: '▦', label: 'Toggle Mission Log', hint: '',           action: () => { cmdClose(); if (typeof toggleTasks === 'function') toggleTasks(); } },
 		{ icon: '▦', label: 'Toggle Scratch Pad', hint: '',           action: () => { cmdClose(); if (typeof scratchToggle === 'function') scratchToggle(); } },
-		{ icon: '↗', label: 'Command Deck — new tab', hint: '',       action: () => window.open('/command-deck/', '_blank') },
-		{ icon: '↗', label: 'Below Deck — new tab', hint: '',         action: () => window.open('/below-deck', '_blank') },
-		{ icon: '↗', label: 'Ledger — new tab', hint: '',            action: () => window.open('/ledger/', '_blank') },
 		{ icon: '⏎', label: 'Refresh',        hint: '',               action: () => window.location.reload() },
 	];
 
