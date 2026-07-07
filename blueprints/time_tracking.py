@@ -721,6 +721,7 @@ def time_manual():
 	description = (data.get('description') or '').strip()
 	time_category_id = data.get('time_category_id')
 	task_id = data.get('task_id')
+	ticket_id = data.get('ticket_id')
 	if not (project_id and date and start_time and end_time):
 		return jsonify({'error': 'project_id, date, start_time and end_time are required'}), 400
 	eastern = pytz.timezone('US/Eastern')
@@ -744,7 +745,10 @@ def time_manual():
 	if project['project_type'] not in _TRACKABLE_TYPES:
 		conn.close()
 		return jsonify({'error': 'project_not_trackable'}), 400
+	# Optional scope — a task OR a ticket on this project (mutually exclusive; task wins if both sent).
+	# Inherits the scope's default category when none was passed, mirroring time_start.
 	tid = None
+	tkid = None
 	if task_id:
 		task = conn.execute('SELECT id, project_id, time_category_id FROM tasks WHERE id = ?', (task_id,)).fetchone()
 		if task and task['project_id'] == int(project_id):
@@ -754,6 +758,15 @@ def time_manual():
 				                   (task['time_category_id'],)).fetchone()
 				if cat and cat['is_active']:
 					time_category_id = task['time_category_id']
+	elif ticket_id:
+		tk = conn.execute('SELECT id, project_id, time_category_id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+		if tk and tk['project_id'] == int(project_id):
+			tkid = tk['id']
+			if not time_category_id and tk['time_category_id']:
+				cat = conn.execute('SELECT id, is_active FROM time_categories WHERE id = ?',
+				                   (tk['time_category_id'],)).fetchone()
+				if cat and cat['is_active']:
+					time_category_id = tk['time_category_id']
 
 	now = _utc_now_iso()
 	cur = conn.execute('''
@@ -762,7 +775,7 @@ def time_manual():
 			 time_category_id, description, started_at, ended_at, duration_seconds, created, updated)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	''', (
-		project_id, tid, None, None, None,
+		project_id, tid, None, None, tkid,
 		int(time_category_id) if time_category_id else None,
 		description,
 		start_et.astimezone(pytz.UTC).strftime(_UTC_FORMAT),
@@ -774,6 +787,27 @@ def time_manual():
 	row = _fetch_entry_with_context(conn, new_id)
 	conn.close()
 	return jsonify({'success': True, 'entry': _serialize_entry(row)})
+
+
+@time_tracking_bp.route('/time/scopes/<int:project_id>', methods=['GET'])
+def time_scopes(project_id):
+	"""Open tasks + open tickets on a project — for the manual-entry Scope picker."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 403
+	conn = get_db()
+	tasks = conn.execute(
+		'SELECT id, title FROM tasks WHERE project_id = ? AND status = \'open\' '
+		'ORDER BY "order" ASC, id DESC LIMIT 150', (project_id,)).fetchall()
+	tickets = conn.execute(
+		"SELECT id, ticket_number, title FROM tickets WHERE project_id = ? AND status != 'closed' "
+		"ORDER BY created DESC LIMIT 150", (project_id,)).fetchall()
+	conn.close()
+	return jsonify({
+		'tasks': [{'id': t['id'], 'title': t['title'] or ''} for t in tasks],
+		'tickets': [{'id': t['id'],
+		             'label': ((str(t['ticket_number']) + ' · ') if t['ticket_number'] else '') + (t['title'] or '')}
+		            for t in tickets],
+	})
 
 
 @time_tracking_bp.route('/time/<int:entry_id>/delete', methods=['POST'])

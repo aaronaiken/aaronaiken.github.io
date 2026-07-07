@@ -882,6 +882,35 @@
 		if (date && !date.value) date.value = new Date().toISOString().slice(0, 10);
 	}
 
+	// Populate the Scope picker (open tasks + tickets on the chosen project).
+	// Runs on every project change; resets to "whole project" when cleared.
+	async function loadScopes(pid) {
+		const scope = document.getElementById('aeScope');
+		if (!scope) return;
+		if (!pid) {
+			scope.innerHTML = '<option value="">— whole project —</option>';
+			return;
+		}
+		scope.innerHTML = '<option value="">loading…</option>';
+		try {
+			const d = await (await fetch(`/time/scopes/${pid}`, { credentials: 'same-origin' })).json();
+			let html = '<option value="">— whole project —</option>';
+			if ((d.tasks || []).length) {
+				html += '<optgroup label="Tasks">' +
+					d.tasks.map((t) => `<option value="task:${t.id}">${escapeHtml(t.title || '(untitled)')}</option>`).join('') +
+					'</optgroup>';
+			}
+			if ((d.tickets || []).length) {
+				html += '<optgroup label="Tickets">' +
+					d.tickets.map((t) => `<option value="ticket:${t.id}">${escapeHtml(t.label || '(untitled)')}</option>`).join('') +
+					'</optgroup>';
+			}
+			scope.innerHTML = html;
+		} catch (_e) {
+			scope.innerHTML = '<option value="">— whole project —</option>';
+		}
+	}
+
 	async function submitManualEntry() {
 		const status = document.getElementById('aeStatus');
 		const payload = {
@@ -892,6 +921,9 @@
 			time_category_id: document.getElementById('aeCategory').value || '',
 			description: document.getElementById('aeDesc').value,
 		};
+		const scopeVal = (document.getElementById('aeScope') || {}).value || '';
+		if (scopeVal.startsWith('task:')) payload.task_id = scopeVal.slice(5);
+		else if (scopeVal.startsWith('ticket:')) payload.ticket_id = scopeVal.slice(7);
 		if (!payload.project_id || !payload.date || !payload.start_time || !payload.end_time) {
 			if (status) status.textContent = 'project, date, start & end required';
 			return;
@@ -925,6 +957,8 @@
 		});
 		const aeSubmit = document.getElementById('aeSubmit');
 		if (aeSubmit) aeSubmit.addEventListener('click', submitManualEntry);
+		const aeProject = document.getElementById('aeProject');
+		if (aeProject) aeProject.addEventListener('change', () => loadScopes(aeProject.value));
 
 		document.querySelectorAll('.cd-reports-preset').forEach((b) => {
 			b.addEventListener('click', () => setPreset(b.dataset.period));
