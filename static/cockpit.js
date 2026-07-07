@@ -230,7 +230,7 @@
 			const k = e.key.toLowerCase();
 			if (k === 'b') { e.preventDefault(); wrapText('**', '**'); }
 			else if (k === 'i') { e.preventDefault(); wrapText('*', '*'); }
-			else if (k === 'k') { e.preventDefault(); smartURL(); }
+			// Ctrl+K is the command palette now — the 🔗 LINK button still runs smartURL() on click.
 		});
 
 		function toggleTheme() {}
