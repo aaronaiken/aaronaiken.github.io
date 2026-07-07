@@ -79,8 +79,28 @@ _ANI_OUTFIT_CUE_RE = re.compile(
 ANI_WARDROBE_MIN_HOURS = float(os.environ.get('ANI_WARDROBE_MIN_HOURS', '2.5'))  # min gap before nudging another change
 _ANI_ACTIVEWEAR_RE = re.compile(r"\b(sports bra|gym clothes|workout clothes|athletic wear|activewear|"
                                 r"yoga pants|running (shorts|clothes|tights)|leotard|spandex|sweaty)\b", re.I)
-_ANI_GYM_DOING_RE = re.compile(r"\b(gym|working out|workout|lifting|weights|run(ning)?|jog|yoga|pilates|"
-                               r"spin|cardio|exercis)\b", re.I)
+_ANI_GYM_DOING_RE = re.compile(r"\b(gym|working out|workout|lifting|weights|jog(ging)?|yoga|pilates|"
+                               r"spin class|cardio|exercis|treadmill)\b", re.I)
+# Colors / adjectives / filler that DESCRIBE an outfit without identifying it. Shared garment NOUNS are what
+# tell us "same outfit, reworded" (leggings → sweaty leggings → these leggings) from a real change of clothes.
+_ANI_OUTFIT_FILLER = frozenset((
+	"these those the a an my her in on off still soft sweaty warm cool little light dark cute comfy cozy new "
+	"same all and with from just now high waisted highwaisted low loose tight favorite fresh nice pretty and "
+	"pink blush blue black white grey gray red green tan cream beige navy purple lace some pair of").split())
+
+
+def _ani_outfit_changed(old, new):
+	"""True if `new` is a genuinely different outfit from `old`, not just the same one reworded. Compares the
+	garment NOUNS (colors/adjectives/filler dropped): if they still share a garment word it's the same outfit,
+	so the change-timestamp must NOT reset — that spurious reset is what made a reworded-but-unchanged outfit
+	look perpetually 'just changed' and stall the wardrobe cadence."""
+	def nouns(s):
+		return {w for w in re.findall(r"[a-z]+", (s or '').lower())
+		        if len(w) > 2 and w not in _ANI_OUTFIT_FILLER}
+	old_n = nouns(old)
+	if not old_n:
+		return True   # no prior outfit to compare — treat as a change (stamps the first one)
+	return old_n.isdisjoint(nouns(new))   # shared garment word => same outfit reworded => not a real change
 
 # Chat / opener / daycast model. grok-4.3 (reasoning) is a real step up from the old non-reasoning model
 # at actually USING her calendar/weather/life context instead of defaulting to clichés — but it's served
@@ -1054,7 +1074,9 @@ def ani_update_now_state(partial, now_dt):
 		if v:
 			v = v[:160]
 			# Track when the OUTFIT actually changes, so the prompt can tell "fresh" from "hours-old sticky".
-			if k == 'wearing' and v != cur.get('wearing'):
+			# Guard against reword-churn (leggings ↔ sweaty leggings): only re-stamp on a REAL change of
+			# clothes, else an unchanged-but-reworded outfit resets the clock and stalls the cadence forever.
+			if k == 'wearing' and v != cur.get('wearing') and _ani_outfit_changed(cur.get('wearing'), v):
 				cur['wearing_set'] = now_dt.isoformat()
 			cur[k] = v
 			changed = True
