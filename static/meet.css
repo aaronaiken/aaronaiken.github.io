@@ -9,11 +9,29 @@
   --ink: #e8d6b0;
   --ink-soft: #9a8a68;
   --danger: #c0453a;
+  --glow: #241a06;
+  --field: #0b0805;
+}
+/* light mode follows the device setting */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f6f1e6;
+    --panel: #fffdf6;
+    --line: #e3d7ba;
+    --amber: #b5730a;
+    --amber-hi: #d4880a;
+    --amber-lo: #8a5a12;
+    --ink: #3a2f1a;
+    --ink-soft: #8a7a58;
+    --danger: #b23227;
+    --glow: #f4e6c6;
+    --field: #ffffff;
+  }
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body {
-  background: radial-gradient(900px 500px at 50% -10%, #241a06 0%, transparent 60%), var(--bg);
+  background: radial-gradient(900px 500px at 50% -10%, var(--glow) 0%, transparent 60%), var(--bg);
   color: var(--ink);
   font-family: 'Share Tech Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
@@ -45,7 +63,7 @@ body {
 .gate-card h2 { color: var(--amber-hi); letter-spacing: 0.12em; margin: 0 0 18px; }
 .gate-card input {
   width: 100%; font-family: inherit; font-size: 1rem; color: var(--ink);
-  background: #0b0805; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+  background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
 }
 .gate-card input:focus { outline: none; border-color: var(--amber); }
 .gate-card .btn-primary { width: 100%; }
@@ -67,7 +85,7 @@ body {
 .tile video { width: 100%; height: 100%; object-fit: cover; background: #000; }
 .tile .tag {
   position: absolute; left: 8px; bottom: 8px; font-size: 0.72rem; letter-spacing: 0.06em;
-  color: var(--ink); background: rgba(0,0,0,0.55); border: 1px solid var(--line);
+  color: #f0e6cc; background: rgba(0,0,0,0.55); border: 1px solid var(--line);
   padding: 3px 8px; border-radius: 6px;
 }
 
@@ -79,7 +97,7 @@ body {
 .ctl {
   display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
   font-family: inherit; font-size: 0.62rem; letter-spacing: 0.08em; color: var(--ink);
-  background: #0b0805; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--field); border: 1px solid var(--line); border-radius: 8px;
   padding: 8px 12px; cursor: pointer; min-width: 58px;
 }
 .ctl span { font-size: 1.1rem; line-height: 1; }
