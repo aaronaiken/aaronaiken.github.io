@@ -345,19 +345,20 @@
 
   // ---------- join ----------
   function begin() {
-    Promise.all([
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true }),
-      fetch('/meet/ice').then(function (r) { return r.json(); }).catch(function () { return null; })
-    ]).then(function (arr) {
-      localStream = arr[0];
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      el('gate-error').textContent = 'this browser blocks camera/mic here (needs https).';
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(function (stream) {
+      localStream = stream;
       camTrack = localStream.getVideoTracks()[0];
-      if (arr[1] && arr[1].iceServers) iceServers = arr[1].iceServers;
-
+      return fetch('/meet/ice').then(function (r) { return r.json(); }).catch(function () { return null; });
+    }).then(function (ice) {
+      if (ice && ice.iceServers) iceServers = ice.iceServers;
       el('name-gate').classList.add('hidden');
       el('stage').classList.remove('hidden');
       var lv = makeTile('local', name + ' (you)', true);
       lv.srcObject = localStream;
-
       wireControls();
       polling = true;
       return api('/join', { peer_id: PEER_ID, name: name });
@@ -365,7 +366,11 @@
       if (res && res.peers) reconcile(res.peers);
       poll();
     }).catch(function (err) {
-      el('gate-error').textContent = 'need camera + mic access to join. (' + (err && err.name || 'error') + ')';
+      console.error('[meet] join failed:', err);
+      var permission = err && (err.name === 'NotAllowedError' || err.name === 'NotFoundError' || err.name === 'NotReadableError');
+      el('gate-error').textContent = permission
+        ? 'need camera + mic access to join. (' + err.name + ')'
+        : 'could not start: ' + (err && (err.message || err.name) || 'unknown error');
       el('name-gate').classList.remove('hidden');
       el('stage').classList.add('hidden');
     });
