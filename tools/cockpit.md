@@ -10,7 +10,7 @@ author: aaron
 
 The Cockpit is a private, password-protected web application I built to publish status updates to this site from anywhere — a phone, a tablet, a borrowed computer. It lives on [PythonAnywhere](https://pythonanywhere.com) and handles everything from writing the update to pushing it live.
 
-It has since grown far past that original brief. The Cockpit is now the bridge of a small private operating system — publishing, a task kneeboard (Below Deck), a project knowledge base (Command Deck), a daily focus view (Today), full time tracking, mileage logging, meeting records, a support-ticket queue, reports across all of it, and a private AI companion (Huyang). It runs on a single Flask app split across seventeen blueprints. None of it is publicly accessible. This page is the technical manual.
+It has since grown far past that original brief. The Cockpit is now the bridge of a small private operating system — publishing, a task kneeboard (Below Deck), a project knowledge base (Command Deck), a daily focus view (Today), full time tracking, mileage logging, meeting records, a support-ticket queue, reports across all of it, and a private AI companion (Huyang). It runs on a single Flask app split across eighteen blueprints. None of it is publicly accessible. This page is the technical manual.
 
 ---
 
@@ -32,7 +32,7 @@ In May 2026 the entire app got split across three layers:
 
 - **`app.py` (~140 lines)** — entry point only. Imports, env-var constants, the `Flask()` constructor, and the chain of `app.register_blueprint(...)` calls for each blueprint. Nothing else.
 - **`helpers/`** — shared utilities, organized by concern. Auth, database, git operations, Bunny image uploads, omg.lol mirroring, comms, scratch I/O. Every helper is a leaf in the import graph — they don't import from `app.py` or from each other.
-- **`blueprints/`** — one Flask Blueprint per route domain. Seventeen of them currently, each owning its own routes and any blueprint-internal helpers.
+- **`blueprints/`** — one Flask Blueprint per route domain. Eighteen of them currently, each owning its own routes and any blueprint-internal helpers.
 
 The result: routes are findable, helpers are reusable, and each blueprint is independently editable. The aesthetic and behavior of the app didn't change. Only the file structure did.
 
@@ -136,6 +136,14 @@ Each meeting is a project-linked record with markdown notes, action items (which
 Recurring meetings (`weekly`, `biweekly`, `monthly`) spawn the next instance when the current one is marked complete. Recurring instances share a `recurrence_anchor_id` so the series stays linked across time.
 
 The notes field is markdown because meeting notes need real formatting — bullet points, sub-bullets, the occasional link — and HTML would be too much friction.
+
+---
+
+## Meet (Video Calls)
+
+A homemade video meeting, built into the Cockpit — no Zoom, no installs. Start a room from `/meet` (it can be named and optionally scheduled), get a shareable link, and send it to whoever's joining. Guests open the link, type a name, and they're in. Camera, mic, screen share, and background blur, plus a notes pad you can copy out afterward.
+
+The media is peer-to-peer WebRTC — a mesh, sized for small 2–4 person calls — and Flask acts only as the signaling relay, over HTTP polling since PythonAnywhere has no WebSockets. Reliability across locked-down networks comes from TURN (Cloudflare Realtime or a static server, both optional via env). Background blur runs entirely in the browser via MediaPipe segmentation: the person is kept sharp on a canvas while the background is blurred, and that processed canvas is swapped into the outgoing video — so it costs the other participants nothing. Rooms are ephemeral (auto-cleaned after 48 hours) but persist long enough that a link made in the morning still works at meeting time. Leaving as the host ends the meeting for everyone.
 
 ---
 
