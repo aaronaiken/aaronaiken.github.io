@@ -32,10 +32,12 @@
   </div>
 
   <aside id="notes-panel" class="notes-panel hidden">
-    <div class="notes-head"><span>notes</span><button id="notes-close" class="notes-x" title="close">✕</button></div>
-    <textarea id="notes-text" placeholder="jot things down… saved on this device, copy when you're done."></textarea>
+    <div class="notes-head"><span>shared notes</span><button id="notes-close" class="notes-x" title="close">✕</button></div>
+    <label class="notes-mine-label">your notes — everyone in the room sees these</label>
+    <textarea id="notes-text" placeholder="jot things down…"></textarea>
+    <div id="notes-others" class="notes-others"></div>
     <div class="notes-actions">
-      <button id="notes-copy" class="mini">copy</button>
+      <button id="notes-copy" class="mini">copy all</button>
       <span id="notes-saved" class="notes-saved"></span>
     </div>
   </aside>
@@ -60,6 +62,6 @@
       isHost: {{ 'true' if is_host else 'false' }}
     };
   </script>
-  <script src="{{ url_for('static', filename='meet.js') }}?v=5"></script>
+  <script src="{{ url_for('static', filename='meet.js') }}?v=6"></script>
 </body>
 </html>

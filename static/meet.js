@@ -5,18 +5,30 @@
    the outgoing video track via replaceTrack — no renegotiation needed. */
 (function () {
   var ROOM = window.MEET.room;
-  var PEER_ID = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  // stable per-room identity (survives a reload so your notes section + mesh spot stay yours)
+  var PEER_ID = (function () {
+    var rnd = function () { return Math.random().toString(36).slice(2) + Date.now().toString(36); };
+    try {
+      var k = 'meet-peer-' + ROOM, v = sessionStorage.getItem(k);
+      if (!v) { v = rnd(); sessionStorage.setItem(k, v); }
+      return v;
+    } catch (e) { return rnd(); }
+  })();
   var API = '/meet/r/' + encodeURIComponent(ROOM);
 
   var localStream = null;      // camera + mic
   var camTrack = null;         // the live camera video track (kept for un-share)
   var screenStream = null;     // active screen capture, if any
+  var myScreen = false;        // am I currently screen-sharing (broadcast to peers)
+  var peerScreen = {};         // peerId -> bool (are THEY screen-sharing → contain, not crop)
   var blurOn = false, blurReady = false;   // background blur (local, sender-side)
   var seg = null, blurVideo = null, blurCanvas = null, blurCtx = null, blurStream = null, blurTrack = null;
   var iceServers = [{ urls: ['stun:stun.l.google.com:19302'] }];
   var peers = {};              // peerId -> { pc, name, tile, pendingCandidates:[] }
   var name = 'guest';
   var polling = false;
+  var latestNotes = [];        // shared-notes sections from everyone (from /poll)
+  var noteSaveT = null, lastOthers = '';
 
   var el = function (id) { return document.getElementById(id); };
   var status = function (t) { var s = el('status'); if (s) s.textContent = t || ''; };
@@ -75,7 +87,18 @@
     pc.onconnectionstatechange = function () {
       if (pc.connectionState === 'failed' || pc.connectionState === 'closed') dropPeer(id);
     };
+    applyScreenClass(id);                                   // apply any screen state already known
+    if (myScreen) sendSignal(id, 'screen', { on: true });  // tell a late joiner I'm sharing
     return entry;
+  }
+
+  // a peer's tile shows CONTAIN (whole screen, letterboxed) while they screen-share, else COVER (crop for faces)
+  function applyScreenClass(id) {
+    var t = el('tile-' + id);
+    if (t) t.classList.toggle('is-screen', !!peerScreen[id]);
+  }
+  function broadcastScreen() {
+    Object.keys(peers).forEach(function (id) { sendSignal(id, 'screen', { on: myScreen }); });
   }
 
   function dropPeer(id) {
@@ -152,8 +175,11 @@
         if (s.kind === 'offer') onOffer(s.from, null, s.payload);
         else if (s.kind === 'answer') onAnswer(s.from, s.payload);
         else if (s.kind === 'candidate') onCandidate(s.from, s.payload);
+        else if (s.kind === 'screen') { peerScreen[s.from] = !!(s.payload && s.payload.on); applyScreenClass(s.from); }
       });
       reconcile(res.peers || []);
+      latestNotes = res.notes || [];
+      renderOtherNotes(latestNotes);
       var n = (res.peers || []).length;
       status(n === 0 ? 'waiting for others… share the link' : (n + 1) + ' in the room');
     }).catch(function () {}).then(function () {
@@ -177,7 +203,9 @@
       var track = s.getVideoTracks()[0];
       replaceOutgoingVideo(track);
       var lv = localVideoEl(); if (lv) lv.srcObject = s;
-      el('screen-btn').classList.add('on');
+      var lt = el('tile-local'); if (lt) lt.classList.add('is-screen');   // show my whole screen, not cropped
+      var sb = el('screen-btn'); if (sb) sb.classList.add('on');
+      myScreen = true; broadcastScreen();                                 // peers switch my tile to contain
       track.onended = stopScreen;   // user hit the browser's "stop sharing"
     });
   }
@@ -185,7 +213,9 @@
     if (screenStream) { screenStream.getTracks().forEach(function (t) { t.stop(); }); screenStream = null; }
     replaceOutgoingVideo(currentCamTrack());
     var lv = localVideoEl(); if (lv) lv.srcObject = (blurOn && blurStream) ? blurStream : localStream;
-    el('screen-btn').classList.remove('on');
+    var lt = el('tile-local'); if (lt) lt.classList.remove('is-screen');
+    var sb = el('screen-btn'); if (sb) sb.classList.remove('on');
+    myScreen = false; broadcastScreen();
   }
 
   // ---------- background blur (MediaPipe segmentation, all local + sender-side) ----------
@@ -335,20 +365,58 @@
     showEnd(window.MEET.isHost ? 'closed' : 'left');
   }
 
-  // ---------- notes ----------
+  // ---------- shared notes (everyone sees everyone's; each edits only their own section) ----------
   var NOTES_KEY = 'meet-notes-' + ROOM;
+
+  function saveNoteSoon() {
+    clearTimeout(noteSaveT);
+    noteSaveT = setTimeout(function () {
+      var ta = el('notes-text');
+      api('/note', { peer_id: PEER_ID, name: name, body: ta ? ta.value : '' }).catch(function () {});
+    }, 500);
+  }
+
+  function renderOtherNotes(notes) {
+    var box = el('notes-others'); if (!box) return;
+    var others = (notes || []).filter(function (n) { return n.peer_id !== PEER_ID; });
+    var sig = JSON.stringify(others);
+    if (sig === lastOthers) return;   // unchanged → don't re-render (avoids flicker while others type)
+    lastOthers = sig;
+    box.innerHTML = '';
+    others.forEach(function (n) {
+      if (!(n.body || '').trim()) return;
+      var sec = document.createElement('div'); sec.className = 'note-section';
+      var who = document.createElement('div'); who.className = 'note-who'; who.textContent = n.name || 'guest';
+      var b = document.createElement('div'); b.className = 'note-body'; b.textContent = n.body;
+      sec.appendChild(who); sec.appendChild(b); box.appendChild(sec);
+    });
+  }
+
+  function combinedNotes() {   // everyone's notes, for the end-screen copy
+    var parts = [];
+    var ta = el('notes-text');
+    if (ta && ta.value.trim()) parts.push('you:\n' + ta.value.trim());
+    latestNotes.forEach(function (n) {
+      if (n.peer_id === PEER_ID || !(n.body || '').trim()) return;
+      parts.push((n.name || 'guest') + ':\n' + n.body.trim());
+    });
+    return parts.join('\n\n');
+  }
+
   function wireNotes() {
     var ta = el('notes-text');
     if (ta) ta.value = localStorage.getItem(NOTES_KEY) || '';
+    if (ta && ta.value.trim()) saveNoteSoon();   // push a restored note so the room sees it
     wire('notes-btn', function () { var p = el('notes-panel'); if (p) p.classList.toggle('hidden'); if (ta) ta.focus(); });
     wire('notes-close', function () { var p = el('notes-panel'); if (p) p.classList.add('hidden'); });
     if (ta) ta.addEventListener('input', function () {
       localStorage.setItem(NOTES_KEY, ta.value);
+      saveNoteSoon();
       var s = el('notes-saved'); if (s) { s.textContent = 'saved'; clearTimeout(ta._t); ta._t = setTimeout(function () { s.textContent = ''; }, 900); }
     });
     wire('notes-copy', function () {
       var b = el('notes-copy');
-      navigator.clipboard.writeText((ta && ta.value) || '').then(function () { b.textContent = 'copied ✓'; setTimeout(function () { b.textContent = 'copy'; }, 1000); });
+      navigator.clipboard.writeText(combinedNotes()).then(function () { b.textContent = 'copied ✓'; setTimeout(function () { b.textContent = 'copy all'; }, 1000); });
     });
   }
 
@@ -357,13 +425,15 @@
     var titles = { left: "you've left the meeting", closed: 'meeting ended', ended: 'the meeting ended' };
     el('stage').classList.add('hidden');
     el('name-gate').classList.add('hidden');
-    el('ended-title').textContent = titles[mode] || 'meeting ended';
-    el('ended-notes').value = localStorage.getItem(NOTES_KEY) || ((el('notes-text') || {}).value || '');
+    var et = el('ended-title'); if (et) et.textContent = titles[mode] || 'meeting ended';
+    var en = el('ended-notes'); if (en) en.value = combinedNotes();
     var rejoin = el('ended-rejoin');
-    if (mode === 'left') { rejoin.classList.remove('hidden'); rejoin.href = location.pathname; }
-    else rejoin.classList.add('hidden');
-    el('ended-new').classList.toggle('hidden', !window.MEET.isHost);
-    el('ended').classList.remove('hidden');
+    if (rejoin) {
+      if (mode === 'left') { rejoin.classList.remove('hidden'); rejoin.href = location.pathname; }
+      else rejoin.classList.add('hidden');
+    }
+    var nw = el('ended-new'); if (nw) nw.classList.toggle('hidden', !window.MEET.isHost);
+    var end = el('ended'); if (end) end.classList.remove('hidden');
   }
 
   // ---------- join ----------

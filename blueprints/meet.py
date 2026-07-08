@@ -59,6 +59,9 @@ def _db():
         CREATE TABLE IF NOT EXISTS signals (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             room_id TEXT, to_peer TEXT, from_peer TEXT, kind TEXT, payload TEXT, created_at TEXT);
+        CREATE TABLE IF NOT EXISTS notes (
+            room_id TEXT, peer_id TEXT, name TEXT, body TEXT, updated_at TEXT,
+            PRIMARY KEY (room_id, peer_id));
     """)
     for col in ('label', 'scheduled_at'):   # additive; safe to re-run
         try:
@@ -87,6 +90,12 @@ def _roster(db, room_id, exclude=None):
     return [{'id': r['peer_id'], 'name': r['name']} for r in rows if r['peer_id'] != exclude]
 
 
+def _notes(db, room_id):
+    rows = db.execute("SELECT peer_id, name, body FROM notes WHERE room_id=? AND body != '' ORDER BY updated_at",
+                      (room_id,)).fetchall()
+    return [{'peer_id': r['peer_id'], 'name': r['name'], 'body': r['body']} for r in rows]
+
+
 # ---- pages ----
 
 def _rooms_with_counts(db):
@@ -111,6 +120,7 @@ def meet_home():
     db.execute("DELETE FROM rooms WHERE created_at < ?", (cutoff,))
     db.execute("DELETE FROM participants WHERE room_id NOT IN (SELECT id FROM rooms)")
     db.execute("DELETE FROM signals WHERE room_id NOT IN (SELECT id FROM rooms)")
+    db.execute("DELETE FROM notes WHERE room_id NOT IN (SELECT id FROM rooms)")
     db.commit()
     rooms = _rooms_with_counts(db)
     db.close()
@@ -154,6 +164,7 @@ def meet_delete(room_id):
     db.execute("DELETE FROM rooms WHERE id=?", (room_id,))
     db.execute("DELETE FROM participants WHERE room_id=?", (room_id,))
     db.execute("DELETE FROM signals WHERE room_id=?", (room_id,))
+    db.execute("DELETE FROM notes WHERE room_id=?", (room_id,))
     db.commit()
     db.close()
     return redirect(url_for('meet.meet_home'))
@@ -246,8 +257,9 @@ def meet_poll(room_id):
         db.execute("DELETE FROM signals WHERE id IN (%s)" % ",".join("?" * len(ids)), ids)
     db.commit()
     peers = _roster(db, room_id, exclude=peer_id)
+    notes = _notes(db, room_id)
     db.close()
-    return jsonify({'peers': peers, 'signals': out})
+    return jsonify({'peers': peers, 'signals': out, 'notes': notes})
 
 
 @meet_bp.route('/meet/r/<room_id>/signal', methods=['POST'])
@@ -262,6 +274,26 @@ def meet_signal(room_id):
     db = _db()
     db.execute("INSERT INTO signals (room_id, to_peer, from_peer, kind, payload, created_at) VALUES (?,?,?,?,?,?)",
                (room_id, to_peer, from_peer, kind, json.dumps(payload), _iso()))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+
+@meet_bp.route('/meet/r/<room_id>/note', methods=['POST'])
+def meet_note(room_id):
+    """Save this participant's section of the shared notes. Everyone edits only their own
+    section (keyed by peer_id) — no merge conflicts — and sees all sections via /poll."""
+    body = request.json or {}
+    peer_id = (body.get('peer_id') or '').strip()
+    name = (body.get('name') or 'guest').strip()[:40]
+    text = (body.get('body') or '')[:20000]
+    if not peer_id:
+        return jsonify({'error': 'peer_id required'}), 400
+    db = _db()
+    db.execute("""INSERT INTO notes (room_id, peer_id, name, body, updated_at) VALUES (?,?,?,?,?)
+                  ON CONFLICT(room_id, peer_id) DO UPDATE SET name=excluded.name, body=excluded.body,
+                    updated_at=excluded.updated_at""",
+               (room_id, peer_id, name, text, _iso()))
     db.commit()
     db.close()
     return jsonify({'ok': True})
@@ -289,6 +321,7 @@ def meet_close(room_id):
     db.execute("DELETE FROM rooms WHERE id=?", (room_id,))
     db.execute("DELETE FROM participants WHERE room_id=?", (room_id,))
     db.execute("DELETE FROM signals WHERE room_id=?", (room_id,))
+    db.execute("DELETE FROM notes WHERE room_id=?", (room_id,))
     db.commit()
     db.close()
     return jsonify({'ok': True})
