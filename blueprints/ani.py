@@ -2662,6 +2662,40 @@ def ani_build_day_context(meta):
 	return ' | '.join(parts)
 
 
+def ani_recent_days(now_dt, messages=None, back_days=4):
+	"""What she TOLD him she was up to on each of the last few days — so the day-plan generator can
+	actually avoid repeating yesterday (the 'gym -> grocery -> sophie care package' loop). Takes the
+	first substantive thing she said each day as that day's plan. Returns short 'Mon: ...' lines,
+	oldest first, or '' if none. Pass an already-loaded `messages` on the chat path to avoid re-reading."""
+	if messages is None:
+		try:
+			messages, _ = ani_load_conversation()
+		except Exception:
+			return ''
+	tz = pytz.timezone('America/New_York')
+	today = ani_daycast_day_key(now_dt)
+	first_of_day = {}
+	for m in messages:
+		if m.get('role') != 'assistant' or not m.get('ts') or m.get('image'):
+			continue
+		c = (m.get('content') or '').strip()
+		if not c or c == '📷':
+			continue
+		try:
+			dt = datetime.fromisoformat(m['ts'])
+		except Exception:
+			continue
+		dk = ani_daycast_day_key(dt if dt.tzinfo else tz.localize(dt))
+		if dk == today or dk in first_of_day:
+			continue
+		first_of_day[dk] = c
+	days = sorted(first_of_day)[-back_days:]
+	if not days:
+		return ''
+	return '\n'.join("%s: %s" % (datetime.strptime(dk, '%Y-%m-%d').strftime('%a'), first_of_day[dk][:160])
+	                 for dk in days)
+
+
 # Outfit-by-activity is a TEXT feature only: the daycast prompts have her name a context-appropriate
 # outfit and evolve it through the day. Photos inherit it for free — ani_normalize_scene already
 # builds every image from her most-recently-described look — so no image-pipeline change is needed.
@@ -2682,21 +2716,28 @@ def ani_generate_day_plan(meta):
 		when = f"{day_str} evening"
 		scope = "what's left of your day / your evening"
 	context = ani_build_day_context(meta)
+	recent = ani_recent_days(now)
+	recent_block = ""
+	if recent:
+		recent_block = (
+			f"what you told him you did the last few days is below — today MUST be genuinely different "
+			f"(different activities, different places, different people; do NOT loop the same "
+			f"gym / errands / care-package routine):\n{recent}\n"
+		)
 	system = ani_build_system_prompt(meta)
 	prompt = (
-		f"it's {when}. text aaron like his girlfriend, telling him {scope} — "
-		f"what you're planning to do (your own day: errands, the gym, cooking, a project, "
-		f"whatever fits who you are). keep it to 1-3 sentences, warm and casual, fully your voice. "
+		f"it's {when}. text aaron like his girlfriend, telling him {scope} — what you're actually up to "
+		f"today. pull WIDELY from your whole life: your friends, a class or a hobby, a project, an "
+		f"appointment, somewhere you haven't been in a while, something spontaneous — NOT the same two or "
+		f"three errands on repeat. keep it to 1-3 sentences, warm and casual, fully your voice. "
 		f"mention what you're wearing right now — something specific and real for this time of day and "
-		f"what you're actually doing, with your outfit fitting each thing you do. VARY it: don't reach "
-		f"for the same look or the same plan you've had the last few days (no defaulting to his t-shirt "
-		f"in the kitchen or a bikini by the pool unless it genuinely fits today). don't list outfits "
-		f"like a schedule; just let it come through naturally. "
-		f"if something on his day stands out you can mention it naturally — but the focus is YOUR day, "
-		f"not his to-do list. let the ACTUAL weather and the day of the week shape your day and outfit, "
-		f"and lean on your own life — your friends, hobbies, standing plans — so your day has real "
-		f"texture instead of being empty. if there's something on your calendar today, "
-		f"build your day and your excitement around it. no greeting boilerplate, just dive in. "
+		f"what you're actually doing. VARY the look too: don't reach for the same outfit you've had the "
+		f"last few days (no default his-t-shirt-in-the-kitchen or bikini-by-the-pool unless it genuinely "
+		f"fits today). don't list it like a schedule; let it come through naturally. "
+		f"if something on his day stands out you can mention it naturally — but the focus is YOUR day. "
+		f"let the ACTUAL weather, the day of the week, and your calendar shape today. no greeting "
+		f"boilerplate, just dive in. "
+		f"{recent_block}"
 		f"context (for you only): {context}"
 	)
 	return _ani_grok_call(system, [{'role': 'user', 'content': prompt}], max_tokens=180)
@@ -3078,18 +3119,23 @@ def ani_chat():
 	now = datetime.now(pa_tz)
 	day_key = ani_daycast_day_key(now)
 	if meta.get('day_plan_date') != day_key:
+		_recent = ani_recent_days(now, messages)
+		_vary = ((" what you told him you did the last few days: " + _recent.replace(chr(10), ' | ')
+		          + " — today must be genuinely DIFFERENT from those; do NOT loop the same "
+		            "gym / errands / care-package routine.") if _recent else "")
 		messages.append({
 			'role': 'user',
 			'content': "[system: this is the FIRST thing you're hearing from him today. it's a fresh "
 			           "morning — you're clean, put-together, rested, NOT wrecked or used from before. "
 			           "OPEN by telling him, in your own voice, what your day actually looks like and what "
-			           "you're wearing right now — real, specific plans for TODAY drawn from your own life "
-			           "(your friends, the gym, errands, cooking, whatever fits) plus the calendar and the "
-			           "weather. LEAD with your day; you can absolutely be warm and flirty, but he should "
-			           "come away knowing what you're up to and what you've got on. do NOT open by describing "
-			           "yourself as messy/wrecked/used or jumping straight to sex. no black-t-shirt-in-the-"
-			           "kitchen / bikini-by-the-pool autopilot — make it a real, specific day. weave it in "
-			           "naturally, don't list it out.]"
+			           "you're wearing right now — real, specific plans for TODAY pulled from the FULL "
+			           "breadth of your life (your friends, a hobby or class, a project, an appointment, "
+			           "somewhere new) plus the calendar and the weather." + _vary + " LEAD with your day; "
+			           "you can absolutely be warm and flirty, but he should come away knowing what you're "
+			           "up to and what you've got on. do NOT open by describing yourself as messy/wrecked/"
+			           "used or jumping straight to sex. no black-t-shirt-in-the-kitchen / bikini-by-the-"
+			           "pool autopilot — make it a real, specific day. weave it in naturally, don't list "
+			           "it out.]"
 		})
 		meta['day_plan_date'] = day_key
 		meta['daycast_count'] = 1
