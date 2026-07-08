@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>link ready · cockpit</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='meet.css') }}">
+</head>
+<body class="meet-lobby">
+  <main class="lobby-card">
+    <h1>// LINK READY</h1>
+    {% if label %}<p class="created-label">{{ label }}</p>{% endif %}
+    {% if when %}<p class="created-when">{{ when.replace('T', ' ') }}</p>{% endif %}
+    <p>share this with your guests — it works now and at meeting time. no install to join.</p>
+
+    <div class="link-box"><code id="link"></code></div>
+    <div class="created-actions">
+      <button id="copy" class="btn-primary">COPY LINK</button>
+      <a class="btn-ghost" href="{{ url_for('meet.meet_room', room_id=room_id, host=1) }}">JOIN NOW</a>
+    </div>
+    <a class="back" href="{{ url_for('meet.meet_home') }}">← all rooms</a>
+  </main>
+
+  <script>
+    var link = location.origin + '/meet/r/' + {{ room_id|tojson }};
+    document.getElementById('link').textContent = link;
+    document.getElementById('copy').onclick = function () {
+      var b = this;
+      navigator.clipboard.writeText(link).then(function () {
+        b.textContent = 'COPIED ✓';
+        setTimeout(function () { b.textContent = 'COPY LINK'; }, 1300);
+      });
+    };
+  </script>
+</body>
+</html>

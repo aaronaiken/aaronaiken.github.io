@@ -7,12 +7,52 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='meet.css') }}">
 </head>
 <body class="meet-lobby">
-  <main class="lobby-card">
+  <main class="lobby-card lobby-wide">
     <h1>// MEET</h1>
-    <p>homemade video, right here in the cockpit. start a room, share the link — your guests just click to join. camera, mic, and screen share, no installs.</p>
-    <form method="post" action="{{ url_for('meet.meet_new') }}">
-      <button type="submit" class="btn-primary">START A MEETING</button>
+    <p>make a room, share the link — join now or at meeting time. guests just click, no installs.</p>
+
+    <form method="post" action="{{ url_for('meet.meet_new') }}" class="new-form">
+      <input type="text" name="label" placeholder="meeting name (optional)" maxlength="80">
+      <input type="datetime-local" name="when" aria-label="when (optional)">
+      <button type="submit" class="btn-primary">CREATE LINK</button>
     </form>
+
+    {% if rooms %}
+    <div class="rooms">
+      <h2>your rooms</h2>
+      {% for r in rooms %}
+      <div class="room">
+        <div class="room-main">
+          <div class="room-label">{{ r.label or 'untitled meeting' }}</div>
+          <div class="room-sub">
+            {% if r.scheduled_at %}<span class="when">{{ r.scheduled_at.replace('T', ' ') }}</span> · {% endif %}
+            {% if r.count %}<span class="live">● {{ r.count }} in room</span>{% else %}<span>link ready</span>{% endif %}
+          </div>
+        </div>
+        <div class="room-actions">
+          <button class="mini copy-link" data-room="{{ r.id }}">copy link</button>
+          <a class="mini go" href="{{ url_for('meet.meet_room', room_id=r.id, host=1) }}">join</a>
+          <form method="post" action="{{ url_for('meet.meet_delete', room_id=r.id) }}"
+                onsubmit="return confirm('delete this room?')">
+            <button class="mini del" type="submit" title="delete">✕</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
   </main>
+
+  <script>
+    document.querySelectorAll('.copy-link').forEach(function (b) {
+      b.onclick = function () {
+        var link = location.origin + '/meet/r/' + this.dataset.room;
+        navigator.clipboard.writeText(link).then(function () {
+          b.textContent = 'copied ✓';
+          setTimeout(function () { b.textContent = 'copy link'; }, 1200);
+        });
+      };
+    });
+  </script>
 </body>
 </html>

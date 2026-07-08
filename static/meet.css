@@ -109,7 +109,61 @@ body {
 .ctl.danger:hover { border-color: var(--danger); color: var(--danger); }
 .status { color: var(--ink-soft); font-size: 0.78rem; margin-left: 12px; }
 
+/* scheduling: lobby form + rooms list + link-ready page */
+.lobby-wide { max-width: 560px; }
+.lobby-card h2 { color: var(--amber); letter-spacing: 0.12em; font-size: 0.9rem; margin: 26px 0 10px; text-align: left; }
+
+.new-form { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.new-form input {
+  flex: 1 1 180px; font-family: inherit; font-size: 0.95rem; color: var(--ink);
+  background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 11px 13px;
+}
+.new-form input:focus { outline: none; border-color: var(--amber); }
+.new-form .btn-primary { margin-top: 0; flex: 1 1 100%; }
+
+.rooms { text-align: left; margin-top: 8px; }
+.room {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--field); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 14px; margin-bottom: 10px;
+}
+.room-label { color: var(--ink); font-size: 0.95rem; }
+.room-sub { color: var(--ink-soft); font-size: 0.75rem; margin-top: 3px; }
+.room-sub .when { color: var(--amber); }
+.room-sub .live { color: var(--amber-hi); }
+.room-actions { display: flex; align-items: center; gap: 6px; }
+.room-actions form { margin: 0; }
+.mini {
+  font-family: inherit; font-size: 0.72rem; letter-spacing: 0.04em; text-decoration: none;
+  color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 6px; padding: 6px 10px; cursor: pointer; display: inline-block;
+}
+.mini:hover { border-color: var(--amber); }
+.mini.go { color: var(--amber-hi); border-color: var(--amber-lo); }
+.mini.del { color: var(--danger); }
+.mini.del:hover { border-color: var(--danger); }
+
+.link-box {
+  margin: 22px 0 18px; background: var(--field); border: 1px dashed var(--line);
+  border-radius: 8px; padding: 14px; overflow-x: auto;
+}
+.link-box code { color: var(--amber-hi); font-size: 0.9rem; word-break: break-all; }
+.created-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.created-actions .btn-primary { margin-top: 0; }
+.btn-ghost {
+  font-family: inherit; font-size: 0.95rem; letter-spacing: 0.14em; text-decoration: none;
+  color: var(--amber-hi); background: transparent; border: 1px solid var(--amber-lo);
+  border-radius: 8px; padding: 13px 22px; cursor: pointer;
+}
+.btn-ghost:hover { border-color: var(--amber-hi); }
+.created-label { color: var(--ink); font-size: 1.1rem; margin: 8px 0 2px; }
+.created-when { color: var(--amber); font-size: 0.85rem; margin: 0; }
+.back { display: inline-block; margin-top: 22px; color: var(--ink-soft); text-decoration: none; font-size: 0.82rem; }
+.back:hover { color: var(--amber); }
+
 @media (max-width: 560px) {
   .grid { grid-template-columns: 1fr; }
   .ctl.danger { margin-left: 0; }
+  .room { flex-direction: column; align-items: stretch; }
+  .room-actions { justify-content: flex-end; }
 }

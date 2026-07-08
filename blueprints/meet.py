@@ -18,7 +18,7 @@ import os
 import json
 import secrets
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import requests
 from flask import Blueprint, request, jsonify, render_template, redirect, url_for
@@ -53,6 +53,11 @@ def _db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             room_id TEXT, to_peer TEXT, from_peer TEXT, kind TEXT, payload TEXT, created_at TEXT);
     """)
+    for col in ('label', 'scheduled_at'):   # additive; safe to re-run
+        try:
+            db.execute("ALTER TABLE rooms ADD COLUMN %s TEXT" % col)
+        except sqlite3.OperationalError:
+            pass
     return db
 
 
@@ -77,24 +82,74 @@ def _roster(db, room_id, exclude=None):
 
 # ---- pages ----
 
+def _rooms_with_counts(db):
+    rows = db.execute("SELECT * FROM rooms ORDER BY COALESCE(NULLIF(scheduled_at, ''), created_at) DESC").fetchall()
+    out = []
+    for r in rows:
+        n = db.execute("SELECT COUNT(*) AS c FROM participants WHERE room_id=?", (r['id'],)).fetchone()['c']
+        out.append({'id': r['id'], 'label': (r['label'] or '').strip(),
+                    'scheduled_at': (r['scheduled_at'] or '').strip(),
+                    'created_at': r['created_at'], 'count': n})
+    return out
+
+
 @meet_bp.route('/meet')
 def meet_home():
-    """Host lobby (authed) — start a meeting."""
+    """Host lobby (authed) — create a link now, join now or at meeting time."""
     if not is_authenticated():
         return redirect(url_for('cockpit.login'))
-    return render_template('meet_home.html')
+    db = _db()
+    # tidy: drop rooms older than 48h + any orphaned state, so the store doesn't grow forever
+    cutoff = (_now() - timedelta(hours=48)).isoformat()
+    db.execute("DELETE FROM rooms WHERE created_at < ?", (cutoff,))
+    db.execute("DELETE FROM participants WHERE room_id NOT IN (SELECT id FROM rooms)")
+    db.execute("DELETE FROM signals WHERE room_id NOT IN (SELECT id FROM rooms)")
+    db.commit()
+    rooms = _rooms_with_counts(db)
+    db.close()
+    return render_template('meet_home.html', rooms=rooms)
 
 
 @meet_bp.route('/meet/new', methods=['POST'])
 def meet_new():
+    """Create a room (optionally named + scheduled). Does NOT join — shows the link."""
     if not is_authenticated():
         return redirect(url_for('cockpit.login'))
     room_id = secrets.token_urlsafe(6)
+    label = (request.form.get('label') or '').strip()[:80]
+    when = (request.form.get('when') or '').strip()[:40]
     db = _db()
-    db.execute("INSERT INTO rooms (id, created_at) VALUES (?,?)", (room_id, _iso()))
+    db.execute("INSERT INTO rooms (id, created_at, label, scheduled_at) VALUES (?,?,?,?)",
+               (room_id, _iso(), label, when))
     db.commit()
     db.close()
-    return redirect(url_for('meet.meet_room', room_id=room_id, host=1))
+    return redirect(url_for('meet.meet_created', room_id=room_id))
+
+
+@meet_bp.route('/meet/created/<room_id>')
+def meet_created(room_id):
+    if not is_authenticated():
+        return redirect(url_for('cockpit.login'))
+    db = _db()
+    room = db.execute("SELECT * FROM rooms WHERE id=?", (room_id,)).fetchone()
+    db.close()
+    if not room:
+        return render_template('meet_gone.html'), 404
+    return render_template('meet_created.html', room_id=room_id,
+                           label=(room['label'] or '').strip(), when=(room['scheduled_at'] or '').strip())
+
+
+@meet_bp.route('/meet/<room_id>/delete', methods=['POST'])
+def meet_delete(room_id):
+    if not is_authenticated():
+        return redirect(url_for('cockpit.login'))
+    db = _db()
+    db.execute("DELETE FROM rooms WHERE id=?", (room_id,))
+    db.execute("DELETE FROM participants WHERE room_id=?", (room_id,))
+    db.execute("DELETE FROM signals WHERE room_id=?", (room_id,))
+    db.commit()
+    db.close()
+    return redirect(url_for('meet.meet_home'))
 
 
 @meet_bp.route('/meet/r/<room_id>')
