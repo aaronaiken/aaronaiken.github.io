@@ -11,6 +11,8 @@
   var localStream = null;      // camera + mic
   var camTrack = null;         // the live camera video track (kept for un-share)
   var screenStream = null;     // active screen capture, if any
+  var blurOn = false, blurReady = false;   // background blur (local, sender-side)
+  var seg = null, blurVideo = null, blurCanvas = null, blurCtx = null, blurStream = null, blurTrack = null;
   var iceServers = [{ urls: ['stun:stun.l.google.com:19302'] }];
   var peers = {};              // peerId -> { pc, name, tile, pendingCandidates:[] }
   var name = 'guest';
@@ -179,9 +181,78 @@
   }
   function stopScreen() {
     if (screenStream) { screenStream.getTracks().forEach(function (t) { t.stop(); }); screenStream = null; }
-    replaceOutgoingVideo(camTrack);
-    var lv = localVideoEl(); if (lv) lv.srcObject = localStream;
+    replaceOutgoingVideo(currentCamTrack());
+    var lv = localVideoEl(); if (lv) lv.srcObject = (blurOn && blurStream) ? blurStream : localStream;
     el('screen-btn').classList.remove('on');
+  }
+
+  // ---------- background blur (MediaPipe segmentation, all local + sender-side) ----------
+  function currentCamTrack() { return (blurOn && blurTrack) ? blurTrack : camTrack; }
+
+  function onSegResults(results) {
+    if (!blurCtx) return;
+    var w = results.image.width, h = results.image.height;
+    if (blurCanvas.width !== w) blurCanvas.width = w;
+    if (blurCanvas.height !== h) blurCanvas.height = h;
+    var c = blurCtx;
+    c.save();
+    c.clearRect(0, 0, w, h);
+    c.drawImage(results.segmentationMask, 0, 0, w, h);
+    c.globalCompositeOperation = 'source-in';        // keep camera only where the person is
+    c.drawImage(results.image, 0, 0, w, h);
+    c.globalCompositeOperation = 'destination-over';  // put the blurred frame behind
+    c.filter = 'blur(12px)';
+    c.drawImage(results.image, 0, 0, w, h);
+    c.restore();
+    if (blurOn && !blurReady && !screenStream) {       // first good frame → go live
+      blurReady = true;
+      replaceOutgoingVideo(blurTrack);
+      var lv = localVideoEl(); if (lv) lv.srcObject = blurStream;
+      el('blur-btn').classList.remove('loading');
+      el('blur-btn').classList.add('on');
+      status('');
+    }
+  }
+
+  function ensureBlur() {
+    if (seg) return true;
+    if (typeof SelfieSegmentation === 'undefined') return false;   // library didn't load
+    blurVideo = document.createElement('video');
+    blurVideo.muted = true; blurVideo.playsInline = true; blurVideo.srcObject = localStream;
+    blurVideo.play().catch(function () {});
+    blurCanvas = document.createElement('canvas'); blurCanvas.width = 640; blurCanvas.height = 480;
+    blurCtx = blurCanvas.getContext('2d');
+    seg = new SelfieSegmentation({ locateFile: function (f) {
+      return 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/' + f;
+    } });
+    seg.setOptions({ modelSelection: 1 });
+    seg.onResults(onSegResults);
+    blurStream = blurCanvas.captureStream(24);
+    blurTrack = blurStream.getVideoTracks()[0];
+    return true;
+  }
+
+  function pump() {
+    if (!blurOn || !seg) return;
+    seg.send({ image: blurVideo }).catch(function () {}).then(function () {
+      if (blurOn) setTimeout(pump, 40);   // ~25fps, and don't over-queue
+    });
+  }
+
+  function toggleBlur() {
+    if (screenStream) { status('stop screen share to blur'); return; }
+    if (blurOn) {
+      blurOn = false; blurReady = false;
+      replaceOutgoingVideo(camTrack);
+      var lv = localVideoEl(); if (lv) lv.srcObject = localStream;
+      el('blur-btn').classList.remove('on');
+      return;
+    }
+    if (!ensureBlur()) { status('blur not available in this browser'); return; }
+    blurOn = true; blurReady = false;
+    el('blur-btn').classList.add('loading');
+    status('starting blur…');
+    pump();
   }
 
   // ---------- controls ----------
@@ -199,6 +270,7 @@
     el('screen-btn').onclick = function () {
       if (screenStream) stopScreen(); else startScreen().catch(function () {});
     };
+    el('blur-btn').onclick = toggleBlur;
     el('copy-btn').onclick = function () {
       var link = location.origin + '/meet/r/' + encodeURIComponent(ROOM);
       navigator.clipboard.writeText(link).then(function () {
@@ -219,8 +291,11 @@
 
   function stopMedia() {
     polling = false;
+    blurOn = false;
     Object.keys(peers).forEach(dropPeer);
     if (screenStream) screenStream.getTracks().forEach(function (t) { t.stop(); });
+    if (blurStream) blurStream.getTracks().forEach(function (t) { t.stop(); });
+    if (seg && seg.close) { try { seg.close(); } catch (e) {} }
     if (localStream) localStream.getTracks().forEach(function (t) { t.stop(); });
   }
   function beaconLeave() {

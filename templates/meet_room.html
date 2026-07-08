@@ -23,6 +23,7 @@
       <button id="mic-btn" class="ctl" title="mute / unmute mic"><span>🎙️</span><em>mic</em></button>
       <button id="cam-btn" class="ctl" title="camera on / off"><span>📷</span><em>cam</em></button>
       <button id="screen-btn" class="ctl" title="share your screen"><span>🖥️</span><em>share</em></button>
+      <button id="blur-btn" class="ctl" title="blur your background"><span>✨</span><em>blur</em></button>
       <button id="copy-btn" class="ctl" title="copy the invite link"><span>🔗</span><em>invite</em></button>
       <button id="notes-btn" class="ctl" title="notes"><span>📝</span><em>notes</em></button>
       <button id="leave-btn" class="ctl danger" title="leave / end the meeting"><span>✕</span><em>leave</em></button>
@@ -52,6 +53,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
   <script>
     window.MEET = {
       room: {{ room_id|tojson }},

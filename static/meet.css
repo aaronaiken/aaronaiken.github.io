@@ -105,6 +105,7 @@ body {
 .ctl:hover { border-color: var(--amber); }
 .ctl.on { border-color: var(--amber-hi); color: var(--amber-hi); }
 .ctl.off { border-color: var(--danger); color: var(--danger); opacity: 0.85; }
+.ctl.loading { opacity: 0.55; }
 .ctl.danger { margin-left: auto; }
 .ctl.danger:hover { border-color: var(--danger); color: var(--danger); }
 .status { color: var(--ink-soft); font-size: 0.78rem; margin-left: 12px; }
