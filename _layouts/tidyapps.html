@@ -32,6 +32,14 @@ body.tidyapps-layout::after { content: ''; position: fixed; inset: 0; background
 .ta__wrap { max-width: 720px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 10; }
 
 .ta__title-block { margin-bottom: 24px; opacity: 0; animation: ta-rise 0.5s ease-out 0.1s forwards; }
+/* Family mark: the four app accent colors (Bar / Stage / Calendar / Away)
+   as a 2x2 — the family, encoded as its own palette. */
+.ta__fammark { display: inline-grid; grid-template-columns: repeat(2, 15px); gap: 4px; margin-bottom: 14px; }
+.ta__fammark span { width: 15px; height: 15px; border-radius: 50%; }
+.ta__fammark .m1 { background: #5fd3e0; box-shadow: 0 0 9px rgba(95,211,224,0.55); }
+.ta__fammark .m2 { background: #e8b24a; box-shadow: 0 0 9px rgba(232,178,74,0.55); }
+.ta__fammark .m3 { background: #e8594c; box-shadow: 0 0 9px rgba(232,89,76,0.55); }
+.ta__fammark .m4 { background: #b8c6f0; box-shadow: 0 0 9px rgba(184,198,240,0.55); }
 .ta__title { font-family: 'VT323', monospace !important; font-size: 4.5rem !important; font-weight: 400 !important; color: var(--ta-amber-hi) !important; text-shadow: 0 0 24px rgba(212,136,10,0.55); letter-spacing: 0.1em !important; line-height: 1 !important; margin: 0 0 12px !important; text-decoration: none !important; animation: ta-amber-breathe 5s ease-in-out infinite; }
 .ta__subtitle { font-family: 'Crimson Pro', serif; font-size: 1.05rem; font-style: italic; color: var(--ta-text-body); margin: 0 !important; line-height: 1.6; max-width: 520px; }
 
@@ -43,17 +51,41 @@ body.tidyapps-layout::after { content: ''; position: fixed; inset: 0; background
 @media (max-width: 560px) { .ta__grid { grid-template-columns: 1fr; } }
 
 .ta__card { display: flex; flex-direction: column; gap: 10px; padding: 20px; background: var(--ta-bg2); border: 1px solid var(--ta-border); text-decoration: none !important; color: var(--ta-text) !important; transition: border-color 0.15s, background 0.15s; position: relative; overflow: hidden; }
-.ta__card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(to right, var(--ta-amber-lo), transparent); opacity: 0; transition: opacity 0.2s; }
-.ta__card:hover { border-color: var(--ta-amber-lo); background: var(--ta-bg3) !important; }
+.ta__card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(to right, var(--accent, var(--ta-amber-lo)), transparent); opacity: 0; transition: opacity 0.2s; }
+.ta__card:hover { border-color: var(--accent-lo, var(--ta-amber-lo)); background: var(--ta-bg3) !important; }
 .ta__card:hover::before { opacity: 1; }
 .ta__card--pending { opacity: 0.6; cursor: default; pointer-events: none; }
+
+/* Each card carries its app's signature color — the grid becomes a map of the
+   family, and clicking into a matching palette feels continuous. */
+.ta__card--bar   { --accent: #5fd3e0; --accent-lo: #3a8090; }
+.ta__card--stage { --accent: #e8b24a; --accent-lo: #9a7828; }
+.ta__card--cal   { --accent: #e8594c; --accent-lo: #a83a30; }
+.ta__card--away  { --accent: #b8c6f0; --accent-lo: #7c88b8; }
 
 .ta__card-header { display: flex; justify-content: space-between; align-items: center; }
 .ta__card-icon { font-size: 1.5rem; line-height: 1; }
 .ta__card-status { display: flex; align-items: center; gap: 5px; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ta-amber-lo); }
 .ta__card-status--pending { color: var(--ta-text-dim); }
-.ta__card-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--ta-amber); box-shadow: 0 0 6px var(--ta-amber); animation: ta-pulse 2s ease-in-out infinite; }
+.ta__card-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent, var(--ta-amber)); box-shadow: 0 0 6px var(--accent, var(--ta-amber)); animation: ta-pulse 2s ease-in-out infinite; }
 .ta__card-dot--pending { background: var(--ta-text-dim); box-shadow: none; animation: none; }
+
+/* ---- Mini motifs: compact echoes of each landing-page hero ---- */
+.ta__ico { display: inline-flex; align-items: center; }
+/* Away — a little moon */
+.ta__ico--away { width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 36% 32%, #eef2ff, #b8c6f0 60%, #6f7bad 100%); box-shadow: 0 0 11px rgba(150,170,240,0.5), inset -4px -4px 8px rgba(30,38,72,0.5); }
+/* Bar — a menu-bar strip with the glowing separator */
+.ta__ico--bar { gap: 3px; height: 16px; padding: 0 5px; border-radius: 4px; background: linear-gradient(180deg, #1a232a, #10161b); border: 1px solid #2c3a42; }
+.ta__ico--bar .d { width: 3px; height: 3px; border-radius: 50%; background: #56646e; }
+.ta__ico--bar .s { width: 2px; height: 9px; background: #5fd3e0; box-shadow: 0 0 5px #5fd3e0; }
+/* Stage — a spotlight orb casting a small cone */
+.ta__ico--stage { display: inline-block; position: relative; width: 24px; height: 22px; }
+.ta__ico--stage .orb { display: block; width: 16px; height: 16px; border-radius: 50%; margin: 0 auto; background: radial-gradient(circle at 40% 34%, #fff6e0, #ffd884 55%, #d69a30); box-shadow: 0 0 10px rgba(232,178,74,0.5); position: relative; z-index: 2; }
+.ta__ico--stage::after { content: ''; position: absolute; top: 13px; left: 50%; transform: translateX(-50%); width: 27px; height: 15px; background: linear-gradient(rgba(255,216,132,0.3), transparent); clip-path: polygon(34% 0, 66% 0, 100% 100%, 0 100%); z-index: 1; }
+/* Calendar — a mini month grid with today lit */
+.ta__ico--cal { display: grid; grid-template-columns: repeat(3, 5px); grid-auto-rows: 5px; gap: 2px; padding: 4px; border: 1px solid #4a3c30; border-radius: 3px; background: #1c1614; align-items: stretch; }
+.ta__ico--cal span { width: 5px; height: 5px; background: #52443a; border-radius: 1px; }
+.ta__ico--cal span.on { background: #e8594c; box-shadow: 0 0 5px #e8594c; }
 
 .ta__card-name { font-family: 'VT323', monospace !important; font-size: 1.6rem !important; font-weight: 400 !important; color: var(--ta-amber-hi) !important; letter-spacing: 0.04em !important; line-height: 1.1 !important; margin: 0 !important; text-decoration: none !important; }
 .ta__card-desc { font-family: 'Crimson Pro', serif; font-size: 1rem; color: var(--ta-text-body); line-height: 1.7; margin: 0 !important; flex: 1; }
@@ -95,6 +127,15 @@ body.tidyapps-layout::after { content: ''; position: fixed; inset: 0; background
   .ta__card { background: var(--ta-bg2); }
   .ta__card:hover { background: var(--ta-bg3) !important; }
   .ta__signal { background: rgba(160,96,32,0.05); }
+  /* Motifs that carried dark faces need lightening on parchment. */
+  .ta__ico--away { box-shadow: 0 0 8px rgba(120,140,210,0.35), inset -4px -4px 8px rgba(150,165,210,0.5); }
+  .ta__ico--bar { background: linear-gradient(180deg, #dfe7ec, #cfd9df); border-color: #aab8c0; }
+  .ta__ico--bar .d { background: #8a969e; }
+  .ta__ico--stage .orb { background: radial-gradient(circle at 40% 34%, #fff2cf, #f0b840 50%, #c2851a); box-shadow: 0 0 8px rgba(190,130,20,0.45); border: 1px solid rgba(150,100,10,0.45); }
+  .ta__ico--stage::after { background: linear-gradient(rgba(224,168,60,0.5), transparent); }
+  .ta__ico--cal { background: #fdf7e8; border-color: #a89066; }
+  .ta__ico--cal span { background: #9a8258; }
+  .ta__ico--cal span.on { background: #d1382e; box-shadow: 0 0 4px rgba(209,56,46,0.5); }
 }
 </style>
 <body class="tidyapps-layout">
@@ -102,6 +143,7 @@ body.tidyapps-layout::after { content: ''; position: fixed; inset: 0; background
   <main class="ta__wrap">
     {% include nav.html %}
     <div class="ta__title-block">
+      <span class="ta__fammark" aria-hidden="true"><span class="m1"></span><span class="m2"></span><span class="m3"></span><span class="m4"></span></span>
       <h1 class="ta__title">TIDY</h1>
       <p class="ta__subtitle">Small, polished, single-job Mac utilities. Made by hand in Harrisburg.</p>
     </div>
@@ -109,40 +151,40 @@ body.tidyapps-layout::after { content: ''; position: fixed; inset: 0; background
     <div class="ta__rule"><span class="ta__rule-glyph">◈ ◈ ◈</span></div>
 
     <div class="ta__grid">
-      <div class="ta__card ta__card--pending">
+      <a class="ta__card ta__card--bar" href="/tools/tidy-bar/">
         <div class="ta__card-header">
-          <span class="ta__card-icon">📊</span>
-          <span class="ta__card-status ta__card-status--pending"><span class="ta__card-dot ta__card-dot--pending"></span>INCOMING</span>
+          <span class="ta__ico ta__ico--bar" aria-hidden="true"><span class="d"></span><span class="d"></span><span class="s"></span><span class="d"></span><span class="d"></span></span>
+          <span class="ta__card-status ta__card-status--pending"><span class="ta__card-dot"></span>INCOMING</span>
         </div>
         <h2 class="ta__card-name">TIDY BAR</h2>
-        <p class="ta__card-desc">A cleaner menu bar for Mac. Hide the noise, drag the divider, reveal what matters. Native, sandboxed, no telemetry.</p>
+        <p class="ta__card-desc">A cleaner menu bar for Mac. Hide the noise, drag the divider, reveal what matters. Native, no telemetry.</p>
         <div class="ta__card-meta">
           <span class="ta__card-tag">macOS</span>
           <span class="ta__card-tag">AppKit</span>
-          <span class="ta__card-tag">Universal</span>
+          <span class="ta__card-tag">App Store</span>
         </div>
-        <div class="ta__card-cta">ON THE APP STORE (soon)</div>
-      </div>
+        <div class="ta__card-cta">LEARN MORE <span class="ta__card-arrow">→</span></div>
+      </a>
 
-      <div class="ta__card ta__card--pending">
+      <a class="ta__card ta__card--stage" href="/tools/tidy-stage/">
         <div class="ta__card-header">
-          <span class="ta__card-icon">🎬</span>
-          <span class="ta__card-status ta__card-status--pending"><span class="ta__card-dot ta__card-dot--pending"></span>BLUEPRINT</span>
+          <span class="ta__ico ta__ico--stage" aria-hidden="true"><span class="orb"></span></span>
+          <span class="ta__card-status ta__card-status--pending"><span class="ta__card-dot"></span>BLUEPRINT</span>
         </div>
         <h2 class="ta__card-name">TIDY STAGE</h2>
         <p class="ta__card-desc">Clean desktop and neutral wallpaper for screen recording and sharing. One toggle: presenter-ready. Restores everything when you're done.</p>
         <div class="ta__card-meta">
           <span class="ta__card-tag">macOS</span>
           <span class="ta__card-tag">AppKit</span>
-          <span class="ta__card-tag">Universal</span>
+          <span class="ta__card-tag">App Store</span>
         </div>
-        <div class="ta__card-cta">DESIGNED · NOT YET SHIPPED</div>
-      </div>
+        <div class="ta__card-cta">LEARN MORE <span class="ta__card-arrow">→</span></div>
+      </a>
 
-      <div class="ta__card ta__card--pending">
+      <a class="ta__card ta__card--cal" href="/tools/tidy-cal/">
         <div class="ta__card-header">
-          <span class="ta__card-icon">📅</span>
-          <span class="ta__card-status ta__card-status--pending"><span class="ta__card-dot ta__card-dot--pending"></span>BLUEPRINT</span>
+          <span class="ta__ico ta__ico--cal" aria-hidden="true"><span></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span><span></span><span></span></span>
+          <span class="ta__card-status ta__card-status--pending"><span class="ta__card-dot"></span>BLUEPRINT</span>
         </div>
         <h2 class="ta__card-name">TIDY CALENDAR</h2>
         <p class="ta__card-desc">Glance at the month from your menu bar. Click the date, see today highlighted. No app to launch, no permissions to grant. The free front door to the family.</p>
@@ -151,8 +193,23 @@ body.tidyapps-layout::after { content: ''; position: fixed; inset: 0; background
           <span class="ta__card-tag">AppKit</span>
           <span class="ta__card-tag">Free</span>
         </div>
-        <div class="ta__card-cta">DESIGNED · NOT YET SHIPPED</div>
-      </div>
+        <div class="ta__card-cta">LEARN MORE <span class="ta__card-arrow">→</span></div>
+      </a>
+
+      <a class="ta__card ta__card--away" href="/tools/tidy-away/">
+        <div class="ta__card-header">
+          <span class="ta__ico ta__ico--away" aria-hidden="true"></span>
+          <span class="ta__card-status ta__card-status--pending"><span class="ta__card-dot"></span>IN TESTING</span>
+        </div>
+        <h2 class="ta__card-name">TIDY AWAY</h2>
+        <p class="ta__card-desc">An out-of-office for iMessage. Auto-replies to people you know, then leaves every message unread. Never groups, never your inner circle, never reads a word.</p>
+        <div class="ta__card-meta">
+          <span class="ta__card-tag">macOS</span>
+          <span class="ta__card-tag">AppKit</span>
+          <span class="ta__card-tag">Direct</span>
+        </div>
+        <div class="ta__card-cta">LEARN MORE <span class="ta__card-arrow">→</span></div>
+      </a>
     </div>
 
     <a class="ta__signal" href="/tools/updates/">

@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap');
+
+/* =============================================
+   TIDY AWAY — landing page
+   A calm, nocturnal counterpoint to the family's
+   amber workshop: moonlit indigo, soft glow, no
+   scanlines. Quiet on purpose.
+   ============================================= */
+
+body.tidyaway-layout {
+  --nav-link: #7c88b8; --nav-link-hover: #b8c6f0;
+  --ident-color: #4a5480; --ident-border: #1a2038;
+  --footer-border: #1a2038; --footer-label: #4a5480;
+  --footer-link: #6a76a8; --footer-link-hover: #b8c6f0; --footer-dim: #3a4468;
+
+  --tw-bg: #080a14; --tw-bg2: #10142a; --tw-bg3: #161b36;
+  --tw-moon: #b8c6f0; --tw-moon-hi: #eef2ff; --tw-moon-lo: #7c88b8;
+  --tw-text: #b6bce0; --tw-text-body: #9aa2ca; --tw-text-dim: #5a6490;
+  --tw-border: #1e2442; --tw-border-hi: #2e3860;
+
+  background: var(--tw-bg) !important; color: var(--tw-text);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh; overflow-x: hidden;
+  margin: 0 !important; max-width: 100% !important; padding: 0 !important;
+  font-size: 17px;
+}
+
+body.tidyaway-layout * { box-sizing: border-box; }
+
+/* Soft moonlight from the top — the only ambient effect. No CRT scanlines;
+   this app is the calm one. */
+body.tidyaway-layout::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 900;
+  background: radial-gradient(ellipse 60% 45% at 50% -5%, rgba(140,160,235,0.14), transparent 70%);
+}
+body.tidyaway-layout::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 901;
+  background: radial-gradient(ellipse at 50% 42%, transparent 55%, rgba(0,0,0,0.55) 100%);
+}
+
+.tw__wrap { max-width: 720px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 10; }
+
+/* ---- Hero ---- */
+.tw__hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; padding: 24px 0 8px; opacity: 0; animation: tw-rise 0.6s ease-out 0.1s forwards; }
+
+.tw__moon {
+  width: 68px; height: 68px; border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, var(--tw-moon-hi), var(--tw-moon) 58%, #6f7bad 100%);
+  box-shadow: 0 0 44px rgba(150,170,240,0.45), inset -9px -9px 20px rgba(30,38,72,0.55);
+  animation: tw-glow 6s ease-in-out infinite;
+}
+
+.tw__title {
+  font-family: 'VT323', monospace !important;
+  font-size: 4.2rem !important; font-weight: 400 !important;
+  color: var(--tw-moon-hi) !important; letter-spacing: 0.1em !important;
+  line-height: 1 !important; margin: 0 !important; text-decoration: none !important;
+  text-shadow: 0 0 26px rgba(150,170,240,0.5);
+}
+
+.tw__tagline { font-family: 'Crimson Pro', serif; font-size: 1.15rem; font-style: italic; color: var(--tw-text-body); margin: 0; line-height: 1.6; max-width: 460px; }
+
+.tw__status { display: inline-flex; align-items: center; gap: 7px; font-size: 0.6rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--tw-moon-lo); border: 1px solid var(--tw-border-hi); padding: 4px 11px; border-radius: 2px; }
+.tw__status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--tw-moon); box-shadow: 0 0 7px var(--tw-moon); animation: tw-pulse 2.4s ease-in-out infinite; }
+
+.tw__rule { display: flex; align-items: center; gap: 10px; margin: 30px 0 4px; opacity: 0; animation: tw-rise 0.5s ease-out 0.22s forwards; }
+.tw__rule::before, .tw__rule::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--tw-border-hi), transparent); }
+.tw__rule-glyph { font-size: 0.6rem; color: var(--tw-moon-lo); letter-spacing: 0.2em; }
+
+/* ---- Prose (rendered markdown body) ---- */
+.tw__prose { opacity: 0; animation: tw-rise 0.6s ease-out 0.3s forwards; }
+
+.tw__prose > p:first-of-type em { color: var(--tw-text-dim); font-style: italic; font-size: 0.8rem; letter-spacing: 0.05em; }
+
+.tw__prose p { font-family: 'Crimson Pro', serif; font-size: 1.08rem; line-height: 1.78; color: var(--tw-text-body); margin: 0 0 18px; }
+
+.tw__prose h2 {
+  font-family: 'Share Tech Mono', monospace !important;
+  font-size: 1.05rem !important; font-weight: 400 !important;
+  letter-spacing: 0.14em !important; text-transform: uppercase;
+  color: var(--tw-moon) !important; margin: 12px 0 16px !important;
+  display: flex; align-items: baseline; gap: 10px;
+}
+.tw__prose h2::before { content: '//'; color: var(--tw-moon-lo); font-size: 0.85em; }
+
+.tw__prose strong { color: var(--tw-moon-hi); font-weight: 600; }
+
+.tw__prose a { color: var(--tw-moon); text-decoration: none; border-bottom: 1px dotted var(--tw-moon-lo); transition: color 0.15s, border-color 0.15s; }
+.tw__prose a:hover { color: var(--tw-moon-hi); border-color: var(--tw-moon-hi); background: none; }
+
+.tw__prose ul { list-style: none; margin: 0 0 18px; padding: 0; }
+.tw__prose li { font-family: 'Crimson Pro', serif; font-size: 1.06rem; line-height: 1.7; color: var(--tw-text-body); position: relative; padding-left: 22px; margin-bottom: 9px; }
+.tw__prose li::before { content: '◗'; position: absolute; left: 2px; top: 0.05em; color: var(--tw-moon-lo); font-size: 0.72em; }
+.tw__prose li strong { color: var(--tw-moon-hi); }
+
+.tw__prose code { font-family: 'Share Tech Mono', monospace; font-size: 0.86em; background: var(--tw-bg2); color: var(--tw-moon); padding: 1px 6px; border: 1px solid var(--tw-border); border-radius: 2px; }
+
+.tw__prose hr { border: none; height: 1px; margin: 34px 0; background: linear-gradient(to right, transparent, var(--tw-border-hi), transparent); }
+
+/* ---- Notify-me CTA ---- */
+.tw__cta { display: flex; align-items: center; gap: 20px; margin: 40px 0 8px; padding: 22px 24px; background: rgba(140,160,235,0.05); border: 1px solid var(--tw-border-hi); border-radius: 3px; text-decoration: none !important; color: var(--tw-text) !important; transition: background 0.15s, border-color 0.15s; opacity: 0; animation: tw-rise 0.6s ease-out 0.4s forwards; }
+.tw__cta:hover { background: rgba(140,160,235,0.11) !important; border-color: var(--tw-moon-lo); }
+.tw__cta-body { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.tw__cta-label { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--tw-moon-lo); }
+.tw__cta-text { font-family: 'Crimson Pro', serif !important; font-size: 1rem !important; color: var(--tw-text-body) !important; line-height: 1.6 !important; margin: 0 !important; }
+.tw__cta-link { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--tw-moon); white-space: nowrap; flex-shrink: 0; }
+.tw__cta:hover .tw__cta-link { color: var(--tw-moon-hi); }
+.tw__cta-arrow { display: inline-block; transition: transform 0.15s; }
+.tw__cta:hover .tw__cta-arrow { transform: translateX(4px); }
+@media (max-width: 480px) { .tw__cta { flex-direction: column; align-items: flex-start; gap: 12px; } }
+
+@keyframes tw-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes tw-glow { 0%,100% { box-shadow: 0 0 38px rgba(150,170,240,0.38), inset -9px -9px 20px rgba(30,38,72,0.55); } 50% { box-shadow: 0 0 52px rgba(180,198,240,0.6), inset -9px -9px 20px rgba(30,38,72,0.55); } }
+@keyframes tw-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* ---- Light mode: soft pre-dawn, not stark ---- */
+@media (prefers-color-scheme: light) {
+  body.tidyaway-layout {
+    --tw-bg: #eef1f8; --tw-bg2: #e2e7f4; --tw-bg3: #d8def0;
+    --tw-moon: #4a5aa0; --tw-moon-hi: #2e3a75; --tw-moon-lo: #6a76a8;
+    --tw-text: #3a4266; --tw-text-body: #454d70; --tw-text-dim: #7a83a8;
+    --tw-border: #ccd3e8; --tw-border-hi: #aab4d6;
+
+    --nav-link: #5a66a0; --nav-link-hover: #2e3a75;
+    --footer-border: #ccd3e8; --footer-label: #7a83a8;
+    --footer-link: #5a66a0; --footer-link-hover: #2e3a75; --footer-dim: #7a83a8;
+    background: var(--tw-bg) !important;
+  }
+  body.tidyaway-layout::after { display: none; }
+  .tw__title { text-shadow: none !important; }
+  .tw__moon { box-shadow: 0 0 30px rgba(120,140,210,0.35), inset -8px -8px 16px rgba(150,165,210,0.5); }
+}
+</style>
+<body class="tidyaway-layout">
+  <main class="tw__wrap">
+    {% include nav.html %}
+
+    <div class="tw__hero">
+      <div class="tw__moon" aria-hidden="true"></div>
+      <h1 class="tw__title">{{ page.hero_title | default: "TIDY AWAY" }}</h1>
+      <p class="tw__tagline">{{ page.tagline | default: "An out-of-office for your iMessages — that leaves everything unread." }}</p>
+      {% if page.hero_status %}<span class="tw__status"><span class="tw__status-dot"></span>{{ page.hero_status }}</span>{% endif %}
+    </div>
+
+    <div class="tw__rule"><span class="tw__rule-glyph">☾ ☾ ☾</span></div>
+
+    <div class="tw__prose">
+      {{ content }}
+    </div>
+
+    {% unless page.hide_cta %}
+    <a class="tw__cta" href="/tools/updates/">
+      <div class="tw__cta-body">
+        <span class="tw__cta-label">☾ Signal</span>
+        <p class="tw__cta-text">{{ page.cta_text | default: "Tidy Away isn't out yet. Leave your email and I'll send one note the day it ships — nothing else, ever." }}</p>
+      </div>
+      <span class="tw__cta-link">Notify me <span class="tw__cta-arrow">→</span></span>
+    </a>
+    {% endunless %}
+
+    {% include footer.html %}
+  </main>
+</body>
+</html>

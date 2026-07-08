@@ -53,6 +53,14 @@ body.tools-page::after { content: ''; position: fixed; inset: 0; background: rad
 
 .tools__card-header { display: flex; justify-content: space-between; align-items: center; }
 .tools__card-icon { font-size: 1.4rem; line-height: 1; }
+/* Tidy family mark: a 2x2 of the four app accent colors (Bar / Stage /
+   Calendar / Away) — the family, encoded as its own palette. */
+.tools__famico { display: inline-grid; grid-template-columns: repeat(2, 9px); gap: 3px; }
+.tools__famico span { width: 9px; height: 9px; border-radius: 50%; }
+.tools__famico .m1 { background: #5fd3e0; box-shadow: 0 0 6px rgba(95,211,224,0.55); }
+.tools__famico .m2 { background: #e8b24a; box-shadow: 0 0 6px rgba(232,178,74,0.55); }
+.tools__famico .m3 { background: #e8594c; box-shadow: 0 0 6px rgba(232,89,76,0.55); }
+.tools__famico .m4 { background: #b8c6f0; box-shadow: 0 0 6px rgba(184,198,240,0.55); }
 .tools__card-status { display: flex; align-items: center; gap: 5px; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--tp-green-lo); }
 .tools__card-status--offline { color: var(--tp-text-dim); }
 .tools__card-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--tp-green); box-shadow: 0 0 5px var(--tp-green); animation: tp-pulse 2s ease-in-out infinite; }
@@ -109,47 +117,14 @@ body.tools-page::after { content: ''; position: fixed; inset: 0; background: rad
     </div>
     <div class="tools__rule"><span class="tools__rule-glyph">// MAC</span></div>
     <div class="tools__grid">
-      <a class="tools__card" href="/tidyapps/">
+      <a class="tools__card" href="/tidyapps/" style="grid-column: 1 / -1;">
         <div class="tools__card-header">
-          <span class="tools__card-icon">📊</span>
-          <span class="tools__card-status tools__card-status--offline"><span class="tools__card-dot tools__card-dot--offline"></span>INCOMING</span>
+          <span class="tools__famico" aria-hidden="true"><span class="m1"></span><span class="m2"></span><span class="m3"></span><span class="m4"></span></span>
+          <span class="tools__card-status tools__card-status--offline"><span class="tools__card-dot tools__card-dot--offline"></span>THE FAMILY</span>
         </div>
-        <h2 class="tools__card-name">TIDY BAR</h2>
-        <p class="tools__card-desc">A cleaner menu bar for Mac. Two-item architecture with a movable separator, screen-aware collapsing, native AppKit. In final v1 polish before App Store submission. Part of the Tidy family.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">Swift</span>
-          <span class="tools__card-tag">macOS</span>
-          <span class="tools__card-tag">AppKit</span>
-        </div>
-        <div class="tools__card-cta">LEARN MORE <span class="tools__card-arrow">→</span></div>
-      </a>
-      <a class="tools__card" href="/tidyapps/">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">🎬</span>
-          <span class="tools__card-status tools__card-status--offline"><span class="tools__card-dot tools__card-dot--offline"></span>BLUEPRINT</span>
-        </div>
-        <h2 class="tools__card-name">TIDY STAGE</h2>
-        <p class="tools__card-desc">Clean desktop and neutral wallpaper for screen recording and sharing. One toggle, presenter-ready, restores everything when you're done. Sibling to Tidy Bar; ships after.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">Swift</span>
-          <span class="tools__card-tag">macOS</span>
-          <span class="tools__card-tag">AppKit</span>
-        </div>
-        <div class="tools__card-cta">LEARN MORE <span class="tools__card-arrow">→</span></div>
-      </a>
-      <a class="tools__card" href="/tidyapps/">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">📅</span>
-          <span class="tools__card-status tools__card-status--offline"><span class="tools__card-dot tools__card-dot--offline"></span>BLUEPRINT</span>
-        </div>
-        <h2 class="tools__card-name">TIDY CALENDAR</h2>
-        <p class="tools__card-desc">Glanceable calendar in your menu bar. Click the date for a clean month grid — today highlighted, locale-correct weekday order, optional ISO 8601 week numbers. Free, no permissions. The front door to the Tidy family.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">Swift</span>
-          <span class="tools__card-tag">macOS</span>
-          <span class="tools__card-tag">AppKit</span>
-        </div>
-        <div class="tools__card-cta">LEARN MORE <span class="tools__card-arrow">→</span></div>
+        <h2 class="tools__card-name">THE TIDY FAMILY</h2>
+        <p class="tools__card-desc">Four small, single-job Mac utilities — Bar, Stage, Calendar, and Away. Native, private, no telemetry, made by hand. All on one page.</p>
+        <div class="tools__card-cta">SEE THE FAMILY <span class="tools__card-arrow">→</span></div>
       </a>
     </div>
 

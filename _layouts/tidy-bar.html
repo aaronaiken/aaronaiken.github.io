@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap');
+
+/* =============================================
+   TIDY BAR — landing page
+   Brushed graphite with a single signal-cyan
+   accent: the glow of the movable separator.
+   ============================================= */
+
+body.tidybar-layout {
+  --nav-link: #6a7c86; --nav-link-hover: #a6ecf4;
+  --ident-color: #46545e; --ident-border: #1c252b;
+  --footer-border: #1c252b; --footer-label: #46545e;
+  --footer-link: #607480; --footer-link-hover: #a6ecf4; --footer-dim: #3a464e;
+
+  --tb-bg: #090c0e; --tb-bg2: #12171b; --tb-bg3: #18212a;
+  --tb-cyan: #5fd3e0; --tb-cyan-hi: #a6ecf4; --tb-cyan-lo: #3a8090;
+  --tb-text: #adbac4; --tb-text-body: #91a0ab; --tb-text-dim: #56646e;
+  --tb-border: #1c252b; --tb-border-hi: #2c3a42;
+
+  background: var(--tb-bg) !important; color: var(--tb-text);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh; overflow-x: hidden;
+  margin: 0 !important; max-width: 100% !important; padding: 0 !important;
+  font-size: 17px;
+}
+
+body.tidybar-layout * { box-sizing: border-box; }
+body.tidybar-layout::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 900; background: radial-gradient(ellipse 55% 40% at 50% -5%, rgba(95,211,224,0.10), transparent 70%); }
+body.tidybar-layout::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 901; background: radial-gradient(ellipse at 50% 42%, transparent 55%, rgba(0,0,0,0.5) 100%); }
+
+.tb__wrap { max-width: 720px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 10; }
+
+.tb__hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; padding: 24px 0 8px; opacity: 0; animation: tb-rise 0.6s ease-out 0.1s forwards; }
+
+/* A menu bar with the signature glowing separator. */
+.tb__bar { display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 11px; border-radius: 7px; background: linear-gradient(180deg, #1a232a, #10161b); border: 1px solid var(--tb-border-hi); box-shadow: 0 0 32px rgba(95,211,224,0.16); animation: tb-glow 6s ease-in-out infinite; }
+.tb__bar-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--tb-text-dim); }
+.tb__bar-sep { width: 2px; height: 15px; background: var(--tb-cyan); box-shadow: 0 0 8px var(--tb-cyan); margin: 0 3px; }
+
+.tb__title { font-family: 'VT323', monospace !important; font-size: 4.2rem !important; font-weight: 400 !important; color: var(--tb-cyan-hi) !important; letter-spacing: 0.1em !important; line-height: 1 !important; margin: 0 !important; text-decoration: none !important; text-shadow: 0 0 24px rgba(95,211,224,0.45); }
+.tb__tagline { font-family: 'Crimson Pro', serif; font-size: 1.15rem; font-style: italic; color: var(--tb-text-body); margin: 0; line-height: 1.6; max-width: 460px; }
+.tb__status { display: inline-flex; align-items: center; gap: 7px; font-size: 0.6rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--tb-cyan-lo); border: 1px solid var(--tb-border-hi); padding: 4px 11px; border-radius: 2px; }
+.tb__status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--tb-cyan); box-shadow: 0 0 7px var(--tb-cyan); animation: tb-pulse 2.4s ease-in-out infinite; }
+
+.tb__rule { display: flex; align-items: center; gap: 10px; margin: 30px 0 4px; opacity: 0; animation: tb-rise 0.5s ease-out 0.22s forwards; }
+.tb__rule::before, .tb__rule::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--tb-border-hi), transparent); }
+.tb__rule-glyph { font-size: 0.6rem; color: var(--tb-cyan-lo); letter-spacing: 0.2em; }
+
+.tb__prose { opacity: 0; animation: tb-rise 0.6s ease-out 0.3s forwards; }
+.tb__prose > p:first-of-type em { color: var(--tb-text-dim); font-style: italic; font-size: 0.8rem; letter-spacing: 0.05em; }
+.tb__prose p { font-family: 'Crimson Pro', serif; font-size: 1.08rem; line-height: 1.78; color: var(--tb-text-body); margin: 0 0 18px; }
+.tb__prose h2 { font-family: 'Share Tech Mono', monospace !important; font-size: 1.05rem !important; font-weight: 400 !important; letter-spacing: 0.14em !important; text-transform: uppercase; color: var(--tb-cyan) !important; margin: 12px 0 16px !important; display: flex; align-items: baseline; gap: 10px; }
+.tb__prose h2::before { content: '//'; color: var(--tb-cyan-lo); font-size: 0.85em; }
+.tb__prose strong { color: var(--tb-cyan-hi); font-weight: 600; }
+.tb__prose a { color: var(--tb-cyan); text-decoration: none; border-bottom: 1px dotted var(--tb-cyan-lo); transition: color 0.15s, border-color 0.15s; }
+.tb__prose a:hover { color: var(--tb-cyan-hi); border-color: var(--tb-cyan-hi); background: none; }
+.tb__prose ul { list-style: none; margin: 0 0 18px; padding: 0; }
+.tb__prose li { font-family: 'Crimson Pro', serif; font-size: 1.06rem; line-height: 1.7; color: var(--tb-text-body); position: relative; padding-left: 22px; margin-bottom: 9px; }
+.tb__prose li::before { content: '▪'; position: absolute; left: 3px; top: 0.05em; color: var(--tb-cyan-lo); font-size: 0.72em; }
+.tb__prose li strong { color: var(--tb-cyan-hi); }
+.tb__prose code { font-family: 'Share Tech Mono', monospace; font-size: 0.86em; background: var(--tb-bg2); color: var(--tb-cyan); padding: 1px 6px; border: 1px solid var(--tb-border); border-radius: 2px; }
+.tb__prose hr { border: none; height: 1px; margin: 34px 0; background: linear-gradient(to right, transparent, var(--tb-border-hi), transparent); }
+
+.tb__cta { display: flex; align-items: center; gap: 20px; margin: 40px 0 8px; padding: 22px 24px; background: rgba(95,211,224,0.05); border: 1px solid var(--tb-border-hi); border-radius: 3px; text-decoration: none !important; color: var(--tb-text) !important; transition: background 0.15s, border-color 0.15s; opacity: 0; animation: tb-rise 0.6s ease-out 0.4s forwards; }
+.tb__cta:hover { background: rgba(95,211,224,0.11) !important; border-color: var(--tb-cyan-lo); }
+.tb__cta-body { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.tb__cta-label { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--tb-cyan-lo); }
+.tb__cta-text { font-family: 'Crimson Pro', serif !important; font-size: 1rem !important; color: var(--tb-text-body) !important; line-height: 1.6 !important; margin: 0 !important; }
+.tb__cta-link { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--tb-cyan); white-space: nowrap; flex-shrink: 0; }
+.tb__cta:hover .tb__cta-link { color: var(--tb-cyan-hi); }
+.tb__cta-arrow { display: inline-block; transition: transform 0.15s; }
+.tb__cta:hover .tb__cta-arrow { transform: translateX(4px); }
+@media (max-width: 480px) { .tb__cta { flex-direction: column; align-items: flex-start; gap: 12px; } }
+
+@keyframes tb-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes tb-glow { 0%,100% { box-shadow: 0 0 26px rgba(95,211,224,0.14); } 50% { box-shadow: 0 0 40px rgba(95,211,224,0.3); } }
+@keyframes tb-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+@media (prefers-color-scheme: light) {
+  body.tidybar-layout {
+    --tb-bg: #eef2f5; --tb-bg2: #e0e7ec; --tb-bg3: #d6e0e6;
+    --tb-cyan: #1f7c8c; --tb-cyan-hi: #0f5966; --tb-cyan-lo: #4a8896;
+    --tb-text: #3a464e; --tb-text-body: #45535c; --tb-text-dim: #78868e;
+    --tb-border: #ccd6dc; --tb-border-hi: #aab8c0;
+    --nav-link: #4a7684; --nav-link-hover: #0f5966;
+    --footer-border: #ccd6dc; --footer-label: #78868e;
+    --footer-link: #4a7684; --footer-link-hover: #0f5966; --footer-dim: #78868e;
+    background: var(--tb-bg) !important;
+  }
+  body.tidybar-layout::after { display: none; }
+  .tb__title { text-shadow: none !important; }
+  .tb__bar { background: linear-gradient(180deg, #dfe7ec, #cfd9df); box-shadow: 0 0 26px rgba(31,124,140,0.22); }
+}
+</style>
+<body class="tidybar-layout">
+  <main class="tb__wrap">
+    {% include nav.html %}
+
+    <div class="tb__hero">
+      <div class="tb__bar" aria-hidden="true">
+        <span class="tb__bar-dot"></span><span class="tb__bar-dot"></span>
+        <span class="tb__bar-sep"></span>
+        <span class="tb__bar-dot"></span><span class="tb__bar-dot"></span><span class="tb__bar-dot"></span>
+      </div>
+      <h1 class="tb__title">{{ page.hero_title | default: "TIDY BAR" }}</h1>
+      <p class="tb__tagline">{{ page.tagline | default: "A cleaner menu bar. Hide the noise, keep what matters, one drag away." }}</p>
+      {% if page.hero_status %}<span class="tb__status"><span class="tb__status-dot"></span>{{ page.hero_status }}</span>{% endif %}
+    </div>
+
+    <div class="tb__rule"><span class="tb__rule-glyph">▪ ▪ ▪</span></div>
+
+    <div class="tb__prose">
+      {{ content }}
+    </div>
+
+    {% unless page.hide_cta %}
+    <a class="tb__cta" href="/tools/updates/">
+      <div class="tb__cta-body">
+        <span class="tb__cta-label">▪ Signal</span>
+        <p class="tb__cta-text">{{ page.cta_text | default: "Tidy Bar is in final polish before the App Store. Leave your email and I'll send one note the day it lands." }}</p>
+      </div>
+      <span class="tb__cta-link">Notify me <span class="tb__cta-arrow">→</span></span>
+    </a>
+    {% endunless %}
+
+    {% include footer.html %}
+  </main>
+</body>
+</html>

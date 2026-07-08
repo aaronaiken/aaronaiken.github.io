@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap');
+
+/* =============================================
+   TIDY CALENDAR — landing page
+   The daylight one. Warm paper in light mode,
+   inked chalkboard in dark, calendar-red accent,
+   a little month grid with today lit up.
+   ============================================= */
+
+body.tidycal-layout {
+  --nav-link: #b06a60; --nav-link-hover: #ff7d70;
+  --ident-color: #6a5850; --ident-border: #2a221c;
+  --footer-border: #2a221c; --footer-label: #6a5850;
+  --footer-link: #9a6a60; --footer-link-hover: #ff7d70; --footer-dim: #5a4a42;
+
+  --tc-bg: #100d0c; --tc-bg2: #1c1614; --tc-bg3: #241c18;
+  --tc-red: #e8594c; --tc-red-hi: #ff7d70; --tc-red-lo: #a83a30;
+  --tc-text: #e6ddcf; --tc-text-body: #c8bda8; --tc-text-dim: #7a6e5c;
+  --tc-border: #2a221c; --tc-border-hi: #3e3228;
+
+  background: var(--tc-bg) !important; color: var(--tc-text);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh; overflow-x: hidden;
+  margin: 0 !important; max-width: 100% !important; padding: 0 !important;
+  font-size: 17px;
+}
+
+body.tidycal-layout * { box-sizing: border-box; }
+body.tidycal-layout::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 900; background: radial-gradient(ellipse 55% 42% at 50% -6%, rgba(232,89,76,0.10), transparent 70%); }
+body.tidycal-layout::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 901; background: radial-gradient(ellipse at 50% 42%, transparent 55%, rgba(0,0,0,0.5) 100%); }
+
+.tc__wrap { max-width: 720px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 10; }
+
+.tc__hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; padding: 24px 0 8px; opacity: 0; animation: tc-rise 0.6s ease-out 0.1s forwards; }
+
+/* A little month grid with today lit. */
+.tc__cal { display: grid; grid-template-columns: repeat(5, 7px); grid-auto-rows: 7px; gap: 4px; padding: 10px; border: 1px solid var(--tc-border-hi); border-radius: 6px; background: var(--tc-bg2); box-shadow: 0 0 30px rgba(232,89,76,0.14); animation: tc-glow 6s ease-in-out infinite; }
+.tc__cal span { background: var(--tc-border-hi); border-radius: 1px; }
+.tc__cal span.tc__cal-today { background: var(--tc-red); box-shadow: 0 0 8px var(--tc-red); }
+
+.tc__title { font-family: 'VT323', monospace !important; font-size: 3.7rem !important; font-weight: 400 !important; color: var(--tc-red-hi) !important; letter-spacing: 0.08em !important; line-height: 1 !important; margin: 0 !important; text-decoration: none !important; text-shadow: 0 0 24px rgba(232,89,76,0.4); }
+.tc__tagline { font-family: 'Crimson Pro', serif; font-size: 1.15rem; font-style: italic; color: var(--tc-text-body); margin: 0; line-height: 1.6; max-width: 460px; }
+.tc__status { display: inline-flex; align-items: center; gap: 7px; font-size: 0.6rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--tc-red-lo); border: 1px solid var(--tc-border-hi); padding: 4px 11px; border-radius: 2px; }
+.tc__status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--tc-red); box-shadow: 0 0 7px var(--tc-red); animation: tc-pulse 2.4s ease-in-out infinite; }
+
+.tc__rule { display: flex; align-items: center; gap: 10px; margin: 30px 0 4px; opacity: 0; animation: tc-rise 0.5s ease-out 0.22s forwards; }
+.tc__rule::before, .tc__rule::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--tc-border-hi), transparent); }
+.tc__rule-glyph { font-size: 0.6rem; color: var(--tc-red-lo); letter-spacing: 0.2em; }
+
+.tc__prose { opacity: 0; animation: tc-rise 0.6s ease-out 0.3s forwards; }
+.tc__prose > p:first-of-type em { color: var(--tc-text-dim); font-style: italic; font-size: 0.8rem; letter-spacing: 0.05em; }
+.tc__prose p { font-family: 'Crimson Pro', serif; font-size: 1.08rem; line-height: 1.78; color: var(--tc-text-body); margin: 0 0 18px; }
+.tc__prose h2 { font-family: 'Share Tech Mono', monospace !important; font-size: 1.05rem !important; font-weight: 400 !important; letter-spacing: 0.14em !important; text-transform: uppercase; color: var(--tc-red) !important; margin: 12px 0 16px !important; display: flex; align-items: baseline; gap: 10px; }
+.tc__prose h2::before { content: '//'; color: var(--tc-red-lo); font-size: 0.85em; }
+.tc__prose strong { color: var(--tc-red-hi); font-weight: 600; }
+.tc__prose a { color: var(--tc-red); text-decoration: none; border-bottom: 1px dotted var(--tc-red-lo); transition: color 0.15s, border-color 0.15s; }
+.tc__prose a:hover { color: var(--tc-red-hi); border-color: var(--tc-red-hi); background: none; }
+.tc__prose ul { list-style: none; margin: 0 0 18px; padding: 0; }
+.tc__prose li { font-family: 'Crimson Pro', serif; font-size: 1.06rem; line-height: 1.7; color: var(--tc-text-body); position: relative; padding-left: 22px; margin-bottom: 9px; }
+.tc__prose li::before { content: '▦'; position: absolute; left: 1px; top: 0.05em; color: var(--tc-red-lo); font-size: 0.72em; }
+.tc__prose li strong { color: var(--tc-red-hi); }
+.tc__prose code { font-family: 'Share Tech Mono', monospace; font-size: 0.86em; background: var(--tc-bg2); color: var(--tc-red); padding: 1px 6px; border: 1px solid var(--tc-border); border-radius: 2px; }
+.tc__prose hr { border: none; height: 1px; margin: 34px 0; background: linear-gradient(to right, transparent, var(--tc-border-hi), transparent); }
+
+.tc__cta { display: flex; align-items: center; gap: 20px; margin: 40px 0 8px; padding: 22px 24px; background: rgba(232,89,76,0.05); border: 1px solid var(--tc-border-hi); border-radius: 3px; text-decoration: none !important; color: var(--tc-text) !important; transition: background 0.15s, border-color 0.15s; opacity: 0; animation: tc-rise 0.6s ease-out 0.4s forwards; }
+.tc__cta:hover { background: rgba(232,89,76,0.11) !important; border-color: var(--tc-red-lo); }
+.tc__cta-body { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.tc__cta-label { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--tc-red-lo); }
+.tc__cta-text { font-family: 'Crimson Pro', serif !important; font-size: 1rem !important; color: var(--tc-text-body) !important; line-height: 1.6 !important; margin: 0 !important; }
+.tc__cta-link { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--tc-red); white-space: nowrap; flex-shrink: 0; }
+.tc__cta:hover .tc__cta-link { color: var(--tc-red-hi); }
+.tc__cta-arrow { display: inline-block; transition: transform 0.15s; }
+.tc__cta:hover .tc__cta-arrow { transform: translateX(4px); }
+@media (max-width: 480px) { .tc__cta { flex-direction: column; align-items: flex-start; gap: 12px; } }
+
+@keyframes tc-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes tc-glow { 0%,100% { box-shadow: 0 0 24px rgba(232,89,76,0.12); } 50% { box-shadow: 0 0 38px rgba(232,89,76,0.26); } }
+@keyframes tc-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* ---- Light mode: warm paper daylight, the family's free front door ---- */
+@media (prefers-color-scheme: light) {
+  body.tidycal-layout {
+    --tc-bg: #f7f3ea; --tc-bg2: #efe8d8; --tc-bg3: #e6ddca;
+    --tc-red: #c8433a; --tc-red-hi: #a5312a; --tc-red-lo: #d08078;
+    --tc-text: #3a3330; --tc-text-body: #4a4038; --tc-text-dim: #8a8074;
+    --tc-border: #e0d8c8; --tc-border-hi: #c8bca4;
+    --nav-link: #b05048; --nav-link-hover: #a5312a;
+    --footer-border: #e0d8c8; --footer-label: #8a8074;
+    --footer-link: #b05048; --footer-link-hover: #a5312a; --footer-dim: #8a8074;
+    background: var(--tc-bg) !important;
+  }
+  body.tidycal-layout::after { display: none; }
+  .tc__title { text-shadow: none !important; }
+  .tc__cal { background: #fffdf7; box-shadow: 0 0 24px rgba(200,67,58,0.18); }
+}
+</style>
+<body class="tidycal-layout">
+  <main class="tc__wrap">
+    {% include nav.html %}
+
+    <div class="tc__hero">
+      <div class="tc__cal" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span class="tc__cal-today"></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <h1 class="tc__title">{{ page.hero_title | default: "TIDY CALENDAR" }}</h1>
+      <p class="tc__tagline">{{ page.tagline | default: "The month, one glance from your menu bar. Click the date; there it is." }}</p>
+      {% if page.hero_status %}<span class="tc__status"><span class="tc__status-dot"></span>{{ page.hero_status }}</span>{% endif %}
+    </div>
+
+    <div class="tc__rule"><span class="tc__rule-glyph">▦ ▦ ▦</span></div>
+
+    <div class="tc__prose">
+      {{ content }}
+    </div>
+
+    {% unless page.hide_cta %}
+    <a class="tc__cta" href="/tools/updates/">
+      <div class="tc__cta-body">
+        <span class="tc__cta-label">▦ Signal</span>
+        <p class="tc__cta-text">{{ page.cta_text | default: "Tidy Calendar is on the way, and it's free. Leave your email and I'll send one note the day it's out." }}</p>
+      </div>
+      <span class="tc__cta-link">Notify me <span class="tc__cta-arrow">→</span></span>
+    </a>
+    {% endunless %}
+
+    {% include footer.html %}
+  </main>
+</body>
+</html>

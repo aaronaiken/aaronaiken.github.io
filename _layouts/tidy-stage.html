@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap');
+
+/* =============================================
+   TIDY STAGE — landing page
+   Theatrical charcoal under a warm spotlight.
+   The stage light casts a soft cone down the hero.
+   ============================================= */
+
+body.tidystage-layout {
+  --nav-link: #a08858; --nav-link-hover: #ffd884;
+  --ident-color: #6a5836; --ident-border: #2a2114;
+  --footer-border: #2a2114; --footer-label: #6a5836;
+  --footer-link: #927a4a; --footer-link-hover: #ffd884; --footer-dim: #5a4a2e;
+
+  --ts-bg: #0c0a07; --ts-bg2: #1a140d; --ts-bg3: #221a10;
+  --ts-gold: #e8b24a; --ts-gold-hi: #ffd884; --ts-gold-lo: #9a7828;
+  --ts-text: #d6c6a8; --ts-text-body: #bba888; --ts-text-dim: #7a6a48;
+  --ts-border: #2a2114; --ts-border-hi: #3e3018;
+
+  background: var(--ts-bg) !important; color: var(--ts-text);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh; overflow-x: hidden;
+  margin: 0 !important; max-width: 100% !important; padding: 0 !important;
+  font-size: 17px;
+}
+
+body.tidystage-layout * { box-sizing: border-box; }
+body.tidystage-layout::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 900; background: radial-gradient(ellipse 50% 42% at 50% -8%, rgba(232,178,74,0.16), transparent 68%); }
+body.tidystage-layout::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 901; background: radial-gradient(ellipse at 50% 40%, transparent 52%, rgba(0,0,0,0.6) 100%); }
+
+.ts__wrap { max-width: 720px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 10; }
+
+.ts__hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; padding: 24px 0 8px; opacity: 0; animation: ts-rise 0.6s ease-out 0.1s forwards; }
+
+/* A stage light: glowing orb spilling a soft cone downward. */
+.ts__spot { position: relative; width: 62px; height: 60px; }
+.ts__spot-orb { display: block; width: 46px; height: 46px; border-radius: 50%; margin: 0 auto; background: radial-gradient(circle at 40% 34%, #fff6e0, var(--ts-gold-hi) 52%, #d69a30 100%); box-shadow: 0 0 42px rgba(232,178,74,0.5); animation: ts-glow 6s ease-in-out infinite; position: relative; z-index: 2; }
+.ts__spot::after { content: ''; position: absolute; top: 38px; left: 50%; transform: translateX(-50%); width: 82px; height: 52px; background: linear-gradient(rgba(255,216,132,0.22), transparent 90%); clip-path: polygon(34% 0, 66% 0, 100% 100%, 0 100%); z-index: 1; }
+
+.ts__title { font-family: 'VT323', monospace !important; font-size: 4.2rem !important; font-weight: 400 !important; color: var(--ts-gold-hi) !important; letter-spacing: 0.1em !important; line-height: 1 !important; margin: 0 !important; text-decoration: none !important; text-shadow: 0 0 26px rgba(232,178,74,0.5); }
+.ts__tagline { font-family: 'Crimson Pro', serif; font-size: 1.15rem; font-style: italic; color: var(--ts-text-body); margin: 0; line-height: 1.6; max-width: 460px; }
+.ts__status { display: inline-flex; align-items: center; gap: 7px; font-size: 0.6rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ts-gold-lo); border: 1px solid var(--ts-border-hi); padding: 4px 11px; border-radius: 2px; }
+.ts__status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--ts-gold); box-shadow: 0 0 7px var(--ts-gold); animation: ts-pulse 2.4s ease-in-out infinite; }
+
+.ts__rule { display: flex; align-items: center; gap: 10px; margin: 30px 0 4px; opacity: 0; animation: ts-rise 0.5s ease-out 0.22s forwards; }
+.ts__rule::before, .ts__rule::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--ts-border-hi), transparent); }
+.ts__rule-glyph { font-size: 0.6rem; color: var(--ts-gold-lo); letter-spacing: 0.2em; }
+
+.ts__prose { opacity: 0; animation: ts-rise 0.6s ease-out 0.3s forwards; }
+.ts__prose > p:first-of-type em { color: var(--ts-text-dim); font-style: italic; font-size: 0.8rem; letter-spacing: 0.05em; }
+.ts__prose p { font-family: 'Crimson Pro', serif; font-size: 1.08rem; line-height: 1.78; color: var(--ts-text-body); margin: 0 0 18px; }
+.ts__prose h2 { font-family: 'Share Tech Mono', monospace !important; font-size: 1.05rem !important; font-weight: 400 !important; letter-spacing: 0.14em !important; text-transform: uppercase; color: var(--ts-gold) !important; margin: 12px 0 16px !important; display: flex; align-items: baseline; gap: 10px; }
+.ts__prose h2::before { content: '//'; color: var(--ts-gold-lo); font-size: 0.85em; }
+.ts__prose strong { color: var(--ts-gold-hi); font-weight: 600; }
+.ts__prose a { color: var(--ts-gold); text-decoration: none; border-bottom: 1px dotted var(--ts-gold-lo); transition: color 0.15s, border-color 0.15s; }
+.ts__prose a:hover { color: var(--ts-gold-hi); border-color: var(--ts-gold-hi); background: none; }
+.ts__prose ul { list-style: none; margin: 0 0 18px; padding: 0; }
+.ts__prose li { font-family: 'Crimson Pro', serif; font-size: 1.06rem; line-height: 1.7; color: var(--ts-text-body); position: relative; padding-left: 22px; margin-bottom: 9px; }
+.ts__prose li::before { content: '✦'; position: absolute; left: 2px; top: 0.05em; color: var(--ts-gold-lo); font-size: 0.72em; }
+.ts__prose li strong { color: var(--ts-gold-hi); }
+.ts__prose code { font-family: 'Share Tech Mono', monospace; font-size: 0.86em; background: var(--ts-bg2); color: var(--ts-gold); padding: 1px 6px; border: 1px solid var(--ts-border); border-radius: 2px; }
+.ts__prose hr { border: none; height: 1px; margin: 34px 0; background: linear-gradient(to right, transparent, var(--ts-border-hi), transparent); }
+
+.ts__cta { display: flex; align-items: center; gap: 20px; margin: 40px 0 8px; padding: 22px 24px; background: rgba(232,178,74,0.05); border: 1px solid var(--ts-border-hi); border-radius: 3px; text-decoration: none !important; color: var(--ts-text) !important; transition: background 0.15s, border-color 0.15s; opacity: 0; animation: ts-rise 0.6s ease-out 0.4s forwards; }
+.ts__cta:hover { background: rgba(232,178,74,0.11) !important; border-color: var(--ts-gold-lo); }
+.ts__cta-body { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.ts__cta-label { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ts-gold-lo); }
+.ts__cta-text { font-family: 'Crimson Pro', serif !important; font-size: 1rem !important; color: var(--ts-text-body) !important; line-height: 1.6 !important; margin: 0 !important; }
+.ts__cta-link { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ts-gold); white-space: nowrap; flex-shrink: 0; }
+.ts__cta:hover .ts__cta-link { color: var(--ts-gold-hi); }
+.ts__cta-arrow { display: inline-block; transition: transform 0.15s; }
+.ts__cta:hover .ts__cta-arrow { transform: translateX(4px); }
+@media (max-width: 480px) { .ts__cta { flex-direction: column; align-items: flex-start; gap: 12px; } }
+
+@keyframes ts-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ts-glow { 0%,100% { box-shadow: 0 0 36px rgba(232,178,74,0.42); } 50% { box-shadow: 0 0 54px rgba(255,216,132,0.62); } }
+@keyframes ts-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+@media (prefers-color-scheme: light) {
+  body.tidystage-layout {
+    --ts-bg: #f6efe2; --ts-bg2: #ece2d0; --ts-bg3: #e4d8c2;
+    --ts-gold: #a06a10; --ts-gold-hi: #6f4600; --ts-gold-lo: #b08840;
+    --ts-text: #4a3d28; --ts-text-body: #55482e; --ts-text-dim: #8a7a58;
+    --ts-border: #d8ccb4; --ts-border-hi: #bcaa84;
+    --nav-link: #a07830; --nav-link-hover: #6f4600;
+    --footer-border: #d8ccb4; --footer-label: #8a7a58;
+    --footer-link: #a07830; --footer-link-hover: #6f4600; --footer-dim: #8a7a58;
+    background: var(--ts-bg) !important;
+  }
+  body.tidystage-layout::after { display: none; }
+  .ts__title { text-shadow: none !important; }
+  /* In daylight a glow has nothing to glow against, so give the lamp a defined
+     gold face + rim and make the beam a legible shaft of light. */
+  .ts__spot-orb {
+    background: radial-gradient(circle at 40% 34%, #fff2cf, #f0b840 50%, #c2851a 100%);
+    box-shadow: 0 0 18px rgba(190,130,20,0.4);
+    border: 1px solid rgba(150,100,10,0.4);
+  }
+  .ts__spot::after {
+    background: linear-gradient(rgba(224,168,60,0.5), rgba(224,168,60,0.05) 92%);
+    width: 88px; height: 56px;
+  }
+}
+</style>
+<body class="tidystage-layout">
+  <main class="ts__wrap">
+    {% include nav.html %}
+
+    <div class="ts__hero">
+      <div class="ts__spot" aria-hidden="true"><div class="ts__spot-orb"></div></div>
+      <h1 class="ts__title">{{ page.hero_title | default: "TIDY STAGE" }}</h1>
+      <p class="ts__tagline">{{ page.tagline | default: "One toggle to a clean desktop — presenter-ready, then everything back the way it was." }}</p>
+      {% if page.hero_status %}<span class="ts__status"><span class="ts__status-dot"></span>{{ page.hero_status }}</span>{% endif %}
+    </div>
+
+    <div class="ts__rule"><span class="ts__rule-glyph">✦ ✦ ✦</span></div>
+
+    <div class="ts__prose">
+      {{ content }}
+    </div>
+
+    {% unless page.hide_cta %}
+    <a class="ts__cta" href="/tools/updates/">
+      <div class="ts__cta-body">
+        <span class="ts__cta-label">✦ Signal</span>
+        <p class="ts__cta-text">{{ page.cta_text | default: "Tidy Stage is designed and building. Leave your email and I'll send one note the day it takes the stage." }}</p>
+      </div>
+      <span class="ts__cta-link">Notify me <span class="ts__cta-arrow">→</span></span>
+    </a>
+    {% endunless %}
+
+    {% include footer.html %}
+  </main>
+</body>
+</html>
