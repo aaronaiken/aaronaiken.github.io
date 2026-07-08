@@ -64,6 +64,8 @@ That isn't a promise layered on top of the code; it's how the code is built. The
 
 The optional diagnostics log — the thing you'd send me if something misbehaved — is scrubbed at the source: first names only, phone numbers masked to their last four digits, and no message contents of any kind.
 
+The full details are in the [privacy policy](/tools/tidy-away/privacy/).
+
 ---
 
 ## Focus
