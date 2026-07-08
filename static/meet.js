@@ -191,6 +191,16 @@
   // ---------- background blur (MediaPipe segmentation, all local + sender-side) ----------
   function currentCamTrack() { return (blurOn && blurTrack) ? blurTrack : camTrack; }
 
+  // blur only works where MediaPipe + canvas.captureStream do — not iOS Safari (incl. iPad, which
+  // reports itself as a Mac, caught via maxTouchPoints). Used to hide the button on unsupported devices.
+  function blurSupported() {
+    if (typeof SelfieSegmentation === 'undefined') return false;
+    if (typeof document.createElement('canvas').captureStream !== 'function') return false;
+    var ios = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+              (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform || ''));
+    return !ios;
+  }
+
   function onSegResults(results) {
     if (!blurCtx) return;
     var w = results.image.width, h = results.image.height;
@@ -282,7 +292,8 @@
     wire('screen-btn', function () {
       if (screenStream) stopScreen(); else startScreen().catch(function () {});
     });
-    wire('blur-btn', toggleBlur);
+    if (blurSupported()) wire('blur-btn', toggleBlur);
+    else { var _bb = el('blur-btn'); if (_bb) _bb.style.display = 'none'; }
     wire('copy-btn', function () {
       var link = location.origin + '/meet/r/' + encodeURIComponent(ROOM);
       navigator.clipboard.writeText(link).then(function () {
