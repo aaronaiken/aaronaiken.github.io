@@ -18,6 +18,7 @@
   </div>
 
   <div id="stage" class="stage hidden">
+    <div id="filmstrip"></div>
     <div id="grid" class="grid"></div>
     <div class="bar">
       <button id="mic-btn" class="ctl" title="mute / unmute mic"><span>🎙️</span><em>mic</em></button>
@@ -62,6 +63,6 @@
       isHost: {{ 'true' if is_host else 'false' }}
     };
   </script>
-  <script src="{{ url_for('static', filename='meet.js') }}?v=6"></script>
+  <script src="{{ url_for('static', filename='meet.js') }}?v=7"></script>
 </body>
 </html>

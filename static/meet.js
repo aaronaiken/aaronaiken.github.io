@@ -58,11 +58,27 @@
     tag.textContent = label;
     wrap.appendChild(v); wrap.appendChild(tag);
     el('grid').appendChild(wrap);
+    relayout();
     return v;
   }
   function removeTile(id) {
     var t = el('tile-' + id);
     if (t) t.remove();
+    relayout();
+  }
+
+  // presentation layout: when anyone's screen-sharing, that tile fills the stage and every
+  // camera shrinks into a strip on top; otherwise it's the equal grid.
+  function relayout() {
+    var strip = el('filmstrip'), grid = el('grid'), stage = el('stage');
+    if (!strip || !grid || !stage) return;
+    var tiles = Array.prototype.slice.call(document.querySelectorAll('.tile'));
+    var presenting = tiles.some(function (t) { return t.classList.contains('is-screen'); });
+    stage.classList.toggle('presenting', presenting);
+    tiles.forEach(function (t) {
+      var target = (presenting && !t.classList.contains('is-screen')) ? strip : grid;
+      if (t.parentNode !== target) target.appendChild(t);
+    });
   }
 
   // ---------- peer connections ----------
@@ -96,6 +112,7 @@
   function applyScreenClass(id) {
     var t = el('tile-' + id);
     if (t) t.classList.toggle('is-screen', !!peerScreen[id]);
+    relayout();
   }
   function broadcastScreen() {
     Object.keys(peers).forEach(function (id) { sendSignal(id, 'screen', { on: myScreen }); });
@@ -204,6 +221,7 @@
       replaceOutgoingVideo(track);
       var lv = localVideoEl(); if (lv) lv.srcObject = s;
       var lt = el('tile-local'); if (lt) lt.classList.add('is-screen');   // show my whole screen, not cropped
+      relayout();
       var sb = el('screen-btn'); if (sb) sb.classList.add('on');
       myScreen = true; broadcastScreen();                                 // peers switch my tile to contain
       track.onended = stopScreen;   // user hit the browser's "stop sharing"
@@ -214,6 +232,7 @@
     replaceOutgoingVideo(currentCamTrack());
     var lv = localVideoEl(); if (lv) lv.srcObject = (blurOn && blurStream) ? blurStream : localStream;
     var lt = el('tile-local'); if (lt) lt.classList.remove('is-screen');
+    relayout();
     var sb = el('screen-btn'); if (sb) sb.classList.remove('on');
     myScreen = false; broadcastScreen();
   }
