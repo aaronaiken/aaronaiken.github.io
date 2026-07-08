@@ -167,3 +167,42 @@ body {
   .room { flex-direction: column; align-items: stretch; }
   .room-actions { justify-content: flex-end; }
 }
+
+/* notes pad */
+.notes-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 340px; max-width: 90vw; z-index: 20;
+  display: flex; flex-direction: column; gap: 10px; padding: 14px;
+  background: var(--panel); border-left: 1px solid var(--line); box-shadow: -20px 0 50px -30px #000;
+}
+.notes-head { display: flex; align-items: center; justify-content: space-between; color: var(--amber); letter-spacing: 0.12em; font-size: 0.85rem; }
+.notes-x { background: none; border: none; color: var(--ink-soft); cursor: pointer; font-size: 0.9rem; }
+.notes-x:hover { color: var(--danger); }
+#notes-text {
+  flex: 1; resize: none; font-family: inherit; font-size: 0.92rem; line-height: 1.5; color: var(--ink);
+  background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+}
+#notes-text:focus { outline: none; border-color: var(--amber); }
+.notes-actions { display: flex; align-items: center; gap: 10px; }
+.notes-saved { color: var(--ink-soft); font-size: 0.72rem; }
+
+/* end screen */
+.ended {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: var(--bg); z-index: 30;
+}
+.ended-card {
+  width: 100%; max-width: 460px; text-align: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 32px 28px;
+}
+.ended-card h2 { color: var(--amber-hi); letter-spacing: 0.1em; margin: 0 0 18px; }
+.ended-label {
+  display: block; text-align: left; color: var(--ink-soft);
+  font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px;
+}
+#ended-notes {
+  width: 100%; min-height: 130px; resize: vertical; font-family: inherit; font-size: 0.9rem; line-height: 1.5;
+  color: var(--ink); background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 18px;
+}
+#ended-notes:focus { outline: none; border-color: var(--amber); }
+.ended-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.ended-actions .btn-primary { margin-top: 0; }

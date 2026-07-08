@@ -24,8 +24,31 @@
       <button id="cam-btn" class="ctl" title="camera on / off"><span>📷</span><em>cam</em></button>
       <button id="screen-btn" class="ctl" title="share your screen"><span>🖥️</span><em>share</em></button>
       <button id="copy-btn" class="ctl" title="copy the invite link"><span>🔗</span><em>invite</em></button>
-      <button id="leave-btn" class="ctl danger" title="leave the meeting"><span>✕</span><em>leave</em></button>
+      <button id="notes-btn" class="ctl" title="notes"><span>📝</span><em>notes</em></button>
+      <button id="leave-btn" class="ctl danger" title="leave / end the meeting"><span>✕</span><em>leave</em></button>
       <span id="status" class="status"></span>
+    </div>
+  </div>
+
+  <aside id="notes-panel" class="notes-panel hidden">
+    <div class="notes-head"><span>notes</span><button id="notes-close" class="notes-x" title="close">✕</button></div>
+    <textarea id="notes-text" placeholder="jot things down… saved on this device, copy when you're done."></textarea>
+    <div class="notes-actions">
+      <button id="notes-copy" class="mini">copy</button>
+      <span id="notes-saved" class="notes-saved"></span>
+    </div>
+  </aside>
+
+  <div id="ended" class="ended hidden">
+    <div class="ended-card">
+      <h2 id="ended-title">meeting ended</h2>
+      <label class="ended-label">notes</label>
+      <textarea id="ended-notes" readonly placeholder="(no notes taken)"></textarea>
+      <div class="ended-actions">
+        <button id="ended-copy" class="btn-primary">COPY NOTES</button>
+        <a id="ended-rejoin" class="btn-ghost hidden" href="">REJOIN</a>
+        <a id="ended-new" class="btn-ghost hidden" href="/meet">NEW MEETING</a>
+      </div>
     </div>
   </div>
 

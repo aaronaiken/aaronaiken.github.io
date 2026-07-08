@@ -143,6 +143,7 @@
     if (!polling) return;
     api('/poll', { peer_id: PEER_ID }).then(function (res) {
       if (res.error) { status(res.error); return; }
+      if (res.ended) { stopMedia(); showEnd('ended'); return; }
       (res.signals || []).forEach(function (s) {
         if (s.kind === 'offer') onOffer(s.from, null, s.payload);
         else if (s.kind === 'answer') onAnswer(s.from, s.payload);
@@ -205,17 +206,66 @@
         setTimeout(function () { b.classList.remove('on'); }, 1200);
       });
     };
-    el('leave-btn').onclick = leave;
-    window.addEventListener('pagehide', leave);
+    el('leave-btn').onclick = onLeaveClick;
+    wireNotes();
+    el('ended-copy').onclick = function () {
+      var b = el('ended-copy');
+      navigator.clipboard.writeText(el('ended-notes').value).then(function () {
+        b.textContent = 'COPIED ✓'; setTimeout(function () { b.textContent = 'COPY NOTES'; }, 1300);
+      });
+    };
+    window.addEventListener('pagehide', beaconLeave);
   }
 
-  function leave() {
+  function stopMedia() {
     polling = false;
     Object.keys(peers).forEach(dropPeer);
+    if (screenStream) screenStream.getTracks().forEach(function (t) { t.stop(); });
     if (localStream) localStream.getTracks().forEach(function (t) { t.stop(); });
-    navigator.sendBeacon
-      ? navigator.sendBeacon(API + '/leave', new Blob([JSON.stringify({ peer_id: PEER_ID })], { type: 'application/json' }))
-      : api('/leave', { peer_id: PEER_ID });
+  }
+  function beaconLeave() {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(API + '/leave', new Blob([JSON.stringify({ peer_id: PEER_ID })], { type: 'application/json' }));
+    } else {
+      api('/leave', { peer_id: PEER_ID });
+    }
+  }
+  function onLeaveClick() {
+    stopMedia();
+    beaconLeave();
+    if (window.MEET.isHost) api('/close', {}).catch(function () {});   // host leaving ends it for everyone
+    showEnd(window.MEET.isHost ? 'closed' : 'left');
+  }
+
+  // ---------- notes ----------
+  var NOTES_KEY = 'meet-notes-' + ROOM;
+  function wireNotes() {
+    var ta = el('notes-text');
+    if (ta) ta.value = localStorage.getItem(NOTES_KEY) || '';
+    el('notes-btn').onclick = function () { el('notes-panel').classList.toggle('hidden'); if (ta) ta.focus(); };
+    el('notes-close').onclick = function () { el('notes-panel').classList.add('hidden'); };
+    if (ta) ta.addEventListener('input', function () {
+      localStorage.setItem(NOTES_KEY, ta.value);
+      var s = el('notes-saved'); if (s) { s.textContent = 'saved'; clearTimeout(ta._t); ta._t = setTimeout(function () { s.textContent = ''; }, 900); }
+    });
+    el('notes-copy').onclick = function () {
+      var b = el('notes-copy');
+      navigator.clipboard.writeText((ta && ta.value) || '').then(function () { b.textContent = 'copied ✓'; setTimeout(function () { b.textContent = 'copy'; }, 1000); });
+    };
+  }
+
+  // ---------- end screen ----------
+  function showEnd(mode) {   // 'left' guest left · 'closed' host ended · 'ended' host ended (guest POV)
+    var titles = { left: "you've left the meeting", closed: 'meeting ended', ended: 'the meeting ended' };
+    el('stage').classList.add('hidden');
+    el('name-gate').classList.add('hidden');
+    el('ended-title').textContent = titles[mode] || 'meeting ended';
+    el('ended-notes').value = localStorage.getItem(NOTES_KEY) || ((el('notes-text') || {}).value || '');
+    var rejoin = el('ended-rejoin');
+    if (mode === 'left') { rejoin.classList.remove('hidden'); rejoin.href = location.pathname; }
+    else rejoin.classList.add('hidden');
+    el('ended-new').classList.toggle('hidden', !window.MEET.isHost);
+    el('ended').classList.remove('hidden');
   }
 
   // ---------- join ----------

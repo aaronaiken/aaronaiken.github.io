@@ -226,6 +226,9 @@ def meet_poll(room_id):
     if not peer_id:
         return jsonify({'error': 'peer_id required'}), 400
     db = _db()
+    if not db.execute("SELECT 1 FROM rooms WHERE id=?", (room_id,)).fetchone():
+        db.close()
+        return jsonify({'ended': True})   # host closed it — tell everyone still polling
     db.execute("UPDATE participants SET last_seen=? WHERE room_id=? AND peer_id=?", (_iso(), room_id, peer_id))
     _prune(db, room_id)
     sigs = db.execute("SELECT id, from_peer, kind, payload FROM signals WHERE room_id=? AND to_peer=? ORDER BY id",
@@ -264,6 +267,21 @@ def meet_leave(room_id):
     db = _db()
     db.execute("DELETE FROM participants WHERE room_id=? AND peer_id=?", (room_id, peer_id))
     db.execute("DELETE FROM signals WHERE room_id=? AND (to_peer=? OR from_peer=?)", (room_id, peer_id, peer_id))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+
+@meet_bp.route('/meet/r/<room_id>/close', methods=['POST'])
+def meet_close(room_id):
+    """End the meeting for everyone — host only (authed). Deletes the room; guests
+    polling get {'ended': True} on their next tick."""
+    if not is_authenticated():
+        return jsonify({'error': 'unauthorized'}), 403
+    db = _db()
+    db.execute("DELETE FROM rooms WHERE id=?", (room_id,))
+    db.execute("DELETE FROM participants WHERE room_id=?", (room_id,))
+    db.execute("DELETE FROM signals WHERE room_id=?", (room_id,))
     db.commit()
     db.close()
     return jsonify({'ok': True})
