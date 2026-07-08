@@ -27,6 +27,13 @@ from helpers.auth import is_authenticated
 
 meet_bp = Blueprint('meet', __name__)
 
+
+@meet_bp.after_request
+def _no_store(resp):
+    # meeting pages + signaling must never be cached (a stale room page = missing buttons / crash)
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
+
 MEET_DB = os.environ.get('COCKPIT_MEET_DB',
                          os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'meet.db'))
 STALE_SECONDS = 25   # drop a participant we haven't heard from in this long

@@ -20,6 +20,8 @@
 
   var el = function (id) { return document.getElementById(id); };
   var status = function (t) { var s = el('status'); if (s) s.textContent = t || ''; };
+  // null-safe click wiring — a missing element (e.g. stale cached HTML) must never crash the join
+  function wire(id, fn) { var e = el(id); if (e) e.onclick = fn; }
 
   function api(path, body) {
     return fetch(API + path, {
@@ -208,8 +210,7 @@
       blurReady = true;
       replaceOutgoingVideo(blurTrack);
       var lv = localVideoEl(); if (lv) lv.srcObject = blurStream;
-      el('blur-btn').classList.remove('loading');
-      el('blur-btn').classList.add('on');
+      var bb = el('blur-btn'); if (bb) { bb.classList.remove('loading'); bb.classList.add('on'); }
       status('');
     }
   }
@@ -217,19 +218,26 @@
   function ensureBlur() {
     if (seg) return true;
     if (typeof SelfieSegmentation === 'undefined') return false;   // library didn't load
-    blurVideo = document.createElement('video');
-    blurVideo.muted = true; blurVideo.playsInline = true; blurVideo.srcObject = localStream;
-    blurVideo.play().catch(function () {});
-    blurCanvas = document.createElement('canvas'); blurCanvas.width = 640; blurCanvas.height = 480;
-    blurCtx = blurCanvas.getContext('2d');
-    seg = new SelfieSegmentation({ locateFile: function (f) {
-      return 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/' + f;
-    } });
-    seg.setOptions({ modelSelection: 1 });
-    seg.onResults(onSegResults);
-    blurStream = blurCanvas.captureStream(24);
-    blurTrack = blurStream.getVideoTracks()[0];
-    return true;
+    try {
+      blurVideo = document.createElement('video');
+      blurVideo.muted = true; blurVideo.playsInline = true; blurVideo.srcObject = localStream;
+      blurVideo.play().catch(function () {});
+      blurCanvas = document.createElement('canvas'); blurCanvas.width = 640; blurCanvas.height = 480;
+      blurCtx = blurCanvas.getContext('2d');
+      seg = new SelfieSegmentation({ locateFile: function (f) {
+        return 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/' + f;
+      } });
+      seg.setOptions({ modelSelection: 1 });
+      seg.onResults(onSegResults);
+      blurStream = blurCanvas.captureStream && blurCanvas.captureStream(24);   // unsupported on some iOS
+      blurTrack = blurStream && blurStream.getVideoTracks()[0];
+      if (!blurTrack) { seg = null; return false; }
+      return true;
+    } catch (e) {
+      console.warn('[meet] blur init failed:', e);
+      seg = null; blurStream = null; blurTrack = null;
+      return false;
+    }
   }
 
   function pump() {
@@ -239,53 +247,57 @@
     });
   }
 
+  function revertBlur(msg) {
+    blurOn = false; blurReady = false;
+    replaceOutgoingVideo(camTrack);
+    var lv = localVideoEl(); if (lv) lv.srcObject = localStream;
+    var bb = el('blur-btn'); if (bb) bb.classList.remove('on', 'loading');
+    if (msg) status(msg);
+  }
+
   function toggleBlur() {
     if (screenStream) { status('stop screen share to blur'); return; }
-    if (blurOn) {
-      blurOn = false; blurReady = false;
-      replaceOutgoingVideo(camTrack);
-      var lv = localVideoEl(); if (lv) lv.srcObject = localStream;
-      el('blur-btn').classList.remove('on');
-      return;
-    }
-    if (!ensureBlur()) { status('blur not available in this browser'); return; }
+    if (blurOn) { revertBlur(''); return; }
+    if (!ensureBlur()) { status('blur isn’t supported on this device'); return; }
     blurOn = true; blurReady = false;
-    el('blur-btn').classList.add('loading');
+    var b = el('blur-btn'); if (b) b.classList.add('loading');
     status('starting blur…');
     pump();
+    // if no blurred frame arrives (e.g. iOS Safari can't run the pipeline), give up gracefully
+    setTimeout(function () { if (blurOn && !blurReady) revertBlur('blur isn’t supported on this device'); }, 6000);
   }
 
   // ---------- controls ----------
   function wireControls() {
-    el('mic-btn').onclick = function () {
+    wire('mic-btn', function () {
       var t = localStream.getAudioTracks()[0]; if (!t) return;
       t.enabled = !t.enabled;
       this.classList.toggle('off', !t.enabled);
-    };
-    el('cam-btn').onclick = function () {
+    });
+    wire('cam-btn', function () {
       if (!camTrack) return;
       camTrack.enabled = !camTrack.enabled;
       this.classList.toggle('off', !camTrack.enabled);
-    };
-    el('screen-btn').onclick = function () {
+    });
+    wire('screen-btn', function () {
       if (screenStream) stopScreen(); else startScreen().catch(function () {});
-    };
-    el('blur-btn').onclick = toggleBlur;
-    el('copy-btn').onclick = function () {
+    });
+    wire('blur-btn', toggleBlur);
+    wire('copy-btn', function () {
       var link = location.origin + '/meet/r/' + encodeURIComponent(ROOM);
       navigator.clipboard.writeText(link).then(function () {
         var b = el('copy-btn'); b.classList.add('on');
         setTimeout(function () { b.classList.remove('on'); }, 1200);
       });
-    };
-    el('leave-btn').onclick = onLeaveClick;
+    });
+    wire('leave-btn', onLeaveClick);
     wireNotes();
-    el('ended-copy').onclick = function () {
+    wire('ended-copy', function () {
       var b = el('ended-copy');
       navigator.clipboard.writeText(el('ended-notes').value).then(function () {
         b.textContent = 'COPIED ✓'; setTimeout(function () { b.textContent = 'COPY NOTES'; }, 1300);
       });
-    };
+    });
     window.addEventListener('pagehide', beaconLeave);
   }
 
@@ -317,16 +329,16 @@
   function wireNotes() {
     var ta = el('notes-text');
     if (ta) ta.value = localStorage.getItem(NOTES_KEY) || '';
-    el('notes-btn').onclick = function () { el('notes-panel').classList.toggle('hidden'); if (ta) ta.focus(); };
-    el('notes-close').onclick = function () { el('notes-panel').classList.add('hidden'); };
+    wire('notes-btn', function () { var p = el('notes-panel'); if (p) p.classList.toggle('hidden'); if (ta) ta.focus(); });
+    wire('notes-close', function () { var p = el('notes-panel'); if (p) p.classList.add('hidden'); });
     if (ta) ta.addEventListener('input', function () {
       localStorage.setItem(NOTES_KEY, ta.value);
       var s = el('notes-saved'); if (s) { s.textContent = 'saved'; clearTimeout(ta._t); ta._t = setTimeout(function () { s.textContent = ''; }, 900); }
     });
-    el('notes-copy').onclick = function () {
+    wire('notes-copy', function () {
       var b = el('notes-copy');
       navigator.clipboard.writeText((ta && ta.value) || '').then(function () { b.textContent = 'copied ✓'; setTimeout(function () { b.textContent = 'copy'; }, 1000); });
-    };
+    });
   }
 
   // ---------- end screen ----------
