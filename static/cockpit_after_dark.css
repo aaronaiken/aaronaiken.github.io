@@ -543,6 +543,31 @@
 	}
 	.lib-tile-del:hover { color: #c04040; }
 
+	/* ============================================================
+	   VIDEO PLAYERS — text + accents follow the mode's --amber (legible amber
+	   in work/normal, red in after-dark) instead of hardcoded dark red, which
+	   was too low-contrast to read on the dark surfaces. Surfaces stay dark.
+	   ============================================================ */
+	#yt-player-title, #ad-player-title,
+	#yt-now-playing, #ad-now-playing { color: var(--amber-hi); }
+	#yt-player .ad-player-tb-btn, #ad-player .ad-player-tb-btn,
+	#yt-player .ad-library-tile, #ad-player .ad-library-tile,
+	#yt-player .ad-queue-row, #ad-player .ad-queue-row,
+	#yt-queue-input, #ad-queue-input, #ad-queue-auto-min { color: var(--amber); }
+	#yt-player .ad-player-tb-btn:hover, #ad-player .ad-player-tb-btn:hover { color: var(--amber-hi); }
+	#yt-player-resize-grip, #ad-player-resize-grip,
+	#yt-queue-status, #ad-queue-status,
+	#yt-player .lib-tile-del, #ad-player .lib-tile-del,
+	#yt-player .ad-queue-del, #ad-player .ad-queue-del { color: var(--amber-lo); }
+	#yt-queue-input::placeholder, #ad-queue-input::placeholder { color: var(--amber-lo); }
+	#yt-player .lib-tile-del:hover, #ad-player .lib-tile-del:hover,
+	#yt-player .ad-queue-del:hover, #ad-player .ad-queue-del:hover { color: var(--amber-hi); }
+	#yt-player .ad-library-tile:hover, #ad-player .ad-library-tile:hover,
+	#yt-player .ad-library-tile.is-playing, #ad-player .ad-library-tile.is-playing,
+	#yt-player .ad-queue-row:hover, #ad-player .ad-queue-row:hover,
+	#yt-player .ad-queue-row.is-playing, #ad-player .ad-queue-row.is-playing { border-color: var(--amber); color: var(--amber-hi); }
+	#yt-queue-input:focus, #ad-queue-input:focus { border-color: var(--amber); }
+
 	#ad-player-video-wrap {
 		position: relative;
 		width: 100%;
