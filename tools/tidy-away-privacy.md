@@ -4,6 +4,11 @@ title: Tidy Away — Privacy
 permalink: /tools/tidy-away/privacy/
 page_ident: "TIDY · MAC UTILITIES"
 author: aaron
+breadcrumb:
+  - { label: Tools, url: /tools/ }
+  - { label: Tidy, url: /tidyapps/ }
+  - { label: Tidy Away, url: /tools/tidy-away/ }
+  - { label: Privacy }
 hero_title: "PRIVACY"
 tagline: "How Tidy Away treats your data. The short version: it barely touches it."
 hide_cta: true

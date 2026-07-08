@@ -5,6 +5,10 @@ permalink: /tools/tidy-cal/
 page_ident: "TIDY · MAC UTILITIES"
 author: aaron
 hero_status: "Free · Coming Soon"
+breadcrumb:
+  - { label: Tools, url: /tools/ }
+  - { label: Tidy, url: /tidyapps/ }
+  - { label: Tidy Calendar }
 description: A glanceable calendar in your Mac menu bar. Click the date for a clean month grid — today highlighted, locale-correct, optional ISO week numbers. Free, no permissions.
 ---
 

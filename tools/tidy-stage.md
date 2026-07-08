@@ -5,6 +5,10 @@ permalink: /tools/tidy-stage/
 page_ident: "TIDY · MAC UTILITIES"
 author: aaron
 hero_status: "Coming Soon"
+breadcrumb:
+  - { label: Tools, url: /tools/ }
+  - { label: Tidy, url: /tidyapps/ }
+  - { label: Tidy Stage }
 description: One toggle covers your cluttered desktop with a clean background for screen recording and sharing, then restores everything when you're done. Native macOS.
 ---
 

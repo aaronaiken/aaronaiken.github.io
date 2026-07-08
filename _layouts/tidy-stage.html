@@ -110,6 +110,8 @@ body.tidystage-layout::after { content: ''; position: fixed; inset: 0; pointer-e
   <main class="ts__wrap">
     {% include nav.html %}
 
+    {% include breadcrumb.html %}
+
     <div class="ts__hero">
       <div class="ts__spot" aria-hidden="true"><div class="ts__spot-orb"></div></div>
       <h1 class="ts__title">{{ page.hero_title | default: "TIDY STAGE" }}</h1>

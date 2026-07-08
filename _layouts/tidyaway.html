@@ -139,6 +139,8 @@ body.tidyaway-layout::after {
   <main class="tw__wrap">
     {% include nav.html %}
 
+    {% include breadcrumb.html %}
+
     <div class="tw__hero">
       <div class="tw__moon" aria-hidden="true"></div>
       <h1 class="tw__title">{{ page.hero_title | default: "TIDY AWAY" }}</h1>

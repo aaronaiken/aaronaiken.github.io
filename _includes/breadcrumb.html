@@ -1,0 +1,17 @@
+{% if page.breadcrumb %}
+<nav class="crumbs" aria-label="Breadcrumb">
+{%- for crumb in page.breadcrumb -%}
+{%- unless forloop.first %}<span class="crumbs__sep">/</span>{% endunless -%}
+{%- if crumb.url -%}<a href="{{ crumb.url }}">{{ crumb.label }}</a>{%- else -%}<span class="crumbs__here">{{ crumb.label }}</span>{%- endif -%}
+{%- endfor -%}
+</nav>
+<style>
+/* Breadcrumb — themes to whatever layout it sits in via that layout's
+   --nav-link / --ident-color custom properties. */
+.crumbs { font-family: 'Share Tech Mono', monospace; font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-bottom: 10px; }
+.crumbs a { color: var(--nav-link, #888); text-decoration: none; border-bottom: 1px dotted transparent; transition: color 0.15s, border-color 0.15s; }
+.crumbs a:hover { color: var(--nav-link-hover, #fff); border-color: var(--nav-link-hover, #fff); }
+.crumbs__sep { color: var(--ident-color, #777); opacity: 0.6; }
+.crumbs__here { color: var(--ident-color, #999); }
+</style>
+{% endif %}

@@ -5,6 +5,10 @@ permalink: /tools/tidy-bar/
 page_ident: "TIDY · MAC UTILITIES"
 author: aaron
 hero_status: "App Store · Soon"
+breadcrumb:
+  - { label: Tools, url: /tools/ }
+  - { label: Tidy, url: /tidyapps/ }
+  - { label: Tidy Bar }
 description: A cleaner Mac menu bar. Hide the icons you don't need behind a movable separator, reveal them on click. Native AppKit, free, no telemetry.
 ---
 

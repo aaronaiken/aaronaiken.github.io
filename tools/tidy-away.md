@@ -5,6 +5,10 @@ permalink: /tools/tidy-away/
 page_ident: "TIDY · MAC UTILITIES"
 author: aaron
 hero_status: "In Testing · v0.1"
+breadcrumb:
+  - { label: Tools, url: /tools/ }
+  - { label: Tidy, url: /tidyapps/ }
+  - { label: Tidy Away }
 description: A menu-bar auto-reply for iMessage that leaves every message unread. Replies to people you know, never groups, never reads a word you wrote. macOS, direct download.
 ---
 
