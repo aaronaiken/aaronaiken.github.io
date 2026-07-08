@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>meet · cockpit</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='meet.css') }}">
+</head>
+<body class="meet-lobby">
+  <main class="lobby-card">
+    <h1>// MEET</h1>
+    <p>homemade video, right here in the cockpit. start a room, share the link — your guests just click to join. camera, mic, and screen share, no installs.</p>
+    <form method="post" action="{{ url_for('meet.meet_new') }}">
+      <button type="submit" class="btn-primary">START A MEETING</button>
+    </form>
+  </main>
+</body>
+</html>

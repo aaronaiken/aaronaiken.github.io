@@ -44,3 +44,5 @@ static/after_dark_youtube.txt
 assets/data/scratch_work.json
 mozzie_games.json
 CLAUDE.md
+# ephemeral meeting room/signal state
+meet.db
