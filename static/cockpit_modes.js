@@ -685,9 +685,11 @@
 		};
 
 		function applySize(newW) {
-			// never wider than the viewport (else the resize grip lands off-screen — e.g. after
-			// dragging it big on an external display, then switching to the laptop screen)
-			newW = Math.max(320, Math.min(newW, window.innerWidth - 24));
+			// keep the WHOLE player within the viewport (both dimensions) so the bottom-right resize
+			// grip is always reachable — width-only wasn't enough: the huge video made it taller than
+			// the screen, stranding the grip below the bottom edge
+			const maxByH = (window.innerHeight - titlebarH() - 40) * NATIVE_W / NATIVE_H;
+			newW = Math.max(320, Math.min(newW, window.innerWidth - 24, maxByH));
 			const scale = newW / NATIVE_W;
 			const videoH = Math.round(NATIVE_H * scale);
 			player.style.width  = newW + 'px';
@@ -746,6 +748,14 @@
 		window.addEventListener('resize', function () {
 			clearTimeout(fitT);
 			fitT = setTimeout(function () { applySize(parseFloat(player.style.width) || 481); }, 120);
+		});
+
+		// escape hatch: double-click the titlebar to snap back to default size + corner
+		const tbar = document.getElementById('ad-player-titlebar');
+		if (tbar) tbar.addEventListener('dblclick', function () {
+			player.style.left = ''; player.style.top = ''; player.style.right = ''; player.style.bottom = '';
+			localStorage.removeItem('ad-player-pos');
+			applySize(481);
 		});
 	})();
 
@@ -1377,7 +1387,9 @@
 		};
 
 		function applySize(newW) {
-			newW = Math.max(320, Math.min(newW, window.innerWidth - 24));   // never wider than the viewport
+			// keep the whole player within the viewport (both dimensions) so the resize grip stays reachable
+			const maxByH = (window.innerHeight - titlebarH() - 40) * ASPECT;
+			newW = Math.max(320, Math.min(newW, window.innerWidth - 24, maxByH));
 			const newH = Math.round(newW / ASPECT) + titlebarH();
 			player.style.width  = newW + 'px';
 			player.style.height = newH + 'px';
@@ -1393,6 +1405,14 @@
 		window.addEventListener('resize', function () {
 			clearTimeout(ytFitT);
 			ytFitT = setTimeout(function () { applySize(parseFloat(player.style.width) || 480); }, 120);
+		});
+
+		// escape hatch: double-click the titlebar to snap back to default size + corner
+		const ytTbar = document.getElementById('yt-player-titlebar');
+		if (ytTbar) ytTbar.addEventListener('dblclick', function () {
+			player.style.left = ''; player.style.top = ''; player.style.right = ''; player.style.bottom = '';
+			localStorage.removeItem('yt-player-pos');
+			applySize(480);
 		});
 
 		let resizing = false, startX, startY, startW;
