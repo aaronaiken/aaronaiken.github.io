@@ -641,6 +641,25 @@
 		});
 	})();
 
+	// ---- keep dragged floating panels on-screen when the viewport shrinks ----
+	// (e.g. unplugging an external display) — otherwise a panel saved at external-monitor
+	// coordinates is stranded off the smaller laptop screen with its resize grip unreachable.
+	(function keepFloatersOnScreen() {
+		function clampOne(id) {
+			const elp = document.getElementById(id);
+			if (!elp || getComputedStyle(elp).display === 'none') return;
+			const left = parseFloat(elp.style.left), top = parseFloat(elp.style.top);
+			if (isNaN(left) && isNaN(top)) return;   // still on its default corner anchor — always on-screen
+			const maxL = Math.max(0, window.innerWidth  - elp.offsetWidth);
+			const maxT = Math.max(0, window.innerHeight - elp.offsetHeight);
+			if (!isNaN(left)) { elp.style.left = Math.min(Math.max(0, left), maxL) + 'px'; elp.style.right = 'auto'; }
+			if (!isNaN(top))  { elp.style.top  = Math.min(Math.max(0, top),  maxT) + 'px'; elp.style.bottom = 'auto'; }
+		}
+		function clampAll() { ['ad-player', 'yt-player', 'focus-timer', 'ad-music-player'].forEach(clampOne); }
+		let t;
+		window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(clampAll, 120); });
+	})();
+
 	// ---- AD Player resize-grip drag ----
 	// Custom grip instead of relying on CSS `resize: both`, which is hard to
 	// grab once the iframe overlays the corner. While the user drags, the

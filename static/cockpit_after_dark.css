@@ -1041,6 +1041,30 @@
 		letter-spacing: 0.1em;
 	}
 
+	/* ---- floating video players follow the DEVICE light/dark setting (outside after-dark mode,
+	   which stays dark by design). Their text/accents already flip via var(--amber); this flips the
+	   hardcoded-dark surfaces to warm paper when the device is in light mode. ---- */
+	@media (prefers-color-scheme: light) {
+		body:not(.mode-after-dark) #ad-player,
+		body:not(.mode-after-dark) #yt-player {
+			background: #fffaf4; border-color: #d8cfb8;
+			box-shadow: 0 8px 40px rgba(120, 90, 40, 0.22), 0 0 0 1px #e6dfcc;
+		}
+		body:not(.mode-after-dark) #ad-player-titlebar,
+		body:not(.mode-after-dark) #yt-player-titlebar { background: #eae3d2; border-bottom-color: #d8cfb8; }
+		body:not(.mode-after-dark) #ad-player-library,
+		body:not(.mode-after-dark) #ad-player-queue,
+		body:not(.mode-after-dark) #yt-player-library,
+		body:not(.mode-after-dark) #yt-player-queue { background: #fffaf4; border-bottom-color: #d8cfb8; }
+		body:not(.mode-after-dark) .ad-library-tile,
+		body:not(.mode-after-dark) .ad-queue-row,
+		body:not(.mode-after-dark) #ad-queue-input,
+		body:not(.mode-after-dark) #ad-queue-auto-min,
+		body:not(.mode-after-dark) #yt-queue-input { background: #fffdf7; border-color: #d8cfb8; }
+		body:not(.mode-after-dark) #ad-player-resize-grip,
+		body:not(.mode-after-dark) #yt-player-resize-grip { background: #eae3d2; border-color: #d8cfb8; }
+	}
+
 	/* ---- AFTER DARK: FULL PAGE PALETTE OVERRIDE ---- */
 body.mode-after-dark {
 	--bg:           #0e0608;
