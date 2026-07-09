@@ -685,7 +685,9 @@
 		};
 
 		function applySize(newW) {
-			newW = Math.max(320, newW);
+			// never wider than the viewport (else the resize grip lands off-screen — e.g. after
+			// dragging it big on an external display, then switching to the laptop screen)
+			newW = Math.max(320, Math.min(newW, window.innerWidth - 24));
 			const scale = newW / NATIVE_W;
 			const videoH = Math.round(NATIVE_H * scale);
 			player.style.width  = newW + 'px';
@@ -737,6 +739,13 @@
 			localStorage.setItem('ad-player-size', JSON.stringify({
 				w: parseFloat(player.style.width),
 			}));
+		});
+
+		// re-fit to the viewport when it shrinks (unplug external display) — keeps the grip reachable
+		let fitT;
+		window.addEventListener('resize', function () {
+			clearTimeout(fitT);
+			fitT = setTimeout(function () { applySize(parseFloat(player.style.width) || 481); }, 120);
 		});
 	})();
 
@@ -1368,7 +1377,7 @@
 		};
 
 		function applySize(newW) {
-			newW = Math.max(320, newW);
+			newW = Math.max(320, Math.min(newW, window.innerWidth - 24));   // never wider than the viewport
 			const newH = Math.round(newW / ASPECT) + titlebarH();
 			player.style.width  = newW + 'px';
 			player.style.height = newH + 'px';
@@ -1378,6 +1387,13 @@
 			const saved = JSON.parse(localStorage.getItem('yt-player-size'));
 			applySize(saved && saved.w ? saved.w : 480);
 		} catch (e) { applySize(480); }
+
+		// re-fit to the viewport when it shrinks (unplug external display) — keeps the grip reachable
+		let ytFitT;
+		window.addEventListener('resize', function () {
+			clearTimeout(ytFitT);
+			ytFitT = setTimeout(function () { applySize(parseFloat(player.style.width) || 480); }, 120);
+		});
 
 		let resizing = false, startX, startY, startW;
 		grip.addEventListener('mousedown', function (e) {
