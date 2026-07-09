@@ -141,7 +141,7 @@ The notes field is markdown because meeting notes need real formatting — bulle
 
 ## Meet (Video Calls)
 
-A homemade video meeting, built into the Cockpit — no Zoom, no installs. Start a room from `/meet` (it can be named and optionally scheduled), get a shareable link, and send it to whoever's joining. Guests open the link, type a name, and they're in. Camera, mic, screen share, and background blur, plus a notes pad you can copy out afterward.
+A homemade video meeting, built into the Cockpit — no Zoom, no installs. Start a room from `/meet` (it can be named and optionally scheduled), get a shareable link, and send it to whoever's joining. Guests open the link, type a name, and they're in. Camera, mic, screen share, and background blur (on desktop), plus shared notes everyone in the room can see and copy out afterward. When someone shares their screen it fills the stage and the cameras shrink to a thumbnail strip on top — a proper presentation view.
 
 The media is peer-to-peer WebRTC — a mesh, sized for small 2–4 person calls — and Flask acts only as the signaling relay, over HTTP polling since PythonAnywhere has no WebSockets. Reliability across locked-down networks comes from TURN (Cloudflare Realtime or a static server, both optional via env). Background blur runs entirely in the browser via MediaPipe segmentation: the person is kept sharp on a canvas while the background is blurred, and that processed canvas is swapped into the outgoing video — so it costs the other participants nothing. Rooms are ephemeral (auto-cleaned after 48 hours) but persist long enough that a link made in the morning still works at meeting time. Leaving as the host ends the meeting for everyone.
 
