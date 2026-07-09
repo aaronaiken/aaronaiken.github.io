@@ -23,6 +23,7 @@ own id post-insert. A temporary unique placeholder is used during INSERT
 (the ticket_number column is NOT NULL UNIQUE; we can't insert NULL). We
 then UPDATE to the canonical TKT-NNNN value.
 """
+import os
 import uuid
 
 from flask import (
@@ -38,6 +39,8 @@ tickets_bp = Blueprint('tickets', __name__)
 
 VALID_STATUSES = ('open', 'pending', 'in_progress', 'closed')
 VALID_PRIORITIES = ('normal', 'urgent')
+
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
 
 
 # ---- Helpers ----
@@ -288,11 +291,15 @@ def ticket_detail(ticket_id):
 		'ORDER BY sort_order ASC, name ASC'
 	).fetchall()
 
+	# Work-log notes — append-only, newest first
+	notes = _ticket_notes(conn, ticket_id)
+
 	conn.close()
 	return render_template(
 		'command_deck_ticket.html',
 		ticket=dict(ticket),
 		time_entries=[dict(r) for r in time_entries],
+		notes=notes,
 		lifetime_seconds=int(lifetime_seconds or 0),
 		customer_groups=[dict(r) for r in customer_groups],
 		ticket_types=[dict(r) for r in ticket_types],
@@ -396,6 +403,270 @@ def ticket_new():
 		conn2.close()
 		return jsonify({'success': True, 'ticket': _serialize_ticket(row)})
 	return redirect(url_for('tickets.ticket_detail', ticket_id=new_id))
+
+
+# ---- Draft-from-text (Huyang extraction → pre-filled ticket) ----
+
+
+_DRAFT_TOOL = {
+	'name': 'draft_ticket',
+	'description': (
+		'Turn a pasted customer email/message/request into a support-ticket '
+		'draft. Extract only what the message actually supports; leave a field '
+		'blank rather than inventing a value.'
+	),
+	'input_schema': {
+		'type': 'object',
+		'properties': {
+			'title': {
+				'type': 'string',
+				'description': 'Short actionable summary of the ask (<= 80 chars). No "Re:" / greeting fluff.',
+			},
+			'description': {
+				'type': 'string',
+				'description': (
+					'The concrete details needed to do the work — what they want, '
+					'any specifics/IDs/links they gave. Tidy, but keep their facts. '
+					'Do not pad with pleasantries.'
+				),
+			},
+			'priority': {
+				'type': 'string',
+				'enum': ['normal', 'urgent'],
+				'description': 'urgent only if the message clearly signals time-pressure or an outage; else normal.',
+			},
+			'customer_name': {
+				'type': 'string',
+				'description': 'Exact name copied from the CUSTOMERS list if the sender matches one, else empty string.',
+			},
+			'customer_group_name': {
+				'type': 'string',
+				'description': 'Exact name from the GROUPS list if evident, else empty string.',
+			},
+			'type_name': {
+				'type': 'string',
+				'description': 'Exact name from the TYPES list that best fits, else empty string.',
+			},
+			'due_date': {
+				'type': 'string',
+				'description': 'YYYY-MM-DD if a deadline is stated or clearly implied ("by Friday"), else empty string.',
+			},
+			'requested_date': {
+				'type': 'string',
+				'description': 'YYYY-MM-DD the request was made if a date is present in the message, else empty string.',
+			},
+			'notes': {
+				'type': 'string',
+				'description': 'One short line: what you inferred vs. guessed, or "" if all clear.',
+			},
+		},
+		'required': ['title', 'description', 'priority'],
+	},
+}
+
+
+def _resolve_lookup(name, rows):
+	"""Case-insensitive exact-then-substring match of `name` against
+	(id, name) rows. Returns the matched id, or None."""
+	if not name:
+		return None
+	n = name.strip().lower()
+	if not n:
+		return None
+	for r in rows:
+		if (r['name'] or '').strip().lower() == n:
+			return r['id']
+	for r in rows:
+		rn = (r['name'] or '').strip().lower()
+		if rn and (n in rn or rn in n):
+			return r['id']
+	return None
+
+
+def _draft_ticket_from_text(text):
+	"""Call Claude with a forced tool schema to extract ticket fields from a
+	pasted message, then resolve customer/group/type names to lookup ids.
+	Returns (draft_dict, error_string). draft is None on error."""
+	import anthropic
+
+	conn = get_db()
+	groups = conn.execute(
+		'SELECT id, name FROM customer_groups WHERE is_active = 1 ORDER BY name ASC'
+	).fetchall()
+	customers = conn.execute(
+		'SELECT id, name, customer_group_id FROM customers '
+		'WHERE archived_at IS NULL ORDER BY name ASC'
+	).fetchall()
+	types = conn.execute(
+		'SELECT id, name FROM ticket_types WHERE is_active = 1 ORDER BY name ASC'
+	).fetchall()
+	conn.close()
+
+	group_names = [g['name'] for g in groups]
+	customer_names = [c['name'] for c in customers]
+	type_names = [t['name'] for t in types]
+
+	today = et_now()[:10]  # et_now() is an ISO string; date portion only
+	system = (
+		"You are Huyang, drafting a support ticket from a message the operator "
+		"pasted in. Be precise and literal — extract only what the message "
+		"supports. Today's date is " + today + " (US Eastern).\n\n"
+		"Pick customer / group / type ONLY from these lists, copying a name "
+		"verbatim when it matches; otherwise return an empty string for that "
+		"field (do not invent new ones).\n\n"
+		"CUSTOMERS: " + (", ".join(customer_names) if customer_names else "(none)") + "\n"
+		"GROUPS: " + (", ".join(group_names) if group_names else "(none)") + "\n"
+		"TYPES: " + (", ".join(type_names) if type_names else "(none)") + "\n"
+	)
+
+	try:
+		client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+		resp = client.messages.create(
+			model='claude-sonnet-4-5',
+			max_tokens=800,
+			system=system,
+			tools=[_DRAFT_TOOL],
+			tool_choice={'type': 'tool', 'name': 'draft_ticket'},
+			messages=[{'role': 'user', 'content': text}],
+		)
+	except Exception as e:
+		return None, str(e)
+
+	fields = None
+	for block in resp.content:
+		if getattr(block, 'type', None) == 'tool_use' and block.name == 'draft_ticket':
+			fields = block.input
+			break
+	if not isinstance(fields, dict):
+		return None, 'no_extraction'
+
+	priority = (fields.get('priority') or 'normal').strip().lower()
+	if priority not in VALID_PRIORITIES:
+		priority = 'normal'
+
+	customer_id = _resolve_lookup(fields.get('customer_name'), customers)
+	group_id = _resolve_lookup(fields.get('customer_group_name'), groups)
+	type_id = _resolve_lookup(fields.get('type_name'), types)
+
+	# If we matched a customer but no group, inherit the customer's group
+	if customer_id and not group_id:
+		for c in customers:
+			if c['id'] == customer_id and c['customer_group_id']:
+				group_id = c['customer_group_id']
+				break
+
+	def _clean_date(v):
+		v = (v or '').strip()
+		try:
+			return _to_iso_date(v)
+		except ValueError:
+			return None
+
+	# Names the model suggested that we couldn't resolve — surface so the
+	# operator knows a field was left blank on purpose.
+	unmatched = []
+	for label, suggested, matched in (
+		('customer', fields.get('customer_name'), customer_id),
+		('type', fields.get('type_name'), type_id),
+	):
+		s = (suggested or '').strip()
+		if s and not matched:
+			unmatched.append({'field': label, 'suggested': s})
+
+	def _name_for(row_id, rows):
+		if not row_id:
+			return ''
+		for r in rows:
+			if r['id'] == row_id:
+				return r['name']
+		return ''
+
+	draft = {
+		'title': (fields.get('title') or '').strip(),
+		'description': (fields.get('description') or '').strip(),
+		'priority': priority,
+		'customer_id': customer_id,
+		'customer_name': _name_for(customer_id, customers),
+		'customer_group_id': group_id,
+		'customer_group_name': _name_for(group_id, groups),
+		'type_id': type_id,
+		'type_name': _name_for(type_id, types),
+		'due_date': _clean_date(fields.get('due_date')),
+		'requested_date': _clean_date(fields.get('requested_date')),
+		'notes': (fields.get('notes') or '').strip(),
+		'unmatched': unmatched,
+	}
+	return draft, None
+
+
+@tickets_bp.route('/command-deck/tickets/draft-from-text', methods=['POST'])
+@cd_auth_required
+def ticket_draft_from_text():
+	data = request.get_json(silent=True) or request.form
+	text = (data.get('text') or '').strip()
+	if not text:
+		return jsonify({'error': 'text_required'}), 400
+	if len(text) > 12000:
+		text = text[:12000]
+	if not ANTHROPIC_API_KEY:
+		return jsonify({'error': 'Anthropic API key not configured'}), 500
+
+	draft, err = _draft_ticket_from_text(text)
+	if err:
+		return jsonify({'error': 'Huyang could not draft this right now.'}), 502
+	return jsonify({'success': True, 'draft': draft})
+
+
+# ---- Work log (append-only timestamped notes) ----
+
+
+def _ticket_notes(conn, ticket_id):
+	rows = conn.execute(
+		'SELECT id, ticket_id, body, created FROM ticket_notes '
+		'WHERE ticket_id = ? ORDER BY id DESC',
+		(ticket_id,)
+	).fetchall()
+	return [dict(r) for r in rows]
+
+
+@tickets_bp.route('/command-deck/tickets/<int:ticket_id>/notes', methods=['POST'])
+@cd_auth_required
+def ticket_note_add(ticket_id):
+	data = request.get_json(silent=True) or request.form
+	body = (data.get('body') or '').strip()
+	if not body:
+		return jsonify({'error': 'body_required'}), 400
+
+	conn = get_db()
+	exists = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+	if not exists:
+		conn.close()
+		return jsonify({'error': 'not_found'}), 404
+
+	now = et_now()
+	cur = conn.execute(
+		'INSERT INTO ticket_notes (ticket_id, body, created) VALUES (?, ?, ?)',
+		(ticket_id, body, now)
+	)
+	# Touch the ticket so it sorts as recently-worked
+	conn.execute('UPDATE tickets SET updated = ? WHERE id = ?', (now, ticket_id))
+	note = {'id': cur.lastrowid, 'ticket_id': ticket_id, 'body': body, 'created': now}
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True, 'note': note})
+
+
+@tickets_bp.route('/command-deck/tickets/<int:ticket_id>/notes/<int:note_id>/delete', methods=['POST'])
+@cd_auth_required
+def ticket_note_delete(ticket_id, note_id):
+	conn = get_db()
+	conn.execute(
+		'DELETE FROM ticket_notes WHERE id = ? AND ticket_id = ?',
+		(note_id, ticket_id)
+	)
+	conn.commit()
+	conn.close()
+	return jsonify({'success': True})
 
 
 # ---- Update (per-field PATCH) ----

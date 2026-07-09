@@ -3327,6 +3327,8 @@ body[data-area="fdot"] .cd-fdot-palm {
 	padding: 6px 10px 0;
 	display: flex;
 	justify-content: flex-start;
+	gap: 0.4rem;
+	flex-wrap: wrap;
 }
 body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
 
@@ -3358,6 +3360,48 @@ body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
 	box-shadow: 0 0 8px rgba(245, 179, 50, 0.25);
 }
 .cd-huyang-search-icon { font-size: 0.7rem; line-height: 1; }
+
+/* Huyang ticket-draft card (→ TICKET mode) */
+.cd-tkt-draft {
+	border: 1px solid rgba(212, 136, 10, 0.35);
+	border-radius: 3px;
+	padding: 0.6rem 0.7rem;
+	background: rgba(212, 136, 10, 0.05);
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+}
+.cd-tkt-draft-head {
+	font-family: var(--cd-font-ui, monospace);
+	font-size: 0.55rem;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: var(--cd-amber, #d4880a);
+	margin-bottom: 0.15rem;
+}
+.cd-tkt-draft-line { font-size: 0.8rem; line-height: 1.35; }
+.cd-tkt-draft-line b {
+	display: inline-block;
+	min-width: 4.4rem;
+	font-size: 0.55rem;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--cd-dim, #9a8b6a);
+	vertical-align: baseline;
+}
+.cd-tkt-draft-flag {
+	font-size: 0.62rem;
+	color: #c0872b;
+	font-style: italic;
+}
+.cd-tkt-draft-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	margin-top: 0.3rem;
+}
+.cd-tkt-draft-status { font-size: 0.62rem; color: var(--cd-dim, #9a8b6a); }
+.cd-tkt-draft-status a { color: var(--cd-amber, #d4880a); }
 
 /* ============================================================
    REPORTS PAGE — Phase 2 of time tracking
@@ -5199,6 +5243,33 @@ textarea.cd-ticket-input { min-height: auto; }
   gap: 0.4rem;
 }
 
+.cd-ticket-paste {
+  border: 1px dashed var(--cd-amber);
+  padding: 0.75rem;
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(212, 136, 10, 0.06);
+  margin-bottom: 0.9rem;
+}
+.cd-ticket-paste-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.cd-ticket-paste-status {
+  font-family: var(--cd-font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  color: var(--cd-dim, #9a8b6a);
+  flex: 1;
+  min-width: 0;
+}
+.cd-ticket-paste-status.ok { color: var(--cd-amber); }
+.cd-ticket-paste-status.err { color: #c0392b; }
+
 .cd-ticket-customer-add {
   border: 1px dashed var(--cd-amber);
   padding: 0.75rem;
@@ -5422,6 +5493,61 @@ textarea.cd-ticket-input { min-height: auto; }
   font-family: var(--cd-font-ui);
   font-size: 0.7rem;
   color: var(--cd-text-dim);
+}
+
+/* Ticket work log */
+.cd-worklog-count {
+  font-family: var(--cd-font-ui, monospace);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: var(--cd-dim, #9a8b6a);
+  border: 1px solid rgba(212, 136, 10, 0.3);
+  border-radius: 2px;
+  padding: 1px 6px;
+}
+.cd-worklog-add { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.75rem; }
+.cd-worklog-input { width: 100%; resize: vertical; }
+.cd-worklog-add-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.cd-worklog-hint { font-size: 0.6rem; color: var(--cd-dim, #9a8b6a); }
+.cd-worklog-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.cd-worklog-entry {
+  border-left: 2px solid rgba(212, 136, 10, 0.4);
+  padding: 0.3rem 0 0.3rem 0.6rem;
+}
+.cd-worklog-entry-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.cd-worklog-entry-time {
+  font-family: var(--cd-font-ui, monospace);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  color: var(--cd-amber, #d4880a);
+}
+.cd-worklog-entry-del {
+  background: none;
+  border: none;
+  color: var(--cd-dim, #9a8b6a);
+  cursor: pointer;
+  font-size: 0.7rem;
+  line-height: 1;
+  opacity: 0.5;
+  transition: opacity 0.15s, color 0.15s;
+}
+.cd-worklog-entry:hover .cd-worklog-entry-del { opacity: 1; }
+.cd-worklog-entry-del:hover { color: #c0392b; }
+.cd-worklog-entry-body {
+  font-size: 0.82rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  margin-top: 0.15rem;
 }
 
 .cd-ticket-resolution-panel { background: rgba(60, 160, 80, 0.06); border-color: rgba(60, 160, 80, 0.25); }

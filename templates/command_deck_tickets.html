@@ -141,6 +141,16 @@
       <form method="POST" action="/command-deck/tickets/new" id="newTicketForm">
         <input type="hidden" name="return" value="json">
 
+        <div class="cd-ticket-paste" id="ntPasteBlock">
+          <span class="cd-ticket-field-label">Draft from a pasted message</span>
+          <textarea id="ntPasteText" class="cd-input cd-ticket-input" rows="3"
+                    placeholder="Paste the email / message someone sent you — Huyang fills in the fields below for you to review."></textarea>
+          <div class="cd-ticket-paste-actions">
+            <button type="button" class="cd-btn primary" id="ntPasteDraftBtn">✨ DRAFT WITH HUYANG</button>
+            <span class="cd-ticket-paste-status" id="ntPasteStatus" aria-live="polite"></span>
+          </div>
+        </div>
+
         <label class="cd-ticket-field">
           <span class="cd-ticket-field-label">Title</span>
           <input type="text" name="title" class="cd-input cd-ticket-input"
@@ -459,6 +469,11 @@
   function closeModal() {
     modal.classList.remove('open');
     custNewBlock.setAttribute('hidden', '');
+    var pt = document.getElementById('ntPasteText');
+    var ps = document.getElementById('ntPasteStatus');
+    if (pt) pt.value = '';
+    if (ps) { ps.textContent = ''; ps.className = 'cd-ticket-paste-status'; }
+    Array.prototype.forEach.call(form.querySelectorAll('input.nt-drafted'), function (el) { el.remove(); });
   }
 
   openBtn.addEventListener('click', function () { openModal(); });
@@ -535,6 +550,81 @@
         newName.value = ''; newEmail.value = ''; newGroup.value = '';
       })
       .catch(function () { newSave.disabled = false; alert('Network error.'); });
+  });
+
+  // Draft-from-paste — Huyang extracts fields from a pasted message
+  var pasteText = document.getElementById('ntPasteText');
+  var pasteBtn = document.getElementById('ntPasteDraftBtn');
+  var pasteStatus = document.getElementById('ntPasteStatus');
+
+  function setHidden(name, val) {
+    // maintain a hidden input so drafted due/requested dates flow to create
+    var el = form.querySelector('input[type="hidden"][name="' + name + '"].nt-drafted');
+    if (!val) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('input');
+      el.type = 'hidden'; el.name = name; el.className = 'nt-drafted';
+      form.appendChild(el);
+    }
+    el.value = val;
+  }
+
+  function applyDraft(d) {
+    var titleInput = form.querySelector('input[name="title"]');
+    var descInput = form.querySelector('textarea[name="description"]');
+    if (titleInput) titleInput.value = d.title || '';
+    if (descInput) descInput.value = d.description || '';
+    var pr = form.querySelector('input[name="priority"][value="' + (d.priority || 'normal') + '"]');
+    if (pr) pr.checked = true;
+    // Customer first (may auto-fill group via change), then override with the
+    // drafted group/type so Huyang's picks win.
+    if (custSelect) custSelect.value = d.customer_id ? String(d.customer_id) : '';
+    if (groupSelect) groupSelect.value = d.customer_group_id ? String(d.customer_group_id) : (groupSelect.value || '');
+    if (groupSelect && groupSelect.value) applyGroupDefaultProject();
+    if (d.type_id) {
+      var typeSelect = form.querySelector('select[name="type_id"]');
+      if (typeSelect) typeSelect.value = String(d.type_id);
+    }
+    setHidden('due_date', d.due_date);
+    setHidden('requested_date', d.requested_date);
+
+    // Build a short "here's what I read" line so the guessed bits are visible
+    var bits = [];
+    if (d.due_date) bits.push('due ' + d.due_date);
+    if (d.requested_date) bits.push('requested ' + d.requested_date);
+    (d.unmatched || []).forEach(function (u) {
+      bits.push('no ' + u.field + ' match for "' + u.suggested + '" — left blank');
+    });
+    if (d.notes) bits.push(d.notes);
+    pasteStatus.textContent = bits.length ? '✓ drafted — ' + bits.join(' · ') + '. Review & create.' : '✓ drafted — review & create.';
+    pasteStatus.className = 'cd-ticket-paste-status ok';
+  }
+
+  if (pasteBtn) pasteBtn.addEventListener('click', function () {
+    var text = (pasteText.value || '').trim();
+    if (!text) { pasteText.focus(); return; }
+    pasteBtn.disabled = true;
+    pasteStatus.className = 'cd-ticket-paste-status';
+    pasteStatus.textContent = 'Huyang is reading…';
+    fetch('/command-deck/tickets/draft-from-text', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text }),
+    }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        pasteBtn.disabled = false;
+        if (!res.ok || !res.d.success) {
+          pasteStatus.className = 'cd-ticket-paste-status err';
+          pasteStatus.textContent = res.d && res.d.error ? res.d.error : 'Could not draft — fill in manually.';
+          return;
+        }
+        applyDraft(res.d.draft);
+      })
+      .catch(function () {
+        pasteBtn.disabled = false;
+        pasteStatus.className = 'cd-ticket-paste-status err';
+        pasteStatus.textContent = 'Network error — fill in manually.';
+      });
   });
 
   // Form submit — POST as JSON, close modal on success, reload list

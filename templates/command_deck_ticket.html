@@ -228,6 +228,36 @@
       </div>
     </section>
 
+    <!-- WORK LOG -->
+    <section class="cd-panel cd-mb">
+      <div class="cd-panel-header">
+        <span class="cd-panel-title">// Work log</span>
+        <span class="cd-worklog-count" id="worklogCount"{% if not notes %} hidden{% endif %}>{{ notes|length }}</span>
+      </div>
+      <div class="cd-panel-body">
+        <div class="cd-worklog-add">
+          <textarea class="cd-input cd-worklog-input" id="worklogInput" rows="2"
+                    placeholder="What did you just do? Add a timestamped note…"></textarea>
+          <div class="cd-worklog-add-actions">
+            <span class="cd-worklog-hint">⌘/Ctrl+Enter to add</span>
+            <button class="cd-btn primary sm" id="worklogAddBtn" type="button">ADD NOTE</button>
+          </div>
+        </div>
+        <ul class="cd-worklog-list" id="worklogList" data-ticket-id="{{ ticket.id }}">
+          {% for n in notes %}
+          <li class="cd-worklog-entry" data-note-id="{{ n.id }}">
+            <div class="cd-worklog-entry-head">
+              <span class="cd-worklog-entry-time">{{ n.created[:16].replace('T', ' ') }}</span>
+              <button class="cd-worklog-entry-del" type="button" title="Delete note" aria-label="Delete note">✕</button>
+            </div>
+            <div class="cd-worklog-entry-body">{{ n.body }}</div>
+          </li>
+          {% endfor %}
+        </ul>
+        <div class="cd-empty cd-worklog-empty" id="worklogEmpty"{% if notes %} hidden{% endif %}>No work-log notes yet.</div>
+      </div>
+    </section>
+
     {% if ticket.status == 'closed' and ticket.resolution %}
     <!-- RESOLUTION -->
     <section class="cd-panel cd-mb cd-ticket-resolution-panel">
@@ -594,6 +624,79 @@ const TICKET_LIFETIME_SECONDS = {{ lifetime_seconds | tojson }};
   }
   syncTodayTag();
   setInterval(syncTodayTag, 30000);
+})();
+
+// ---- Work log (timestamped, append-only) ----
+(function () {
+  var list = document.getElementById('worklogList');
+  if (!list) return;
+  var ticketId = list.dataset.ticketId;
+  var inputEl = document.getElementById('worklogInput');
+  var addBtn = document.getElementById('worklogAddBtn');
+  var emptyEl = document.getElementById('worklogEmpty');
+  var countEl = document.getElementById('worklogCount');
+
+  function esc(s) {
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(s || ''));
+    return d.innerHTML;
+  }
+  function updateCount() {
+    var n = list.querySelectorAll('.cd-worklog-entry').length;
+    if (countEl) { countEl.textContent = n; countEl.hidden = n === 0; }
+    if (emptyEl) emptyEl.hidden = n !== 0;
+  }
+  function fmtStamp(iso) {
+    // et_now() ISO string → "YYYY-MM-DD HH:MM"
+    return (iso || '').slice(0, 16).replace('T', ' ');
+  }
+  function wireDelete(entry) {
+    var del = entry.querySelector('.cd-worklog-entry-del');
+    if (!del) return;
+    del.addEventListener('click', function () {
+      var noteId = entry.dataset.noteId;
+      if (!confirm('Delete this note?')) return;
+      fetch('/command-deck/tickets/' + ticketId + '/notes/' + noteId + '/delete', {
+        method: 'POST', credentials: 'same-origin',
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d && d.success) { entry.remove(); updateCount(); }
+      });
+    });
+  }
+  Array.prototype.forEach.call(list.querySelectorAll('.cd-worklog-entry'), wireDelete);
+
+  function addNote() {
+    var body = (inputEl.value || '').trim();
+    if (!body) { inputEl.focus(); return; }
+    addBtn.disabled = true;
+    fetch('/command-deck/tickets/' + ticketId + '/notes', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: body }),
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      addBtn.disabled = false;
+      if (!d || !d.success) { alert('Could not add note: ' + ((d && d.error) || 'unknown')); return; }
+      var li = document.createElement('li');
+      li.className = 'cd-worklog-entry';
+      li.dataset.noteId = d.note.id;
+      li.innerHTML =
+        '<div class="cd-worklog-entry-head">' +
+          '<span class="cd-worklog-entry-time">' + esc(fmtStamp(d.note.created)) + '</span>' +
+          '<button class="cd-worklog-entry-del" type="button" title="Delete note" aria-label="Delete note">✕</button>' +
+        '</div>' +
+        '<div class="cd-worklog-entry-body">' + esc(d.note.body) + '</div>';
+      list.insertBefore(li, list.firstChild);
+      wireDelete(li);
+      inputEl.value = '';
+      inputEl.focus();
+      updateCount();
+    }).catch(function () { addBtn.disabled = false; alert('Network error.'); });
+  }
+
+  addBtn.addEventListener('click', addNote);
+  inputEl.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); addNote(); }
+  });
 })();
 </script>
 <script src="/static/command_deck_nav.js"></script>
