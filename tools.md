@@ -1,6 +1,6 @@
 ---
 layout: tools
-title: Tools
+title: The Workbench
 permalink: /tools/
-page_ident: "WORKSHOP · TOOLS & EXPERIMENTS"
+page_ident: "WORKBENCH · TOOLS & EXPERIMENTS"
 ---

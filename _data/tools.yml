@@ -1,0 +1,226 @@
+# The Workbench — the source of truth for the /tools/ page.
+# Add a thing: append to `tools` below. Move it between sections: change `group`.
+# Put it up top for a while: set `featured: true`. That's it — no HTML to edit.
+#
+# status  -> live | online | docs | soon | blueprint  (drives the dot + label)
+# group   -> must match a `groups` id below
+# icon    -> an emoji; OR set family_icon: true for the Tidy 4-dot mark
+# external-> true for off-site links (adds rel=noopener); omit for on-site
+
+groups:
+  - { id: publish,  label: "WRITE & PUBLISH" }
+  - { id: rhythms,  label: "DAILY RHYTHMS" }
+  - { id: mac,      label: "MAC UTILITIES" }
+  - { id: toys,     label: "WEB EXPERIMENTS" }
+  - { id: money,    label: "SHOP & SUPPORT" }
+  - { id: books,    label: "BOOKS" }
+  - { id: private,  label: "THE SHIP'S SYSTEMS · PRIVATE" }
+
+tools:
+  - name: Letters from Paul
+    url: https://lettersfrompaul.day
+    external: true
+    icon: "⛵"
+    status: live
+    group: rhythms
+    featured: true
+    cta: VISIT
+    blurb: >
+      A slow daily walk through the apostle Paul's letters, in his own voice — a
+      passage each morning, plus a place to write to him and receive a real letter
+      back. ESV-clean readings, illustrated voyage maps, generated on Claude. Flask
+      + SQLite on Fly.
+    tags: [Flask, Claude, Resend, "Fly.io"]
+
+  - name: Endpaper
+    url: https://endpaper.day
+    external: true
+    icon: "📖"
+    status: live
+    group: publish
+    featured: true
+    cta: VISIT
+    blurb: >
+      A multi-lens writing system. Capture in any shape — journal, snapshots,
+      scholarly drafts — then search across everything you've ever written and
+      publish to any blog. My main personal tool, dogfooded daily.
+    tags: [SvelteKit, FastAPI, Postgres, pgvector]
+
+  - name: The Slot
+    url: https://theslot.ink
+    external: true
+    icon: "📰"
+    status: live
+    group: publish
+    cta: VISIT
+    blurb: >
+      A calm editorial planner for writers who publish across more than one place.
+      Four-column kanban — idea → draft → review → published — with an optional
+      BYOK AI layer. Sibling to Endpaper.
+    tags: [SvelteKit, FastAPI, Postgres, "BYOK AI"]
+
+  - name: One Thing
+    url: https://firstthing.day
+    external: true
+    icon: "🎯"
+    status: live
+    group: rhythms
+    cta: SIGN UP
+    blurb: >
+      Email-first daily intention setter. Email a single focus to a magic address;
+      receive a short reminder at your chosen morning time. No app, no login —
+      anti-productivity-theater.
+    tags: ["Cloudflare Workers", Resend, "Email-first"]
+
+  - name: Made My Day
+    url: https://mademy.day
+    external: true
+    icon: "✨"
+    status: live
+    group: rhythms
+    cta: SIGN UP
+    blurb: >
+      Email-first positive-moments journal. Send short notes about good things to a
+      magic address; once a month, receive a recap of everything. No accounts, no
+      app.
+    tags: ["Cloudflare Workers", Resend, "Email-first"]
+
+  - name: Mission Log
+    url: /tools/tasks/
+    icon: "📋"
+    status: online
+    group: rhythms
+    cta: VIEW
+    blurb: "Personal tasks out of my head."
+    tags: [Tasks, IndieWeb]
+
+  - name: The Tidy Family
+    url: /tidyapps/
+    family_icon: true
+    status: family
+    group: mac
+    cta: SEE THE FAMILY
+    blurb: >
+      Four small, single-job Mac utilities — Bar, Stage, Calendar, and Away. Native,
+      private, no telemetry, made by hand. All on one page.
+
+  - name: Astromech // Audio Lab
+    url: /tools/audio-lab/
+    icon: "🔊"
+    status: online
+    group: toys
+    cta: LAUNCH LAB
+    blurb: >
+      Browser-based synthesizer and sound design tool. 30 sounds across 5 categories,
+      live oscilloscope, pitch and decay controls. Export Jekyll-ready snippets. Web
+      Audio API — no dependencies, no server.
+    tags: ["Web Audio API", JavaScript, "Jekyll-ready"]
+
+  - name: Astromech // Brew Lab
+    url: /tools/brew/
+    icon: "☕️"
+    status: online
+    group: toys
+    cta: STEEP
+    blurb: >
+      French press calculator and steep timer. Set your coffee weight, pick your
+      ratio, and let R2 whistle when the brew is ready. Web Audio API — no
+      dependencies, no server.
+    tags: ["Web Audio API", JavaScript, "French Press"]
+
+  - name: Astromech // Domain Scanner
+    url: /tools/domains/
+    icon: "📡"
+    status: online
+    group: toys
+    cta: SCAN
+    blurb: >
+      Bulk domain availability checker. Paste a list or sweep a name across TLDs. DNS
+      first, RDAP fallback, honest UNKNOWNs when CORS blocks the truth. Self-contained,
+      client-side only.
+    tags: ["Bulk lookup", "DNS + RDAP", "Self-contained"]
+
+  - name: Best Cigar Matches
+    url: https://bestcigarmatches.com
+    external: true
+    icon: "🪵"
+    status: live
+    group: money
+    cta: SHOP
+    blurb: >
+      A direct-to-consumer storefront for hand-made cedar cigar matches and leather
+      goods. Jekyll storefront, custom Flask admin, Stripe for payments. Real
+      customers, real revenue. My wife runs fulfillment.
+    tags: [Jekyll, Flask, Stripe, "Hand-made"]
+
+  - name: Plink
+    url: https://plink.aaronaiken.me/please
+    external: true
+    icon: "🪙"
+    status: live
+    group: money
+    cta: SEE IT
+    blurb: >
+      Self-hosted tip jar for indie creators. Embed it on your site, visitors send
+      tips directly via Stripe, no middleman skim. FastAPI + SvelteKit on Fly.io. See
+      it in action on my own page.
+    tags: [FastAPI, SvelteKit, Stripe, "Fly.io"]
+
+  - name: Splinched
+    url: /splinched
+    icon: "📕"
+    status: blueprint
+    group: books
+    cta: LEARN MORE
+    blurb: >
+      A digital bundle — book + spreadsheet + worksheets — capturing my system for
+      eliminating $110k of debt. Pre-orders coming soon at the founder's price.
+    tags: [PDF, Spreadsheet, Bundle]
+
+  - name: The Cockpit
+    url: /tools/cockpit/
+    icon: "🛸"
+    status: docs
+    group: private
+    cta: READ THE MANUAL
+    blurb: >
+      Private Flask web app that runs my publishing pipeline plus Below Deck, Command
+      Deck, Today, time tracking, mileage, meetings, tickets, reports, and an LLM
+      companion. The bridge of the ship. This is the technical manual.
+    tags: [Python, Flask, SQLite, "Anthropic API", PythonAnywhere]
+
+  - name: The Ledger
+    url: /tools/ledger/
+    icon: "🧭"
+    status: docs
+    group: private
+    cta: READ THE MANUAL
+    blurb: >
+      Private Cockpit-sibling for debt elimination and cash runway. Avalanche-snowball
+      projection, payday session, leak-hunt CSV imports, milestone map, optional AI
+      assistant. The chart room of the ship. This is the technical manual.
+    tags: [Python, Flask, SQLite, PythonAnywhere]
+
+  - name: The Dispatch
+    url: /tools/dispatch/
+    icon: "📬"
+    status: docs
+    group: private
+    cta: READ THE MANUAL
+    blurb: >
+      Private Flask app handling all site communication — contact form forwarding,
+      tools update signups, and a double-locked Markdown newsletter sender. One app,
+      three jobs. This is the technical manual.
+    tags: [Python, Flask, Fastmail, PythonAnywhere]
+
+  - name: The Creed
+    url: /tools/creed/
+    icon: "🛡️"
+    status: docs
+    group: private
+    cta: READ THE MANUAL
+    blurb: >
+      A daily-reflection app I built for my son Mozzie. PIN-locked sign-in, daily
+      virtue missions, XP and credits, Mandalorian character customization. Lindsay
+      and I get the dashboard. This is the technical manual.
+    tags: [Python, Flask, SQLAlchemy]

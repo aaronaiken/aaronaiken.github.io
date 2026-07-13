@@ -1,0 +1,28 @@
+{% assign t = include.tool %}
+{% case t.status %}
+  {% when 'live' %}{% assign slabel = 'LIVE' %}{% assign soff = false %}
+  {% when 'online' %}{% assign slabel = 'ONLINE' %}{% assign soff = false %}
+  {% when 'docs' %}{% assign slabel = 'DOCS' %}{% assign soff = false %}
+  {% when 'blueprint' %}{% assign slabel = 'BLUEPRINT' %}{% assign soff = true %}
+  {% when 'soon' %}{% assign slabel = 'SOON' %}{% assign soff = true %}
+  {% when 'family' %}{% assign slabel = 'THE FAMILY' %}{% assign soff = true %}
+  {% else %}{% assign slabel = t.status | upcase %}{% assign soff = false %}
+{% endcase %}
+<a class="tools__card" href="{{ t.url }}"{% if t.external %} rel="noopener noreferrer"{% endif %}>
+  <div class="tools__card-header">
+    {% if t.family_icon %}
+      <span class="tools__famico" aria-hidden="true"><span class="m1"></span><span class="m2"></span><span class="m3"></span><span class="m4"></span></span>
+    {% else %}
+      <span class="tools__card-icon">{{ t.icon }}</span>
+    {% endif %}
+    <span class="tools__card-status{% if soff %} tools__card-status--offline{% endif %}"><span class="tools__card-dot{% if soff %} tools__card-dot--offline{% endif %}"></span>{{ slabel }}</span>
+  </div>
+  <h2 class="tools__card-name">{{ t.name | upcase }}</h2>
+  <p class="tools__card-desc">{{ t.blurb }}</p>
+  {% if t.tags %}
+  <div class="tools__card-meta">
+    {% for tag in t.tags %}<span class="tools__card-tag">{{ tag }}</span>{% endfor %}
+  </div>
+  {% endif %}
+  <div class="tools__card-cta">{{ t.cta | default: 'OPEN' }} <span class="tools__card-arrow">→</span></div>
+</a>

@@ -106,279 +106,87 @@ body.tools-page::after { content: ''; position: fixed; inset: 0; background: rad
 @media (max-width: 480px) {
   .tools__card--signal { flex-direction: column; align-items: flex-start; }
 }
+
+/* filter chips + featured 'now' strip (The Workbench) */
+.wb-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; opacity: 0; animation: tp-rise 0.4s ease-out 0.2s forwards; }
+.wb-chip { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; padding: 5px 11px; background: var(--tp-bg2); border: 1px solid var(--tp-border); color: var(--tp-text-dim); cursor: pointer; transition: color 0.15s, border-color 0.15s, background 0.15s; }
+.wb-chip:hover { border-color: var(--tp-amber-lo); color: var(--tp-amber); }
+.wb-chip.active { border-color: var(--tp-amber-lo); color: var(--tp-amber-hi); background: var(--tp-bg3); }
+.wb-section[data-section="now"] .tools__card { border-color: var(--tp-amber-lo); background: rgba(212,136,10,0.035); }
+.wb-section[data-section="now"] .tools__card:hover { background: rgba(212,136,10,0.09) !important; }
 </style>
 <body class="tools-page">
   <div class="tools-grain"></div>
   <main class="tools__wrap">
     {% include nav.html %}
     <div class="tools__title-block">
-      <h1 class="tools__title"><span class="tools__title-prefix">// </span>TOOLS<span class="tools__cursor"></span></h1>
-      <p class="tools__subtitle">Things I built. Public. Works in progress. Tinkering made visible.</p>
-    </div>
-    <div class="tools__rule"><span class="tools__rule-glyph">// MAC</span></div>
-    <div class="tools__grid">
-      <a class="tools__card" href="/tidyapps/" style="grid-column: 1 / -1;">
-        <div class="tools__card-header">
-          <span class="tools__famico" aria-hidden="true"><span class="m1"></span><span class="m2"></span><span class="m3"></span><span class="m4"></span></span>
-          <span class="tools__card-status tools__card-status--offline"><span class="tools__card-dot tools__card-dot--offline"></span>THE FAMILY</span>
-        </div>
-        <h2 class="tools__card-name">THE TIDY FAMILY</h2>
-        <p class="tools__card-desc">Four small, single-job Mac utilities — Bar, Stage, Calendar, and Away. Native, private, no telemetry, made by hand. All on one page.</p>
-        <div class="tools__card-cta">SEE THE FAMILY <span class="tools__card-arrow">→</span></div>
-      </a>
+      <h1 class="tools__title"><span class="tools__title-prefix">// </span>THE WORKBENCH<span class="tools__cursor"></span></h1>
+      <p class="tools__subtitle">Things I've built — public, private, in progress. Tinkering made visible.</p>
     </div>
 
-    <div class="tools__rule"><span class="tools__rule-glyph">// WEB</span></div>
-    <div class="tools__grid">
-      <a class="tools__card" href="https://endpaper.day" rel="noopener noreferrer">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">📖</span>
-          <span class="tools__card-status"><span class="tools__card-dot"></span>LIVE</span>
-        </div>
-        <h2 class="tools__card-name">ENDPAPER</h2>
-        <p class="tools__card-desc">A multi-lens writing system. Capture in any shape — journal, snapshots, scholarly drafts — then search across everything you've ever written and publish to any blog. SvelteKit on the front, FastAPI and Postgres on the back. My main personal tool, dogfooded daily.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">SvelteKit</span>
-          <span class="tools__card-tag">FastAPI</span>
-          <span class="tools__card-tag">Postgres</span>
-          <span class="tools__card-tag">pgvector</span>
-        </div>
-        <div class="tools__card-cta">VISIT <span class="tools__card-arrow">→</span></div>
-      </a>
-      <a class="tools__card" href="https://theslot.ink" rel="noopener noreferrer">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">📰</span>
-          <span class="tools__card-status"><span class="tools__card-dot"></span>LIVE</span>
-        </div>
-        <h2 class="tools__card-name">THE SLOT</h2>
-        <p class="tools__card-desc">A calm editorial planner for writers who publish across more than one place. Four-column kanban — idea → draft → review → published — with an optional BYOK AI layer for outlining cards, decomposing projects, and crafting publication voice profiles. Sibling to Endpaper. SvelteKit on Cloudflare Pages, FastAPI on Fly.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">SvelteKit</span>
-          <span class="tools__card-tag">FastAPI</span>
-          <span class="tools__card-tag">Postgres</span>
-          <span class="tools__card-tag">BYOK AI</span>
-        </div>
-        <div class="tools__card-cta">VISIT <span class="tools__card-arrow">→</span></div>
-      </a>
-      <a class="tools__card" href="https://bestcigarmatches.com" rel="noopener noreferrer">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">🪵</span>
-          <span class="tools__card-status"><span class="tools__card-dot"></span>LIVE</span>
-        </div>
-        <h2 class="tools__card-name">BEST CIGAR MATCHES</h2>
-        <p class="tools__card-desc">A direct-to-consumer storefront for hand-made cedar cigar matches and leather goods. Jekyll storefront, custom Flask admin for orders and labels, Stripe for payments. Real customers, real revenue. My wife runs fulfillment.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">Jekyll</span>
-          <span class="tools__card-tag">Flask</span>
-          <span class="tools__card-tag">Stripe</span>
-          <span class="tools__card-tag">Hand-made</span>
-        </div>
-        <div class="tools__card-cta">SHOP <span class="tools__card-arrow">→</span></div>
-      </a>
-      <a class="tools__card" href="https://plink.aaronaiken.me/please" rel="noopener noreferrer">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">🪙</span>
-          <span class="tools__card-status"><span class="tools__card-dot"></span>LIVE</span>
-        </div>
-        <h2 class="tools__card-name">PLINK</h2>
-        <p class="tools__card-desc">Self-hosted tip jar for indie creators. Embed it on your site, visitors send tips directly via Stripe, no middleman skim. FastAPI backend, SvelteKit admin, deployed on Fly.io. See it in action on my own page.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">FastAPI</span>
-          <span class="tools__card-tag">SvelteKit</span>
-          <span class="tools__card-tag">Stripe</span>
-          <span class="tools__card-tag">Fly.io</span>
-        </div>
-        <div class="tools__card-cta">SEE IT <span class="tools__card-arrow">→</span></div>
-      </a>
-      <a class="tools__card" href="https://firstthing.day" rel="noopener noreferrer">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">🎯</span>
-          <span class="tools__card-status"><span class="tools__card-dot"></span>LIVE</span>
-        </div>
-        <h2 class="tools__card-name">ONE THING</h2>
-        <p class="tools__card-desc">Email-first daily intention setter. Email a single focus to a magic address; receive a short reminder at your chosen morning time. No app, no login — anti-productivity-theater. Cloudflare Workers, Resend, Neon Postgres.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">Cloudflare Workers</span>
-          <span class="tools__card-tag">Resend</span>
-          <span class="tools__card-tag">Email-first</span>
-        </div>
-        <div class="tools__card-cta">SIGN UP <span class="tools__card-arrow">→</span></div>
-      </a>
-      <a class="tools__card" href="https://mademy.day" rel="noopener noreferrer">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">✨</span>
-          <span class="tools__card-status"><span class="tools__card-dot"></span>LIVE</span>
-        </div>
-        <h2 class="tools__card-name">MADE MY DAY</h2>
-        <p class="tools__card-desc">Email-first positive-moments journal. Send short notes about good things that happened to a magic address; once a month, receive a recap of everything. No accounts, no app. Cloudflare Workers, Resend, Neon Postgres.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">Cloudflare Workers</span>
-          <span class="tools__card-tag">Resend</span>
-          <span class="tools__card-tag">Email-first</span>
-        </div>
-        <div class="tools__card-cta">SIGN UP <span class="tools__card-arrow">→</span></div>
-      </a>
-      <a class="tools__card" href="/tools/tasks/">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">📋</span>
-          <span class="tools__card-status"><span class="tools__card-dot"></span>ONLINE</span>
-        </div>
-        <h2 class="tools__card-name">MISSION LOG</h2>
-        <p class="tools__card-desc">Personal tasks out of my head.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">Tasks</span>
-          <span class="tools__card-tag">IndieWeb</span>
-        </div>
-        <div class="tools__card-cta">VIEW <span class="tools__card-arrow">→</span></div>
-      </a>
-      <a class="tools__card" href="/tools/audio-lab/">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">🔊</span>
-          <span class="tools__card-status"><span class="tools__card-dot"></span>ONLINE</span>
-        </div>
-        <h2 class="tools__card-name">ASTROMECH // AUDIO LAB</h2>
-        <p class="tools__card-desc">Browser-based synthesizer and sound design tool. 30 sounds across 5 categories, live oscilloscope, pitch and decay controls. Export Jekyll-ready snippets. Built with Web Audio API — no dependencies, no server.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">Web Audio API</span>
-          <span class="tools__card-tag">JavaScript</span>
-          <span class="tools__card-tag">Jekyll-ready</span>
-        </div>
-        <div class="tools__card-cta">LAUNCH LAB <span class="tools__card-arrow">→</span></div>
-      </a>
-      <a class="tools__card" href="/tools/brew/">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">☕️</span>
-          <span class="tools__card-status"><span class="tools__card-dot"></span>ONLINE</span>
-        </div>
-        <h2 class="tools__card-name">ASTROMECH // BREW LAB</h2>
-        <p class="tools__card-desc">French press calculator and steep timer. Set your coffee weight, pick your
-          ratio, and let R2 whistle when the brew is ready. Built with Web Audio API —
-          no dependencies, no server.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">Web Audio API</span>
-          <span class="tools__card-tag">JavaScript</span>
-          <span class="tools__card-tag">French Press</span>
-        </div>
-        <div class="tools__card-cta">STEEP <span class="tools__card-arrow">→</span></div>
-      </a>
-      <a class="tools__card" href="/tools/domains/">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">📡</span>
-          <span class="tools__card-status"><span class="tools__card-dot"></span>ONLINE</span>
-        </div>
-        <h2 class="tools__card-name">ASTROMECH // DOMAIN SCANNER</h2>
-        <p class="tools__card-desc">Bulk domain availability checker. Paste a list or sweep a name across TLDs. DNS first, RDAP fallback, honest UNKNOWNs when CORS blocks the truth. Self-contained, client-side only.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">Bulk lookup</span>
-          <span class="tools__card-tag">DNS + RDAP</span>
-          <span class="tools__card-tag">Self-contained</span>
-        </div>
-        <div class="tools__card-cta">SCAN <span class="tools__card-arrow">→</span></div>
-      </a>
+    <div class="wb-filters">
+      <button class="wb-chip active" type="button" data-filter="all">ALL</button>
+      {% for g in site.data.tools.groups %}
+      <button class="wb-chip" type="button" data-filter="{{ g.id }}">{{ g.label }}</button>
+      {% endfor %}
     </div>
 
-    <div class="tools__rule"><span class="tools__rule-glyph">// BOOKS</span></div>
-    <div class="tools__grid">
-      <a class="tools__card" href="/splinched">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">📕</span>
-          <span class="tools__card-status tools__card-status--offline"><span class="tools__card-dot tools__card-dot--offline"></span>BLUEPRINT</span>
-        </div>
-        <h2 class="tools__card-name">SPLINCHED</h2>
-        <p class="tools__card-desc">A digital bundle — book + spreadsheet + worksheets — capturing my system for eliminating $110k of debt. Pre-orders coming soon at the founder's price.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">PDF</span>
-          <span class="tools__card-tag">Spreadsheet</span>
-          <span class="tools__card-tag">Bundle</span>
-        </div>
-        <div class="tools__card-cta">LEARN MORE <span class="tools__card-arrow">→</span></div>
-      </a>
-    </div>
+    {% assign featured = site.data.tools.tools | where: "featured", true %}
+    {% if featured.size > 0 %}
+    <section class="wb-section" data-section="now">
+      <div class="tools__rule"><span class="tools__rule-glyph">// NOW</span></div>
+      <div class="tools__grid">
+        {% for tool in featured %}{% include wb-card.html tool=tool %}{% endfor %}
+      </div>
+    </section>
+    {% endif %}
 
-    <div class="tools__rule"><span class="tools__rule-glyph">// PRIVATE</span></div>
-    <div class="tools__grid">
-      <a class="tools__card" href="/tools/cockpit/">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">🛸</span>
-          <span class="tools__card-status"><span class="tools__card-dot"></span>DOCS</span>
-        </div>
-        <h2 class="tools__card-name">THE COCKPIT</h2>
-        <p class="tools__card-desc">Private Flask web app that runs my publishing pipeline plus Below Deck (task kneeboard), Command Deck (project hub with checklists and blocks), Today (daily focus view), time tracking, mileage, meetings, tickets, reports, scratch pads, and an LLM companion (Huyang). The bridge of the ship. Not publicly accessible — this is the technical manual.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">Python</span>
-          <span class="tools__card-tag">Flask</span>
-          <span class="tools__card-tag">SQLite</span>
-          <span class="tools__card-tag">Anthropic API</span>
-          <span class="tools__card-tag">PythonAnywhere</span>
-        </div>
-        <div class="tools__card-cta">READ THE MANUAL <span class="tools__card-arrow">→</span></div>
-      </a>
-      <a class="tools__card" href="/tools/ledger/">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">🧭</span>
-          <span class="tools__card-status"><span class="tools__card-dot"></span>DOCS</span>
-        </div>
-        <h2 class="tools__card-name">THE LEDGER</h2>
-        <p class="tools__card-desc">Private Cockpit-sibling for debt elimination and cash runway. Avalanche-snowball projection, payday session, leak-hunt CSV imports, sequenced milestone map, optional AI assistant. The chart room of the ship. Not publicly accessible — this is the technical manual.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">Python</span>
-          <span class="tools__card-tag">Flask</span>
-          <span class="tools__card-tag">SQLite</span>
-          <span class="tools__card-tag">PythonAnywhere</span>
-        </div>
-        <div class="tools__card-cta">READ THE MANUAL <span class="tools__card-arrow">→</span></div>
-      </a>
-      <a class="tools__card" href="/tools/dispatch/">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">📬</span>
-          <span class="tools__card-status">
-            <span class="tools__card-dot"></span>
-            DOCS
-          </span>
-        </div>
-        <h2 class="tools__card-name">THE DISPATCH</h2>
-        <p class="tools__card-desc">Private Flask app handling all site communication — contact form forwarding, tools update signups, and a double-locked Markdown newsletter sender. One app, three jobs. Not publicly accessible — this is the technical manual.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">Python</span>
-          <span class="tools__card-tag">Flask</span>
-          <span class="tools__card-tag">Fastmail</span>
-          <span class="tools__card-tag">PythonAnywhere</span>
-        </div>
-        <div class="tools__card-cta">READ THE MANUAL <span class="tools__card-arrow">→</span></div>
-      </a>
-      <a class="tools__card" href="/tools/creed/">
-        <div class="tools__card-header">
-          <span class="tools__card-icon">🛡️</span>
-          <span class="tools__card-status"><span class="tools__card-dot"></span>DOCS</span>
-        </div>
-        <h2 class="tools__card-name">THE CREED</h2>
-        <p class="tools__card-desc">A daily-reflection app I built for my son Mozzie. PIN-locked sign-in, daily virtue missions, XP and credits, Mandalorian character customization. Lindsay and I get the dashboard. Twelve schema versions deep, running for the family. Not publicly accessible — this is the technical manual.</p>
-        <div class="tools__card-meta">
-          <span class="tools__card-tag">Python</span>
-          <span class="tools__card-tag">Flask</span>
-          <span class="tools__card-tag">SQLAlchemy</span>
-        </div>
-        <div class="tools__card-cta">READ THE MANUAL <span class="tools__card-arrow">→</span></div>
-      </a>
-    </div>
+    {% for g in site.data.tools.groups %}
+    {% assign items = site.data.tools.tools | where: "group", g.id %}
+    {% if items.size > 0 %}
+    <section class="wb-section" data-section="{{ g.id }}">
+      <div class="tools__rule"><span class="tools__rule-glyph">// {{ g.label }}</span></div>
+      <div class="tools__grid">
+        {% for tool in items %}{% include wb-card.html tool=tool %}{% endfor %}
+      </div>
+    </section>
+    {% endif %}
+    {% endfor %}
 
-    <div class="tools__rule"><span class="tools__rule-glyph">// SIGNAL</span></div>
-    <div class="tools__grid">
-      <a class="tools__card tools__card--signal" href="/tools/updates/">
-        <span class="tools__card-icon" style="font-size:1.8rem;flex-shrink:0;">📡</span>
-        <div class="tools__card--signal-body">
-          <div class="tools__card-header" style="margin:0;padding:0;">
-            <h2 class="tools__card-name">SIGNAL LIST</h2>
-            <span class="tools__card-status">
-              <span class="tools__card-dot"></span>
-              OPEN
-            </span>
+    <section class="wb-section" data-section="signal">
+      <div class="tools__rule"><span class="tools__rule-glyph">// SIGNAL</span></div>
+      <div class="tools__grid">
+        <a class="tools__card tools__card--signal" href="/tools/updates/">
+          <span class="tools__card-icon" style="font-size:1.8rem;flex-shrink:0;">📡</span>
+          <div class="tools__card--signal-body">
+            <div class="tools__card-header" style="margin:0;padding:0;">
+              <h2 class="tools__card-name">SIGNAL LIST</h2>
+              <span class="tools__card-status"><span class="tools__card-dot"></span>OPEN</span>
+            </div>
+            <p class="tools__card-desc" style="flex:none;">Get a heads-up when something ships. One signal, drop your email, done. No newsletters.</p>
           </div>
-          <p class="tools__card-desc" style="flex:none;">Get a heads-up when something ships. One signal, drop your email, done. No newsletters.</p>
-        </div>
-        <div class="tools__card-cta" style="flex-shrink:0;">SIGN UP <span class="tools__card-arrow">→</span></div>
-      </a>
-    </div>
+          <div class="tools__card-cta" style="flex-shrink:0;">SIGN UP <span class="tools__card-arrow">→</span></div>
+        </a>
+      </div>
+    </section>
+
+    <script>
+      (function () {
+        var chips = document.querySelectorAll('.wb-chip');
+        var sections = document.querySelectorAll('.wb-section');
+        chips.forEach(function (chip) {
+          chip.addEventListener('click', function () {
+            var f = chip.getAttribute('data-filter');
+            chips.forEach(function (c) { c.classList.toggle('active', c === chip); });
+            sections.forEach(function (sec) {
+              var s = sec.getAttribute('data-section');
+              sec.style.display = (f === 'all' || s === f) ? '' : 'none';
+            });
+          });
+        });
+      })();
+    </script>
+
     {% include footer.html %}
   </main>
 </body>
