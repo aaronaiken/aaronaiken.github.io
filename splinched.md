@@ -7,6 +7,8 @@ page_ident: "BOOK · SPLINCHED"
 subtitle: How I built my way out of $110k of debt — and the system that got me there.
 description: How I paid off $110k of debt — the book, the system that got me there, and a toolkit you can use yourself.
 image: /assets/splinched/splinched-og-share.png
+favicon: /assets/splinched/favicon.svg
+theme_color: "#0d1620"
 ---
 
 In 2021 my world crumbled. Four years after that I had piled up $110,000 of mostly consumer debt — leather-business overhead, tax bills, marital separation, and a lot of trying to fill a hole inside me with the spending of money I had, and the spending of money I didn't.

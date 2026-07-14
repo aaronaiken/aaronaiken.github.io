@@ -1,4 +1,4 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<meta name="theme-color" content="#0d0c0a">
+<link rel="icon" type="image/svg+xml" href="{{ page.favicon | default: '/favicon.svg' }}">
+<link rel="apple-touch-icon" href="{{ page.apple_touch_icon | default: '/apple-touch-icon.png' }}">
+<meta name="theme-color" content="{{ page.theme_color | default: '#0d0c0a' }}">
