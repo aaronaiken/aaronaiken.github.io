@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Splinched public feed · Ledger</title>
+<link rel="stylesheet" href="/static/ledger.css">
+<style>
+  .lp { max-width: 560px; margin: 0 auto; padding: 44px 24px 80px; font-family: 'JetBrains Mono', monospace; }
+  .lp a { color: var(--brass, #b08d57); text-decoration: none; }
+  .lp h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; margin: 14px 0 6px; }
+  .lp .lede { opacity: .75; font-size: .9rem; line-height: 1.6; margin: 0 0 26px; }
+  .lp .live { border: 1px solid var(--sl-border-hi, #2a3949); border-radius: 3px; padding: 16px 18px; margin: 0 0 28px; font-size: .85rem; line-height: 1.7; }
+  .lp .live b { color: var(--brass-hi, #d4ad6e); }
+  .lp label { display: block; margin: 20px 0 7px; font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; opacity: .8; }
+  .lp input[type=month] { padding: 11px 12px; font-family: inherit; font-size: 1rem; width: 220px; background: var(--sl-bg2, #14202e); color: inherit; border: 1px solid var(--sl-border-hi, #2a3949); border-radius: 3px; }
+  .lp .toggle { display: flex; align-items: center; gap: 10px; margin: 22px 0 0; font-size: .95rem; }
+  .lp button { margin-top: 26px; padding: 13px 32px; cursor: pointer; font-family: inherit; font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; background: var(--brass, #b08d57); color: var(--sl-bg, #0d1620); border: none; border-radius: 3px; }
+  .lp .feed { margin-top: 30px; font-size: .78rem; opacity: .7; }
+  .lp .on { color: #6c9d9d; } .lp .off { color: #b85d50; }
+</style>
+</head>
+<body>
+  <div class="lp">
+    <p><a href="/ledger/">&larr; Ledger</a></p>
+    <h1>Splinched public feed</h1>
+    <p class="lede">Drives the live numbers on the Splinched sales page. Only the whitelisted figures below are ever exposed.</p>
+
+    <div class="live">
+      Computed automatically, right now:<br>
+      Current debt <b>${{ '{:,}'.format(current) }}</b> &middot; baseline / minimum-pace payoff <b>{{ baseline or '—' }}</b>
+    </div>
+
+    <form method="POST">
+      <label for="accel">Accelerated (sandbox) payoff month</label>
+      <input type="month" id="accel" name="accel_date" value="{{ accel_date }}">
+      <div class="toggle">
+        <input type="checkbox" id="publish" name="publish" {% if publish %}checked{% endif %}>
+        <label for="publish" style="margin:0; text-transform:none; letter-spacing:0; font-size:.95rem; opacity:1;">Publish this feed publicly</label>
+      </div>
+      <button type="submit">Save</button>
+    </form>
+
+    <p class="feed">
+      Feed: <a href="/ledger/public/splinched.json">/ledger/public/splinched.json</a> —
+      {% if publish %}<span class="on">live</span>{% else %}<span class="off">off</span> (404 until published){% endif %}.
+    </p>
+  </div>
+</body>
+</html>

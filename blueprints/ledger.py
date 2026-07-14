@@ -2574,3 +2574,86 @@ def _fallback_recommendations(target, runway, debts):
 			})
 			break
 	return recs[:3]
+
+
+# ---- Splinched public stats feed + operator settings ----------------------
+# A deliberate public carve-out: the ONLY unauthenticated Ledger route. It
+# exposes just the numbers already published on the Splinched sales page —
+# original ($110k, frozen), current (live), the baseline (minimum-pace) and
+# accelerated (sandbox) payoff months, and an as-of stamp — and nothing else.
+# Off by default; 404s until the operator flips 'publish' in /ledger/public-stats/.
+
+_SPLINCHED_ORIGINAL = 110000     # frozen peak of the hole
+_SPLINCHED_START = '2024-11'     # frozen month the debt peaked (chart origin)
+_SPLINCHED_CORS_ORIGIN = 'https://aaronaiken.me'
+
+
+def _splinched_month(d):
+	if d is None:
+		return None
+	if hasattr(d, 'strftime'):
+		return d.strftime('%Y-%m')
+	return str(d)[:7]
+
+
+def _splinched_cors(resp):
+	resp.headers['Access-Control-Allow-Origin'] = _SPLINCHED_CORS_ORIGIN
+	resp.headers['Cache-Control'] = 'public, max-age=1800'
+	return resp
+
+
+@ledger_bp.route('/public/splinched.json')
+def public_splinched_feed():
+	"""Public, read-only, whitelisted feed for the Splinched sales page."""
+	conn = get_ledger_db()
+	if not L.get_setting(conn, 'splinched_publish', 0):
+		conn.close()
+		return _splinched_cors(jsonify({'published': False})), 404
+	accel = L.get_setting(conn, 'splinched_accel_date', None)
+	current = L.total_debt(conn)
+	try:
+		baseline = _splinched_month(L.project_payoff(conn).debt_free_date)
+	except Exception:
+		logger.exception('splinched feed: baseline projection failed')
+		baseline = None
+	conn.close()
+	return _splinched_cors(jsonify({
+		'published': True,
+		'original': _SPLINCHED_ORIGINAL,
+		'current': round(current or 0),
+		'start': _SPLINCHED_START,
+		'as_of': L.et_today().strftime('%Y-%m'),
+		'baseline_free': baseline,
+		'system_free': accel,
+	}))
+
+
+@ledger_bp.route('/public/splinched.json', methods=['OPTIONS'])
+def public_splinched_preflight():
+	return _splinched_cors(jsonify({})), 204
+
+
+@ledger_bp.route('/public-stats/', methods=['GET', 'POST'])
+@cd_auth_required
+def public_stats_settings():
+	"""Operator screen: set the accelerated (sandbox) date + publish toggle."""
+	conn = get_ledger_db()
+	if request.method == 'POST':
+		publish = 1 if request.form.get('publish') else 0
+		accel = (request.form.get('accel_date') or '').strip() or None
+		conn.execute(
+			'UPDATE settings SET splinched_publish = ?, splinched_accel_date = ?, updated = ? WHERE id = 1',
+			(publish, accel, L.et_now_iso()),
+		)
+		conn.commit()
+		conn.close()
+		flash('Splinched public feed updated.')
+		return redirect(url_for('ledger.public_stats_settings'))
+	ctx = {
+		'publish': L.get_setting(conn, 'splinched_publish', 0),
+		'accel_date': L.get_setting(conn, 'splinched_accel_date', '') or '',
+		'current': round((L.total_debt(conn) or 0)),
+		'baseline': _splinched_month(L.project_payoff(conn).debt_free_date),
+	}
+	conn.close()
+	return render_template('ledger_public_stats.html', **ctx)
