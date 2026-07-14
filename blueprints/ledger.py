@@ -2628,11 +2628,6 @@ def public_splinched_feed():
 	}))
 
 
-@ledger_bp.route('/public/splinched.json', methods=['OPTIONS'])
-def public_splinched_preflight():
-	return _splinched_cors(jsonify({})), 204
-
-
 @ledger_bp.route('/public-stats/', methods=['GET', 'POST'])
 @cd_auth_required
 def public_stats_settings():
