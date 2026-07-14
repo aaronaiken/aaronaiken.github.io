@@ -7,7 +7,8 @@ projects:
     year: "2026"
     icon: /assets/img/abacus-icon.svg
     summary: >
-      A check-in, check-out, and movement-tracking system for a ~100-camper musical
-      theater day camp — QR badge scans across a dozen staff devices at once,
-      offline-first, with elective-level attendance and one-click daily reports.
-    tags: [Flask, Postgres, "Offline PWA", "Fly.io"]
+      The operational hub for a ~100-camper musical theater day camp — offline-first
+      check-in/out and movement tracking, plus parent + staff communications, a health
+      &amp; incident log, script-mailing logistics, and one-click reports, all on one
+      real-time roster with role-based access.
+    tags: [Flask, Postgres, "Offline PWA", Resend, "Role-based access"]

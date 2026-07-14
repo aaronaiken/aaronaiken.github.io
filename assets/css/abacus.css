@@ -285,4 +285,16 @@ a.tile:hover .card { border-color: var(--brand); }
 .article strong { color: var(--ink); font-weight: 700; }
 .article code { background: #eef2fb; color: var(--brand-dark); padding: 2px 6px;
   border-radius: 6px; font-size: .88em; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* Screenshots — a plain markdown image, or a <figure> with a caption. Framed,
+   rounded, subtle shadow; captions in the dim ink. Two side-by-side when wrapped
+   in a .shots grid. */
+.article img { display: block; width: 100%; height: auto; border: 1px solid var(--line);
+  border-radius: 12px; box-shadow: var(--shadow); margin: 22px auto; background: var(--surface); }
+.article figure { margin: 26px 0; }
+.article figure img { margin: 0 0 8px; }
+.article figure figcaption { color: var(--ink-dim); font-size: .88rem; text-align: center; }
+.article .shots { display: grid; gap: 14px; margin: 24px 0; }
+@media (min-width: 620px) { .article .shots { grid-template-columns: 1fr 1fr; } }
+.article .shots figure { margin: 0; }
 @media (prefers-color-scheme: dark) { .article code { background: #1d2942; color: #9cc0ff; } }
