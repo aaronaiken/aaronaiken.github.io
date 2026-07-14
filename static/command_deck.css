@@ -3330,7 +3330,9 @@ body[data-area="fdot"] .cd-fdot-palm {
 	gap: 0.4rem;
 	flex-wrap: wrap;
 }
-body[data-cd-tab="personal"] .cd-huyang-search-row { display: none; }
+/* In personal mode, hide only the work-scoped SEARCH toggle — the ticket-draft
+   toggle is global (Huyang chat spans both tabs), so it stays visible. */
+body[data-cd-tab="personal"] #huyangSearchToggle { display: none; }
 
 .cd-huyang-search-toggle {
 	display: inline-flex;
