@@ -28,6 +28,9 @@ Direct engagements with end clients. No agencies, no staff augmentation.
 
 ## Things I've shipped
 
+One built for another team; the rest built for myself and my family. Same promise, seen from both sides.
+
+- **[Abacus](/work/abacus/)** — the operational hub I built for a ~100-camper theater day camp that had outgrown its spreadsheets, group texts, and paper. One live system for gate check-in, parent and staff communications, health records, and the daily reporting — run by about thirty staff and interns across their own phones, in production through their season. The built-for-someone-else proof of exactly what this page describes.
 - **[Endpaper](https://endpaper.day)** — a private writing system. Capture thoughts in any shape (journal, notes, scholarly drafts), search across everything you've ever written, publish to any blog. My main personal tool, live and in production.
 - **[Best Cigar Matches](https://bestcigarmatches.com)** — a real direct-to-consumer business selling hand-made cedar matches. Real customers, real revenue. My wife runs fulfillment.
 - **The Creed** — a daily-reflection app I built for my son Mozzie. He checks in each day on a virtue, earns points, customizes his character. Lindsay and I get the dashboard. Running quietly for years.

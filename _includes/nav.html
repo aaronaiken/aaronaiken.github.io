@@ -1,12 +1,7 @@
 <nav class="site-nav">
-  <a href="/" title="Home">Home</a> |
-  <a href="/about/" title="About Aaron">About</a> |
-  <a href="/blog/" title="Blog">Blog</a> |
-  <a href="/status.html" title="Status updates">Status</a> |
-  <a href="/now/" title="What I'm up to now">/now</a> |
-  <a href="/work/" title="Work — built for others">Work</a> |
-  <a href="/tools/" title="The Workbench — tools &amp; experiments">Workbench</a> |
-  <a href="/contact/" title="Send a transmission">Contact</a>
+  {%- for item in site.data.nav.primary -%}
+  <a href="{{ item.url | relative_url }}" title="{{ item.title }}">{{ item.label }}</a>{% unless forloop.last %} |{% endunless %}
+  {%- endfor -%}
 </nav>
 {% if page.page_ident %}
   {% assign ident_parts = page.page_ident | split: " · " %}

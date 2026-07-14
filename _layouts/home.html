@@ -275,6 +275,15 @@ body.home-page::after {
 .home-page__footer a { color: var(--hp-text-dim) !important; text-decoration: none !important; transition: color 0.15s; background: none !important; }
 .home-page__footer a:hover { color: var(--hp-amber-lo) !important; background: none !important; }
 
+.home-page__brandline {
+  margin-top: 10px; text-align: center;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.6rem;
+  color: var(--hp-text-dim); letter-spacing: 0.1em;
+  opacity: 0; animation: hp-rise 0.4s ease-out 0.72s forwards;
+}
+.home-page__brandline a { color: var(--hp-text-dim) !important; text-decoration: none !important; background: none !important; transition: color 0.15s; }
+.home-page__brandline a:hover { color: var(--hp-amber-lo) !important; background: none !important; }
+
 .home-page__footer-quote {
   font-family: 'Crimson Pro', serif; font-style: italic;
   font-size: 0.82rem; text-transform: none; letter-spacing: 0;
@@ -371,13 +380,9 @@ body.home-page::after {
     <div class="home-page__links-section">
       <p class="home-page__links-label">// Navigate</p>
       <div class="home-page__links-grid">
-        <a class="home-page__link home-page__link--primary" href="/blog/"><span class="home-page__link-icon">✦</span>Read the Blog<span class="home-page__arrow">→</span></a>
-        <a class="home-page__link" href="/splinched"><span class="home-page__link-icon">❖</span>Splinched<span class="home-page__arrow">→</span></a>
-        <a class="home-page__link" href="/the-long-way"><span class="home-page__link-icon">✎</span>The Long Way<span class="home-page__arrow">→</span></a>
-        <a class="home-page__link" href="/tools/"><span class="home-page__link-icon">⚙</span>Tools<span class="home-page__arrow">→</span></a>
-        <a class="home-page__link" href="/now/"><span class="home-page__link-icon">◎</span>/now page<span class="home-page__arrow">→</span></a>
-        <a class="home-page__link" href="/status.html"><span class="home-page__link-icon">◉</span>Status<span class="home-page__arrow">→</span></a>
-        <a class="home-page__link" href="/about/aaronaiken"><span class="home-page__link-icon">◈</span>About<span class="home-page__arrow">→</span></a>
+        {%- for item in site.data.nav.home_grid -%}
+        <a class="home-page__link{% if item.primary %} home-page__link--primary{% endif %}" href="{{ item.url | relative_url }}"><span class="home-page__link-icon">{{ item.icon }}</span>{{ item.label }}<span class="home-page__arrow">→</span></a>
+        {%- endfor -%}
         {%- for mst in site.mastodon -%}{%- if mst.username and mst.instance -%}
         <a class="home-page__link" href="https://{{ mst.instance }}/@{{ mst.username }}" rel="noopener noreferrer"><span class="home-page__link-icon">◈</span>Mastodon<span class="home-page__arrow">→</span></a>
         {%- endif -%}{%- endfor -%}
@@ -392,6 +397,7 @@ body.home-page::after {
       <span class="home-page__footer-quote">"Never tell me the odds."</span>
       <span>Built with <a href="https://jekyllrb.com">Jekyll</a></span>
     </footer>
+    <p class="home-page__brandline">Made by hand in Harrisburg, PA · <a href="https://themarkup.org/blacklight?url=aaronaiken.me" rel="noopener noreferrer">not tracking you</a> · <a href="/colophon/">colophon</a></p>
   </main>
   <script src="/js/dynamic-timestamp.js"></script>
 </body>

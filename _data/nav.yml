@@ -1,0 +1,46 @@
+# Single source of truth for site navigation.
+# Drives the top nav (_includes/nav.html), the shared footer
+# (_includes/footer.html), and the homepage links grid (_layouts/home.html).
+# Edit a link here and every surface updates — no more hand-syncing three lists.
+# Config-driven links (RSS feeds, Mastodon, GitHub, email) stay in their
+# templates; everything internal lives here.
+
+# --- Top nav (pipe-separated bar) ---
+primary:
+  - { label: Home,      url: /,         title: Home }
+  - { label: About,     url: /about/,   title: About Aaron }
+  - { label: Blog,      url: /blog/,    title: Blog }
+  - { label: Work,      url: /work/,    title: "Work — built for others" }
+  - { label: Workbench, url: /tools/,   title: "The Workbench — tools & experiments" }
+  - { label: Hire,      url: /selling,  title: "Work with me" }
+  - { label: Contact,   url: /contact/, title: "Send a transmission" }
+
+# --- Shared footer columns (static internal links; feeds/social appended in template) ---
+footer:
+  - label: Navigate
+    links:
+      - { label: Home,      url: / }
+      - { label: About,     url: /about/aaronaiken }
+      - { label: Blog,      url: /blog/ }
+      - { label: Work,      url: /work/ }
+      - { label: Workbench, url: /tools/ }
+      - { label: Status,    url: /status.html }
+      - { label: "/now",    url: /now/ }
+  - label: More
+    links:
+      - { label: "The Long Way", url: /the-long-way }
+      - { label: Splinched,      url: /splinched }
+      - { label: Hire,           url: /selling }
+      - { label: Colophon,       url: /colophon/ }
+
+# --- Homepage links grid (icons + optional primary highlight) ---
+home_grid:
+  - { label: "Read the Blog", url: /blog/,           icon: "✦", primary: true }
+  - { label: Splinched,       url: /splinched,        icon: "❖" }
+  - { label: "The Long Way",  url: /the-long-way,     icon: "✎" }
+  - { label: Work,            url: /work/,            icon: "❏" }
+  - { label: Workbench,       url: /tools/,           icon: "⚙" }
+  - { label: Hire,            url: /selling,          icon: "⚑" }
+  - { label: "/now page",     url: /now/,             icon: "◎" }
+  - { label: Status,          url: /status.html,      icon: "◉" }
+  - { label: About,           url: /about/aaronaiken, icon: "◈" }

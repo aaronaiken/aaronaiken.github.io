@@ -3,24 +3,20 @@
   <div class="site-footer__inner">
 
     <div class="site-footer__col">
-      <p class="site-footer__label">Navigate</p>
+      <p class="site-footer__label">{{ site.data.nav.footer[0].label }}</p>
       <ul class="site-footer__list">
-        <li><a href="/">Home</a></li>
-        <li><a href="/about/aaronaiken">About</a></li>
-        <li><a href="/blog/">Blog</a></li>
-        <li><a href="/status.html">Status</a></li>
-        <li><a href="/now/">/now</a></li>
-        <li><a href="/tools/">Tools</a></li>
-        <li><a href="/tidyapps/">Tidy Apps</a></li>
+        {%- for link in site.data.nav.footer[0].links -%}
+        <li><a href="{{ link.url | relative_url }}">{{ link.label }}</a></li>
+        {%- endfor -%}
       </ul>
     </div>
 
     <div class="site-footer__col">
-      <p class="site-footer__label">More</p>
+      <p class="site-footer__label">{{ site.data.nav.footer[1].label }}</p>
       <ul class="site-footer__list">
-        <li><a href="/the-long-way">The Long Way</a></li>
-        <li><a href="/selling">Selling</a></li>
-        <li><a href="/colophon/">Colophon</a></li>
+        {%- for link in site.data.nav.footer[1].links -%}
+        <li><a href="{{ link.url | relative_url }}">{{ link.label }}</a></li>
+        {%- endfor -%}
         {%- if site.rss -%}
         <li><a href="{{ '/feed.xml' | relative_url }}" title="{{ site.rss }}">Blog RSS</a></li>
         {%- endif -%}
