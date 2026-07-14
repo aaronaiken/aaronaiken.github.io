@@ -1078,6 +1078,62 @@ body.cd-strip-visible .cd-shell { padding-top: 32px; }
   transition: border-color 0.15s;
 }
 
+/* Attach-a-screenshot control + preview (Huyang vision) */
+.cd-huyang-attach-btn {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  background: var(--cd-bg);
+  border: 1px solid var(--cd-border);
+  border-radius: var(--cd-radius);
+  color: var(--cd-text-dim);
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0.4rem 0.55rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.cd-huyang-attach-btn:hover { border-color: var(--cd-amber-lo); }
+.cd-huyang-attach-btn.is-active {
+  border-color: var(--cd-amber);
+  background: var(--cd-bg-raised);
+}
+
+.cd-huyang-attach-preview {
+  position: relative;
+  display: inline-flex;
+  margin: 0 0.75rem;
+  padding: 0.4rem;
+  border: 1px solid var(--cd-border);
+  border-radius: var(--cd-radius);
+  background: var(--cd-bg-raised);
+  width: max-content;
+  max-width: calc(100% - 1.5rem);
+}
+.cd-huyang-attach-thumb {
+  max-height: 64px;
+  max-width: 160px;
+  border-radius: 3px;
+  display: block;
+}
+.cd-huyang-attach-remove {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--cd-border);
+  background: var(--cd-bg);
+  color: var(--cd-text);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cd-huyang-attach-remove:hover { border-color: var(--cd-amber); color: var(--cd-amber); }
+
 .cd-huyang-textarea:focus {
   border-color: var(--cd-amber-lo);
 }

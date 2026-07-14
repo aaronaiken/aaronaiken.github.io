@@ -142,10 +142,18 @@
         <input type="hidden" name="return" value="json">
 
         <div class="cd-ticket-paste" id="ntPasteBlock">
-          <span class="cd-ticket-field-label">Draft from a pasted message</span>
+          <span class="cd-ticket-field-label">Draft from a pasted message or screenshot</span>
           <textarea id="ntPasteText" class="cd-input cd-ticket-input" rows="3"
-                    placeholder="Paste the email / message someone sent you — Huyang fills in the fields below for you to review."></textarea>
+                    placeholder="Paste the email / message — or paste / attach a screenshot of it — and Huyang fills in the fields below for you to review."></textarea>
+          <div class="cd-huyang-attach-preview" id="ntAttachPreview" hidden>
+            <img class="cd-huyang-attach-thumb" id="ntAttachThumb" alt="attached screenshot">
+            <button type="button" class="cd-huyang-attach-remove" id="ntAttachRemove"
+                    title="Remove screenshot" aria-label="Remove screenshot">×</button>
+          </div>
           <div class="cd-ticket-paste-actions">
+            <button type="button" class="cd-huyang-attach-btn" id="ntAttachBtn"
+                    title="Attach a screenshot" aria-label="Attach a screenshot">🖼</button>
+            <input type="file" id="ntAttachInput" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
             <button type="button" class="cd-btn primary" id="ntPasteDraftBtn">✨ DRAFT WITH HUYANG</button>
             <span class="cd-ticket-paste-status" id="ntPasteStatus" aria-live="polite"></span>
           </div>
@@ -552,10 +560,51 @@
       .catch(function () { newSave.disabled = false; alert('Network error.'); });
   });
 
-  // Draft-from-paste — Huyang extracts fields from a pasted message
+  // Draft-from-paste — Huyang extracts fields from a pasted message or screenshot
   var pasteText = document.getElementById('ntPasteText');
   var pasteBtn = document.getElementById('ntPasteDraftBtn');
   var pasteStatus = document.getElementById('ntPasteStatus');
+
+  // Attach / paste a screenshot for Huyang to read (Claude vision)
+  var ntImage = null;
+  var ntAttachBtn = document.getElementById('ntAttachBtn');
+  var ntAttachInput = document.getElementById('ntAttachInput');
+  var ntAttachPreview = document.getElementById('ntAttachPreview');
+  var ntAttachThumb = document.getElementById('ntAttachThumb');
+  var ntAttachRemove = document.getElementById('ntAttachRemove');
+  var NT_MAX_IMG = 4 * 1024 * 1024;
+  function ntSetImage(url) {
+    ntImage = url || null;
+    if (ntAttachPreview) ntAttachPreview.hidden = !ntImage;
+    if (ntAttachThumb && ntImage) ntAttachThumb.src = ntImage;
+    if (ntAttachBtn) ntAttachBtn.classList.toggle('is-active', !!ntImage);
+  }
+  function ntClearImage() { ntSetImage(null); if (ntAttachInput) ntAttachInput.value = ''; }
+  function ntReadFile(file) {
+    if (!file || !/^image\//.test(file.type || '')) return;
+    if (file.size > NT_MAX_IMG) {
+      pasteStatus.className = 'cd-ticket-paste-status err';
+      pasteStatus.textContent = 'That image is too large — 4MB max.';
+      return;
+    }
+    var r = new FileReader();
+    r.onload = function () { ntSetImage(r.result); };
+    r.readAsDataURL(file);
+  }
+  if (ntAttachBtn) ntAttachBtn.addEventListener('click', function () { if (ntAttachInput) ntAttachInput.click(); });
+  if (ntAttachInput) ntAttachInput.addEventListener('change', function () {
+    if (ntAttachInput.files && ntAttachInput.files[0]) ntReadFile(ntAttachInput.files[0]);
+  });
+  if (ntAttachRemove) ntAttachRemove.addEventListener('click', ntClearImage);
+  if (pasteText) pasteText.addEventListener('paste', function (e) {
+    var items = (e.clipboardData && e.clipboardData.items) || [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].type && items[i].type.indexOf('image') === 0) {
+        var f = items[i].getAsFile();
+        if (f) { e.preventDefault(); ntReadFile(f); break; }
+      }
+    }
+  });
 
   function setHidden(name, val) {
     // maintain a hidden input so drafted due/requested dates flow to create
@@ -602,14 +651,16 @@
 
   if (pasteBtn) pasteBtn.addEventListener('click', function () {
     var text = (pasteText.value || '').trim();
-    if (!text) { pasteText.focus(); return; }
+    if (!text && !ntImage) { pasteText.focus(); return; }
     pasteBtn.disabled = true;
     pasteStatus.className = 'cd-ticket-paste-status';
     pasteStatus.textContent = 'Huyang is reading…';
+    var reqBody = { text: text };
+    if (ntImage) reqBody.image = ntImage;
     fetch('/command-deck/tickets/draft-from-text', {
       method: 'POST', credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: text }),
+      body: JSON.stringify(reqBody),
     }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
       .then(function (res) {
         pasteBtn.disabled = false;
@@ -619,6 +670,7 @@
           return;
         }
         applyDraft(res.d.draft);
+        ntClearImage();
       })
       .catch(function () {
         pasteBtn.disabled = false;

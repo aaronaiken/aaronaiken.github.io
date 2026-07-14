@@ -302,7 +302,15 @@
               <span class="cd-huyang-search-label">→ TICKET</span>
             </button>
           </div>
+          <div class="cd-huyang-attach-preview" id="huyangAttachPreview" hidden>
+            <img class="cd-huyang-attach-thumb" id="huyangAttachThumb" alt="attached screenshot">
+            <button type="button" class="cd-huyang-attach-remove" id="huyangAttachRemove"
+                    title="Remove screenshot" aria-label="Remove screenshot">×</button>
+          </div>
           <div class="cd-huyang-input-row">
+            <button type="button" class="cd-huyang-attach-btn" id="huyangAttachBtn"
+                    title="Attach a screenshot for Huyang to read" aria-label="Attach a screenshot">🖼</button>
+            <input type="file" id="huyangAttachInput" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
             <textarea class="cd-huyang-textarea" id="huyangInput"
               placeholder="ask Huyang..." rows="1"></textarea>
             <button class="cd-btn primary sm" id="huyangSend">TX</button>
@@ -806,6 +814,50 @@ updateMileageQuickPanel();
   const sendBtn  = document.getElementById('huyangSend');
   const clearBtn = document.getElementById('huyangClear');
 
+  // ── Attach a screenshot for Huyang to read (Claude vision) ────────────────
+  // Works in normal chat ("pull the info out of this") and in ticket mode
+  // ("draft a ticket from this screenshot"). The image rides along with the
+  // next message; it isn't persisted server-side.
+  let attachedImage = null;  // data URL, or null
+  const attachBtn     = document.getElementById('huyangAttachBtn');
+  const attachInput   = document.getElementById('huyangAttachInput');
+  const attachPreview = document.getElementById('huyangAttachPreview');
+  const attachThumb   = document.getElementById('huyangAttachThumb');
+  const attachRemove  = document.getElementById('huyangAttachRemove');
+  const MAX_IMG_BYTES = 4 * 1024 * 1024;  // mirror the server cap
+
+  function setAttachedImage(dataUrl) {
+    attachedImage = dataUrl || null;
+    if (attachPreview) attachPreview.hidden = !attachedImage;
+    if (attachThumb && attachedImage) attachThumb.src = attachedImage;
+    if (attachBtn) attachBtn.classList.toggle('is-active', !!attachedImage);
+  }
+  function clearAttachedImage() {
+    setAttachedImage(null);
+    if (attachInput) attachInput.value = '';
+  }
+  function readImageFile(file) {
+    if (!file || !/^image\//.test(file.type || '')) return;
+    if (file.size > MAX_IMG_BYTES) { appendMsg('assistant', 'That image is too large — 4MB max.'); return; }
+    const reader = new FileReader();
+    reader.onload = function () { setAttachedImage(reader.result); };
+    reader.readAsDataURL(file);
+  }
+  if (attachBtn) attachBtn.addEventListener('click', function () { if (attachInput) attachInput.click(); });
+  if (attachInput) attachInput.addEventListener('change', function () {
+    if (attachInput.files && attachInput.files[0]) readImageFile(attachInput.files[0]);
+  });
+  if (attachRemove) attachRemove.addEventListener('click', clearAttachedImage);
+  if (input) input.addEventListener('paste', function (e) {
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type && items[i].type.indexOf('image') === 0) {
+        const file = items[i].getAsFile();
+        if (file) { e.preventDefault(); readImageFile(file); break; }
+      }
+    }
+  });
+
   function scrollBottom() {
     history.scrollTop = history.scrollHeight;
   }
@@ -932,14 +984,16 @@ updateMileageQuickPanel();
     });
   }
 
-  function draftTicketFromText(text) {
-    appendMsg('user', text);
+  function draftTicketFromText(text, image) {
+    appendMsg('user', text || '🖼 screenshot');
     const thinking = showThinking();
     sendBtn.disabled = true;
+    const reqBody = { text: text };
+    if (image) reqBody.image = image;
     fetch('/command-deck/tickets/draft-from-text', {
       method: 'POST', credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: text }),
+      body: JSON.stringify(reqBody),
     }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
       .then(function (res) {
         thinking.remove();
@@ -959,22 +1013,26 @@ updateMileageQuickPanel();
 
   function sendMessage() {
     const msg = input.value.trim();
-    if (!msg) return;
+    const image = attachedImage;
+    if (!msg && !image) return;
 
     input.value = '';
     input.style.height = 'auto';
 
     if (ticketModeActive) {
-      draftTicketFromText(msg);
+      draftTicketFromText(msg, image);
+      clearAttachedImage();
       return;
     }
 
-    appendMsg('user', msg);
+    appendMsg('user', msg || '🖼 screenshot');
     const thinking = showThinking();
     sendBtn.disabled = true;
 
     const payload = { message: msg, project_id: null };
     if (searchWorkActive) payload.mode = 'search_work';
+    if (image) payload.image = image;
+    clearAttachedImage();
 
     fetch('/command-deck/chat', {
       method: 'POST',

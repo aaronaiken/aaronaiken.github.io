@@ -32,6 +32,7 @@ from flask import (
 
 from helpers.auth import cd_auth_required, is_authenticated
 from helpers.db import et_now, get_db
+from helpers.vision import image_block_from_data_url
 
 
 tickets_bp = Blueprint('tickets', __name__)
@@ -483,10 +484,10 @@ def _resolve_lookup(name, rows):
 	return None
 
 
-def _draft_ticket_from_text(text):
+def _draft_ticket_from_text(text, image_block=None):
 	"""Call Claude with a forced tool schema to extract ticket fields from a
-	pasted message, then resolve customer/group/type names to lookup ids.
-	Returns (draft_dict, error_string). draft is None on error."""
+	pasted message and/or an attached screenshot, then resolve customer/group/type
+	names to lookup ids. Returns (draft_dict, error_string). draft is None on error."""
 	import anthropic
 
 	conn = get_db()
@@ -508,9 +509,10 @@ def _draft_ticket_from_text(text):
 
 	today = et_now()[:10]  # et_now() is an ISO string; date portion only
 	system = (
-		"You are Huyang, drafting a support ticket from a message the operator "
-		"pasted in. Be precise and literal — extract only what the message "
-		"supports. Today's date is " + today + " (US Eastern).\n\n"
+		"You are Huyang, drafting a support ticket from what the operator handed you "
+		"— a pasted message, an attached screenshot, or both. Be precise and literal "
+		"— extract only what the source supports; when reading a screenshot, use only "
+		"text you can actually see in it. Today's date is " + today + " (US Eastern).\n\n"
 		"Pick customer / group / type ONLY from these lists, copying a name "
 		"verbatim when it matches; otherwise return an empty string for that "
 		"field (do not invent new ones).\n\n"
@@ -518,6 +520,12 @@ def _draft_ticket_from_text(text):
 		"GROUPS: " + (", ".join(group_names) if group_names else "(none)") + "\n"
 		"TYPES: " + (", ".join(type_names) if type_names else "(none)") + "\n"
 	)
+
+	if image_block:
+		text_part = text or 'Draft a support ticket from the attached screenshot.'
+		content = [image_block, {'type': 'text', 'text': text_part}]
+	else:
+		content = text
 
 	try:
 		client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
@@ -527,7 +535,7 @@ def _draft_ticket_from_text(text):
 			system=system,
 			tools=[_DRAFT_TOOL],
 			tool_choice={'type': 'tool', 'name': 'draft_ticket'},
-			messages=[{'role': 'user', 'content': text}],
+			messages=[{'role': 'user', 'content': content}],
 		)
 	except Exception as e:
 		return None, str(e)
@@ -604,14 +612,21 @@ def _draft_ticket_from_text(text):
 def ticket_draft_from_text():
 	data = request.get_json(silent=True) or request.form
 	text = (data.get('text') or '').strip()
-	if not text:
-		return jsonify({'error': 'text_required'}), 400
 	if len(text) > 12000:
 		text = text[:12000]
+
+	image_block = None
+	if data.get('image'):
+		image_block, img_err = image_block_from_data_url(data.get('image'))
+		if img_err:
+			return jsonify({'error': 'That screenshot could not be read.'}), 400
+
+	if not text and not image_block:
+		return jsonify({'error': 'text_required'}), 400
 	if not ANTHROPIC_API_KEY:
 		return jsonify({'error': 'Anthropic API key not configured'}), 500
 
-	draft, err = _draft_ticket_from_text(text)
+	draft, err = _draft_ticket_from_text(text, image_block=image_block)
 	if err:
 		return jsonify({'error': 'Huyang could not draft this right now.'}), 502
 	return jsonify({'success': True, 'draft': draft})

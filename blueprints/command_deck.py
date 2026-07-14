@@ -22,6 +22,7 @@ from werkzeug.utils import secure_filename
 
 from helpers.auth import is_authenticated, cd_auth_required
 from helpers.db import get_db, slugify, unique_slug, et_now, fetch_assign_picker_groups
+from helpers.vision import image_block_from_data_url
 from helpers.bunny import (
 	_allowed_file, _upload_to_bunny,
 	BUNNY_STORAGE_ZONE, BUNNY_API_KEY, BUNNY_CDN_URL,
@@ -2071,7 +2072,13 @@ def cd_chat():
 	project_id = data.get('project_id')  # int or None
 	mode = data.get('mode')  # 'search_work' (Phase 1), or absent/'general'/'project'
 
-	if not message:
+	image_block = None
+	if data.get('image'):
+		image_block, img_err = image_block_from_data_url(data.get('image'))
+		if img_err:
+			return jsonify({'error': 'That screenshot could not be read.'}), 400
+
+	if not message and not image_block:
 		return jsonify({'error': 'message required'}), 400
 
 	if not ANTHROPIC_API_KEY:
@@ -2113,7 +2120,11 @@ def cd_chat():
 	''', (project_id,)).fetchall()
 
 	messages = [{'role': r['role'], 'content': r['content']} for r in history_rows]
-	messages.append({'role': 'user', 'content': message})
+	if image_block:
+		text_part = message or 'Read this screenshot and pull out the key information.'
+		messages.append({'role': 'user', 'content': [image_block, {'type': 'text', 'text': text_part}]})
+	else:
+		messages.append({'role': 'user', 'content': message})
 
 	# Call Anthropic
 	try:
@@ -2130,11 +2141,14 @@ def cd_chat():
 		conn.close()
 		return jsonify({'error': 'Huyang is unavailable right now.'}), 500
 
-	# Save both messages — mode tags search_work turns (§0a.2 #5)
+	# Save both messages — mode tags search_work turns (§0a.2 #5). The screenshot
+	# itself isn't persisted (ephemeral, like a paste); we log a marker so the
+	# transcript reads sensibly.
 	now = et_now()
+	user_text = message or ('📎 (screenshot)' if image_block else message)
 	conn.execute(
 		'INSERT INTO chat_messages (role, content, project_id, created, mode) VALUES (?, ?, ?, ?, ?)',
-		('user', message, project_id, now, persist_mode)
+		('user', user_text, project_id, now, persist_mode)
 	)
 	conn.execute(
 		'INSERT INTO chat_messages (role, content, project_id, created, mode) VALUES (?, ?, ?, ?, ?)',
