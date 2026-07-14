@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#1d4ed8"/>
+  <rect x="97" y="97" width="318" height="318" rx="32" fill="none" stroke="#fff" stroke-width="22"/>
+  <!-- rods -->
+  <g stroke="#fff" stroke-width="8">
+    <line x1="108" y1="158" x2="404" y2="158"/>
+    <line x1="108" y1="224" x2="404" y2="224"/>
+    <line x1="108" y1="290" x2="404" y2="290"/>
+    <line x1="108" y1="356" x2="404" y2="356"/>
+  </g>
+  <!-- beads -->
+  <g stroke="#1d4ed8" stroke-width="4">
+    <g fill="#fbbf24"><circle cx="150" cy="158" r="26"/><circle cx="186" cy="158" r="26"/><circle cx="222" cy="158" r="26"/><circle cx="330" cy="158" r="26"/><circle cx="372" cy="158" r="26"/></g>
+    <g fill="#22c55e"><circle cx="150" cy="224" r="26"/><circle cx="186" cy="224" r="26"/><circle cx="292" cy="224" r="26"/><circle cx="330" cy="224" r="26"/><circle cx="366" cy="224" r="26"/></g>
+    <g fill="#f8fafc"><circle cx="150" cy="290" r="26"/><circle cx="252" cy="290" r="26"/><circle cx="292" cy="290" r="26"/><circle cx="330" cy="290" r="26"/><circle cx="366" cy="290" r="26"/></g>
+    <g fill="#f87171"><circle cx="222" cy="356" r="26"/><circle cx="258" cy="356" r="26"/><circle cx="294" cy="356" r="26"/><circle cx="330" cy="356" r="26"/><circle cx="372" cy="356" r="26"/></g>
+  </g>
+</svg>

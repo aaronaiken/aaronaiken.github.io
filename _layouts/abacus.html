@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#1d4ed8">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e1421">
+  <title>{{ page.title }} · Aaron Aiken</title>
+  {% if page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
+  <link rel="icon" href="{{ '/assets/img/abacus-icon.svg' | relative_url }}" type="image/svg+xml">
+  <!-- carries the actual app's stylesheet (palette, typography, dark mode) -->
+  <link rel="stylesheet" href="{{ '/assets/css/abacus.css' | relative_url }}">
+</head>
+<body>
+  <header class="abacus-hero">
+    <img src="{{ '/assets/img/abacus-icon.svg' | relative_url }}" alt="Mindsteward Abacus">
+    <div>
+      <h1>{{ page.title }}</h1>
+      <div class="k">{{ page.page_ident | default: "WORK · BUILT FOR OTHERS" }}</div>
+    </div>
+  </header>
+
+  <article class="article">
+    {{ content }}
+  </article>
+
+  <footer class="appfoot">
+    <span>Built by <a href="https://aaronaiken.me" rel="noopener">Aaron Aiken</a></span>
+    <a href="https://aaronaiken.me" rel="noopener">aaronaiken.me ↗</a>
+  </footer>
+</body>
+</html>

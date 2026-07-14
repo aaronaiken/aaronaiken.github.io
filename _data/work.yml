@@ -1,0 +1,13 @@
+# The Work section — case studies of things built for other people/teams.
+# Add a piece: append to `projects`, and create its case-study page under work/.
+projects:
+  - title: Mindsteward Abacus
+    url: /work/abacus/
+    client: Mind Steward
+    year: "2026"
+    icon: /assets/img/abacus-icon.svg
+    summary: >
+      A check-in, check-out, and movement-tracking system for a ~100-camper musical
+      theater day camp — QR badge scans across a dozen staff devices at once,
+      offline-first, with elective-level attendance and one-click daily reports.
+    tags: [Flask, Postgres, "Offline PWA", "Fly.io"]

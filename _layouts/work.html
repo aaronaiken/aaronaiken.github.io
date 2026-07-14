@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#1d4ed8">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e1421">
+  <title>{{ page.title | default: "Work" }} · Aaron Aiken</title>
+  {% if page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
+  {% include favicons.html %}
+  <link rel="stylesheet" href="{{ '/assets/css/work.css' | relative_url }}">
+</head>
+<body>
+  <main class="work-wrap">
+    <div class="work-top">
+      <a class="work-back" href="{{ '/' | relative_url }}">← aaronaiken.me</a>
+      <span class="work-ident">{{ page.page_ident | default: "WORK · BUILT FOR OTHERS" }}</span>
+    </div>
+
+    <header class="work-hero">
+      <h1>{{ page.hero_title | default: "Work" }}</h1>
+      <p>{{ page.hero_tagline | default: "Things I've built for other people and teams — quietly, to solve a real problem." }}</p>
+    </header>
+
+    <section class="work-grid">
+      {% for p in site.data.work.projects %}
+      <a class="work-card" href="{{ p.url | relative_url }}">
+        <div class="work-card-head">
+          {% if p.icon %}<img src="{{ p.icon | relative_url }}" alt="">{% endif %}
+          <div>
+            <h2 class="work-card-title">{{ p.title }}</h2>
+            <span class="work-card-client">{{ p.client }}{% if p.year %} · {{ p.year }}{% endif %}</span>
+          </div>
+        </div>
+        <p class="work-card-summary">{{ p.summary }}</p>
+        {% if p.tags %}
+        <div class="work-card-meta">
+          {% for t in p.tags %}<span class="work-tag">{{ t }}</span>{% endfor %}
+        </div>
+        {% endif %}
+        <span class="work-card-cta">Read the case study →</span>
+      </a>
+      {% endfor %}
+    </section>
+
+    {{ content }}
+
+    <footer class="work-foot">
+      Built by <a href="{{ '/' | relative_url }}">Aaron Aiken</a>. Interested in something similar?
+      <a href="{{ '/contact/' | relative_url }}">Get in touch</a>.
+    </footer>
+  </main>
+</body>
+</html>
