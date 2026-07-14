@@ -1,5 +1,5 @@
 ---
-layout: splinched
+layout: splinched-v2
 title: "Splinched — How I Paid Off $110k of Debt"
 heading: Splinched
 permalink: /splinched

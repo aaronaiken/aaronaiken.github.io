@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,400&family=Crimson+Pro:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+body.splinched-layout {
+  --sl-bg: #0d1620;
+  --sl-bg2: #14202e;
+  --sl-bg3: #1a2838;
+  --sl-brass: #b08d57;
+  --sl-brass-hi: #d4ad6e;
+  --sl-brass-lo: #7e6440;
+  --sl-teal: #6c9d9d;
+  --sl-brick: #b85d50;
+  --sl-text: #c4cdd6;
+  --sl-text-body: #a8b3bd;
+  --sl-text-dim: #6c7682;
+  --sl-border: #1f2c3a;
+  --sl-border-hi: #2a3949;
+
+  --nav-link: #b08d57; --nav-link-hover: #d4ad6e;
+  --ident-color: #7e6440; --ident-border: #1f2c3a;
+  --footer-border: #1f2c3a; --footer-label: #6c7682;
+  --footer-link: #b08d57; --footer-link-hover: #d4ad6e; --footer-dim: #6c7682;
+
+  background: var(--sl-bg) !important; color: var(--sl-text) !important;
+  font-family: 'Crimson Pro', Georgia, serif !important;
+  min-height: 100vh; overflow-x: hidden;
+  margin: 0 !important; max-width: 100% !important; padding: 0 !important;
+  font-size: 18px; line-height: 1.7;
+}
+
+body.splinched-layout * { box-sizing: border-box; }
+
+.sl__wrap { max-width: 680px; margin: 0 auto; padding: 40px 28px 80px; position: relative; }
+
+.sl__header { margin-bottom: 12px; opacity: 0; animation: sl-rise 0.5s ease-out 0.1s forwards; }
+.sl__title { font-family: 'Fraunces', Georgia, serif !important; font-size: 5rem !important; font-weight: 600 !important; color: var(--sl-brass-hi) !important; letter-spacing: -0.02em !important; line-height: 1 !important; margin: 0 0 18px !important; text-decoration: none !important; }
+.sl__subtitle { font-family: 'Fraunces', Georgia, serif; font-size: 1.3rem; font-style: italic; font-weight: 300; color: var(--sl-text-body); margin: 0; line-height: 1.5; }
+
+.sl__rule { height: 1px; background: linear-gradient(to right, var(--sl-brass-lo), transparent); margin: 32px 0 36px; opacity: 0; animation: sl-rise 0.4s ease-out 0.18s forwards; }
+
+.sl__content { opacity: 0; animation: sl-rise 0.5s ease-out 0.22s forwards; }
+.sl__content > p:first-of-type { font-size: 1.2rem !important; line-height: 1.75 !important; color: var(--sl-text) !important; margin-bottom: 1.6em !important; }
+.sl__content p { color: var(--sl-text-body) !important; margin-bottom: 1.6em; line-height: 1.75; font-family: 'Crimson Pro', serif !important; font-size: 1.08rem; }
+.sl__content strong { color: var(--sl-text) !important; font-weight: 500; }
+.sl__content em { color: var(--sl-brass-hi) !important; font-style: italic; }
+
+.sl__content h2 { font-family: 'JetBrains Mono', monospace !important; font-size: 0.72rem !important; letter-spacing: 0.25em !important; text-transform: uppercase !important; color: var(--sl-brass) !important; margin: 3em 0 1.4em !important; font-weight: 500 !important; text-decoration: none !important; padding-bottom: 10px; border-bottom: 1px solid var(--sl-border); }
+.sl__content h2::before { content: '/ '; color: var(--sl-brass-lo); }
+
+.sl__content h3 { font-family: 'Fraunces', serif !important; font-size: 1.3rem !important; font-weight: 600 !important; color: var(--sl-text) !important; margin: 2em 0 0.6em !important; letter-spacing: -0.01em !important; }
+
+.sl__content ul { list-style: none !important; padding: 0 !important; margin: 0 0 2em !important; }
+.sl__content ul li { padding: 12px 0 12px 26px; font-family: 'Crimson Pro', serif !important; font-size: 1.05rem !important; color: var(--sl-text-body) !important; border-bottom: 1px solid var(--sl-border); line-height: 1.6 !important; margin: 0 !important; position: relative; }
+.sl__content ul li:last-child { border-bottom: none; }
+.sl__content ul li::before { content: '◆'; position: absolute; left: 0; top: 16px; color: var(--sl-brass-lo); font-size: 0.65rem; }
+.sl__content ul li strong { color: var(--sl-text) !important; }
+
+.sl__content a { color: var(--sl-brass) !important; text-decoration: none !important; border-bottom: 1px solid var(--sl-brass-lo); background: none !important; transition: color 0.15s, border-color 0.15s; }
+.sl__content a:hover { color: var(--sl-brass-hi) !important; border-color: var(--sl-brass-hi); background: none !important; }
+
+.sl__content blockquote { margin: 2em 0; padding: 1em 1.5em; border-left: 2px solid var(--sl-brass-lo); background: var(--sl-bg2); font-family: 'Fraunces', serif; font-style: italic; color: var(--sl-text); font-size: 1.1rem; }
+
+.sl__content hr { border: none; border-top: 1px solid var(--sl-border); margin: 3em 0 !important; }
+
+.sl__pricing { background: var(--sl-bg2); border: 1px solid var(--sl-brass-lo); padding: 32px; margin: 2.5em 0 !important; text-align: center; opacity: 0; animation: sl-rise 0.5s ease-out 0.32s forwards; }
+.sl__price-founder-label { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--sl-brass); margin-bottom: 14px; }
+.sl__price-founder { font-family: 'Fraunces', serif; font-size: 3rem; font-weight: 600; color: var(--sl-brass-hi); margin: 0 0 6px; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.sl__price-detail { font-family: 'Crimson Pro', serif; font-style: italic; font-size: 1rem; color: var(--sl-text-body); margin-bottom: 22px; }
+.sl__price-standard { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--sl-text-dim); letter-spacing: 0.08em; margin-bottom: 24px; font-variant-numeric: tabular-nums; }
+.sl__price-cta { display: inline-block; padding: 14px 36px; background: var(--sl-brass); color: var(--sl-bg) !important; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; letter-spacing: 0.2em; text-transform: uppercase; text-decoration: none !important; border: 1px solid var(--sl-brass) !important; transition: background 0.15s, color 0.15s; }
+.sl__price-cta:hover { background: var(--sl-brass-hi); border-color: var(--sl-brass-hi) !important; color: var(--sl-bg) !important; }
+.sl__price-secondary { display: block; margin: 16px auto 0; font-family: 'Crimson Pro', serif; font-style: italic; font-size: 0.98rem; color: var(--sl-text-body) !important; text-decoration: none !important; border-bottom: none !important; background: none !important; transition: color 0.15s; }
+.sl__price-secondary:hover { color: var(--sl-brass-hi) !important; border-bottom: none !important; background: none !important; }
+.sl__price-note { font-family: 'Crimson Pro', serif; font-style: italic; font-size: 0.9rem; color: var(--sl-text-dim); margin-top: 22px; line-height: 1.55; }
+
+@keyframes sl-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 560px) {
+  .sl__wrap { padding: 30px 20px 60px; }
+  .sl__title { font-size: 3.4rem !important; }
+  .sl__subtitle { font-size: 1.1rem; }
+  .sl__content > p:first-of-type { font-size: 1.12rem !important; }
+  .sl__content p { font-size: 1.02rem; }
+  .sl__pricing { padding: 24px; }
+  .sl__price-founder { font-size: 2.4rem; }
+}
+
+@media (prefers-color-scheme: light) {
+  body.splinched-layout {
+    --sl-bg: #f6efe3;
+    --sl-bg2: #ede5d4;
+    --sl-bg3: #e4dac8;
+    --sl-brass: #8a6a35;
+    --sl-brass-hi: #6a4e20;
+    --sl-brass-lo: #b09870;
+    --sl-text: #3a3024;
+    --sl-text-body: #5a4e3e;
+    --sl-text-dim: #8a7860;
+    --sl-border: #d4c8b0;
+    --sl-border-hi: #b8a888;
+
+    --nav-link: #8a6a35; --nav-link-hover: #6a4e20;
+    --footer-border: #d4c8b0; --footer-label: #8a7860;
+    --footer-link: #8a6a35; --footer-link-hover: #6a4e20; --footer-dim: #8a7860;
+  }
+  .sl__price-cta { color: #f6efe3 !important; }
+  .sl__price-cta:hover { color: #f6efe3 !important; }
+}
+
+/* Lemon Squeezy overlay hardening. lemon.js injects its checkout iframe + loader
+   with `height: 100%` and a transparent iframe background; if the cross-origin
+   checkout page doesn't fill the frame, our page shows through the bottom. Force
+   true full-viewport coverage (100dvh is containing-block-proof + mobile-safe)
+   and paint the dim backdrop on the iframe element itself so the whole screen
+   dims regardless of what LS renders inside. Scoped to `.lemonsqueezy-open`,
+   the class lemon.js adds to <body> only while the overlay is up. */
+body.lemonsqueezy-open iframe[allow="payment"],
+.lemonsqueezy-loader {
+  position: fixed !important;
+  top: 0 !important; left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+}
+body.lemonsqueezy-open iframe[allow="payment"] {
+  background: rgba(13, 22, 32, 0.55) !important;
+}
+
+/* ===== Redesign: cracked title + descent chart + dossier ===== */
+.sl__crack { position: relative; display: inline-block; line-height: 1; }
+.sl__crack-l { font-family: 'Fraunces', serif; font-size: 6rem; font-weight: 600; letter-spacing: -0.02em; color: var(--sl-brass-hi); margin: 0; display: block; }
+.sl__crack-top { clip-path: polygon(0 0,100% 0,100% 46%,82% 53%,66% 45%,50% 54%,34% 46%,17% 54%,0 47%); animation: sl-healTop 1.9s cubic-bezier(.16,.85,.28,1) .35s both; }
+.sl__crack-bot { position: absolute; top: 0; left: 0; color: var(--sl-brass); clip-path: polygon(0 47%,17% 54%,34% 46%,50% 54%,66% 45%,82% 53%,100% 46%,100% 100%,0 100%); animation: sl-healBot 1.9s cubic-bezier(.16,.85,.28,1) .35s both; }
+@keyframes sl-healTop { from { transform: translate(-18px,-15px); } 70% { transform: translate(1px,1px); } to { transform: translate(0,0); } }
+@keyframes sl-healBot { from { transform: translate(20px,17px) rotate(1.8deg); } 70% { transform: translate(2px,2px) rotate(0); } to { transform: translate(3px,3px) rotate(0); } }
+@media (prefers-reduced-motion: reduce) { .sl__crack-top { animation: none; transform: translate(0,0); } .sl__crack-bot { animation: none; transform: translate(3px,3px); } }
+
+.sl__redesign { margin: 4px 0 0; }
+.sl__redesign .block { margin: 48px 0; }
+.sl__redesign .section-k { font-family: 'JetBrains Mono', monospace; font-size: .72rem; letter-spacing: .24em; text-transform: uppercase; color: var(--sl-brass); margin: 0 0 18px; padding-bottom: 10px; border-bottom: 1px solid var(--sl-border); }
+.sl__redesign .section-k::before { content: '/ '; color: var(--sl-brass-lo); }
+.sl__redesign .chart { background: var(--sl-bg2); border: 1px solid var(--sl-border-hi); border-radius: 3px; padding: 22px 18px 10px; }
+.sl__redesign .chart svg { display: block; width: 100%; height: auto; }
+.sl__redesign .grid { stroke: var(--sl-border); stroke-width: 1; }
+.sl__redesign .axis { font-family: 'JetBrains Mono', monospace; font-size: 10px; fill: var(--sl-text-dim); letter-spacing: .05em; }
+.sl__redesign .line-actual { fill: none; stroke: var(--sl-brass-hi); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.sl__redesign .line-sys { fill: none; stroke: var(--sl-brass-hi); stroke-width: 2.2; stroke-dasharray: 5 5; stroke-linecap: round; }
+.sl__redesign .line-base { fill: none; stroke: var(--sl-text-dim); stroke-width: 1.8; stroke-dasharray: 4 6; stroke-linecap: round; }
+.sl__redesign .gap { fill: var(--sl-brass); opacity: .15; }
+.sl__redesign .dot { fill: var(--sl-bg); stroke: var(--sl-brass-hi); stroke-width: 2.5; }
+.sl__redesign .dot.base { stroke: var(--sl-text-dim); }
+.sl__redesign .plabel { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; fill: var(--sl-text); font-weight: 500; }
+.sl__redesign .plabel.dim { fill: var(--sl-text-dim); font-weight: 400; }
+.sl__redesign .legend { display: flex; gap: 20px; justify-content: center; margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: .64rem; letter-spacing: .06em; }
+.sl__redesign .legend .sys { color: var(--sl-brass-hi); }
+.sl__redesign .legend .base { color: var(--sl-text-dim); }
+.sl__redesign .caption { font-family: 'Crimson Pro', serif; font-style: italic; color: var(--sl-text-dim); font-size: .98rem; text-align: center; margin: 14px 0 0; }
+.sl__redesign .caption b { color: var(--sl-brass-hi); font-weight: 500; font-style: normal; }
+.sl__redesign .caption b.dim { color: var(--sl-text-dim); font-weight: 400; }
+.sl__redesign .dossier-intro { color: var(--sl-text-body); font-size: 1.06rem; margin: 0 0 18px; line-height: 1.7; }
+.sl__redesign .dossier-intro em { color: var(--sl-brass-hi); font-style: italic; }
+.sl__redesign .statement { background: var(--sl-bg2); border: 1px solid var(--sl-border-hi); border-radius: 3px; overflow: hidden; }
+.sl__redesign .statement__head { font-family: 'JetBrains Mono', monospace; font-size: .62rem; letter-spacing: .2em; text-transform: uppercase; color: var(--sl-text-dim); padding: 14px 22px; border-bottom: 1px solid var(--sl-border); display: flex; justify-content: space-between; }
+.sl__redesign .row { display: flex; justify-content: space-between; align-items: baseline; padding: 15px 22px; border-bottom: 1px solid var(--sl-border); font-family: 'JetBrains Mono', monospace; }
+.sl__redesign .row .lab { color: var(--sl-text-body); font-size: .92rem; letter-spacing: .02em; }
+.sl__redesign .row .amt { color: var(--sl-text); font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.sl__redesign .row.total { background: var(--sl-bg3); border-bottom: none; }
+.sl__redesign .row.total .lab { color: var(--sl-brass); text-transform: uppercase; font-size: .72rem; letter-spacing: .18em; }
+.sl__redesign .row.total .amt { color: var(--sl-brass-hi); font-size: 1.3rem; font-weight: 500; }
+.sl__redesign .row .pre { display: inline-block; margin-left: 8px; font-family: 'JetBrains Mono', monospace; font-size: .56rem; letter-spacing: .08em; text-transform: uppercase; color: var(--sl-brass); border: 1px solid var(--sl-brass-lo); border-radius: 2px; padding: 1px 6px; vertical-align: middle; opacity: .9; }
+.sl__redesign .row .pre.hot { color: var(--sl-bg); background: var(--sl-brass); border-color: var(--sl-brass); opacity: 1; }
+.sl__redesign .row.killed .lab { opacity: .58; }
+.sl__redesign .row.killed .amt { opacity: .58; text-decoration: line-through; }
+.sl__redesign .row.with .lab { opacity: 1; }
+.sl__redesign .row.with .amt { opacity: .85; text-decoration: line-through; }
+@media (max-width: 560px) { .sl__crack-l { font-size: 3.6rem; } .sl__redesign .block { margin: 36px 0; } }
+</style>
+<body class="splinched-layout">
+  <main class="sl__wrap">
+    {% include nav.html %}
+
+    {% assign bktitle = page.heading | default: page.title %}
+    <header class="sl__header">
+      <div class="sl__crack">
+        <span class="sl__crack-l sl__crack-top">{{ bktitle }}</span>
+        <span class="sl__crack-l sl__crack-bot" aria-hidden="true">{{ bktitle }}</span>
+      </div>
+      {% if page.subtitle %}<p class="sl__subtitle">{{ page.subtitle }}</p>{% endif %}
+    </header>
+
+    <div class="sl__rule"></div>
+
+    <div class="sl__redesign">
+      <div class="block">
+        <div class="section-k">The descent</div>
+        <div class="chart">
+          <svg id="descentChart" viewBox="0 0 640 250" role="img" aria-label="Debt payoff: minimum pace versus the accelerated plan"></svg>
+          <div class="legend"><span class="sys">&#9473;&#9473;  with the system</span><span class="base">&#9476;&#9476;  at minimum pace</span></div>
+          <p class="caption" id="descentCaption"></p>
+        </div>
+      </div>
+      <div class="block">
+        <div class="section-k">What $110,000 was made of</div>
+        <p class="dossier-intro">Every balance as it stood in <em>November 2024</em> — the month I got serious, when I desperately wanted to change my life. This was the $110,000 in front of me. Some I killed before I ever built the app; others are falling to it now; the rest are next.</p>
+        <div class="statement">
+          <div class="statement__head"><span>Account</span><span>Balance as of 11/2024</span></div>
+          <div id="statementRows"></div>
+          <div class="row total"><span class="lab">The hole &middot; Nov 2024</span><span class="amt" id="statementTotal"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sl__content">
+      {{ content }}
+    </div>
+
+    {% include footer.html %}
+  </main>
+  <!-- Lemon Squeezy overlay checkout: turns .lemonsqueezy-button links into
+       in-page overlays so buyers never leave aaronaiken.me. -->
+  <script src="https://assets.lemonsqueezy.com/lemon.js" defer></script>
+  <script>
+  // Descent chart — pulls live numbers from the Ledger feed, falls back to these.
+  (function(){
+    var LEDGER_STATS_URL = 'https://cockpit.aaronaiken.me/ledger/public/splinched.json';
+    var DEFAULT_STATS = { original:110000, current:64605, as_of:'2026-07', start:'2024-11', baseline_free:'2028-11', system_free:'2027-03' };
+    function mi(s){ var p=s.split('-'); return (+p[0])*12+(+p[1]-1); }
+    function money(n){ return '$'+Math.round(n).toLocaleString(); }
+    function mon(s){ var p=s.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+p[1]-1]+" '"+String(p[0]).slice(2); }
+    function renderChart(st){
+      var L=64,R=598,T=34,B=200;
+      var s0=mi(st.start), s1=Math.max(mi(st.baseline_free),mi(st.system_free));
+      var X=function(d){return L+(mi(d)-s0)/(s1-s0)*(R-L);}, Y=function(v){return T+(1-v/st.original)*(B-T);};
+      var Ps=[X(st.start),Y(st.original)], Pn=[X(st.as_of),Y(st.current)], Pb=[X(st.baseline_free),B], Py=[X(st.system_free),B];
+      var el=document.getElementById('descentChart'); if(!el) return;
+      el.innerHTML =
+        '<defs><linearGradient id="slag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b08d57" stop-opacity=".16"/><stop offset="1" stop-color="#b08d57" stop-opacity="0"/></linearGradient></defs>'+
+        '<line class="grid" x1="'+L+'" y1="'+T+'" x2="'+R+'" y2="'+T+'"/><line class="grid" x1="'+L+'" y1="'+((T+B)/2)+'" x2="'+R+'" y2="'+((T+B)/2)+'"/><line class="grid" x1="'+L+'" y1="'+B+'" x2="'+R+'" y2="'+B+'"/>'+
+        '<text class="axis" x="'+(L-6)+'" y="'+(T+4)+'" text-anchor="end">'+money(st.original)+'</text>'+
+        '<text class="axis" x="'+(L-6)+'" y="'+((T+B)/2+4)+'" text-anchor="end">'+money(st.original/2)+'</text>'+
+        '<text class="axis" x="'+(L-6)+'" y="'+(B+4)+'" text-anchor="end">$0</text>'+
+        '<polygon class="gap" points="'+Pn+' '+Py+' '+Pb+'"/>'+
+        '<path class="area" fill="url(#slag)" d="M'+Ps+' L'+Pn+' L'+Pn[0]+','+B+' L'+Ps[0]+','+B+' Z"/>'+
+        '<path class="line-base" d="M'+Pn+' L'+Pb+'"/>'+
+        '<path class="line-sys" d="M'+Pn+' L'+Py+'"/>'+
+        '<path class="line-actual" d="M'+Ps+' L'+Pn+'"/>'+
+        '<circle class="dot" cx="'+Ps[0]+'" cy="'+Ps[1]+'" r="4.5"/><text class="plabel" x="'+(Ps[0]+8)+'" y="'+(Ps[1]-6)+'">'+money(st.original)+'</text>'+
+        '<circle class="dot" cx="'+Pn[0]+'" cy="'+Pn[1]+'" r="5"/><text class="plabel" x="'+Pn[0]+'" y="'+(Pn[1]-12)+'" text-anchor="middle">'+money(st.current)+' &#183; today</text>'+
+        '<circle class="dot" cx="'+Py[0]+'" cy="'+Py[1]+'" r="5"/><text class="plabel" x="'+(Py[0]-8)+'" y="'+(Py[1]-10)+'" text-anchor="end">$0 &#183; '+mon(st.system_free)+'</text>'+
+        '<circle class="dot base" cx="'+Pb[0]+'" cy="'+Pb[1]+'" r="4"/><text class="plabel dim" x="'+(Pb[0]-7)+'" y="'+(Pb[1]-9)+'" text-anchor="end">$0 &#183; '+mon(st.baseline_free)+'</text>'+
+        '<text class="axis" x="'+L+'" y="'+(B+24)+'">'+mon(st.start)+'</text>';
+      var cap=document.getElementById('descentCaption'); if(cap) cap.innerHTML =
+        'The solid line is real — logged every payday. From today it splits in two: keep the minimums and you clear it around <b class="dim">'+mon(st.baseline_free)+
+        '</b>; run the sandbox — extra income, every bonus thrown at it — and the same debt is gone by <b>'+mon(st.system_free)+'</b>. That gap is the book.';
+    }
+    function load(){
+      try {
+        fetch(LEDGER_STATS_URL,{mode:'cors'}).then(function(r){
+          if(r.ok){ r.json().then(function(d){ var m={}; for(var k in DEFAULT_STATS) m[k]=DEFAULT_STATS[k]; for(var j in d) m[j]=d[j]; renderChart(m); }); }
+          else { renderChart(DEFAULT_STATS); }
+        }).catch(function(){ renderChart(DEFAULT_STATS); });
+      } catch(e){ renderChart(DEFAULT_STATS); }
+    }
+    load();
+
+    // Dossier — the frozen origin, as of 11/2024. Edit this list; total auto-sums.
+    var ACCOUNTS = [
+      {label:'Student Loan',    bal:24483},
+      {label:'Credit Card 5',   bal:22323},
+      {label:'Auto',            bal:16028, killed:'before'},
+      {label:'Personal Loan 3', bal:10000},
+      {label:'Personal Loan 2', bal:9701},
+      {label:'Personal Loan 4', bal:7687,  killed:'before'},
+      {label:'Credit Card 1',   bal:7281},
+      {label:'Credit Card 4',   bal:4069},
+      {label:'Credit Card 6',   bal:3549,  killed:'with'},
+      {label:'Credit Card 3',   bal:2275,  killed:'before'},
+      {label:'Credit Card 2',   bal:1350},
+      {label:'Personal Loan 1', bal:1254,  killed:'before'}
+    ];
+    var rowsEl=document.getElementById('statementRows');
+    if(rowsEl){
+      rowsEl.innerHTML = ACCOUNTS.map(function(a){
+        var cls='', tag='';
+        if(a.killed==='with'){ cls=' killed with'; tag=' <span class="pre hot">killed with the app</span>'; }
+        else if(a.killed==='before'){ cls=' killed'; tag=' <span class="pre">killed before the app</span>'; }
+        return '<div class="row'+cls+'"><span class="lab">'+a.label+tag+'</span><span class="amt">$'+a.bal.toLocaleString()+'</span></div>';
+      }).join('');
+      var tot=document.getElementById('statementTotal');
+      if(tot) tot.textContent = '$'+ACCOUNTS.reduce(function(s,a){return s+a.bal;},0).toLocaleString();
+    }
+  })();
+  </script>
+</body>
+</html>
