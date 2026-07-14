@@ -4,19 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Splinched public feed · Ledger</title>
-<link rel="stylesheet" href="/static/ledger.css">
 <style>
-  .lp { max-width: 560px; margin: 0 auto; padding: 44px 24px 80px; font-family: 'JetBrains Mono', monospace; }
-  .lp a { color: var(--brass, #b08d57); text-decoration: none; }
-  .lp h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; margin: 14px 0 6px; }
-  .lp .lede { opacity: .75; font-size: .9rem; line-height: 1.6; margin: 0 0 26px; }
-  .lp .live { border: 1px solid var(--sl-border-hi, #2a3949); border-radius: 3px; padding: 16px 18px; margin: 0 0 28px; font-size: .85rem; line-height: 1.7; }
-  .lp .live b { color: var(--brass-hi, #d4ad6e); }
-  .lp label { display: block; margin: 20px 0 7px; font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; opacity: .8; }
-  .lp input[type=month] { padding: 11px 12px; font-family: inherit; font-size: 1rem; width: 220px; background: var(--sl-bg2, #14202e); color: inherit; border: 1px solid var(--sl-border-hi, #2a3949); border-radius: 3px; }
-  .lp .toggle { display: flex; align-items: center; gap: 10px; margin: 22px 0 0; font-size: .95rem; }
-  .lp button { margin-top: 26px; padding: 13px 32px; cursor: pointer; font-family: inherit; font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; background: var(--brass, #b08d57); color: var(--sl-bg, #0d1620); border: none; border-radius: 3px; }
-  .lp .feed { margin-top: 30px; font-size: .78rem; opacity: .7; }
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0d1620; color: #c4cdd6; font-family: 'JetBrains Mono', monospace; }
+  .lp { max-width: 560px; margin: 0 auto; padding: 44px 24px 90px; }
+  .lp a { color: #b08d57; text-decoration: none; }
+  .lp a:hover { color: #d4ad6e; }
+  .lp h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 2.6rem; color: #d4ad6e; margin: 14px 0 6px; }
+  .lp .lede { color: #8a95a1; font-size: .9rem; line-height: 1.6; margin: 0 0 26px; }
+  .lp .live { border: 1px solid #2a3949; border-radius: 3px; padding: 16px 18px; margin: 0 0 28px; font-size: .85rem; line-height: 1.8; color: #a8b3bd; }
+  .lp .live b { color: #d4ad6e; }
+  .lp label.k { display: block; margin: 22px 0 8px; font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: #8a95a1; }
+  .lp input[type=month] { padding: 12px 12px; font-family: inherit; font-size: 1rem; width: 220px; background: #14202e; color: #e6ecf1; border: 1px solid #2a3949; border-radius: 3px; }
+  .lp input[type=month]:focus { outline: none; border-color: #b08d57; }
+  .lp .toggle { display: flex; align-items: center; gap: 10px; margin: 24px 0 0; font-size: .95rem; color: #c4cdd6; }
+  .lp .toggle input { width: 17px; height: 17px; accent-color: #b08d57; }
+  .lp button { margin-top: 28px; padding: 13px 34px; cursor: pointer; font-family: inherit; font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; background: #b08d57; color: #0d1620; border: none; border-radius: 3px; }
+  .lp button:hover { background: #d4ad6e; }
+  .lp .feed { margin-top: 32px; font-size: .78rem; color: #8a95a1; }
   .lp .on { color: #6c9d9d; } .lp .off { color: #b85d50; }
 </style>
 </head>
@@ -32,11 +38,11 @@
     </div>
 
     <form method="POST">
-      <label for="accel">Accelerated (sandbox) payoff month</label>
+      <label class="k" for="accel">Accelerated (sandbox) payoff month</label>
       <input type="month" id="accel" name="accel_date" value="{{ accel_date }}">
       <div class="toggle">
         <input type="checkbox" id="publish" name="publish" {% if publish %}checked{% endif %}>
-        <label for="publish" style="margin:0; text-transform:none; letter-spacing:0; font-size:.95rem; opacity:1;">Publish this feed publicly</label>
+        <label for="publish">Publish this feed publicly</label>
       </div>
       <button type="submit">Save</button>
     </form>
