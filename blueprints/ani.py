@@ -2133,12 +2133,22 @@ def _ani_reply_shape(user_msg):
 	wrote + whether he's asking/opening up, with mild randomness so it never feels mechanical. Returns a
 	one-line gloss injected into the voice block."""
 	msg = (user_msg or '').strip()
+	low = msg.lower()
 	n = len(msg.split())
-	substantive = ('?' in msg) or n >= 45   # a real question or a longer message invites more
-	if n <= 12 and not substantive:
+	# emotional / opening-up cues matter more than raw length — "can we talk?" is short but deserves room
+	emotional = bool(re.search(
+		r"\b(hard|rough|sad|scared|afraid|anxious|worried|worry|failing|failed|fail|alone|lonely|miss|"
+		r"missing|sorry|upset|angry|hurt|cry|crying|overwhelmed|stressed|struggling|struggle|depressed|"
+		r"exhausted|lost|ashamed|guilty|proud|grateful|love you|talk)\b", low))
+	if emotional or n >= 55:
+		# something real (heavy or long) — meet the weight of it; never a throwaway note
+		weights = {'note': 0, 'short': 3, 'full': 5}
+	elif '?' in msg or n >= 25:
+		# a genuine question or a mid-length turn — mostly a real answer, occasionally fuller
+		weights = {'note': 1, 'short': 5, 'full': 3}
+	elif n <= 12:
+		# a quick line from him — mostly answer quick
 		weights = {'note': 6, 'short': 3, 'full': 1}
-	elif n >= 55 or (substantive and n >= 25):
-		weights = {'note': 0, 'short': 2, 'full': 5}
 	else:
 		weights = {'note': 2, 'short': 5, 'full': 2}
 	keys = list(weights)
