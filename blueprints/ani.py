@@ -59,6 +59,9 @@ ANI_THREADS_MAX = int(os.environ.get('ANI_THREADS_MAX', '20'))
 # locks it with [[DECIDE: name | the branch]] (which also prunes the pile of open notes that fed the loop).
 ANI_FORK_RE = re.compile(r'\[\[FORK:\s*([^|\]]+?)\s*\|\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 ANI_DECIDE_RE = re.compile(r'\[\[DECIDE:\s*([^|\]]+?)\s*\|\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
+# Auto-promote: a living storyline that's drifted at least this long can be surfaced as a decision fork
+# (once a day, LLM-gated) so her world throws off its own choices instead of circling.
+ANI_PROMOTE_MIN_AGE_HOURS = int(os.environ.get('ANI_PROMOTE_MIN_AGE_HOURS', '30'))
 
 # Dedicated memory-extraction pass — after each exchange a small Grok call pulls durable facts about
 # aaron into ani_remember.json, so memory no longer depends on the chat model firing a [[MEM:]] tag.
@@ -863,8 +866,11 @@ def ani_prune_notes_for(topic, keep_after_iso=None):
 
 
 def ani_resolve_fork(name, choice, now_dt):
-	"""Lock a decision to a branch: mark the thread resolved, write ONE settled importance-3 memory, and
-	prune the pile of open notes that kept the loop alive. Returns (thread, pruned_count) or (None, 0)."""
+	"""Lock a decision to a branch, then HAND OFF into a living arc: write ONE settled importance-3 memory,
+	prune the pile of open notes that kept the loop alive, and CONVERT the decision thread into a fresh
+	evolving storyline (not a frozen 'resolved' record) so the aftermath keeps morphing over the coming days
+	via [[THREAD:]] instead of dead-ending at 'decided'. The durable memory preserves that it was decided.
+	Returns (thread, pruned_count) or (None, 0)."""
 	name = (name or '').strip()
 	choice = (choice or '').strip()
 	if not name or not choice:
@@ -874,18 +880,25 @@ def ani_resolve_fork(name, choice, now_dt):
 	if key not in threads:
 		key = next((k for k, t in threads.items() if t.get('name', '').lower() == name.lower()), key)
 	t = threads.get(key) or {'name': name[:60], 'opened': now_dt.isoformat()}
-	t.update({'kind': 'decision', 'state': 'resolved', 'options': t.get('options', []),
-	          'resolution': choice[:120], 'status': 'decided — ' + choice[:180],
-	          'updated': now_dt.isoformat(), 'resolved_at': now_dt.isoformat()})
-	threads[key] = t
-	ani_save_threads(threads)
+	disp = t.get('name', name)
 	settled = ani_add_memory_note({
-		'text': ('Settled: %s — %s.' % (t.get('name', name), choice))[:220],
+		'text': ('Settled: %s — %s.' % (disp, choice))[:220],
 		'category': 'her_world', 'importance': 3,
-		'keywords': sorted(_ani_tokens(t.get('name', name) + ' ' + choice))[:6]})
+		'keywords': sorted(_ani_tokens(disp + ' ' + choice))[:6]})
 	after_iso = settled['created_at'] if settled else now_dt.isoformat()
-	pruned = ani_prune_notes_for(t.get('name', name), keep_after_iso=after_iso)
-	return t, pruned
+	pruned = ani_prune_notes_for(disp, keep_after_iso=after_iso)
+	# Auto-handoff: the decision becomes a LIVING storyline. Drop the decision machinery (kind/options/
+	# state) so it's a plain evolving thread again, and reframe the status as the beginning of the aftermath.
+	living = {
+		'name': disp[:60],
+		'status': ('just decided: %s. it\'s real now and starting to unfold — let this arc move naturally '
+		           'from here (getting used to it, the new rhythm, what it changes).' % choice)[:220],
+		'opened': now_dt.isoformat(), 'updated': now_dt.isoformat(),
+		'from_decision': choice[:120],
+	}
+	threads[key] = living
+	ani_save_threads(threads)
+	return living, pruned
 
 
 def ani_open_decisions():
@@ -912,6 +925,59 @@ def ani_decisions_context():
 	        "lock it with a hidden tag [[DECIDE: name | the branch you chose]] (invisible to him; never show "
 	        "it). from then on you LIVE in that outcome and never reopen it. the open decision(s) right now:\n"
 	        + lines + "\n")
+
+
+def ani_maybe_promote_thread(now_dt):
+	"""The inverse of auto-handoff: once a day, if a LIVING storyline has drifted a while and reached a
+	natural crossroads, surface it as a decision fork automatically — so her world throws off its own
+	choices for aaron to weigh in on instead of circling forever. LLM-gated (a fork only when there's a
+	genuine choice; most drift needs none) + at most one promotion per call. Guarded; returns the promoted
+	thread name or None. Called from the daycast's once-daily housekeeping."""
+	api_key = os.environ.get('XAI_API_KEY')
+	if not api_key:
+		return None
+	threads = ani_load_threads()
+	cutoff = (now_dt - timedelta(hours=ANI_PROMOTE_MIN_AGE_HOURS)).isoformat()
+	# candidates: plain storylines (not already a decision), old enough to have actually developed
+	cands = [(k, t) for k, t in threads.items()
+	         if t.get('kind') != 'decision' and t.get('updated', '') and t.get('updated') < cutoff]
+	if not cands:
+		return None
+	cands.sort(key=lambda kt: kt[1].get('updated', ''))   # most overdue for movement first
+	key, t = cands[0]
+	system = (
+		"You look at ONE ongoing storyline in a woman's life and decide whether it has reached a natural "
+		"CROSSROADS — a point where a real decision between 2-3 clear, concrete options would move it forward. "
+		"Most of the time the answer is NO: it's just drifting fine and doesn't need a choice yet. Only say "
+		"yes when there's a genuine fork a real person would pause on. Return ONLY JSON: "
+		"{\"decision\": true, \"options\": [\"option one\", \"option two\"]} — or {\"decision\": false} .")
+	user = "Storyline — %s: %s" % (t.get('name', key), t.get('status', ''))
+	try:
+		resp = requests.post(
+			'https://api.x.ai/v1/chat/completions',
+			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+			json={'model': ANI_MEMORY_EXTRACT_MODEL, 'max_tokens': 200, 'temperature': 0,
+			      'messages': [{'role': 'system', 'content': system},
+			                   {'role': 'user', 'content': user}]},
+			timeout=20)
+		if resp.status_code != 200:
+			print(f"Ani promote HTTP {resp.status_code}: {resp.text[:120]}")
+			return None
+		txt = resp.json()['choices'][0]['message']['content']
+		m = re.search(r'\{.*\}', txt, re.S)
+		data = json.loads(m.group(0)) if m else {}
+	except Exception as e:
+		print(f"Ani promote error: {e}")
+		return None
+	if not data.get('decision'):
+		return None
+	opts = [str(o).strip() for o in (data.get('options') or []) if str(o).strip()][:3]
+	if len(opts) < 2:
+		return None
+	# promote in place: keep the storyline's identity (its name/key), turn it into a decision fork
+	if ani_open_fork(t.get('name', key), ' | '.join(opts), now_dt):
+		return t.get('name', key)
+	return None
 
 
 def ani_log_visit(meta):
@@ -3125,6 +3191,14 @@ def ani_emit_daycast():
 				print(f"Ani memory consolidated: {r[0]} -> {r[1]}")
 		except Exception as e:
 			print(f"Ani auto-consolidate error: {e}")
+		# Once-daily: a drifting storyline that's reached a crossroads gets auto-promoted to a decision fork
+		# (surfaces in the panel + the forcing function). LLM-gated + one per day; guarded so it can't break.
+		try:
+			promoted = ani_maybe_promote_thread(now)
+			if promoted:
+				print(f"Ani auto-promoted thread to a decision: {promoted}")
+		except Exception as e:
+			print(f"Ani auto-promote error: {e}")
 
 	def _emit(text):
 		messages.append({'role': 'assistant', 'content': text, 'ani_day': True, 'ts': now.isoformat()})
