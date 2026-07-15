@@ -147,6 +147,59 @@
 #ani-now-state .ani-ns-wear { color: #c8a0c8; }
 #ani-now-state .ani-ns-sep { color: #3a2a10; }
 
+/* Decision forks — a crossroads in her world, resolved with one tap (story branches) */
+#ani-decisions {
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid #2e1e08;
+  background: #0b0a06;
+}
+.ani-fork {
+  border: 1px solid #4a3410;
+  border-left: 3px solid #d4880a;
+  border-radius: 4px;
+  padding: 7px 9px 8px;
+  background: #100d07;
+}
+.ani-fork + .ani-fork { margin-top: 7px; }
+.ani-fork-head {
+  font-size: 0.64rem;
+  letter-spacing: 0.05em;
+  color: #d8b46a;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.ani-fork-glyph { color: #f5b332; }
+.ani-fork-name { flex: 1; color: #e8c67a; }
+.ani-fork-tag {
+  font-size: 0.48rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #9a6018;
+  border: 1px solid #4a3410;
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+.ani-fork-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.ani-fork-opt {
+  flex: 1 1 auto;
+  min-width: 44%;
+  font: inherit;
+  font-size: 0.62rem;
+  letter-spacing: 0.03em;
+  color: #d4a850;
+  background: #0a0c08;
+  border: 1px solid #6b4a12;
+  border-radius: 3px;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.ani-fork-opt:hover { color: #f5b332; border-color: #9a6018; background: #14100a; }
+.ani-fork-opt:disabled { opacity: 0.4; cursor: not-allowed; }
+.ani-fork-deciding { opacity: 0.5; pointer-events: none; }
+
 .ani-mem-cat {
   display: inline-block;
   font-size: 0.5rem;

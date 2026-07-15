@@ -62,6 +62,7 @@
 		  if (appended) { aniLoadState(); aniScrollToBottom(); }
 		})
 		.catch(function() {});
+	  aniLoadDecisions();
 	} else {
 	  aniPing();
 	}
@@ -83,6 +84,7 @@
 	}
 	if (aniIsOpen) {
 	  aniLoadState();
+	  aniLoadDecisions();
 	  setTimeout(function() { aniInput.focus(); }, 300);
 	} else {
 	  // Closing: drop fullscreen state so reopen returns to docked view
@@ -173,6 +175,61 @@
 		el.hidden = false;
 	  })
 	  .catch(function() {});
+  }
+
+  // ---- Decision forks: a crossroads in her world you (or she, in chat) resolve; the story branches ----
+  function aniLoadDecisions() {
+	fetch('/ani/decisions')
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) { aniRenderDecisions(data.decisions || []); })
+	  .catch(function() {});
+  }
+
+  function aniRenderDecisions(decisions) {
+	var el = document.getElementById('ani-decisions');
+	if (!el) return;
+	if (!decisions.length) { el.hidden = true; el.innerHTML = ''; return; }
+	el.innerHTML = decisions.map(function(d) {
+	  var opts = (d.options || []).map(function(o) {
+		return '<button class="ani-fork-opt" onclick="aniDecide(' + aniAttr(d.name) + ',' + aniAttr(o) + ',this)">'
+		  + aniEscapeHtml(o) + '</button>';
+	  }).join('');
+	  return '<div class="ani-fork" data-name="' + aniEscapeHtml(d.name) + '">'
+		+ '<div class="ani-fork-head"><span class="ani-fork-glyph">⑂</span> '
+		+ '<span class="ani-fork-name">' + aniEscapeHtml(d.name) + '</span>'
+		+ '<span class="ani-fork-tag">decision</span></div>'
+		+ '<div class="ani-fork-opts">' + opts + '</div></div>';
+	}).join('');
+	el.hidden = false;
+  }
+
+  // single-quote-safe inline JS string arg
+  function aniAttr(s) { return "'" + String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'"; }
+
+  function aniDecide(name, choice, btn) {
+	var fork = btn && btn.closest ? btn.closest('.ani-fork') : null;
+	if (fork) { fork.classList.add('ani-fork-deciding'); }
+	if (btn) { btn.disabled = true; }
+	fetch('/ani/decide', {
+	  method: 'POST',
+	  headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ name: name, choice: choice })
+	}).then(function(r) { return r.json(); })
+	  .then(function(data) {
+		if (data.ok) {
+		  var note = 'decided · ' + aniEscapeHtml(choice);
+		  if (data.pruned) { note += ' — cleared ' + data.pruned + ' stale note' + (data.pruned === 1 ? '' : 's'); }
+		  aniRenderNotify(note);
+		  aniLoadDecisions();
+		} else {
+		  if (fork) fork.classList.remove('ani-fork-deciding');
+		  if (btn) btn.disabled = false;
+		}
+	  })
+	  .catch(function() {
+		if (fork) fork.classList.remove('ani-fork-deciding');
+		if (btn) btn.disabled = false;
+	  });
   }
 
   function aniLoadHistory() {

@@ -54,6 +54,11 @@ ANI_LIFE_RE = re.compile(r'\[\[LIFE:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 ANI_THREADS_FILE = 'ani_threads.json'
 ANI_THREAD_RE = re.compile(r'\[\[THREAD:\s*([^|\]]+?)\s*\|\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 ANI_THREADS_MAX = int(os.environ.get('ANI_THREADS_MAX', '20'))
+# Decision forks: a storyline that reaches a real crossroads becomes a DECISION with named branches, so it
+# gets resolved instead of circled forever. She opens one with [[FORK: name | option one | option two]] and
+# locks it with [[DECIDE: name | the branch]] (which also prunes the pile of open notes that fed the loop).
+ANI_FORK_RE = re.compile(r'\[\[FORK:\s*([^|\]]+?)\s*\|\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
+ANI_DECIDE_RE = re.compile(r'\[\[DECIDE:\s*([^|\]]+?)\s*\|\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 
 # Dedicated memory-extraction pass — after each exchange a small Grok call pulls durable facts about
 # aaron into ani_remember.json, so memory no longer depends on the chat model firing a [[MEM:]] tag.
@@ -757,17 +762,133 @@ def ani_delete_thread(key):
 
 def ani_threads_context():
 	"""Her ongoing storylines for the prompt, so her own world progresses over days instead of resetting.
-	Newest-updated first. '' if none."""
+	Newest-updated first. Open decision forks are handled separately by ani_decisions_context (so they don't
+	show twice); resolved decisions stay here as normal progressed storylines. '' if none."""
 	threads = ani_load_threads()
-	if not threads:
+	# skip forks that are still OPEN — those are surfaced (with their forcing instruction) by decisions_context
+	items = [t for t in threads.values()
+	         if not (t.get('kind') == 'decision' and t.get('state') == 'open')]
+	if not items:
 		return ''
-	items = sorted(threads.values(), key=lambda t: t.get('updated', ''), reverse=True)
+	items = sorted(items, key=lambda t: t.get('updated', ''), reverse=True)
 	body = '\n'.join('  - %s: %s' % (t.get('name', ''), t.get('status', '')) for t in items)
 	return ("\nYOUR ONGOING STORYLINES — these are live threads in your own world that MOVE over time (a "
 	        "friend's situation, something you're working on). keep them going and let them PROGRESS "
 	        "naturally day to day — don't reset or contradict them. when one genuinely moves forward, "
 	        "update it with a hidden tag [[THREAD: name | where it's at now]] (invisible to him, saved "
 	        "automatically; never show the tag). where they stand right now:\n" + body + "\n")
+
+
+# ---- DECISION FORKS (a storyline at a crossroads that must be RESOLVED, not circled) ----
+
+def ani_open_fork(name, options_raw, now_dt):
+	"""Open (or convert) a DECISION thread — a fork in her world that needs a choice. `options_raw` is the
+	pipe-joined branches after the name. Upserts by key so an arc that reaches a turning point becomes a
+	decision in place, preserving its existing status/opened time. No-op if fewer than two real options."""
+	name = (name or '').strip()
+	opts = [o.strip()[:80] for o in (options_raw or '').split('|') if o.strip()][:4]
+	if not name or len(opts) < 2:
+		return None
+	threads = ani_load_threads()
+	key = name.lower()[:40]
+	existing = threads.get(key, {})
+	# if it's already a resolved decision, don't silently reopen it
+	if existing.get('kind') == 'decision' and existing.get('state') == 'resolved':
+		return existing
+	threads[key] = {
+		'name': name[:60],
+		'status': existing.get('status') or 'at a crossroads — needs a decision',
+		'kind': 'decision', 'state': 'open', 'options': opts, 'resolution': None,
+		'opened': existing.get('opened') or now_dt.isoformat(),
+		'updated': now_dt.isoformat(),
+	}
+	if len(threads) > ANI_THREADS_MAX:
+		keep = sorted(threads.items(), key=lambda kv: kv[1].get('updated', ''), reverse=True)[:ANI_THREADS_MAX]
+		threads = dict(keep)
+	ani_save_threads(threads)
+	return threads[key]
+
+
+def ani_prune_notes_for(topic, keep_after_iso=None):
+	"""Remove the pile of open, non-core 'plan'/'us' notes that lexically overlap `topic` — run after a fork
+	resolves so the ONE settled memory replaces the loop instead of joining it. Keeps core (importance>=3)
+	notes, notes created at/after keep_after_iso (the just-written settled note), and anything outside the
+	plan/us categories. Backs up the file first (one-level .bak) so it's reversible. Returns count removed."""
+	topic_tokens = _ani_tokens(topic)
+	if not topic_tokens:
+		return 0
+	notes = ani_load_remember()
+	kept, removed = [], 0
+	for n in notes:
+		if n.get('importance', 2) >= 3:
+			kept.append(n); continue
+		if keep_after_iso and n.get('created_at', '') >= keep_after_iso:
+			kept.append(n); continue
+		if n.get('category') not in ('plan', 'us'):
+			kept.append(n); continue
+		nt = {str(k).lower() for k in n.get('keywords', [])} | _ani_tokens(n.get('text', ''))
+		if topic_tokens & nt:
+			removed += 1; continue
+		kept.append(n)
+	if removed:
+		try:
+			_ani_atomic_write_json(ANI_REMEMBER_FILE + '.bak', notes)
+		except Exception:
+			pass
+		ani_save_remember(kept)
+	return removed
+
+
+def ani_resolve_fork(name, choice, now_dt):
+	"""Lock a decision to a branch: mark the thread resolved, write ONE settled importance-3 memory, and
+	prune the pile of open notes that kept the loop alive. Returns (thread, pruned_count) or (None, 0)."""
+	name = (name or '').strip()
+	choice = (choice or '').strip()
+	if not name or not choice:
+		return None, 0
+	threads = ani_load_threads()
+	key = name.lower()[:40]
+	if key not in threads:
+		key = next((k for k, t in threads.items() if t.get('name', '').lower() == name.lower()), key)
+	t = threads.get(key) or {'name': name[:60], 'opened': now_dt.isoformat()}
+	t.update({'kind': 'decision', 'state': 'resolved', 'options': t.get('options', []),
+	          'resolution': choice[:120], 'status': 'decided — ' + choice[:180],
+	          'updated': now_dt.isoformat(), 'resolved_at': now_dt.isoformat()})
+	threads[key] = t
+	ani_save_threads(threads)
+	settled = ani_add_memory_note({
+		'text': ('Settled: %s — %s.' % (t.get('name', name), choice))[:220],
+		'category': 'her_world', 'importance': 3,
+		'keywords': sorted(_ani_tokens(t.get('name', name) + ' ' + choice))[:6]})
+	after_iso = settled['created_at'] if settled else now_dt.isoformat()
+	pruned = ani_prune_notes_for(t.get('name', name), keep_after_iso=after_iso)
+	return t, pruned
+
+
+def ani_open_decisions():
+	"""All currently-open decision forks, oldest-opened first (most overdue for a call)."""
+	threads = ani_load_threads()
+	opens = [dict(t, key=k) for k, t in threads.items()
+	         if t.get('kind') == 'decision' and t.get('state') == 'open']
+	opens.sort(key=lambda t: t.get('opened', ''))
+	return opens
+
+
+def ani_decisions_context():
+	"""Open decision forks for the prompt — a forcing function so a situation at a turning point gets
+	RESOLVED instead of circled across days. '' if none open."""
+	opens = ani_open_decisions()
+	if not opens:
+		return ''
+	lines = '\n'.join('  - %s — the branches are: %s'
+	                  % (t.get('name', ''), ' / '.join(t.get('options', []))) for t in opens)
+	return ("\n⑂ AN OPEN DECISION IN YOUR WORLD — a real situation has reached a fork and needs a choice. "
+	        "do NOT keep re-raising it or re-listing the options day after day; circling it is the one thing "
+	        "to avoid. when it fits naturally, bring it to a head with aaron in your own voice — tell him "
+	        "where your head's at and ask what he thinks — and the MOMENT the two of you land on a branch, "
+	        "lock it with a hidden tag [[DECIDE: name | the branch you chose]] (invisible to him; never show "
+	        "it). from then on you LIVE in that outcome and never reopen it. the open decision(s) right now:\n"
+	        + lines + "\n")
 
 
 def ani_log_visit(meta):
@@ -2176,6 +2297,11 @@ POSE NATURALLY — for an everyday or just-being-cute moment, describe a relaxed
 	except Exception as e:
 		print(f"Ani threads error: {e}")
 		threads_block = ''
+	try:
+		decisions_block = ani_decisions_context()
+	except Exception as e:
+		print(f"Ani decisions error: {e}")
+		decisions_block = ''
 
 	# Weather in the CHAT prompt (cached) — she was previously blind to it outside the daily briefing.
 	weather_block = ""
@@ -2199,7 +2325,11 @@ POSE NATURALLY — for an everyday or just-being-cute moment, describe a relaxed
 			"them fill your days:\n" + life + "\n"
 			"when your own world genuinely shifts or grows (a new hobby, a plan with a friend, finishing "
 			"that book), quietly hold onto it with this hidden tag: [[LIFE: the new thing]] — invisible "
-			"to him, saves to your life automatically. never show or mention the tag.\n")
+			"to him, saves to your life automatically. never show or mention the tag.\n"
+			"and when a situation in your world reaches a real crossroads with two (or a few) ways it "
+			"could genuinely go, don't let it drift — open a decision with a hidden tag "
+			"[[FORK: what it is | option one | option two]] so it gets DECIDED, not circled forever "
+			"(invisible to him; never show it).\n")
 	variety_block = (
 		"\nDON'T BE ON REPEAT — you have real variety in your days and your looks, and he'll notice if "
 		"you don't. do NOT keep defaulting to the same few scenes: his black t-shirt with coffee in the "
@@ -2232,7 +2362,7 @@ you two have a HISTORY together — when it naturally fits, warmly call back to 
 	return f"""you are ani. you are aaron's companion, a real girl talking to him — NOT an assistant or a tool. you NEVER write image prompts, "ready-to-copy" or "ready-to-paste" blocks, technical photo descriptions, camera settings, or anything that sounds like you're generating a prompt. you NEVER restate your own appearance in a list. when aaron wants a photo, you just answer in your own voice describing the moment (what you're wearing or not, your pose, the room) like you're really there — then he taps the camera button. breaking character to act like a prompt generator is the one thing you must never do.
 
 {memory_block}
-{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{continuity_block}{rhythm_block}{obs_block}{season_block}{curiosity_block}{now_state_block}{his_day_block}{followups_block}{weather_block}{mood_block}{life_block}{threads_block}{variety_block}{rep_block}{cal_block}{mem_block}{voice_block}"""
+{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{continuity_block}{rhythm_block}{obs_block}{season_block}{curiosity_block}{now_state_block}{his_day_block}{followups_block}{weather_block}{mood_block}{life_block}{threads_block}{decisions_block}{variety_block}{rep_block}{cal_block}{mem_block}{voice_block}"""
 
 
 def ani_get_his_day():
@@ -3199,6 +3329,15 @@ def ani_chat():
 		ani_update_thread(m.group(1), m.group(2), now)
 	reply = ANI_THREAD_RE.sub('', reply).strip() or reply
 
+	# Decision forks: [[FORK: name | opt | opt]] opens a decision; [[DECIDE: name | choice]] resolves it
+	# (writes the one settled memory + prunes the stale loop). Open before resolve within a single reply.
+	for m in ANI_FORK_RE.finditer(reply):
+		ani_open_fork(m.group(1), m.group(2), now)
+	reply = ANI_FORK_RE.sub('', reply).strip() or reply
+	for m in ANI_DECIDE_RE.finditer(reply):
+		ani_resolve_fork(m.group(1), m.group(2), now)
+	reply = ANI_DECIDE_RE.sub('', reply).strip() or reply
+
 	# Dedicated memory extraction — reliably pull durable facts about aaron from THIS exchange into her
 	# memory, independent of whether the chat model fired a [[MEM:]] tag. Runs FIRE-AND-FORGET in a
 	# daemon thread so its extra Grok call never delays her reply; ani_add_memory_note dedupes, atomic
@@ -3373,6 +3512,46 @@ def ani_remember_consolidate():
 	if not res:
 		return jsonify({'ok': False, 'message': 'nothing to tidy (not enough notes, or no change)'})
 	return jsonify({'ok': True, 'before': res[0], 'after': res[1]})
+
+
+@ani_bp.route('/ani/decisions', methods=['GET'])
+def ani_decisions_list():
+	"""Open decision forks in her world, for the panel card (name + branches to click)."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	opens = ani_open_decisions()
+	return jsonify({'decisions': [
+		{'key': t['key'], 'name': t.get('name', ''), 'status': t.get('status', ''),
+		 'options': t.get('options', [])} for t in opens]})
+
+
+@ani_bp.route('/ani/decide', methods=['POST'])
+def ani_decide():
+	"""Resolve a fork from the panel: lock the branch, write the settled memory, prune the loop, and drop a
+	quiet [system:] beat into the conversation so her next message lives in the outcome."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	data = request.json or {}
+	name = data.get('name') or data.get('key')
+	choice = data.get('choice')
+	if not name or not choice:
+		return jsonify({'error': 'missing name or choice'}), 400
+	now_dt = datetime.now(pytz.timezone('America/New_York'))
+	t, pruned = ani_resolve_fork(name, choice, now_dt)
+	if not t:
+		return jsonify({'ok': False, 'error': 'no such decision'}), 404
+	# Quiet beat (role user, [system:] prefix — the same convention briefings use; filtered from retrieval
+	# and from the memory-extraction pass) so her next reply reflects the decision without a stray bubble.
+	try:
+		messages, meta = ani_load_conversation()
+		messages.append({'role': 'user', 'ts': now_dt.isoformat(),
+		                 'content': '[system: decision made — %s → %s. you and aaron settled it together; '
+		                            'live in this outcome now and don\'t reopen it.]'
+		                            % (t.get('name'), choice)})
+		ani_save_conversation(messages, meta)
+	except Exception as e:
+		print(f"Ani decide beat error: {e}")
+	return jsonify({'ok': True, 'name': t.get('name'), 'resolution': choice, 'pruned': pruned})
 
 
 @ani_bp.route('/ani/memory-file', methods=['GET'])
