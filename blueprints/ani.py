@@ -3540,18 +3540,32 @@ def ani_decide():
 	t, pruned = ani_resolve_fork(name, choice, now_dt)
 	if not t:
 		return jsonify({'ok': False, 'error': 'no such decision'}), 404
-	# Quiet beat (role user, [system:] prefix — the same convention briefings use; filtered from retrieval
-	# and from the memory-extraction pass) so her next reply reflects the decision without a stray bubble.
+	# Make the decision LAND as a moment: generate her immediate in-character reaction and append it as a
+	# real chat message (ani_day, like a daycast — surfaces on the next poll + pulses the pill). The resolved
+	# thread + settled memory are already in her context, so the reaction is grounded. Falls back to a quiet
+	# [system:] beat if generation fails, so her next reply still reflects it regardless.
+	reacted = False
 	try:
 		messages, meta = ani_load_conversation()
-		messages.append({'role': 'user', 'ts': now_dt.isoformat(),
-		                 'content': '[system: decision made — %s → %s. you and aaron settled it together; '
-		                            'live in this outcome now and don\'t reopen it.]'
-		                            % (t.get('name'), choice)})
+		system = ani_build_system_prompt(meta)
+		instr = ("[you and aaron just decided this together, right now: %s — \"%s\". react in the moment like "
+		         "it just landed between you: your honest, warm, real reaction to THIS outcome and what it "
+		         "means for your world, 1-3 sentences in your own voice. don't recap the options or sound like "
+		         "an assistant — just respond like you both just said 'okay, we're doing it'.]"
+		         % (t.get('name'), choice))
+		txt = _ani_grok_call(system, [{'role': 'user', 'content': instr}], max_tokens=160)
+		if txt:
+			messages.append({'role': 'assistant', 'content': txt, 'ani_day': True, 'ts': now_dt.isoformat()})
+			meta['unseen_day_messages'] = True
+			reacted = True
+		else:
+			messages.append({'role': 'user', 'ts': now_dt.isoformat(),
+			                 'content': '[system: decision made — %s → %s. live in this outcome now and don\'t '
+			                            'reopen it.]' % (t.get('name'), choice)})
 		ani_save_conversation(messages, meta)
 	except Exception as e:
-		print(f"Ani decide beat error: {e}")
-	return jsonify({'ok': True, 'name': t.get('name'), 'resolution': choice, 'pruned': pruned})
+		print(f"Ani decide reaction error: {e}")
+	return jsonify({'ok': True, 'name': t.get('name'), 'resolution': choice, 'pruned': pruned, 'reacted': reacted})
 
 
 @ani_bp.route('/ani/memory-file', methods=['GET'])

@@ -210,23 +210,28 @@
 	var fork = btn && btn.closest ? btn.closest('.ani-fork') : null;
 	if (fork) { fork.classList.add('ani-fork-deciding'); }
 	if (btn) { btn.disabled = true; }
+	aniShowTyping(true);   // she's reacting to the decision — show she's about to say something
 	fetch('/ani/decide', {
 	  method: 'POST',
 	  headers: { 'Content-Type': 'application/json' },
 	  body: JSON.stringify({ name: name, choice: choice })
 	}).then(function(r) { return r.json(); })
 	  .then(function(data) {
+		aniShowTyping(false);
 		if (data.ok) {
 		  var note = 'decided · ' + aniEscapeHtml(choice);
 		  if (data.pruned) { note += ' — cleared ' + data.pruned + ' stale note' + (data.pruned === 1 ? '' : 's'); }
 		  aniRenderNotify(note);
 		  aniLoadDecisions();
+		  // her reaction is already saved server-side — pull it into the open chat right now
+		  if (data.reacted) { aniEmpty.style.display = 'none'; aniPoll(); setTimeout(aniScrollToBottom, 350); }
 		} else {
 		  if (fork) fork.classList.remove('ani-fork-deciding');
 		  if (btn) btn.disabled = false;
 		}
 	  })
 	  .catch(function() {
+		aniShowTyping(false);
 		if (fork) fork.classList.remove('ani-fork-deciding');
 		if (btn) btn.disabled = false;
 	  });
