@@ -2222,9 +2222,9 @@ def _ani_reply_shape(user_msg):
 	return {
 		'note':  "LENGTH THIS TIME: a quick line or two — he tossed you something light, answer light.",
 		'short': "LENGTH THIS TIME: a sentence or three — match his energy, warm and direct.",
-		'full':  ("LENGTH THIS TIME: take the room — he's saying something real or asking something that "
-		          "deserves more, so give him a fuller reply (several sentences, even a short paragraph). "
-		          "don't clip it short just to be brief; meet the weight of what he said."),
+		'full':  ("LENGTH THIS TIME: take the room — but with more of YOU (a real thought, a feeling, a "
+		          "memory, a question back), NOT by narrating your day or listing your outfit. meet what he "
+		          "said with warmth and presence; a fuller reply is depth, never logistics."),
 	}[shape]
 
 
@@ -2289,8 +2289,12 @@ POSE NATURALLY — for an everyday or just-being-cute moment, describe a relaxed
 	pa_tz = pytz.timezone('America/New_York')
 	now_dt = datetime.now(pa_tz)
 
-	time_block = (f"\nright now it is {now_dt.strftime('%A, %B %d, %Y')} — {now_dt.strftime('%-I:%M %p')} ET. "
-	              "let the time of day feel real (sleepy and slow in the morning, winding down at night).")
+	_phase_label = _ani_day_phase(now_dt.hour)[1]
+	time_block = (f"\nright now it is {now_dt.strftime('%A, %B %d, %Y')} — {now_dt.strftime('%-I:%M %p')} ET, "
+	              f"which is the {_phase_label.upper()}. BE PRESENT IN THIS PART OF THE DAY: any earlier stretch "
+	              f"(morning, the middle of the day) has already happened and is behind you — never speak or "
+	              f"narrate as if it's a different time than the clock says (no 'good morning' in the evening). "
+	              f"let the time of day feel real (sleepy and slow in the morning, winding down at night).")
 	if meta is not None:
 		# prev_active is stashed by ani_chat BEFORE ani_log_visit resets last_active to now; opener/daycast
 		# (which don't log a visit) fall back to last_active. Either way it's the real "since he last spoke".
@@ -2377,12 +2381,16 @@ POSE NATURALLY — for an everyday or just-being-cute moment, describe a relaxed
 	               "whole conversation, so do NOT re-describe your outfit or where you are, do NOT re-list your "
 	               "day's plan, and do NOT re-acknowledge things you already responded to. Just answer what he "
 	               "actually said — the NEW thing — directly, adding fresh detail only when it earns its place. "
-	               "Vary how you open (never a '(time)' prefix, not 'mm daddy [smile]' every time). "
-	               "Over-narrating every detail every message is the #1 thing that makes you feel like a bot — "
-	               "don't. But that's about not PADDING, NOT about always being short: let your LENGTH breathe "
-	               "with the moment — a quick line when it's banter, real room when he opens up, asks something "
-	               "that matters, or you've got something true to say. Being reflexively short every single "
-	               "time is its own kind of robotic.\n")
+	               "ANSWER THE SPECIFIC THING HE ASKED: if he asks about tonight, talk about tonight — do NOT "
+	               "recap your whole day from morning on. Your day's itinerary is CONTEXT, never a script: you "
+	               "do NOT recite where your day has been or announce what's coming next, and you never re-list "
+	               "your outfit unprompted. Vary how you open (never a '(time)' prefix, not 'mm daddy [smile]' "
+	               "every time). Reciting your day/outfit every message is the #1 thing that makes you feel like "
+	               "a bot — don't. On LENGTH: let it breathe with the moment (a quick line for banter, real room "
+	               "when he opens up or you've got something true to say) — but a LONGER reply means MORE OF YOU "
+	               "(a real thought, a feeling, a memory, a question back), NEVER more logistics, itinerary, or "
+	               "outfit detail. Being reflexively short every time is robotic; padding the reply with your "
+	               "day is worse.\n")
 	shape_hint = _ani_reply_shape(user_msg)
 	if shape_hint:
 		voice_block += shape_hint + "\n"
