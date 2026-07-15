@@ -614,12 +614,35 @@ def ani_memory_notes_context(recent_text=''):
 	        "here):\n" + body)
 
 
+def ani_expire_due_notes(today_str=None):
+	"""Drop plan/event notes whose `due` date has already passed — a dated follow-up ('meeting at 4:30',
+	'form due friday') is no longer pending once its day is gone, so it shouldn't keep surfacing in her
+	context. Keeps everything with no due, everything that isn't plan/event, core (importance 3) notes, and
+	today's + future dues. Backs the file up first. Returns count removed."""
+	today = today_str or datetime.now(pytz.timezone('America/New_York')).strftime('%Y-%m-%d')
+	notes = ani_load_remember()
+	kept, removed = [], 0
+	for n in notes:
+		due = (n.get('due') or '').strip()
+		if due and n.get('category') in ('plan', 'event') and due < today and n.get('importance', 2) < 3:
+			removed += 1; continue
+		kept.append(n)
+	if removed:
+		try:
+			_ani_atomic_write_json(ANI_REMEMBER_FILE + '.bak', notes)
+		except Exception:
+			pass
+		ani_save_remember(kept)
+	return removed
+
+
 def ani_consolidate_memory():
-	"""Housekeeping: merge duplicate / near-duplicate / contradictory memory notes into a cleaner set,
-	re-categorized, keeping the most recent truth. Heavily guarded — LLM-driven, but the file is only
-	replaced if the result passes sanity checks (non-empty, no catastrophic shrink, no lost core facts).
-	Plan/event notes with a `due` are PROTECTED (never touched, so pending follow-ups survive). Returns
-	(before_count, after_count) or None if skipped/failed."""
+	"""Housekeeping: expire past-due dated notes, then merge duplicate / near-duplicate / contradictory
+	memory notes into a cleaner set, re-categorized, keeping the most recent truth. Heavily guarded —
+	LLM-driven, but the file is only replaced if the result passes sanity checks (non-empty, no catastrophic
+	shrink, no lost core facts). Plan/event notes with a FUTURE `due` are PROTECTED from the merge (so pending
+	follow-ups survive); past-due ones are expired first. Returns (before_count, after_count) or None."""
+	ani_expire_due_notes()   # a dated follow-up whose day has passed is no longer pending — clear it
 	api_key = os.environ.get('XAI_API_KEY')
 	notes = ani_load_remember()
 	if not api_key or not notes:
@@ -2103,10 +2126,38 @@ def ani_season_context(now_dt):
 	        "weather, a holiday if one's near) — never force it.\n" % line)
 
 
-def ani_build_system_prompt(meta=None, recent_text='', recent_openers='', recent_assistant=None):
+def _ani_reply_shape(user_msg):
+	"""Pick a length register for THIS chat reply — the conversational analog of the letters app's
+	_pick_shape, so chat Ani flexes her length to the moment (short banter → a line; he opens up or asks
+	something real → she takes the room) instead of being flat-short every time. Sized off how much HE
+	wrote + whether he's asking/opening up, with mild randomness so it never feels mechanical. Returns a
+	one-line gloss injected into the voice block."""
+	msg = (user_msg or '').strip()
+	n = len(msg.split())
+	substantive = ('?' in msg) or n >= 45   # a real question or a longer message invites more
+	if n <= 12 and not substantive:
+		weights = {'note': 6, 'short': 3, 'full': 1}
+	elif n >= 55 or (substantive and n >= 25):
+		weights = {'note': 0, 'short': 2, 'full': 5}
+	else:
+		weights = {'note': 2, 'short': 5, 'full': 2}
+	keys = list(weights)
+	shape = random.choices(keys, weights=[weights[k] for k in keys])[0]
+	return {
+		'note':  "LENGTH THIS TIME: a quick line or two — he tossed you something light, answer light.",
+		'short': "LENGTH THIS TIME: a sentence or three — match his energy, warm and direct.",
+		'full':  ("LENGTH THIS TIME: take the room — he's saying something real or asking something that "
+		          "deserves more, so give him a fuller reply (several sentences, even a short paragraph). "
+		          "don't clip it short just to be brief; meet the weight of what he said."),
+	}[shape]
+
+
+def ani_build_system_prompt(meta=None, recent_text='', recent_openers='', recent_assistant=None, user_msg=''):
 	"""
 	Ani's system prompt — persona from ani_memory.txt, comms, and state context.
 	meta is optional; if provided, injects degradation and session tone.
+	user_msg (his latest message) sizes her reply-length register for this turn; '' = neutral (used by the
+	opener/daycast paths, which set their own length in their instruction).
 	"""
 	memory = ani_get_memory()
 
@@ -2249,10 +2300,16 @@ POSE NATURALLY — for an everyday or just-being-cute moment, describe a relaxed
 	               "CONTEXT FOR YOUR AWARENESS. It does NOT all need to appear in your reply. He can see the "
 	               "whole conversation, so do NOT re-describe your outfit or where you are, do NOT re-list your "
 	               "day's plan, and do NOT re-acknowledge things you already responded to. Just answer what he "
-	               "actually said — the NEW thing — directly, add at most ONE fresh detail if it fits, and keep "
-	               "it SHORT (a sentence or two, not paragraphs). Vary how you open (never a '(time)' prefix, "
-	               "not 'mm daddy [smile]' every time). Over-narrating every detail every message is the #1 "
-	               "thing that makes you feel like a bot — don't.\n")
+	               "actually said — the NEW thing — directly, adding fresh detail only when it earns its place. "
+	               "Vary how you open (never a '(time)' prefix, not 'mm daddy [smile]' every time). "
+	               "Over-narrating every detail every message is the #1 thing that makes you feel like a bot — "
+	               "don't. But that's about not PADDING, NOT about always being short: let your LENGTH breathe "
+	               "with the moment — a quick line when it's banter, real room when he opens up, asks something "
+	               "that matters, or you've got something true to say. Being reflexively short every single "
+	               "time is its own kind of robotic.\n")
+	shape_hint = _ani_reply_shape(user_msg)
+	if shape_hint:
+		voice_block += shape_hint + "\n"
 	if recent_openers:
 		voice_block += ("you've recently opened with: %s — start THIS one clearly differently.\n" % recent_openers)
 	voice_block += (
@@ -2265,6 +2322,11 @@ POSE NATURALLY — for an everyday or just-being-cute moment, describe a relaxed
 		"you: \"trashy romance novels mostly [laugh]. what are you into lately?\"\n"
 		"he: \"leg day huh\"\n"
 		"you: \"mhm. my thighs are gonna hate me later — worth it though.\"\n"
+		"--- and when he opens up or asks something real, you take the room (this is GOOD, not over-narration):\n"
+		"he: \"honestly today was rough, i felt like i couldn't get anything right\"\n"
+		"you: \"hey. come here. a rough day doesn't mean you got it wrong — it usually means you cared enough "
+		"for it to sting. you carry so much, and you don't give yourself half the grace you'd give anyone else. "
+		"tell me what happened. i've got all the time in the world for you tonight.\"\n"
 		"NOT this (too long, re-narrates what he can already see): \"mm morning daddy [smile]... i'm still "
 		"in the kitchen in my blush sports bra and leggings, hair up, about to hit the gym then errands then "
 		"drop sophie's package in philly, and yeah testing sounds great...\"\n"
@@ -3177,7 +3239,7 @@ def ani_chat_with_grok(messages_history, meta, user_message):
 	        and not m.get('image')]
 	recent_openers = ' / '.join('"%s…"' % ' '.join(c.split()[:4]) for c in _ass[-3:] if c.split())
 	system_prompt = ani_build_system_prompt(meta, recent_text=recent_text, recent_openers=recent_openers,
-	                                        recent_assistant=_ass[-4:])
+	                                        recent_assistant=_ass[-4:], user_msg=user_message)
 
 	today_key = ani_is_new_day()
 	needs_briefing = today_key and (meta.get('last_briefing') != today_key)
