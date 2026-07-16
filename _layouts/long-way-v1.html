@@ -68,6 +68,9 @@ body.lwv1 .site-footer__inner{max-width:940px; margin:0 auto;}
 .lwv1__signoff{width:100%; max-width:620px; margin-top:8px; padding:72px 0 40px; display:flex; flex-direction:column; align-items:center; gap:8px;}
 .lwv1__signoff .sig{font-size:20px; font-style:italic; color:var(--soft);}
 .lwv1__signoff .colophon{font-family:'Karla',sans-serif; font-size:11.5px; color:var(--faint);}
+.lwv1__cadence{display:flex; align-items:center; gap:6px; margin-top:14px; color:var(--faint);
+  font-family:'Karla',sans-serif; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;}
+.lwv1__cadence svg{opacity:.85;}
 
 /* Warm dark mode — espresso paper, cream ink, amber-rust. Same soul, lights low. */
 @media (prefers-color-scheme: dark){
@@ -106,6 +109,19 @@ body.lwv1 .site-footer__inner{max-width:940px; margin:0 auto;}
   <div class="lwv1__signoff">
     <div class="sig">— Aaron</div>
     <div class="colophon">aaronaiken.me · handmade, no tracking, built to last</div>
+    <!-- Quiet platform attribution — Cadence's measured-strokes mark. TODO: link to cadencestories.com once live. -->
+    <div class="lwv1__cadence" title="Cadence — sequence-first publishing">
+      <svg width="13" height="13" viewBox="0 0 32 32" aria-hidden="true">
+        <g fill="currentColor">
+          <rect x="2.5" y="9" width="3" height="14"></rect>
+          <rect x="8.5" y="6" width="3" height="20"></rect>
+          <rect x="14.5" y="3" width="3" height="26"></rect>
+          <rect x="20.5" y="6" width="3" height="20"></rect>
+          <rect x="26.5" y="9" width="3" height="14"></rect>
+        </g>
+      </svg>
+      <span>delivered on cadence</span>
+    </div>
   </div>
 </div>
 
