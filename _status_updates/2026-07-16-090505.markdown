@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-07-16 09:05:05 -0400
+layout: status_update
+author: aaron
+source: web
+---
+I've been writing letters, "Issues", for this in preparation for launching, and that time is soon I think. You can drop your email onto the form and I'll let you know when it is ready! Calling it [The Long Way](https://aaronaiken.me/the-long-way).
+
+![A newsletter cover page titled "The Long Way" with subtitle describing themes of debt, marriage, faith, fatherhood and reconciliation, featuring a red squiggly line illustration.](https://cargo.aaronaiken.me/status/20260716090505.jpg)
