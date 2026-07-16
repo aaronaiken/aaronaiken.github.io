@@ -2,6 +2,8 @@
 layout: long-way-v1
 title: The Long Way
 permalink: /the-long-way
+favicon: /assets/the-long-way/tlw.svg
+theme_color: "#FAF5EC"
 subtitle: Debt. Marriage. Faith. Fatherhood. Reconciliation. A letter from Aaron about the harder, slower, more honest path.
 description: The Long Way — a personal newsletter from Aaron about taking the harder path through debt, marriage, faith, fatherhood, and the daily work of not taking shortcuts. Roughly every two weeks.
 ---
