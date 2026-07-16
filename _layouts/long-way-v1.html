@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Karla:wght@400;500;600&display=swap');
+
+/* The Long Way — v1 "the wandering line". Warm, handmade, deliberately NOT the Cadence platform brand. */
+body.lwv1{
+  --paper:#FAF5EC; --ink:#2B2620; --soft:#5C5142; --dim:#8A7A64; --faint:#B0A38C;
+  --rust:#9C4A2F; --rust-dk:#7C3A24; --rule:#E3D8C4; --field:#FFFDF8; --field-line:#D8CBB2;
+  /* site nav + footer inherit the warm palette */
+  --nav-link:#8A7A64; --nav-link-hover:#9C4A2F; --ident-color:#8A7A64; --ident-border:#E3D8C4;
+  --footer-border:#E3D8C4; --footer-label:#8A7A64; --footer-link:#9C4A2F; --footer-link-hover:#7C3A24; --footer-dim:#B0A38C;
+  margin:0 !important; max-width:100% !important; padding:0 !important;
+  background:var(--paper) !important; color:var(--ink) !important;
+  font-family:'EB Garamond',Georgia,serif !important; font-size:19px; line-height:1.75;
+}
+body.lwv1 *{box-sizing:border-box;}
+body.lwv1 a{color:var(--rust);} body.lwv1 a:hover{color:var(--rust-dk);}
+
+.lwv1__wrap{display:flex; flex-direction:column; align-items:center; padding:0 24px;}
+
+/* Hero */
+.lwv1__hero{width:100%; max-width:620px; display:flex; flex-direction:column; align-items:center; text-align:center; padding:72px 0 0;}
+.lwv1__eyebrow{font-family:'Karla',sans-serif; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim);}
+.lwv1__title{font-size:clamp(44px,9vw,64px); font-weight:500; line-height:1.08; margin:18px 0 0; letter-spacing:-.01em; color:var(--ink);}
+.lwv1__sub{font-size:clamp(19px,4vw,22px); font-style:italic; line-height:1.6; color:var(--soft); margin-top:20px; max-width:500px; text-wrap:pretty;}
+.lwv1__path{margin-top:44px;}
+.lwv1__path path{stroke-dasharray:400; animation:lwvDraw 5s ease-out both;}
+@keyframes lwvDraw{from{stroke-dashoffset:400;} to{stroke-dashoffset:0;}}
+@media (prefers-reduced-motion: reduce){ .lwv1__path path{animation:none; stroke-dashoffset:0;} }
+
+/* Body — Aaron's own words, single warm column */
+.lwv1__body{width:100%; max-width:560px; padding:64px 0 0;}
+.lwv1__body p{margin:0 0 22px;}
+.lwv1__body em{color:var(--soft);}
+.lwv1__body hr{border:none; border-top:1px solid var(--rule); margin:40px 0;}
+
+/* Signup (restyles the .lw2__reply block that lives in the page content) */
+.lwv1__body .lw2__reply{border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); padding:34px 0; margin:8px 0 0;}
+.lwv1__body .lw2__reply .k{font-family:'Karla',sans-serif; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); margin:0 0 10px;}
+.lwv1__body .lw2__reply > p:not(.k):not(.lw2__note){font-size:19px; line-height:1.7; margin:0 0 18px;}
+.lw2__row{display:flex; gap:10px; flex-wrap:wrap;}
+.lw2__row input{flex:1; min-width:220px; border:1px solid var(--field-line); background:var(--field); padding:13px 16px;
+  font-family:'Karla',sans-serif; font-size:14px; color:var(--ink); border-radius:3px; outline:none;}
+.lw2__row input:focus{border-color:var(--rust);}
+.lw2__row button{background:var(--rust); color:var(--paper); border:none; font-family:'Karla',sans-serif; font-size:14px;
+  font-weight:600; padding:13px 26px; border-radius:3px; cursor:pointer;}
+.lw2__row button:hover{background:var(--rust-dk);}
+.lw2__row button:disabled{opacity:.6; cursor:default;}
+.lw2__note{font-family:'Karla',sans-serif; font-size:12.5px; color:var(--dim); margin-top:16px; line-height:1.7;}
+
+/* Signoff */
+.lwv1__signoff{width:100%; max-width:620px; margin-top:8px; padding:72px 0 40px; display:flex; flex-direction:column; align-items:center; gap:8px;}
+.lwv1__signoff .sig{font-size:20px; font-style:italic; color:var(--soft);}
+.lwv1__signoff .colophon{font-family:'Karla',sans-serif; font-size:11.5px; color:var(--faint);}
+</style>
+<body class="lwv1">
+{% include nav.html %}
+
+<div class="lwv1__wrap">
+  <div class="lwv1__hero">
+    <div class="lwv1__eyebrow">A newsletter, in letters</div>
+    <h1 class="lwv1__title">{{ page.title }}</h1>
+    {% if page.subtitle %}<div class="lwv1__sub">{{ page.subtitle }}</div>{% endif %}
+    <svg class="lwv1__path" width="80" height="150" viewBox="0 0 80 150" aria-hidden="true">
+      <path d="M40 4 C 40 30, 12 34, 12 58 C 12 84, 68 78, 68 104 C 68 126, 42 130, 40 146"
+            fill="none" stroke="#9C4A2F" stroke-width="1.6" stroke-linecap="round"></path>
+      <circle cx="40" cy="4" r="2.6" fill="#9C4A2F"></circle>
+      <circle cx="40" cy="146" r="2.6" fill="#9C4A2F"></circle>
+    </svg>
+  </div>
+
+  <div class="lwv1__body">{{ content }}</div>
+
+  <div class="lwv1__signoff">
+    <div class="sig">— Aaron</div>
+    <div class="colophon">aaronaiken.me · handmade, no tracking, built to last</div>
+  </div>
+</div>
+
+{% include footer.html %}
+</body>
+</html>

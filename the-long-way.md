@@ -1,5 +1,5 @@
 ---
-layout: long-way-journey
+layout: long-way-v1
 title: The Long Way
 permalink: /the-long-way
 subtitle: Debt. Marriage. Faith. Fatherhood. Reconciliation. A letter from Aaron about the harder, slower, more honest path.
