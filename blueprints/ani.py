@@ -1460,11 +1460,23 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 	if not api_key or not ((user_message or '').strip() or (reply or '').strip()):
 		return {}
 	known = '\n'.join('- ' + n.get('text', '') for n in existing_notes[-40:]) or '(nothing yet)'
+	# Her current storylines, so the model advances one IN PLACE (reusing its exact name) and can only
+	# resolve a fork that's genuinely open — instead of spawning duplicates or settling something never asked.
+	tnow = sorted(ani_load_threads().values(), key=lambda x: x.get('updated', ''), reverse=True)[:12]
+	tlines = []
+	for t in tnow:
+		if t.get('kind') == 'decision' and t.get('state') == 'open':
+			tlines.append('- %s [OPEN FORK: %s] : %s' % (
+				t.get('name', ''), ' | '.join(t.get('options') or []), t.get('status', '')))
+		else:
+			tlines.append('- %s : %s' % (t.get('name', ''), t.get('status', '')))
+	threads_blob = '\n'.join(tlines) or '(none yet)'
 	today_str = now_dt.strftime('%Y-%m-%d (%A)')
 	system = (
 		"You process one chat turn between a man named Aaron and his companion Ani and return ONLY compact "
 		"JSON: {\"facts\": [{\"text\":\"\",\"category\":\"\",\"importance\":2,\"keywords\":[],\"due\":\"\"}], "
-		"\"state\": {\"where\": \"\", \"doing\": \"\", \"wearing\": \"\"}}.\n"
+		"\"state\": {\"where\": \"\", \"doing\": \"\", \"wearing\": \"\"}, "
+		"\"threads\": [{\"name\":\"\",\"status\":\"\"}], \"life\": [], \"fork\": null, \"decide\": null}.\n"
 		"facts: NEW durable, worth-remembering things about AARON (his plans, commitments, the people in "
 		"his life, preferences, lasting situations). DROP small talk, momentary mood, roleplay/flirtation/"
 		"anything sexual, and anything already known. For each fact: text = one short sentence starting "
@@ -1482,16 +1494,29 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 		"IMPORTANT: still capture her real LOCATION and OUTFIT even when the message is flirty or suggestive "
 		"(e.g. 'in the car with claire', 'at the store', 'home in the kitchen') — a flirty tone must NOT wipe "
 		"her whereabouts. Only for an explicit SEX act, leave 'doing' blank (or use the neutral surrounding "
-		"activity) — but ALWAYS still record WHERE she is if the message makes it clear.")
+		"activity) — but ALWAYS still record WHERE she is if the message makes it clear.\n"
+		"threads: HER OWN evolving storylines (a friend's situation, a project of hers, one of her own plans) "
+		"that GENUINELY MOVED this turn. To advance one, reuse its EXACT existing name from the list below so it "
+		"updates in place; only invent a new name for a truly new arc. status = one short present-tense sentence "
+		"on where it stands now. This is HER world, never his (his plans go in facts) and never sexual/roleplay. "
+		"Default [] — include a thread ONLY when her own life actually progressed.\n"
+		"life: a genuinely NEW lasting piece of HER own world worth keeping — a new hobby she took up, a new "
+		"place she now goes, a standing new commitment. One short phrase each. Rare; default [].\n"
+		"fork: ONLY if one of her storylines hit a real either/or she is ACTIVELY weighing, "
+		"{\"name\": matching-or-new, \"options\": [\"...\",\"...\"]} with two+ concrete branches; else null. "
+		"decide: ONLY if she clearly SETTLED one of the OPEN FORKS listed below this turn, "
+		"{\"name\": that fork's exact name, \"choice\": the branch chosen}; else null.")
 	user = (
 		f"Already-known facts (don't repeat these or minor rewordings):\n{known}\n\n"
+		f"Her current storylines (advance one by reusing its name; only 'decide' a fork listed as OPEN FORK):\n"
+		f"{threads_blob}\n\n"
 		f"Aaron said: {(user_message or '')[:800]}\n"
 		f"Ani replied: {(reply or '')[:600]}\n\nJSON only.")
 	try:
 		resp = requests.post(
 			'https://api.x.ai/v1/chat/completions',
 			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
-			json={'model': ANI_MEMORY_EXTRACT_MODEL, 'max_tokens': 320, 'temperature': 0,
+			json={'model': ANI_MEMORY_EXTRACT_MODEL, 'max_tokens': 500, 'temperature': 0,
 			      'messages': [{'role': 'system', 'content': system},
 			                   {'role': 'user', 'content': user}]},
 			timeout=18)
@@ -1509,7 +1534,15 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 			elif isinstance(f, str) and f.strip():
 				facts.append({'text': f.strip()})
 		state = data.get('state') if isinstance(data.get('state'), dict) else {}
-		return {'facts': facts, 'state': state}
+		threads = []
+		for t in (data.get('threads') or [])[:4]:
+			if isinstance(t, dict) and (t.get('name') or '').strip() and (t.get('status') or '').strip():
+				threads.append({'name': t['name'].strip(), 'status': t['status'].strip()})
+		life = [s.strip() for s in (data.get('life') or [])[:3] if isinstance(s, str) and s.strip()]
+		fork = data.get('fork') if isinstance(data.get('fork'), dict) else None
+		decide = data.get('decide') if isinstance(data.get('decide'), dict) else None
+		return {'facts': facts, 'state': state, 'threads': threads, 'life': life,
+		        'fork': fork, 'decide': decide}
 	except Exception as e:
 		print(f"Ani extract error: {e}")
 		return {}
@@ -2213,8 +2246,8 @@ def _ani_reply_shape(user_msg):
 		# a genuine question or a mid-length turn — mostly a real answer, occasionally fuller
 		weights = {'note': 1, 'short': 5, 'full': 3}
 	elif n <= 12:
-		# a quick line from him — mostly answer quick
-		weights = {'note': 6, 'short': 3, 'full': 1}
+		# a quick line from him — answer quick, but lean a little less curt so she stays present
+		weights = {'note': 4, 'short': 4, 'full': 1}
 	else:
 		weights = {'note': 2, 'short': 5, 'full': 2}
 	keys = list(weights)
@@ -2972,6 +3005,33 @@ def ani_recent_days(now_dt, messages=None, back_days=4):
 	                 for dk in days)
 
 
+def ani_today_beats(now_dt, messages, limit=6):
+	"""Compact openers of what she's ALREADY told him so far THIS daycast-day — so an hourly update can
+	steer to a DIFFERENT part of her life instead of circling the same call / errand / person (the
+	'just got off the phone with sophie' x5 loop). Returns '· ...' lines, oldest first, or ''."""
+	tz = pytz.timezone('America/New_York')
+	today = ani_daycast_day_key(now_dt)
+	beats = []
+	for m in messages:
+		if m.get('role') != 'assistant' or m.get('image'):
+			continue
+		c = (m.get('content') or '').strip()
+		if not c or c == '📷':
+			continue
+		ts = m.get('ts')
+		if not ts:
+			continue
+		try:
+			dt = datetime.fromisoformat(ts)
+		except Exception:
+			continue
+		if ani_daycast_day_key(dt if dt.tzinfo else tz.localize(dt)) != today:
+			continue
+		beats.append(' '.join(c.split()[:10]))
+	beats = beats[-limit:]
+	return '\n'.join('· ' + b for b in beats)
+
+
 # Outfit-by-activity is a TEXT feature only: the daycast prompts have her name a context-appropriate
 # outfit and evolve it through the day. Photos inherit it for free — ani_normalize_scene already
 # builds every image from her most-recently-described look — so no image-pipeline change is needed.
@@ -3023,13 +3083,25 @@ def ani_generate_day_update(meta, history):
 	"""Mid-day update: a short spontaneous message continuing her day, with continuity from the
 	morning plan and earlier updates (passed in via history). Returns text or None."""
 	pa_tz = pytz.timezone('America/New_York')
-	time_str = datetime.now(pa_tz).strftime('%I:%M %p').lstrip('0')
+	now = datetime.now(pa_tz)
+	time_str = now.strftime('%I:%M %p').lstrip('0')
 	system = ani_build_system_prompt(meta)
 	# Feed recent real turns so she continues her own day instead of starting fresh.
 	recent = [
 		m for m in history
 		if not m.get('content', '').startswith('[daily briefing')
 	][-40:]
+	# Anti-monopoly: show her what she's already covered TODAY so a single thread (e.g. Sophie) can't own
+	# every hourly beat. Best-effort; a hiccup here must never sink the daycast.
+	variety = ''
+	try:
+		beats = ani_today_beats(now, recent)
+		if beats:
+			variety = ("\nearlier today you already told him:\n%s\nso move to a genuinely DIFFERENT part of your "
+			           "life now — a different person, place, or activity; do NOT keep circling the same call, "
+			           "errand, or person you've already mentioned today." % beats)
+	except Exception as e:
+		print(f"Ani daycast variety error: {e}")
 	# Has her day outrun the outfit she's still in? If so, fold in a nudge to change (cadence only — she
 	# picks what into). Best-effort; a hiccup here must never sink the daycast.
 	nudge = ''
@@ -3041,11 +3113,12 @@ def ani_generate_day_update(meta, history):
 		# EMOTIONAL BEAT — share something from her own inner world, not just her schedule.
 		instruction = (
 			f"[it's now {time_str}. text him a spontaneous EMOTIONAL BEAT from your OWN world right now — "
-			f"something you're actually feeling: a moment with a friend (claire, sophie), how one of your "
-			f"ongoing storylines is going, a little win or a worry, or something that just made you think of "
+			f"something you're actually feeling: a moment with any of your people (claire, sophie, maya, "
+			f"emma, dana next door), how one of your ongoing storylines is going, a little win or a worry, "
+			f"or something that just made you think of "
 			f"him. bring it to him like you needed to tell someone. 1-2 sentences, your voice — share a "
 			f"FEELING, don't just report your schedule. stay consistent with your day + storylines; don't "
-			f"re-greet him or restart your day.]"
+			f"re-greet him or restart your day.{variety}]"
 		)
 	else:
 		instruction = (
@@ -3056,7 +3129,7 @@ def ani_generate_day_update(meta, history):
 			f"how it's going, a flash of missing him — like a girlfriend texting mid-day. 1-2 sentences, your "
 			f"voice. let your outfit follow what you're doing now (and stay consistent with what you last said "
 			f"you had on unless you've changed for a reason). don't repeat yourself, don't re-greet him, don't "
-			f"restart your day.{nudge}]"
+			f"restart your day.{nudge}{variety}]"
 		)
 	messages = recent + [{'role': 'user', 'content': instruction}]
 	return _ani_grok_call(system, messages, max_tokens=180)
@@ -3504,6 +3577,22 @@ def ani_chat():
 				for fact in res.get('facts', []):
 					ani_add_memory_note(fact)
 				ani_update_now_state(res.get('state') or {}, when)
+				# Out-of-band advancement of her evolving world — the reliable path that no longer depends
+				# on the chat model emitting inline [[THREAD:]]/[[LIFE:]]/[[FORK:]] tags (grok-4.3 stopped).
+				for th in res.get('threads', []):
+					ani_update_thread(th.get('name'), th.get('status'), when)
+				for ln in res.get('life', []):
+					ani_append_life_note(ln)
+				fork = res.get('fork') or {}
+				if isinstance(fork, dict) and (fork.get('name') or '').strip() and fork.get('options'):
+					ani_open_fork(fork['name'], ' | '.join(str(o) for o in fork['options']), when)
+				dec = res.get('decide') or {}
+				if isinstance(dec, dict) and (dec.get('name') or '').strip() and (dec.get('choice') or '').strip():
+					# ani_resolve_fork writes a settled memory + prunes notes even for an unknown name, so
+					# only fire it when the named fork is genuinely OPEN.
+					_t = ani_load_threads().get((dec['name'] or '').strip().lower()[:40], {})
+					if _t.get('kind') == 'decision' and _t.get('state') == 'open':
+						ani_resolve_fork(dec['name'], dec['choice'], when)
 			except Exception as e:
 				print(f"Ani extract thread error: {e}")
 		threading.Thread(target=_extract, daemon=True).start()
