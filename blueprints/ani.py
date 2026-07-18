@@ -1476,7 +1476,8 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 		"You process one chat turn between a man named Aaron and his companion Ani and return ONLY compact "
 		"JSON: {\"facts\": [{\"text\":\"\",\"category\":\"\",\"importance\":2,\"keywords\":[],\"due\":\"\"}], "
 		"\"state\": {\"where\": \"\", \"doing\": \"\", \"wearing\": \"\"}, "
-		"\"threads\": [{\"name\":\"\",\"status\":\"\"}], \"life\": [], \"fork\": null, \"decide\": null}.\n"
+		"\"threads\": [{\"name\":\"\",\"status\":\"\"}], \"life\": [], \"fork\": null, \"decide\": null, "
+		"\"calendar\": [{\"date\":\"YYYY-MM-DD\",\"time\":\"\",\"text\":\"\",\"source\":\"her\"}]}.\n"
 		"facts: NEW durable, worth-remembering things about AARON (his plans, commitments, the people in "
 		"his life, preferences, lasting situations). DROP small talk, momentary mood, roleplay/flirtation/"
 		"anything sexual, and anything already known. For each fact: text = one short sentence starting "
@@ -1505,7 +1506,15 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 		"fork: ONLY if one of her storylines hit a real either/or she is ACTIVELY weighing, "
 		"{\"name\": matching-or-new, \"options\": [\"...\",\"...\"]} with two+ concrete branches; else null. "
 		"decide: ONLY if she clearly SETTLED one of the OPEN FORKS listed below this turn, "
-		"{\"name\": that fork's exact name, \"choice\": the branch chosen}; else null.")
+		"{\"name\": that fork's exact name, \"choice\": the branch chosen}; else null.\n"
+		"calendar: a dated plan that got COMMITTED this turn — either Aaron asked to put something on the "
+		"calendar / agreed to a plan ('put dinner on thursday', 'yeah let's do saturday'), OR Ani committed to "
+		"a real plan of her OWN ('i'm driving to philly today', 'seeing claire tomorrow for lunch'). "
+		f"date = resolved YYYY-MM-DD (TODAY is {today_str}; resolve 'today'/'tomorrow'/'friday'); "
+		"time = HH:MM 24h if a clear time was given, else \"\"; text = one short plain label ('dinner with "
+		"aaron', 'drive to philly to help sophie pack'); source = 'you' if it's Aaron's plan or he asked, "
+		"'her' if it's her own plan. Default [] — only add when a concrete dated plan was actually made this "
+		"turn, never for vague someday talk.")
 	user = (
 		f"Already-known facts (don't repeat these or minor rewordings):\n{known}\n\n"
 		f"Her current storylines (advance one by reusing its name; only 'decide' a fork listed as OPEN FORK):\n"
@@ -1541,8 +1550,13 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 		life = [s.strip() for s in (data.get('life') or [])[:3] if isinstance(s, str) and s.strip()]
 		fork = data.get('fork') if isinstance(data.get('fork'), dict) else None
 		decide = data.get('decide') if isinstance(data.get('decide'), dict) else None
+		calendar = []
+		for c in (data.get('calendar') or [])[:4]:
+			if isinstance(c, dict) and (c.get('text') or '').strip() and (c.get('date') or '').strip():
+				calendar.append({'date': c['date'].strip(), 'time': (c.get('time') or '').strip(),
+				                 'text': c['text'].strip(), 'source': c.get('source') or 'you'})
 		return {'facts': facts, 'state': state, 'threads': threads, 'life': life,
-		        'fork': fork, 'decide': decide}
+		        'fork': fork, 'decide': decide, 'calendar': calendar}
 	except Exception as e:
 		print(f"Ani extract error: {e}")
 		return {}
@@ -3593,6 +3607,16 @@ def ani_chat():
 					_t = ani_load_threads().get((dec['name'] or '').strip().lower()[:40], {})
 					if _t.get('kind') == 'decision' and _t.get('state') == 'open':
 						ani_resolve_fork(dec['name'], dec['choice'], when)
+				# Calendar: a plan committed this turn lands on the shared calendar via the reliable
+				# extraction path (the inline [[CAL:]] tag is dead like the others). Light dedup on date+text.
+				cal_now = ani_load_calendar()
+				for c in res.get('calendar', []):
+					txt = (c.get('text') or '').strip().lower()
+					if txt and not any(e.get('date') == c.get('date')
+					                   and (e.get('text') or '').strip().lower() == txt for e in cal_now):
+						added = ani_add_calendar_entry(c.get('date'), c.get('time'), c.get('text'), c.get('source'))
+						if added:
+							cal_now.append(added)
 			except Exception as e:
 				print(f"Ani extract thread error: {e}")
 		threading.Thread(target=_extract, daemon=True).start()
