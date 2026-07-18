@@ -2061,6 +2061,9 @@ def ani_generate_image(scene):
 		clean_scene = re.sub(r',[^,]*\b(?:foot of the bed|along her body|looking along)\b[^,]*', '',
 		                     clean_scene, flags=re.IGNORECASE)
 		clean_scene = re.sub(r'\s{2,}', ' ', clean_scene).strip(' ,;.')
+	# Lead with hair color so it lands among the earliest, highest-weighted tokens — otherwise the bible's
+	# hair clause sits after the scene and the model drifts to its default brunette.
+	clean_scene = 'caramel-blonde hair, long soft waves, ' + clean_scene
 	bible = ani_get_bible() or ''
 
 	if ANI_IMAGE_BACKEND == 'venice':
