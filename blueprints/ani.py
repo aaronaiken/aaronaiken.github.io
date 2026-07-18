@@ -393,8 +393,10 @@ def ani_save_calendar(entries):
 	_ani_atomic_write_json(ANI_CALENDAR_FILE, entries)
 
 
-def ani_add_calendar_entry(date, time_str, text, source):
-	"""Validate + append a calendar entry. Returns the entry, or None if date/text are bad."""
+def ani_add_calendar_entry(date, time_str, text, source, thread=None, milestone=False):
+	"""Validate + append a calendar entry. Returns the entry, or None if date/text are bad. `thread` links
+	the plan to one of her storylines and `milestone` marks a life-changing turning point — both consumed
+	when the plan completes (ani_apply_plan_consequences)."""
 	text = (text or '').strip()
 	if not text:
 		return None
@@ -421,6 +423,8 @@ def ani_add_calendar_entry(date, time_str, text, source):
 		# Autonomy-layer lifecycle (only HER plans are auto-driven through it; see ani_sweep_plans).
 		'state': 'planned',
 		'state_updated': created,
+		'thread': ((thread or '').strip().lower()[:40] or None),
+		'milestone': bool(milestone),
 	}
 	entries = ani_load_calendar()
 	entries.append(entry)
@@ -1486,7 +1490,8 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 		"JSON: {\"facts\": [{\"text\":\"\",\"category\":\"\",\"importance\":2,\"keywords\":[],\"due\":\"\"}], "
 		"\"state\": {\"where\": \"\", \"doing\": \"\", \"wearing\": \"\"}, "
 		"\"threads\": [{\"name\":\"\",\"status\":\"\"}], \"life\": [], \"fork\": null, \"decide\": null, "
-		"\"calendar\": [{\"date\":\"YYYY-MM-DD\",\"time\":\"\",\"text\":\"\",\"source\":\"her\"}]}.\n"
+		"\"calendar\": [{\"date\":\"YYYY-MM-DD\",\"time\":\"\",\"text\":\"\",\"source\":\"her\","
+		"\"thread\":\"\",\"milestone\":false}]}.\n"
 		"facts: NEW durable, worth-remembering things about AARON (his plans, commitments, the people in "
 		"his life, preferences, lasting situations). DROP small talk, momentary mood, roleplay/flirtation/"
 		"anything sexual, and anything already known. For each fact: text = one short sentence starting "
@@ -1522,8 +1527,11 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 		f"date = resolved YYYY-MM-DD (TODAY is {today_str}; resolve 'today'/'tomorrow'/'friday'); "
 		"time = HH:MM 24h if a clear time was given, else \"\"; text = one short plain label ('dinner with "
 		"aaron', 'drive to philly to help sophie pack'); source = 'you' if it's Aaron's plan or he asked, "
-		"'her' if it's her own plan. Default [] — only add when a concrete dated plan was actually made this "
-		"turn, never for vague someday talk.")
+		"'her' if it's her own plan. Optionally thread = the EXACT name of one of her current storylines "
+		"below that this plan belongs to (e.g. a Philly trip belongs to a 'Sophie settling in' storyline), "
+		"else \"\"; milestone = true ONLY for a genuine life-changing turning point (a move-in, a big first), "
+		"else false. Default [] — only add when a concrete dated plan was actually made this turn, never for "
+		"vague someday talk.")
 	user = (
 		f"Already-known facts (don't repeat these or minor rewordings):\n{known}\n\n"
 		f"Her current storylines (advance one by reusing its name; only 'decide' a fork listed as OPEN FORK):\n"
@@ -1563,7 +1571,8 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 		for c in (data.get('calendar') or [])[:4]:
 			if isinstance(c, dict) and (c.get('text') or '').strip() and (c.get('date') or '').strip():
 				calendar.append({'date': c['date'].strip(), 'time': (c.get('time') or '').strip(),
-				                 'text': c['text'].strip(), 'source': c.get('source') or 'you'})
+				                 'text': c['text'].strip(), 'source': c.get('source') or 'you',
+				                 'thread': (c.get('thread') or '').strip(), 'milestone': bool(c.get('milestone'))})
 		return {'facts': facts, 'state': state, 'threads': threads, 'life': life,
 		        'fork': fork, 'decide': decide, 'calendar': calendar}
 	except Exception as e:
@@ -3327,6 +3336,42 @@ def ani_plan_aftermath_message(meta, now, entry):
 		return None
 
 
+def ani_apply_plan_consequences(entry, now):
+	"""The MARK a completed plan leaves on her world — so following through actually changes her, instead of
+	evaporating. Fires exactly once per plan (on the done transition, driven by ani_sweep_plans): (1) a durable
+	memory that she did it; (2) advances any linked storyline; (3) for a milestone, mutates her baseline life
+	file (e.g. 'Sophie now lives here') so her ordinary days shift afterward. Same consequence shape as
+	ani_resolve_fork, generalized to dated plans. Best-effort; guarded so it never sinks the sweep."""
+	try:
+		text = (entry.get('text') or '').strip()
+		if not text:
+			return
+		try:
+			datelabel = datetime.strptime(entry.get('date', ''), '%Y-%m-%d').strftime('%b %-d')
+		except (ValueError, TypeError):
+			datelabel = entry.get('date', '')
+		milestone = bool(entry.get('milestone'))
+		# 1) durable memory of the thing she followed through on
+		ani_add_memory_note({
+			'text': ('Ani did this on %s: %s.' % (datelabel, text))[:220],
+			'category': 'her_world', 'importance': 3 if milestone else 2,
+			'keywords': sorted(_ani_tokens(text))[:6]})
+		# 2) advance a linked storyline to its next phase
+		tkey = (entry.get('thread') or '').strip().lower()[:40]
+		if tkey:
+			th = ani_load_threads().get(tkey)
+			if th:
+				ani_update_thread(th.get('name'),
+				                  ('just did: %s — that piece is behind you now; let the arc move on from '
+				                   'here (the aftermath, what it changes).' % text)[:220], now)
+		# 3) a milestone shifts her baseline life
+		if milestone:
+			ani_append_life_note('%s happened (%s) — this is part of your everyday life now.' % (text, datelabel))
+			print(f"Ani milestone applied to life file: {text} ({datelabel})")
+	except Exception as e:
+		print(f"Ani plan consequence error: {e}")
+
+
 def ani_emit_daycast():
 	"""Proactive 'her day' messaging — called by the ani_daycast.py PA scheduled task (hourly).
 	Her day is STARTED by aaron's first message of the day (see ani_chat), not by the clock — until
@@ -3408,6 +3453,10 @@ def ani_emit_daycast():
 	# The state transitions always run; only the message honors spacing. Best-effort; never sink the daycast.
 	try:
 		swept = ani_sweep_plans(now)
+		# Every completion leaves its durable mark (memory / thread advance / milestone), independent of
+		# whether a message goes out this tick.
+		for e in (swept.get('completed') or []):
+			ani_apply_plan_consequences(e, now)
 		# Mark-done runs for any completion (cleanup), but only a FRESH one (today/yesterday) earns a
 		# 'how it went' beat — an old entry swept done shouldn't trigger a wrong "yesterday you did X".
 		yest = (now - timedelta(days=1)).strftime('%Y-%m-%d')
@@ -3699,7 +3748,8 @@ def ani_chat():
 					txt = (c.get('text') or '').strip().lower()
 					if txt and not any(e.get('date') == c.get('date')
 					                   and (e.get('text') or '').strip().lower() == txt for e in cal_now):
-						added = ani_add_calendar_entry(c.get('date'), c.get('time'), c.get('text'), c.get('source'))
+						added = ani_add_calendar_entry(c.get('date'), c.get('time'), c.get('text'),
+						                               c.get('source'), c.get('thread'), c.get('milestone'))
 						if added:
 							cal_now.append(added)
 			except Exception as e:
