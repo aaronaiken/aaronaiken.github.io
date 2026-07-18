@@ -448,6 +448,43 @@ def ani_delete_calendar_entry(entry_id):
 	return False
 
 
+def ani_move_calendar_entry(entry_id, date, time_str, now):
+	"""Reschedule an existing plan to a new date (+ optional time) and reset it to 'planned' so it executes on
+	the new day. Validates the date; no-op on a bad id or date. Returns the entry or None."""
+	try:
+		datetime.strptime(date, '%Y-%m-%d')
+	except (ValueError, TypeError):
+		return None
+	entries = ani_load_calendar()
+	for e in entries:
+		if e.get('id') == entry_id:
+			e['date'] = date
+			ts = (time_str or '').strip()
+			if ts:
+				try:
+					e['time'] = datetime.strptime(ts, '%H:%M').strftime('%H:%M')
+				except ValueError:
+					pass
+			e['state'] = 'planned'
+			e['state_updated'] = now.isoformat()
+			ani_save_calendar(entries)
+			return e
+	return None
+
+
+def ani_cancel_calendar_entry(entry_id, now):
+	"""Soft-cancel a plan (state='skipped') so the sweep ignores it — it won't complete or report back. Keeps
+	the row for history. Returns the entry or None."""
+	entries = ani_load_calendar()
+	for e in entries:
+		if e.get('id') == entry_id:
+			e['state'] = 'skipped'
+			e['state_updated'] = now.isoformat()
+			ani_save_calendar(entries)
+			return e
+	return None
+
+
 def _ani_cal_sort_key(e):
 	return (e.get('date', ''), e.get('time') or '99:99')
 
@@ -1491,6 +1528,13 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 		else:
 			tlines.append('- %s : %s' % (t.get('name', ''), t.get('status', '')))
 	threads_blob = '\n'.join(tlines) or '(none yet)'
+	today_ymd = now_dt.strftime('%Y-%m-%d')
+	# Her upcoming (not-done, not-cancelled) plans with ids, so a move/cancel this turn can target one exactly.
+	upcoming = sorted([e for e in ani_load_calendar()
+	                   if e.get('state') not in ('done', 'skipped') and (e.get('date') or '') >= today_ymd],
+	                  key=lambda e: (e.get('date', ''), e.get('time') or ''))[:10]
+	up_blob = '\n'.join('- [%s] %s%s — %s' % (e.get('id'), e.get('date'),
+	                    (' ' + e['time']) if e.get('time') else '', e.get('text', '')) for e in upcoming) or '(none)'
 	today_str = now_dt.strftime('%Y-%m-%d (%A)')
 	system = (
 		"You process one chat turn between a man named Aaron and his companion Ani and return ONLY compact "
@@ -1498,7 +1542,8 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 		"\"state\": {\"where\": \"\", \"doing\": \"\", \"wearing\": \"\"}, "
 		"\"threads\": [{\"name\":\"\",\"status\":\"\"}], \"life\": [], \"fork\": null, \"decide\": null, "
 		"\"calendar\": [{\"date\":\"YYYY-MM-DD\",\"time\":\"\",\"text\":\"\",\"source\":\"her\","
-		"\"thread\":\"\",\"milestone\":false}]}.\n"
+		"\"thread\":\"\",\"milestone\":false}], "
+		"\"calendar_ops\": [{\"id\":\"\",\"op\":\"move\",\"date\":\"YYYY-MM-DD\",\"time\":\"\"}]}.\n"
 		"facts: NEW durable, worth-remembering things about AARON (his plans, commitments, the people in "
 		"his life, preferences, lasting situations). DROP small talk, momentary mood, roleplay/flirtation/"
 		"anything sexual, and anything already known. For each fact: text = one short sentence starting "
@@ -1534,15 +1579,20 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 		f"date = resolved YYYY-MM-DD (TODAY is {today_str}; resolve 'today'/'tomorrow'/'friday'); "
 		"time = HH:MM 24h if a clear time was given, else \"\"; text = one short plain label ('dinner with "
 		"aaron', 'drive to philly to help sophie pack'); source = 'you' if it's Aaron's plan or he asked, "
-		"'her' if it's her own plan. Optionally thread = the EXACT name of one of her current storylines "
-		"below that this plan belongs to (e.g. a Philly trip belongs to a 'Sophie settling in' storyline), "
-		"else \"\"; milestone = true ONLY for a genuine life-changing turning point (a move-in, a big first), "
-		"else false. Default [] — only add when a concrete dated plan was actually made this turn, never for "
-		"vague someday talk.")
+		"'her' if it's her own plan. Set thread = the EXACT name of one of her current storylines below that "
+		"this plan belongs to whenever there's a clear tie (a Philly trip → 'Sophie settling in'; coffee with "
+		"Sophie → 'Sophie settling in'), else \"\"; milestone = true ONLY for a genuine life-changing turning "
+		"point (a move-in, a big first), else false. Default [] — only add when a concrete dated plan was "
+		"actually made this turn, never for vague someday talk.\n"
+		"calendar_ops: if a plan ALREADY on her calendar got CHANGED or DROPPED this turn ('let's move dinner "
+		"to friday', 'i'm gonna skip the market this week'), reference it by its id from her upcoming-plans list "
+		"below: op='move' with a new date (+ time if given) to reschedule, or op='cancel' to drop it. Use ONLY "
+		"an id that appears in that list; never invent one. Default [].")
 	user = (
 		f"Already-known facts (don't repeat these or minor rewordings):\n{known}\n\n"
 		f"Her current storylines (advance one by reusing its name; only 'decide' a fork listed as OPEN FORK):\n"
 		f"{threads_blob}\n\n"
+		f"Her upcoming plans (move/cancel one only by its [id] here):\n{up_blob}\n\n"
 		f"Aaron said: {(user_message or '')[:800]}\n"
 		f"Ani replied: {(reply or '')[:600]}\n\nJSON only.")
 	try:
@@ -1580,8 +1630,13 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 				calendar.append({'date': c['date'].strip(), 'time': (c.get('time') or '').strip(),
 				                 'text': c['text'].strip(), 'source': c.get('source') or 'you',
 				                 'thread': (c.get('thread') or '').strip(), 'milestone': bool(c.get('milestone'))})
+		calendar_ops = []
+		for op in (data.get('calendar_ops') or [])[:4]:
+			if isinstance(op, dict) and (op.get('id') or '').strip() and op.get('op') in ('move', 'cancel'):
+				calendar_ops.append({'id': op['id'].strip(), 'op': op['op'],
+				                     'date': (op.get('date') or '').strip(), 'time': (op.get('time') or '').strip()})
 		return {'facts': facts, 'state': state, 'threads': threads, 'life': life,
-		        'fork': fork, 'decide': decide, 'calendar': calendar}
+		        'fork': fork, 'decide': decide, 'calendar': calendar, 'calendar_ops': calendar_ops}
 	except Exception as e:
 		print(f"Ani extract error: {e}")
 		return {}
@@ -3865,6 +3920,13 @@ def ani_chat():
 						                               c.get('source'), c.get('thread'), c.get('milestone'))
 						if added:
 							cal_now.append(added)
+				# Reschedule / cancel an existing plan (only by an id that's really on her calendar, so a
+				# hallucinated id is a harmless no-op). Cancel is soft (state='skipped') and reversible.
+				for op in res.get('calendar_ops', []):
+					if op.get('op') == 'cancel':
+						ani_cancel_calendar_entry(op.get('id'), when)
+					elif op.get('op') == 'move' and (op.get('date') or '').strip():
+						ani_move_calendar_entry(op.get('id'), op['date'].strip(), op.get('time'), when)
 			except Exception as e:
 				print(f"Ani extract thread error: {e}")
 		threading.Thread(target=_extract, daemon=True).start()
