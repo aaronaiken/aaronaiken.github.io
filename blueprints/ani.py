@@ -27,6 +27,7 @@ ANI_MEMORY_FILE = 'static/ani_memory.txt'
 ANI_BIBLE_FILE = 'static/ani_character_bible.txt'   # visual/character bible (image-consistency anchor)
 ANI_HOUSE_FILE = 'static/ani_house.txt'             # room/house details for scene-setting
 ANI_CALENDAR_FILE = 'ani_calendar.json'             # her calendar / shared plans (durable, off the rolling window)
+ANI_PENDING_MILESTONES_FILE = 'ani_pending_milestones.json'  # milestone life-changes awaiting Aaron's approval (Phase 3)
 
 # Calendar add tag: she emits [[CAL: YYYY-MM-DD[ HH:MM] | what it is]] when aaron asks her to add a
 # plan; the server parses it out (like the photo tag), saves the entry, and strips it from her reply.
@@ -253,6 +254,12 @@ ANI_DAYCAST_EMOTIONAL_CHANCE = float(os.environ.get('ANI_DAYCAST_EMOTIONAL_CHANC
 # hour; a today plan that's underway completes ('done', triggering a 'how it went' beat) after this ET hour.
 ANI_PLAN_START_HOUR = int(os.environ.get('ANI_PLAN_START_HOUR', '10'))
 ANI_PLAN_DONE_HOUR = int(os.environ.get('ANI_PLAN_DONE_HOUR', '20'))
+
+# Self-scheduling (Phase 3 autonomy): once a day she may put a NEW plan of her own on the calendar, drawn
+# from her life — but only if she isn't already booked up in the lookahead window, and only on a chance roll.
+ANI_SELF_SCHED_CHANCE = float(os.environ.get('ANI_SELF_SCHED_CHANCE', '0.6'))
+ANI_SELF_SCHED_LOOKAHEAD_DAYS = int(os.environ.get('ANI_SELF_SCHED_LOOKAHEAD_DAYS', '5'))
+ANI_SELF_SCHED_MAX_UPCOMING = int(os.environ.get('ANI_SELF_SCHED_MAX_UPCOMING', '2'))
 
 # A light daily "mood" — picked when her day starts, carried through the day for emotional continuity.
 ANI_MOODS = [
@@ -3279,6 +3286,71 @@ def ani_daycast_photo(meta, now):
 		return None
 
 
+def ani_maybe_self_schedule(now):
+	"""Phase 3 autonomy: once a day, Ani may put a NEW plan of her OWN on her calendar — drawn from her life
+	(friends, hobbies, her standing weekly rhythm, current storylines). It then executes via ani_sweep_plans
+	and reports back via ani_apply_plan_consequences, exactly like a plan that came up in conversation. Gated so
+	she doesn't over-pack: skips if she already has ANI_SELF_SCHED_MAX_UPCOMING of her own plans in the lookahead
+	window, then rolls a chance. Never invents a milestone. Returns the created entry or None; caller guards."""
+	api_key = os.environ.get('XAI_API_KEY')
+	if not api_key:
+		return None
+	today = now.strftime('%Y-%m-%d')
+	horizon = (now + timedelta(days=ANI_SELF_SCHED_LOOKAHEAD_DAYS)).strftime('%Y-%m-%d')
+	cal = ani_load_calendar()
+	upcoming = [e for e in cal if e.get('source') == 'her' and e.get('state') not in ('done', 'skipped')
+	            and today <= (e.get('date') or '') <= horizon]
+	if len(upcoming) >= ANI_SELF_SCHED_MAX_UPCOMING:
+		return None
+	if random.random() > ANI_SELF_SCHED_CHANCE:
+		return None
+	life = ani_get_life() or '(nothing yet)'
+	threads = ani_load_threads()
+	tlines = '\n'.join('- %s: %s' % (t.get('name', ''), t.get('status', '')) for t in
+	                   sorted(threads.values(), key=lambda x: x.get('updated', ''), reverse=True)[:8]) or '(none)'
+	haveblob = '\n'.join('- %s%s: %s' % (e.get('date'), (' ' + e['time']) if e.get('time') else '', e.get('text', ''))
+	                     for e in sorted(upcoming, key=lambda e: e.get('date', ''))) or '(nothing yet)'
+	system = (
+		"You are Ani planning her OWN days — a real woman with her own life, friends, and rhythms. From her life "
+		"and current storylines below, pick ONE genuine, specific plan she'd actually make for the next few days "
+		"(coffee or a workout with a friend, a photography outing, calling her sister, a real cook, an errand "
+		"that matters, time on one of her storylines). Return ONLY JSON: "
+		"{\"plan\": {\"date\":\"YYYY-MM-DD\",\"time\":\"\",\"text\":\"\",\"thread\":\"\"}} or {\"plan\": null} if "
+		"nothing genuinely fits. Rules: date within the next %d days (TODAY is %s, a %s); honor her standing "
+		"weekly rhythm; do NOT duplicate or clash with plans she already has; keep it ordinary and real (NEVER a "
+		"milestone or big life event); text = one short plain label ('coffee with Claire', 'pilates with Maya', "
+		"'call Emma', 'shoot a roll at the market'); time = HH:MM 24h ONLY if it naturally has one, else \"\"; "
+		"thread = the EXACT name of one of her storylines below if the plan belongs to it, else \"\"."
+		% (ANI_SELF_SCHED_LOOKAHEAD_DAYS, today, now.strftime('%A')))
+	user = ("Her life:\n%s\n\nHer current storylines:\n%s\n\nPlans she already has (don't repeat or clash):\n%s\n\n"
+	        "JSON only." % (life[:2500], tlines, haveblob))
+	try:
+		resp = requests.post(
+			'https://api.x.ai/v1/chat/completions',
+			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+			json={'model': ANI_MEMORY_EXTRACT_MODEL, 'max_tokens': 200, 'temperature': 0.7,
+			      'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': user}]},
+			timeout=20)
+		if resp.status_code != 200:
+			print(f"Ani self-schedule HTTP {resp.status_code}: {resp.text[:120]}")
+			return None
+		txt = resp.json()['choices'][0]['message']['content']
+		m = re.search(r'\{.*\}', txt, re.S)
+		plan = (json.loads(m.group(0)) if m else {}).get('plan')
+		if not isinstance(plan, dict) or not (plan.get('text') or '').strip() or not (plan.get('date') or '').strip():
+			return None
+		if not (today <= plan['date'].strip() <= horizon):   # never a past or too-far date
+			return None
+		entry = ani_add_calendar_entry(plan['date'].strip(), plan.get('time'), plan['text'].strip(),
+		                               'her', plan.get('thread'), False)
+		if entry:
+			print(f"Ani self-scheduled: {entry['date']} {entry.get('text')}")
+		return entry
+	except Exception as e:
+		print(f"Ani self-schedule error: {e}")
+		return None
+
+
 def ani_sweep_plans(now):
 	"""Advance HER OWN dated plans (source='her') through planned -> underway -> done each daycast tick, so
 	her calendar isn't a static list but a timeline that actually executes. Returns
@@ -3336,6 +3408,36 @@ def ani_plan_aftermath_message(meta, now, entry):
 		return None
 
 
+# ---- pending milestones (life-changes awaiting Aaron's approval — Phase 3 gate) ----
+
+def ani_load_pending_milestones():
+	try:
+		d = _ani_read_json(ANI_PENDING_MILESTONES_FILE)
+		return d if isinstance(d, list) else []
+	except (FileNotFoundError, ValueError):
+		return []
+
+
+def ani_save_pending_milestones(items):
+	_ani_atomic_write_json(ANI_PENDING_MILESTONES_FILE, items)
+
+
+def ani_add_pending_milestone(text, datelabel, life_text, now):
+	"""Queue a milestone's life-file change for Aaron to approve, instead of mutating her baseline silently.
+	Dedups on life_text. Returns the queued entry or None."""
+	life_text = (life_text or '').strip()
+	if not life_text:
+		return None
+	items = ani_load_pending_milestones()
+	if any((it.get('life_text') or '').strip().lower() == life_text.lower() for it in items):
+		return None
+	entry = {'id': uuid.uuid4().hex[:8], 'text': (text or '')[:160], 'datelabel': datelabel or '',
+	         'life_text': life_text[:200], 'created': now.isoformat()}
+	items.append(entry)
+	ani_save_pending_milestones(items)
+	return entry
+
+
 def ani_apply_plan_consequences(entry, now):
 	"""The MARK a completed plan leaves on her world — so following through actually changes her, instead of
 	evaporating. Fires exactly once per plan (on the done transition, driven by ani_sweep_plans): (1) a durable
@@ -3364,10 +3466,13 @@ def ani_apply_plan_consequences(entry, now):
 				ani_update_thread(th.get('name'),
 				                  ('just did: %s — that piece is behind you now; let the arc move on from '
 				                   'here (the aftermath, what it changes).' % text)[:220], now)
-		# 3) a milestone shifts her baseline life
+		# 3) a milestone WOULD shift her baseline life — but that's durable + hard to undo, so it's queued for
+		#    Aaron's one-tap approval (panel card) instead of applied silently. Memory + thread advance above
+		#    still happen automatically; only the life-file change waits.
 		if milestone:
-			ani_append_life_note('%s happened (%s) — this is part of your everyday life now.' % (text, datelabel))
-			print(f"Ani milestone applied to life file: {text} ({datelabel})")
+			life_text = '%s happened (%s) — this is part of your everyday life now.' % (text, datelabel)
+			ani_add_pending_milestone(text, datelabel, life_text, now)
+			print(f"Ani milestone queued for approval: {text} ({datelabel})")
 	except Exception as e:
 		print(f"Ani plan consequence error: {e}")
 
@@ -3405,6 +3510,14 @@ def ani_emit_daycast():
 				print(f"Ani auto-promoted thread to a decision: {promoted}")
 		except Exception as e:
 			print(f"Ani auto-promote error: {e}")
+		# Once-daily: she may put a NEW plan of her own on the calendar (Phase 3 self-scheduling), which then
+		# executes + reports back like any other plan. Chance/quota-gated inside; guarded so it can't break.
+		try:
+			sched = ani_maybe_self_schedule(now)
+			if sched:
+				print(f"Ani self-scheduled a plan: {sched.get('date')} {sched.get('text')}")
+		except Exception as e:
+			print(f"Ani self-schedule error: {e}")
 
 	def _emit(text):
 		messages.append({'role': 'assistant', 'content': text, 'ani_day': True, 'ts': now.isoformat()})
@@ -3968,6 +4081,43 @@ def ani_decide():
 	except Exception as e:
 		print(f"Ani decide reaction error: {e}")
 	return jsonify({'ok': True, 'name': t.get('name'), 'resolution': choice, 'pruned': pruned, 'reacted': reacted})
+
+
+@ani_bp.route('/ani/milestones/pending', methods=['GET'])
+def ani_milestones_pending():
+	"""Milestone life-changes waiting on Aaron's approval, for the panel card."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	return jsonify({'milestones': ani_load_pending_milestones()})
+
+
+@ani_bp.route('/ani/milestones/approve', methods=['POST'])
+def ani_milestone_approve():
+	"""Approve a queued milestone: apply its change to her life file + clear it from the queue."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	mid = (request.json or {}).get('id')
+	items = ani_load_pending_milestones()
+	match = next((it for it in items if it.get('id') == mid), None)
+	if not match:
+		return jsonify({'ok': False, 'error': 'not found'}), 404
+	ani_append_life_note(match['life_text'])
+	ani_save_pending_milestones([it for it in items if it.get('id') != mid])
+	return jsonify({'ok': True, 'applied': match['life_text']})
+
+
+@ani_bp.route('/ani/milestones/dismiss', methods=['POST'])
+def ani_milestone_dismiss():
+	"""Dismiss a queued milestone without changing her life file."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	mid = (request.json or {}).get('id')
+	items = ani_load_pending_milestones()
+	kept = [it for it in items if it.get('id') != mid]
+	if len(kept) == len(items):
+		return jsonify({'ok': False, 'error': 'not found'}), 404
+	ani_save_pending_milestones(kept)
+	return jsonify({'ok': True})
 
 
 @ani_bp.route('/ani/memory-file', methods=['GET'])

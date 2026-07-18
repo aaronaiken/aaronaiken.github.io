@@ -63,6 +63,7 @@
 		})
 		.catch(function() {});
 	  aniLoadDecisions();
+	  aniLoadMilestones();
 	} else {
 	  aniPing();
 	}
@@ -85,6 +86,7 @@
 	if (aniIsOpen) {
 	  aniLoadState();
 	  aniLoadDecisions();
+	  aniLoadMilestones();
 	  setTimeout(function() { aniInput.focus(); }, 300);
 	} else {
 	  // Closing: drop fullscreen state so reopen returns to docked view
@@ -233,6 +235,55 @@
 	  .catch(function() {
 		aniShowTyping(false);
 		if (fork) fork.classList.remove('ani-fork-deciding');
+		if (btn) btn.disabled = false;
+	  });
+  }
+
+  // ---- Milestone approvals: a life-changing plan completed; you approve before her baseline shifts ----
+  function aniLoadMilestones() {
+	fetch('/ani/milestones/pending')
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) { aniRenderMilestones(data.milestones || []); })
+	  .catch(function() {});
+  }
+
+  function aniRenderMilestones(items) {
+	var el = document.getElementById('ani-milestones');
+	if (!el) return;
+	if (!items.length) { el.hidden = true; el.innerHTML = ''; return; }
+	el.innerHTML = items.map(function(m) {
+	  return '<div class="ani-fork" data-id="' + aniEscapeHtml(m.id) + '">'
+		+ '<div class="ani-fork-head"><span class="ani-fork-glyph">✦</span> '
+		+ '<span class="ani-fork-name">' + aniEscapeHtml(m.text || 'a milestone') + '</span>'
+		+ '<span class="ani-fork-tag">milestone</span></div>'
+		+ '<div class="ani-fork-opts">'
+		+ '<button class="ani-fork-opt" onclick="aniMilestone(' + aniAttr(m.id) + ',true,this)">Add to her life</button>'
+		+ '<button class="ani-fork-opt" onclick="aniMilestone(' + aniAttr(m.id) + ',false,this)">Not yet</button>'
+		+ '</div></div>';
+	}).join('');
+	el.hidden = false;
+  }
+
+  function aniMilestone(id, approve, btn) {
+	var card = btn && btn.closest ? btn.closest('.ani-fork') : null;
+	if (card) { card.classList.add('ani-fork-deciding'); }
+	if (btn) { btn.disabled = true; }
+	fetch(approve ? '/ani/milestones/approve' : '/ani/milestones/dismiss', {
+	  method: 'POST',
+	  headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ id: id })
+	}).then(function(r) { return r.json(); })
+	  .then(function(data) {
+		if (data.ok) {
+		  aniRenderNotify(approve ? 'milestone added to her life' : 'milestone set aside');
+		  aniLoadMilestones();
+		} else {
+		  if (card) card.classList.remove('ani-fork-deciding');
+		  if (btn) btn.disabled = false;
+		}
+	  })
+	  .catch(function() {
+		if (card) card.classList.remove('ani-fork-deciding');
 		if (btn) btn.disabled = false;
 	  });
   }
