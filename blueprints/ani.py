@@ -249,6 +249,11 @@ ANI_DAYCAST_PHOTO_CHANCE = float(os.environ.get('ANI_DAYCAST_PHOTO_CHANCE', '0.2
 # Fraction of proactive text updates that are an EMOTIONAL BEAT from her own world vs. a "what I'm doing".
 ANI_DAYCAST_EMOTIONAL_CHANCE = float(os.environ.get('ANI_DAYCAST_EMOTIONAL_CHANCE', '0.4'))
 
+# Plan lifecycle (autonomy layer): a timeless plan of HERS flips 'underway' once the day is going by this ET
+# hour; a today plan that's underway completes ('done', triggering a 'how it went' beat) after this ET hour.
+ANI_PLAN_START_HOUR = int(os.environ.get('ANI_PLAN_START_HOUR', '10'))
+ANI_PLAN_DONE_HOUR = int(os.environ.get('ANI_PLAN_DONE_HOUR', '20'))
+
 # A light daily "mood" — picked when her day starts, carried through the day for emotional continuity.
 ANI_MOODS = [
 	'playful and teasing', 'soft, warm, and affectionate', 'sleepy and clingy',
@@ -405,13 +410,17 @@ def ani_add_calendar_entry(date, time_str, text, source):
 		except ValueError:
 			time_str = None
 	pa_tz = pytz.timezone('America/New_York')
+	created = datetime.now(pa_tz).isoformat()
 	entry = {
 		'id': uuid.uuid4().hex[:8],
 		'date': date,
 		'time': time_str,
 		'text': text[:200],
 		'source': source if source in ('her', 'you') else 'you',
-		'created_at': datetime.now(pa_tz).isoformat()
+		'created_at': created,
+		# Autonomy-layer lifecycle (only HER plans are auto-driven through it; see ani_sweep_plans).
+		'state': 'planned',
+		'state_updated': created,
 	}
 	entries = ani_load_calendar()
 	entries.append(entry)
@@ -3261,6 +3270,63 @@ def ani_daycast_photo(meta, now):
 		return None
 
 
+def ani_sweep_plans(now):
+	"""Advance HER OWN dated plans (source='her') through planned -> underway -> done each daycast tick, so
+	her calendar isn't a static list but a timeline that actually executes. Returns
+	{'started': [...], 'completed': [...]} of entries whose state changed THIS sweep. Calendar-state only —
+	the consequences (memory / thread / life) are layered on in Phase 2. Aaron's shared plans (source='you')
+	are left alone (the existing event reach-out announces those). Best-effort; caller guards."""
+	today = now.strftime('%Y-%m-%d')
+	entries = ani_load_calendar()
+	started, completed, changed = [], [], False
+	for e in entries:
+		if e.get('source') != 'her':
+			continue
+		state = e.get('state') or 'planned'
+		if state in ('done', 'skipped'):
+			continue
+		date = e.get('date') or ''
+		# COMPLETE — the day rolled past it, or it's late today and already underway. Guarantees the arc
+		# closes even if the hourly narration never got there (kills the "about to go to philly" loop).
+		if date < today or (date == today and state == 'underway' and now.hour >= ANI_PLAN_DONE_HOUR):
+			e['state'], e['state_updated'] = 'done', now.isoformat()
+			completed.append(e); changed = True
+			continue
+		# START — today's plan whose time (or a default morning hour, if timeless) has arrived.
+		if date == today and state == 'planned':
+			t = e.get('time')
+			due = now.hour >= ANI_PLAN_START_HOUR
+			if t:
+				try:
+					tt = datetime.strptime(t, '%H:%M')
+					due = (now.hour, now.minute) >= (tt.hour, tt.minute)
+				except ValueError:
+					pass
+			if due:
+				e['state'], e['state_updated'] = 'underway', now.isoformat()
+				started.append(e); changed = True
+	if changed:
+		ani_save_calendar(entries)
+	return {'started': started, 'completed': completed}
+
+
+def ani_plan_aftermath_message(meta, now, entry):
+	"""A short 'how it went' beat when one of HER plans just completed — the trip that reports back. Returns
+	text or None; fully guarded so a failure can never sink the daycast."""
+	try:
+		system = ani_build_system_prompt(meta)
+		text = (entry.get('text') or 'that plan')[:160]
+		when = 'earlier today' if entry.get('date') == now.strftime('%Y-%m-%d') else 'yesterday'
+		instr = ("[%s you had this on your plate: \"%s\" — and it's done now. text aaron a short, warm 'how it "
+		         "went' beat, like a girlfriend filling him in after: how it actually went, one real detail, how "
+		         "you're feeling now that it's behind you. 1-2 sentences, fully your voice. don't re-greet him or "
+		         "restate the plan mechanically.]" % (when, text))
+		return _ani_grok_call(system, [{'role': 'user', 'content': instr}], max_tokens=150)
+	except Exception as e:
+		print(f"Ani plan aftermath error: {e}")
+		return None
+
+
 def ani_emit_daycast():
 	"""Proactive 'her day' messaging — called by the ani_daycast.py PA scheduled task (hourly).
 	Her day is STARTED by aaron's first message of the day (see ani_chat), not by the clock — until
@@ -3336,6 +3402,25 @@ def ani_emit_daycast():
 			return (now - ld).total_seconds() / 60
 		except Exception:
 			return 999
+
+	# Plan lifecycle sweep (autonomy layer): advance her own dated plans every tick so the calendar actually
+	# executes. A just-completed plan earns ONE 'how it went' aftermath beat — the trip that reports back.
+	# The state transitions always run; only the message honors spacing. Best-effort; never sink the daycast.
+	try:
+		swept = ani_sweep_plans(now)
+		# Mark-done runs for any completion (cleanup), but only a FRESH one (today/yesterday) earns a
+		# 'how it went' beat — an old entry swept done shouldn't trigger a wrong "yesterday you did X".
+		yest = (now - timedelta(days=1)).strftime('%Y-%m-%d')
+		done_plans = [e for e in (swept.get('completed') or []) if (e.get('date') or '') >= yest]
+		if done_plans and _recent_gap_min() >= 15:
+			after = ani_plan_aftermath_message(meta, now, done_plans[0])
+			if after:
+				meta['daycast_count'] = meta.get('daycast_count', 0) + 1
+				_emit(after)
+				return 'plan aftermath sent'
+	except Exception as e:
+		print(f"Ani plan sweep error: {e}")
+
 	if _recent_gap_min() >= 15:
 		event_msg = ani_daycast_event_message(meta, now)
 		if event_msg:
