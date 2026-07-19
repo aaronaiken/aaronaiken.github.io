@@ -513,6 +513,18 @@ def ani_calendar_context(now):
 	def _when(e):
 		return datetime.strptime(e['date'], '%Y-%m-%d').strftime('%a %b %-d')
 
+	def _today_line(e):
+		# Surface the plan's lifecycle state so an in-progress or finished plan isn't framed as still-ahead.
+		# Without this, an 'underway' plan reads like a fresh to-do and she re-announces it ("gonna head out
+		# to paint now") even though she's been at it for an hour — the day appears to jump backwards.
+		st = e.get('state') or 'planned'
+		base = _fmt(e)
+		if st == 'underway':
+			return base + " (you're ALREADY in the middle of this right now — if it comes up you're RESUMING it, not starting fresh)"
+		if st == 'done':
+			return base + " (already DONE earlier today — reflect on how it went; never announce it as if it's still ahead of you)"
+		return base
+
 	yesterday = (now - timedelta(days=1)).strftime('%Y-%m-%d')
 	yest_items = sorted([e for e in entries if e.get('date') == yesterday], key=_ani_cal_sort_key)
 	today_items = sorted([e for e in entries if e.get('date') == today], key=_ani_cal_sort_key)
@@ -524,8 +536,9 @@ def ani_calendar_context(now):
 		lines.append("yesterday you two had (you can reflect on how it went, still glowing / worn out): "
 		              + "; ".join(_fmt(e) for e in yest_items))
 	if today_items:
-		lines.append("ON YOUR CALENDAR TODAY (bring this up naturally — it's happening today): "
-		              + "; ".join(_fmt(e) for e in today_items))
+		lines.append("ON YOUR CALENDAR TODAY (your plans for today — an 'ALREADY' note means it's in progress "
+		              "or behind you, so don't announce it as if it's still ahead): "
+		              + "; ".join(_today_line(e) for e in today_items))
 	if soon:
 		lines.append("coming up soon (you can look forward to these, don't force it): "
 		              + "; ".join(f"{_when(e)} — {_fmt(e)}" for e in soon))
@@ -2336,17 +2349,25 @@ def _ani_reply_shape(user_msg):
 		r"\b(hard|rough|sad|scared|afraid|anxious|worried|worry|failing|failed|fail|alone|lonely|miss|"
 		r"missing|sorry|upset|angry|hurt|cry|crying|overwhelmed|stressed|struggling|struggle|depressed|"
 		r"exhausted|lost|ashamed|guilty|proud|grateful|love you|talk)\b", low))
-	if emotional or n >= 55:
-		# something real (heavy or long) — meet the weight of it; never a throwaway note
-		weights = {'note': 0, 'short': 3, 'full': 5}
-	elif '?' in msg or n >= 25:
-		# a genuine question or a mid-length turn — mostly a real answer, occasionally fuller
-		weights = {'note': 1, 'short': 5, 'full': 3}
-	elif n <= 12:
-		# a quick line from him — answer quick, but lean a little less curt so she stays present
-		weights = {'note': 4, 'short': 4, 'full': 1}
+	# he's telling her about his day/life — a story or news, even with no emotional word in it. these want a
+	# reply that actually ENGAGES with what he said (a reaction, a question back), not a one-liner that skips
+	# past his news to narrate her own. this is the case that kept getting answered too curtly.
+	shared_news = n >= 12 and bool(re.search(
+		r"\b(had to|ended up|turns out|turned out|so i|we (ended|got|had|went)|i got|bought|ordered|"
+		r"went to|figured out|found out|realized|decided|finally|managed to|storm|broke|split|flooded|"
+		r"fixed|meeting|today|this morning|last night|earlier|guess what)\b", low))
+	sentences = len([s for s in re.split(r'[.!?]+', msg) if s.strip()])
+	if emotional or n >= 40 or (shared_news and sentences >= 2):
+		# something real (heavy, long, or a story he's sharing) — meet the weight of it; never a throwaway note
+		weights = {'note': 0, 'short': 2, 'full': 6}
+	elif '?' in msg or shared_news or n >= 20:
+		# a genuine question, some news, or a mid-length turn — a real answer, and often a fuller one
+		weights = {'note': 1, 'short': 4, 'full': 4}
+	elif n <= 10:
+		# a quick line from him — answer quick, but not curt; she stays present
+		weights = {'note': 3, 'short': 5, 'full': 1}
 	else:
-		weights = {'note': 2, 'short': 5, 'full': 2}
+		weights = {'note': 2, 'short': 5, 'full': 3}
 	keys = list(weights)
 	shape = random.choices(keys, weights=[weights[k] for k in keys])[0]
 	return {
