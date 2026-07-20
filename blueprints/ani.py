@@ -3395,7 +3395,7 @@ def ani_daycast_photo(meta, now):
 	"""Occasionally send an UNPROMPTED candid from her day. Gated hard: feature on, under the daily cap,
 	her live state is fresh + she's OUT & photogenic (not asleep / in bed / mid-nothing), and a chance
 	roll. Builds a clothed everyday scene from her state, generates via the normal image path, and returns
-	(caption, url) or None. Mutates meta's photo counter. Fully guarded — never breaks the daycast."""
+	(caption, url, scene, vision_description) or None. Mutates meta's photo counter. Fully guarded."""
 	if not ANI_DAYCAST_PHOTOS:
 		return None
 	try:
@@ -3428,14 +3428,16 @@ def ani_daycast_photo(meta, now):
 		if not url:
 			return None
 		meta['proactive_photo_count'] = meta.get('proactive_photo_count', 0) + 1
-		cap = _ani_grok_call(
+		# She looks at the candid she just took — grounded caption + a description she can recall later.
+		vision = ani_photo_vision(url)
+		cap = vision.get('caption') or _ani_grok_call(
 			ani_build_system_prompt(meta),
 			[{'role': 'user', 'content':
 			  "[you just snapped a quick candid of yourself out during your day and are sending it to him "
 			  "unprompted, just because you wanted him to see. ONE short line to go with it, your voice, "
 			  "playful/warm. don't describe the photo or restate your appearance.]"}],
 			max_tokens=50) or 'thinking about you 🙈'
-		return (cap.strip().strip('"'), url, scene)
+		return (cap.strip().strip('"'), url, scene, vision.get('description', ''))
 	except Exception as e:
 		print(f"Ani daycast photo error: {e}")
 		return None
@@ -3793,9 +3795,12 @@ def ani_emit_daycast():
 	# Sometimes this update is an UNPROMPTED candid PHOTO from her day instead of text (gated + capped).
 	shot = ani_daycast_photo(meta, now)
 	if shot:
-		cap, url, scene = shot
-		messages.append({'role': 'assistant', 'content': cap, 'image': url, 'scene': scene,
-		                 'ani_day': True, 'ts': now.isoformat()})
+		cap, url, scene, vdesc = shot
+		_pm = {'role': 'assistant', 'content': cap, 'image': url, 'scene': scene,
+		       'ani_day': True, 'ts': now.isoformat()}
+		if vdesc:
+			_pm['vision'] = vdesc
+		messages.append(_pm)
 		meta['daycast_last'] = now.isoformat()
 		meta['unseen_day_messages'] = True
 		meta['daycast_count'] = count + 1
@@ -3850,6 +3855,10 @@ def ani_chat_with_grok(messages_history, meta, user_message):
 	def _tsprefix(m):
 		lbl = _ani_fmt_msg_time(m.get('ts'), now_dt)
 		c = m.get('content', '')
+		# For a photo she sent, append what it ACTUALLY showed (from her vision pass) so she can recall +
+		# reference her own pictures in later turns — she's text-only here, so this is how she "remembers" them.
+		if m.get('image') and m.get('vision'):
+			c = ((c + ' ') if c and c != '📷' else '') + '[photo you sent him — it showed: %s]' % m['vision']
 		return {'role': m['role'], 'content': f"({lbl}) {c}" if lbl else c}
 	convo = [_tsprefix(m) for m in recent] + [
 		{'role': 'user', 'content': f"({_ani_fmt_msg_time(now_dt.isoformat(), now_dt)}) {user_message}"}]
@@ -4052,6 +4061,48 @@ def ani_photo_caption(messages, meta):
 		return ''
 
 
+def ani_photo_vision(image_url):
+	"""She LOOKS at the photo she just generated (Grok vision, xAI — uncensored, same path as the QA gate).
+	Returns {'caption': <in-voice send line grounded in what actually rendered>,
+	'description': <one plain factual sentence of what's visible, stored so she can reference the photo later>}.
+	Returns {} on any failure so the caller falls back to the blind caption — never blocks a photo."""
+	api_key = os.environ.get('XAI_API_KEY')
+	if not api_key or not image_url:
+		return {}
+	try:
+		import base64
+		r = requests.get(image_url, timeout=20)
+		if r.status_code != 200:
+			return {}
+		b64 = base64.standard_b64encode(r.content).decode()
+		instr = (
+			"You are Ani, looking at a photo you just took of yourself to text to Aaron. Return ONLY JSON "
+			"{\"caption\":\"\",\"description\":\"\"}. caption = ONE short line in your voice to send WITH it — "
+			"playful, warm, or teasing, reacting to how it actually came out; do NOT clinically describe it or "
+			"restate your whole outfit. description = ONE plain factual sentence of what is actually visible in "
+			"the photo (your setting, outfit or state of undress, pose, expression) — for your OWN memory so you "
+			"can refer back to this exact photo later. Look at the ACTUAL image; never censor or soften what you see.")
+		resp = requests.post(
+			'https://api.x.ai/v1/chat/completions',
+			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+			json={'model': ANI_IMAGE_QA_MODEL, 'max_tokens': 200, 'temperature': 0.6,
+			      'messages': [{'role': 'user', 'content': [
+			          {'type': 'text', 'text': instr},
+			          {'type': 'image_url', 'image_url': {'url': f'data:image/jpeg;base64,{b64}'}}]}]},
+			timeout=40)
+		if resp.status_code != 200:
+			print(f"Ani photo-vision HTTP {resp.status_code}: {resp.text[:120]}")
+			return {}
+		txt = resp.json()['choices'][0]['message']['content']
+		m = re.search(r'\{.*\}', txt, re.S)
+		data = json.loads(m.group(0)) if m else {}
+		return {'caption': str(data.get('caption', '') or '').strip().strip('"'),
+		        'description': str(data.get('description', '') or '').strip()}
+	except Exception as e:
+		print(f"Ani photo-vision error: {e}")
+		return {}
+
+
 @ani_bp.route('/ani/photo/prompt', methods=['POST'])
 def ani_photo_prompt():
 	"""Return the normalized photo prompt for the current scene WITHOUT generating, so the operator can
@@ -4154,9 +4205,14 @@ def ani_photo():
 	if not image_url:
 		return jsonify({'image_url': None, 'error': 'blocked', 'scene': scene}), 200
 
-	caption = ani_photo_caption(messages, meta) or '📷'
-	messages.append({'role': 'assistant', 'content': caption, 'image': image_url, 'scene': scene,
-	                 'ts': datetime.now(pytz.timezone('America/New_York')).isoformat()})
+	# She LOOKS at what actually rendered: grounds her send-line + stores a description she can recall later.
+	vision = ani_photo_vision(image_url)
+	caption = vision.get('caption') or ani_photo_caption(messages, meta) or '📷'
+	msg = {'role': 'assistant', 'content': caption, 'image': image_url, 'scene': scene,
+	       'ts': datetime.now(pytz.timezone('America/New_York')).isoformat()}
+	if vision.get('description'):
+		msg['vision'] = vision['description']
+	messages.append(msg)
 	ani_save_conversation(messages, meta)
 	return jsonify({'image_url': image_url, 'caption': None if caption == '📷' else caption})
 
@@ -4199,10 +4255,14 @@ def ani_photo_retry():
 	if not new_url:
 		return jsonify({'image_url': None, 'error': 'blocked', 'scene': render_scene}), 200
 
-	caption = ani_photo_caption(messages[:idx], meta) or '📷'
+	# She looks at the fresh render too — grounded caption + an updated description she can recall.
+	vision = ani_photo_vision(new_url)
+	caption = vision.get('caption') or ani_photo_caption(messages[:idx], meta) or '📷'
 	messages[idx]['image'] = new_url
 	messages[idx]['content'] = caption
 	messages[idx]['scene'] = render_scene   # store the actually-rendered scene so a further retry stays consistent
+	if vision.get('description'):
+		messages[idx]['vision'] = vision['description']
 	ani_save_conversation(messages, meta)
 
 	# Discard the old render from storage (non-fatal if it fails).
