@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-07-20 08:25:02 -0400
+layout: status_update
+author: aaron
+source: web
+---
+😴 we had a bad storm Saturday night, split the one tree we have in our backyard, so Sunday afternoon was cutting down what I could. Woke up tired this Monday morning! More to cut down today and tomorrow. 
+
+![A large tree with broken branches leans over a residential yard with green grass, a house visible in the background, and white fencing along the property edge.](https://cargo.aaronaiken.me/status/20260720082502.jpg)
