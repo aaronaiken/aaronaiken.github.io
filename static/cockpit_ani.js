@@ -349,10 +349,35 @@
 	});
   }
 
-  // 📷 flow is two-step: fetch the normalized prompt, show it editable, THEN send generates with whatever
-  // you leave in the box. See-and-edit before it renders.
+  // Both 📷 (new photo) and ↻ (retry) go through the same see-and-edit modal: fetch the prompt, show it
+  // editable, then Send generates with whatever you leave in the box. Mode decides what Send does.
+  var aniPromptMode = 'new';   // 'new' | 'retry'
+  var aniRetryCtx = null;      // { btn, oldUrl } when retrying a specific photo
+
   function aniPhoto() {
 	if (aniPhotoBtn.disabled) return;
+	aniPromptMode = 'new'; aniRetryCtx = null;
+	aniPromptOpen(function() {
+	  return fetch('/ani/photo/prompt', { method: 'POST' }).then(function(r) { return r.json(); });
+	});
+  }
+
+  // ↻ retry: open the editable prompt for THIS photo (its stored scene), then Send re-rolls it in place.
+  function aniRetryPhoto(btn) {
+	var oldUrl = btn.getAttribute('data-img');
+	if (!oldUrl || btn.disabled) return;
+	aniPromptMode = 'retry';
+	aniRetryCtx = { btn: btn, oldUrl: oldUrl };
+	aniPromptOpen(function() {
+	  return fetch('/ani/photo/retry', {
+		method: 'POST', headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ image_url: oldUrl, preview: true })
+	  }).then(function(r) { return r.json(); });
+	});
+  }
+
+  // Open the modal and fill it via `fetcher` (a fn returning a promise of {scene}).
+  function aniPromptOpen(fetcher) {
 	var overlay = document.getElementById('ani-prompt-overlay');
 	var box = document.getElementById('ani-prompt-text');
 	var sendBtn = document.getElementById('ani-prompt-send');
@@ -360,11 +385,11 @@
 	box.value = '';
 	box.placeholder = 'reading the scene…';
 	sendBtn.disabled = true;
+	sendBtn.textContent = aniPromptMode === 'retry' ? 'RE-ROLL 📷' : 'SEND 📷';
 	overlay.hidden = false;
-	fetch('/ani/photo/prompt', { method: 'POST' })
-	  .then(function(r) { return r.json(); })
+	fetcher()
 	  .then(function(data) {
-		if (data.scene) {
+		if (data && data.scene) {
 		  box.value = data.scene;
 		  box.placeholder = 'the scene she photographs — edit freely';
 		  sendBtn.disabled = false;
@@ -381,11 +406,16 @@
 	if (o) o.hidden = true;
   }
 
-  // Send the (possibly edited) prompt to generate. Mirrors the old one-shot flow, minus the normalize step.
   function aniPhotoSend() {
 	var box = document.getElementById('ani-prompt-text');
 	var scene = (box && box.value || '').trim();
 	if (!scene) return;
+	if (aniPromptMode === 'retry' && aniRetryCtx) { aniDoRetry(scene); }
+	else { aniDoNewPhoto(scene); }
+  }
+
+  // New photo: generate from the edited scene, append as a fresh message.
+  function aniDoNewPhoto(scene) {
 	aniPhotoPromptClose();
 	aniEmpty.style.display = 'none';
 	aniPhotoBtn.disabled = true;
@@ -394,8 +424,7 @@
 	aniShowTyping(true);
 	aniScrollToBottom();
 	fetch('/ani/photo', {
-	  method: 'POST',
-	  headers: { 'Content-Type': 'application/json' },
+	  method: 'POST', headers: { 'Content-Type': 'application/json' },
 	  body: JSON.stringify({ scene: scene })
 	})
 	  .then(function(r) { return r.json(); })
@@ -418,6 +447,47 @@
 		setTimeout(function() { aniPhotoBtn.disabled = false; }, 2500);
 		aniRenderNotify('photo request failed — try again');
 		aniScrollToBottom();
+	  });
+  }
+
+  // Retry: re-roll the edited scene for a specific photo and swap it in place.
+  function aniDoRetry(scene) {
+	var ctx = aniRetryCtx;
+	if (!ctx) return;
+	aniPhotoPromptClose();
+	var btn = ctx.btn;
+	var msgDiv = btn.closest('.ani-msg');
+	var img = msgDiv ? msgDiv.querySelector('.ani-msg-img') : null;
+	var cap = msgDiv ? msgDiv.querySelector('.ani-msg-cap') : null;
+	btn.disabled = true;
+	btn.textContent = '↻ developing…';
+	if (img) img.style.opacity = '0.35';
+	fetch('/ani/photo/retry', {
+	  method: 'POST', headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ image_url: ctx.oldUrl, scene: scene })
+	})
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		btn.disabled = false;
+		btn.textContent = '↻ retry';
+		if (data.image_url) {
+		  if (img) { img.src = data.image_url; img.style.opacity = ''; }
+		  btn.setAttribute('data-img', data.image_url);
+		  if (cap) cap.innerHTML = aniEscapeHtml(data.caption || '').replace(/\n/g, '<br>');
+		  // Match the server's stored content so the poller doesn't re-append the swapped photo as a dupe.
+		  aniSeen.add(aniSig('assistant', data.caption || '📷', data.image_url));
+		} else {
+		  if (img) img.style.opacity = '';
+		  aniRenderNotify(data.error === 'blocked'
+			? 'retry blocked by the filter — edit to a tamer scene first'
+			: 'could not re-roll that photo — try again');
+		}
+	  })
+	  .catch(function() {
+		btn.disabled = false;
+		btn.textContent = '↻ retry';
+		if (img) img.style.opacity = '';
+		aniRenderNotify('retry failed — try again');
 	  });
   }
 
@@ -489,45 +559,7 @@
 	}
   });
 
-  // Re-roll a bad render: swap this photo for a fresh one generated from the same scene, in place.
-  function aniRetryPhoto(btn) {
-	var oldUrl = btn.getAttribute('data-img');
-	if (!oldUrl || btn.disabled) return;
-	var msgDiv = btn.closest('.ani-msg');
-	var img = msgDiv ? msgDiv.querySelector('.ani-msg-img') : null;
-	var cap = msgDiv ? msgDiv.querySelector('.ani-msg-cap') : null;
-	btn.disabled = true;
-	btn.textContent = '↻ developing…';
-	if (img) img.style.opacity = '0.35';
-	fetch('/ani/photo/retry', {
-	  method: 'POST',
-	  headers: { 'Content-Type': 'application/json' },
-	  body: JSON.stringify({ image_url: oldUrl })
-	})
-	  .then(function(r) { return r.json(); })
-	  .then(function(data) {
-		btn.disabled = false;
-		btn.textContent = '↻ retry';
-		if (data.image_url) {
-		  if (img) { img.src = data.image_url; img.style.opacity = ''; }
-		  btn.setAttribute('data-img', data.image_url);
-		  if (cap) cap.innerHTML = aniEscapeHtml(data.caption || '').replace(/\n/g, '<br>');
-		  // Match the server's stored content so the poller doesn't re-append the swapped photo as a dupe.
-		  aniSeen.add(aniSig('assistant', data.caption || '📷', data.image_url));
-		} else {
-		  if (img) img.style.opacity = '';
-		  aniRenderNotify(data.error === 'blocked'
-			? 'retry blocked by the filter — describe a tamer scene first'
-			: 'could not re-roll that photo — try again');
-		}
-	  })
-	  .catch(function() {
-		btn.disabled = false;
-		btn.textContent = '↻ retry';
-		if (img) img.style.opacity = '';
-		aniRenderNotify('retry failed — try again');
-	  });
-  }
+  // (aniRetryPhoto now lives with the photo-prompt modal above — retry routes through the same edit box.)
 
   // Lightbox with zoom (pinch / wheel / double-tap) + pan.
   var lbScale = 1, lbX = 0, lbY = 0;

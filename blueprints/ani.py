@@ -4039,7 +4039,8 @@ def ani_photo_retry():
 	if not is_authenticated():
 		return jsonify({'error': 'unauthorized'}), 401
 
-	bad_url = (request.get_json(silent=True) or {}).get('image_url')
+	body = request.get_json(silent=True) or {}
+	bad_url = body.get('image_url')
 	if not bad_url:
 		return jsonify({'error': 'no_image'}), 400
 
@@ -4053,11 +4054,16 @@ def ani_photo_retry():
 	# for older photos saved before scenes were stored on the message.
 	scene = messages[idx].get('scene') or ani_normalize_scene(messages[:idx])
 	if not scene:
-		return jsonify({'image_url': None, 'error': 'prompt'}), 200
+		return jsonify({'scene': None, 'image_url': None, 'error': 'prompt'}), 200
 
-	# Faithful re-roll of the same scene, but auto-simplify a hard/unreliable pose (squat, kneel, lying...)
-	# so the retry renders clean instead of breaking the same way. Easy poses pass through untouched.
-	render_scene = ani_simplify_pose(scene)
+	# Preview for the see-and-edit box: hand back the scene, generate nothing.
+	if body.get('preview'):
+		return jsonify({'scene': scene})
+
+	# An operator-edited scene wins and skips the auto-simplify (they're steering the pose themselves).
+	# Otherwise faithful re-roll of the same scene, auto-simplifying a hard/unreliable pose so it renders clean.
+	override = (body.get('scene') or '').strip()
+	render_scene = override or ani_simplify_pose(scene)
 
 	new_url = ani_generate_image(render_scene)
 	if not new_url:
