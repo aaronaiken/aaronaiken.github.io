@@ -569,6 +569,22 @@
 	</div>
   </div>
 
+  <div id="ani-prompt-overlay" class="ani-photolog-overlay" hidden onclick="if(event.target===this)aniPhotoPromptClose()">
+	<div class="ani-photolog-panel ani-cal-panel" role="dialog" aria-label="Edit photo prompt">
+	  <div class="ani-photolog-head">
+		<span>ANI · PHOTO PROMPT</span>
+		<button class="ani-photolog-close" onclick="aniPhotoPromptClose()" aria-label="Close">✕</button>
+	  </div>
+	  <div class="ani-prompt-edit">
+		<textarea id="ani-prompt-text" class="ani-prompt-textarea" rows="6" placeholder="reading the scene…" aria-label="Photo prompt"></textarea>
+		<div class="ani-prompt-actions">
+		  <button class="ani-footer-btn" onclick="aniPhotoPromptClose()">CANCEL</button>
+		  <button class="ani-footer-btn ani-prompt-send" id="ani-prompt-send" onclick="aniPhotoSend()">SEND 📷</button>
+		</div>
+	  </div>
+	</div>
+  </div>
+
   <div id="ani-calendar-overlay" class="ani-photolog-overlay" hidden onclick="if(event.target===this)aniCalendarClose()">
 	<div class="ani-photolog-panel ani-cal-panel" role="dialog" aria-label="Calendar">
 	  <div class="ani-photolog-head">

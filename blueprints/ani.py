@@ -3992,15 +3992,31 @@ def ani_photo_caption(messages, meta):
 		return ''
 
 
+@ani_bp.route('/ani/photo/prompt', methods=['POST'])
+def ani_photo_prompt():
+	"""Return the normalized photo prompt for the current scene WITHOUT generating, so the operator can
+	review/edit it before sending (see-and-edit flow). Read-only — doesn't touch history."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	messages, _ = ani_load_conversation()
+	scene = ani_normalize_scene(messages)
+	if not scene:
+		return jsonify({'scene': None, 'error': 'prompt'}), 200
+	return jsonify({'scene': scene})
+
+
 @ani_bp.route('/ani/photo', methods=['POST'])
 def ani_photo():
-	"""Button-triggered photo. Normalize the recent conversation into a safe prompt, generate,
-	re-host on Bunny, append a photo message (with a short in-voice caption) to history."""
+	"""Button-triggered photo. Normalize the recent conversation into a safe prompt (or use an operator-edited
+	`scene` from the see-and-edit flow), generate, re-host on Bunny, append a photo message (with a short
+	in-voice caption) to history."""
 	if not is_authenticated():
 		return jsonify({'error': 'unauthorized'}), 401
 
 	messages, meta = ani_load_conversation()
-	scene = ani_normalize_scene(messages)
+	# An edited prompt from the preview modal wins; otherwise normalize the recent scene as before.
+	override = ((request.get_json(silent=True) or {}).get('scene') or '').strip()
+	scene = override or ani_normalize_scene(messages)
 	if not scene:
 		return jsonify({'image_url': None, 'error': 'prompt'}), 200
 

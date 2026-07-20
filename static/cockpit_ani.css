@@ -902,6 +902,33 @@ body.ani-fullscreen .plog-meta a { color: #a8d4ff; }
 .ani-cal-time { width: 78px; }
 .ani-cal-text { flex: 1; min-width: 120px; }
 .ani-cal-addbtn { align-self: stretch; }
+
+/* Photo-prompt see-and-edit modal */
+.ani-prompt-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+}
+.ani-prompt-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 130px;
+  background: #0c0e08;
+  border: 1px solid #2e1e08;
+  border-radius: 4px;
+  color: #c89040;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  padding: 8px 10px;
+}
+.ani-prompt-textarea:focus { outline: none; border-color: #6a4818; }
+.ani-prompt-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.ani-prompt-send:disabled { opacity: 0.45; cursor: default; }
+body.ani-fullscreen .ani-prompt-textarea { background: #0a0f24; border-color: #2a3360; color: #a8b8e8; }
+body.ani-fullscreen .ani-prompt-textarea:focus { border-color: #4a5288; }
 .ani-cal-entry {
   display: flex;
   align-items: baseline;

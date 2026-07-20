@@ -349,15 +349,55 @@
 	});
   }
 
+  // 📷 flow is two-step: fetch the normalized prompt, show it editable, THEN send generates with whatever
+  // you leave in the box. See-and-edit before it renders.
   function aniPhoto() {
 	if (aniPhotoBtn.disabled) return;
+	var overlay = document.getElementById('ani-prompt-overlay');
+	var box = document.getElementById('ani-prompt-text');
+	var sendBtn = document.getElementById('ani-prompt-send');
+	if (!overlay || !box || !sendBtn) return;
+	box.value = '';
+	box.placeholder = 'reading the scene…';
+	sendBtn.disabled = true;
+	overlay.hidden = false;
+	fetch('/ani/photo/prompt', { method: 'POST' })
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		if (data.scene) {
+		  box.value = data.scene;
+		  box.placeholder = 'the scene she photographs — edit freely';
+		  sendBtn.disabled = false;
+		  box.focus();
+		} else {
+		  box.placeholder = 'no scene yet — describe one to her first, then tap 📷';
+		}
+	  })
+	  .catch(function() { box.placeholder = 'could not read the scene — close and try again'; });
+  }
+
+  function aniPhotoPromptClose() {
+	var o = document.getElementById('ani-prompt-overlay');
+	if (o) o.hidden = true;
+  }
+
+  // Send the (possibly edited) prompt to generate. Mirrors the old one-shot flow, minus the normalize step.
+  function aniPhotoSend() {
+	var box = document.getElementById('ani-prompt-text');
+	var scene = (box && box.value || '').trim();
+	if (!scene) return;
+	aniPhotoPromptClose();
 	aniEmpty.style.display = 'none';
 	aniPhotoBtn.disabled = true;
 	aniSendBtn.disabled = true;
 	aniRenderNotify('developing a photo…');
 	aniShowTyping(true);
 	aniScrollToBottom();
-	fetch('/ani/photo', { method: 'POST' })
+	fetch('/ani/photo', {
+	  method: 'POST',
+	  headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ scene: scene })
+	})
 	  .then(function(r) { return r.json(); })
 	  .then(function(data) {
 		aniShowTyping(false);
@@ -366,7 +406,7 @@
 		if (data.image_url) {
 		  aniRenderMessage('assistant', data.caption || '', data.image_url, new Date().toISOString());
 		} else if (data.error === 'blocked') {
-		  aniRenderNotify('photo blocked by the filter — describe a tamer scene and tap 📷 again');
+		  aniRenderNotify('photo blocked by the filter — edit to a tamer scene and tap 📷 again');
 		} else {
 		  aniRenderNotify('could not develop a photo — give her a scene to work from first');
 		}
