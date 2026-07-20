@@ -86,6 +86,9 @@ _ANI_OUTFIT_CUE_RE = re.compile(
 # not sit on one outfit all day. The daycast nudges a change at day-phase transitions (and post-gym), but
 # never dictates WHAT she changes into — the outfit stays freely chosen so it varies. Cadence only.
 ANI_WARDROBE_MIN_HOURS = float(os.environ.get('ANI_WARDROBE_MIN_HOURS', '2.5'))  # min gap before nudging another change
+# On a daytime/evening outfit change, chance she's nudged toward a fuller, put-together look (jeans, a
+# sundress, a real dress) instead of loungewear — widens the palette without dictating the piece.
+ANI_WARDROBE_DRESSY_CHANCE = float(os.environ.get('ANI_WARDROBE_DRESSY_CHANCE', '0.4'))
 _ANI_ACTIVEWEAR_RE = re.compile(r"\b(sports bra|gym clothes|workout clothes|athletic wear|activewear|"
                                 r"yoga pants|running (shorts|clothes|tights)|leotard|spandex|sweaty)\b", re.I)
 _ANI_GYM_DOING_RE = re.compile(r"\b(gym|working out|workout|lifting|weights|jog(ging)?|yoga|pilates|"
@@ -149,6 +152,11 @@ _ANI_POSE_RE = re.compile(
 _ANI_LYING_RE = re.compile(
 	r'\b(?:lying|laying|lies|reclin\w*|sprawl\w*|flat on|on her (?:back|side|stomach)|'
 	r'spread (?:out )?(?:on|across|over)|across the (?:bed|sheets|pillows))\b', re.IGNORECASE)
+# She writes on her MacBook, not by hand — a writing/letter/journal scene must render a laptop, never
+# pen-and-paper. Detects the writing cue so ani_generate_image can anchor the laptop + negate handwriting.
+_ANI_WRITING_RE = re.compile(
+	r'\b(?:writing|writes|write|composing|composes|compose|penning|pens|journal(?:ing)?|typing)\b',
+	re.IGNORECASE)
 
 # Image backend: 'xai' (grok-imagine, output-moderated → normalizer enforces a covered chest)
 # or 'venice' (uncensored Lustify, no coverage rule → renders her scene faithfully). Flag-gated
@@ -1454,6 +1462,16 @@ def _ani_day_phase(hour):
 	return (3, 'wind-down for the night')
 
 
+def _ani_outfit_variety_hint():
+	"""Occasionally (chance-gated) nudge her toward a fuller, put-together daytime/evening outfit instead of
+	the loungewear/minimal default — widens the palette without dictating the piece. '' most of the time."""
+	if random.random() < ANI_WARDROBE_DRESSY_CHANCE:
+		return (" make it a real, put-together outfit this time — actual clothes with some range (jeans, a "
+		        "sundress, a skirt and top, a cozy sweater, a proper dress) rather than loungewear or "
+		        "something tiny.")
+	return ''
+
+
 def ani_wardrobe_nudge(st, now):
 	"""If her day has moved past the outfit she's still in, return a short instruction (with a leading space,
 	ready to append to her next proactive-message prompt) so she narrates changing into something fresh +
@@ -1486,12 +1504,16 @@ def ani_wardrobe_nudge(st, now):
 	if _ANI_ACTIVEWEAR_RE.search(wearing) and not at_gym:
 		return (" you've been in your workout clothes a while and you're done at the gym now — you'd have "
 		        "showered and changed by this point; work in what you slipped into, fresh for the rest of your "
-		        "day (not the same thing again).")
+		        "day (not the same thing again)." + _ani_outfit_variety_hint())
 	# Day has moved into a later stretch than the outfit belongs to (needs the stamp to know its phase).
 	if wdt is not None and not at_gym and _ani_day_phase(now.hour)[0] > _ani_day_phase(wdt.hour)[0]:
-		return (" your day's moved into the %s and you're still in what you put on earlier — you'd naturally "
+		base = (" your day's moved into the %s and you're still in what you put on earlier — you'd naturally "
 		        "have changed by now; mention what you're in now, picked fresh for this part of the day (not a "
 		        "repeat of earlier)." % _ani_day_phase(now.hour)[1])
+		# Widen the palette on daytime/evening changes — but not heading into wind-down, where loungewear/pjs fit.
+		if _ani_day_phase(now.hour)[0] < 3:
+			base += _ani_outfit_variety_hint()
+		return base
 	return ''
 
 
@@ -2072,6 +2094,11 @@ def ani_generate_image(scene):
 	# Lead with hair color so it lands among the earliest, highest-weighted tokens — otherwise the bible's
 	# hair clause sits after the scene and the model drifts to its default brunette.
 	clean_scene = 'caramel-blonde hair, long soft waves, ' + clean_scene
+	# She composes on her MacBook, never by hand — a writing/letter/journal scene must render a laptop, not
+	# pen-and-paper. Anchor the laptop in the scene and (below) negate the handwriting attractor.
+	writing_scene = bool(_ANI_WRITING_RE.search(clean_scene))
+	if writing_scene and not re.search(r'\b(macbook|laptop|keyboard)\b', clean_scene, re.IGNORECASE):
+		clean_scene += ', typing on her open silver MacBook laptop'
 	bible = ani_get_bible() or ''
 
 	if ANI_IMAGE_BACKEND == 'venice':
@@ -2108,9 +2135,12 @@ def ani_generate_image(scene):
 		complex_pose = bool(_ANI_POSE_RE.search(clean_scene))
 		pose_neg = _ani_pose_negative(clean_scene)
 		require_rear = bool(_ANI_REAR_INTENT_RE.search(clean_scene))
-		# Base realism + always-on dup/anatomy guards + scene-specific garment/pose negatives.
+		# Keep a writing scene on the laptop — negate the pen-and-paper attractor so it doesn't render by hand.
+		writing_neg = ('pen, pencil, fountain pen, paper, notebook, stationery, handwriting, handwritten, '
+		               'writing by hand, ink') if writing_scene else ''
+		# Base realism + always-on dup/anatomy guards + scene-specific garment/pose/writing negatives.
 		negative = ', '.join(p for p in (
-			VENICE_NEGATIVE_PROMPT, VENICE_DUP_NEGATIVE, VENICE_ANATOMY_NEGATIVE, extra_neg, pose_neg) if p)
+			VENICE_NEGATIVE_PROMPT, VENICE_DUP_NEGATIVE, VENICE_ANATOMY_NEGATIVE, extra_neg, pose_neg, writing_neg) if p)
 		width, height = VENICE_DIMS_PORTRAIT
 		steps = VENICE_STEPS_POSE if complex_pose else VENICE_STEPS
 		if extra_neg:
