@@ -144,7 +144,7 @@ _ANI_TOP_INJECT_PLAIN = ', wearing a soft top that fully covers her chest'
 # the pose from the normalized scene so the framing follows the description instead of the default.
 _ANI_POSE_RE = re.compile(
 	r'\b(?:lying|laying|lies|reclin\w*|sprawl\w*|propped|on her (?:back|side|stomach|knees)|'
-	r'spread|legs (?:open|spread|apart|up|back)|knees (?:bent|up|back|apart)|kneel\w*|'
+	r'spread|legs (?:open|spread|apart|up|back)|knees (?:bent|up|back|apart)|kneel\w*|squat\w*|crouch\w*|'
 	r'on top|straddl\w*|bent over|all fours|doggy|on all fours)\b', re.IGNORECASE)
 _ANI_LYING_RE = re.compile(
 	r'\b(?:lying|laying|lies|reclin\w*|sprawl\w*|flat on|on her (?:back|side|stomach)|'
@@ -1778,6 +1778,27 @@ def ani_normalize_scene(history):
 	except Exception as e:
 		print(f"Ani normalize error: {e}")
 		return None
+
+
+def ani_simplify_pose(scene):
+	"""For a photo RETRY: keep the scene faithful, but if it calls for a hard-to-render pose (squat,
+	kneel, lying, spread, bent-over, on-all-fours, legs-up...) rewrite it to a simple, reliably-rendered
+	standing/sitting/leaning pose while keeping the SAME outfit, setting, hair, lighting and mood. Easy
+	poses pass through untouched. Falls back to the original scene on any failure — never raises."""
+	if not scene or not _ANI_POSE_RE.search(scene):
+		return scene
+	system = ("You rewrite one-line image prompts. Keep the subject, outfit, setting, room, hair, "
+	          "lighting and mood EXACTLY the same, but replace the body pose with a simple, natural, "
+	          "easy-to-render one: standing, sitting, or leaning — upright, feet flat, facing roughly "
+	          "toward the camera at eye level. Remove any squatting, crouching, kneeling, lying, "
+	          "reclining, bent-over, on-all-fours, straddling, spread, or legs-up posing. Return ONE "
+	          "line: the full rewritten prompt only, no preamble or quotes.")
+	out = _ani_grok_call(system, [{'role': 'user', 'content': scene}], max_tokens=220)
+	out = re.sub(r'\s+', ' ', out or '').strip().strip('"\'').strip()
+	if out:
+		print(f"Ani RETRY — simplified pose: {out!r}")
+		return out
+	return scene
 
 
 def _ani_garment_negative(scene):
@@ -3967,14 +3988,18 @@ def ani_photo_retry():
 	if not scene:
 		return jsonify({'image_url': None, 'error': 'prompt'}), 200
 
-	new_url = ani_generate_image(scene)
+	# Faithful re-roll of the same scene, but auto-simplify a hard/unreliable pose (squat, kneel, lying...)
+	# so the retry renders clean instead of breaking the same way. Easy poses pass through untouched.
+	render_scene = ani_simplify_pose(scene)
+
+	new_url = ani_generate_image(render_scene)
 	if not new_url:
-		return jsonify({'image_url': None, 'error': 'blocked', 'scene': scene}), 200
+		return jsonify({'image_url': None, 'error': 'blocked', 'scene': render_scene}), 200
 
 	caption = ani_photo_caption(messages[:idx], meta) or '📷'
 	messages[idx]['image'] = new_url
 	messages[idx]['content'] = caption
-	messages[idx]['scene'] = scene
+	messages[idx]['scene'] = render_scene   # store the actually-rendered scene so a further retry stays consistent
 	ani_save_conversation(messages, meta)
 
 	# Discard the old render from storage (non-fatal if it fails).
