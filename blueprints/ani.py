@@ -2097,9 +2097,18 @@ def ani_generate_image(scene):
 	# She composes on her MacBook, never by hand — a writing/letter/journal scene must render a laptop, not
 	# pen-and-paper. Anchor the laptop in the scene and (below) negate the handwriting attractor.
 	writing_scene = bool(_ANI_WRITING_RE.search(clean_scene))
-	if writing_scene and not re.search(r'\b(macbook|laptop|keyboard)\b', clean_scene, re.IGNORECASE):
-		clean_scene += (', hands on the keyboard typing on her open silver MacBook laptop, '
-		                'fingers resting on the keys, no pen or paper')
+	if writing_scene:
+		# The normalizer bakes handwriting into the scene ('holding a pen writing on paper'), and appending a
+		# 'typing on a laptop' clause just contradicts it — the model renders the pen. So STRIP any comma-clause
+		# that mentions a pen/paper/handwriting (the deterministic fix a prompt rule can't be), THEN anchor the
+		# laptop with her hands on the keys.
+		clean_scene = re.sub(
+			r',[^,]*\b(?:pens?|pencils?|paper|notebook|notepad|stationery|fountain pen|ballpoint|quill|'
+			r'ink|by hand|handwrit\w*)\b[^,]*', '', clean_scene, flags=re.IGNORECASE)
+		clean_scene = re.sub(r'\s{2,}', ' ', clean_scene).strip(' ,;.')
+		if not re.search(r'\b(macbook|laptop|keyboard)\b', clean_scene, re.IGNORECASE):
+			clean_scene += (', hands on the keyboard typing on her open silver MacBook laptop, '
+			                'fingers resting on the keys, no pen or paper')
 	bible = ani_get_bible() or ''
 
 	if ANI_IMAGE_BACKEND == 'venice':
