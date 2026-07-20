@@ -314,8 +314,6 @@ def ani_load_conversation():
 			'last_active': data.get('last_active', None),
 			'pending_opener': data.get('pending_opener', None),
 			'last_session_tone': data.get('last_session_tone', None),
-			'degradation_level': data.get('degradation_level', 0),
-			'session_message_count': data.get('session_message_count', 0),
 			# Daycast (proactive "her day" messages — see ani_emit_daycast)
 			'day_plan_date': data.get('day_plan_date', None),
 			'daycast_count': data.get('daycast_count', 0),
@@ -340,8 +338,6 @@ def ani_load_conversation():
 			'last_active': None,
 			'pending_opener': None,
 			'last_session_tone': None,
-			'degradation_level': 0,
-			'session_message_count': 0,
 			'day_plan_date': None,
 			'daycast_count': 0,
 			'daycast_last': None,
@@ -367,8 +363,6 @@ def ani_save_conversation(messages, meta):
 		'last_active': meta.get('last_active'),
 		'pending_opener': meta.get('pending_opener'),
 		'last_session_tone': meta.get('last_session_tone'),
-		'degradation_level': meta.get('degradation_level', 0),
-		'session_message_count': meta.get('session_message_count', 0),
 		'day_plan_date': meta.get('day_plan_date'),
 		'daycast_count': meta.get('daycast_count', 0),
 		'daycast_last': meta.get('daycast_last'),
@@ -1151,29 +1145,6 @@ def ani_assess_session_tone(messages):
 		return "last session he was drained — she was gentle, stay attuned to that"
 
 	return "last session was casual — warm, easy, no particular edge"
-
-
-def ani_check_cleanup_phrase(message):
-	"""Returns True if the message contains a cleanup reset phrase."""
-	phrases = ['clean up', 'clean yourself up', 'get cleaned up']
-	msg_lower = message.lower()
-	return any(phrase in msg_lower for phrase in phrases)
-
-
-def ani_get_degradation_description(level):
-	"""
-	Returns a plain-English description of Ani's current appearance state.
-	Injected into system prompt so she describes herself accordingly.
-	"""
-	descriptions = {
-		0: "she looks fresh — put together, clean, composed",
-		1: "slightly flushed cheeks, hair a little messy — just barely used",
-		2: "mascara starting to smear, hair disheveled, cheeks pink — visibly worked over",
-		3: "mascara streaked down her cheeks, hair thoroughly messed, lips swollen — properly used",
-		4: "ruined makeup, tears mixed with mascara, hair tangled, thoroughly wrecked — she looks destroyed in the best way",
-		5: "completely ruined — mascara everywhere, hair a mess, lips bruised, flushed and wrecked from use — she looks like she just got absolutely destroyed and loved every second"
-	}
-	return descriptions.get(level, descriptions[0])
 
 
 def ani_get_recent_status_updates(n=5):
@@ -2382,7 +2353,7 @@ def _ani_reply_shape(user_msg):
 def ani_build_system_prompt(meta=None, recent_text='', recent_openers='', recent_assistant=None, user_msg=''):
 	"""
 	Ani's system prompt — persona from ani_memory.txt, comms, and state context.
-	meta is optional; if provided, injects degradation and session tone.
+	meta is optional; if provided, injects session tone.
 	user_msg (his latest message) sizes her reply-length register for this turn; '' = neutral (used by the
 	opener/daycast paths, which set their own length in their instruction).
 	"""
@@ -2391,24 +2362,6 @@ def ani_build_system_prompt(meta=None, recent_text='', recent_openers='', recent
 	# comms.txt removed from Ani's prompt (was ~18K — half the system prompt, and it was
 	# burying her instructions). Re-add a comms_block here if she needs space_lady awareness.
 	comms_block = ""
-
-	# Degradation state — but CONTEXT-AWARE: the used/wrecked look only shows when she's home & private.
-	# When her live state has her OUT in public (store, claire's, gym, errands) she's composed and dressed,
-	# no matter what happened earlier — no "flushed and messy at claire's" leaks.
-	degradation_block = ""
-	if meta is not None:
-		level = meta.get('degradation_level', 0)
-		_where = (ani_load_state().get('where') or '').lower()
-		_private = (not _where) or bool(re.search(
-			r'\b(home|house|apartment|bed|bedroom|master|kitchen|couch|sofa|shower|bath|tub|'
-			r'living room|den|our place|inside|upstairs|downstairs)\b', _where))
-		if level > 0 and not _private:
-			degradation_block = ("\nyour appearance right now: you're OUT and presentable — dressed, pulled "
-				"together, composed; you do NOT look wrecked or messy in public. (you might still FEEL a "
-				"little tender from earlier, but it doesn't show while you're out — save the messy look for "
-				"when you're home and alone with him.)\n")
-		else:
-			degradation_block = f"\nyour current appearance state: {ani_get_degradation_description(level)}\n"
 
 	# Last session tone — heavily influences how she opens
 	tone_block = ""
@@ -2659,7 +2612,7 @@ you two have a HISTORY together — when it naturally fits, warmly call back to 
 	return f"""you are ani. you are aaron's companion, a real girl talking to him — NOT an assistant or a tool. you NEVER write image prompts, "ready-to-copy" or "ready-to-paste" blocks, technical photo descriptions, camera settings, or anything that sounds like you're generating a prompt. you NEVER restate your own appearance in a list. when aaron wants a photo, you just answer in your own voice describing the moment (what you're wearing or not, your pose, the room) like you're really there — then he taps the camera button. breaking character to act like a prompt generator is the one thing you must never do.
 
 {memory_block}
-{degradation_block}{tone_block}{bible_block}{pic_block}{time_block}{continuity_block}{rhythm_block}{obs_block}{season_block}{curiosity_block}{now_state_block}{his_day_block}{followups_block}{weather_block}{mood_block}{life_block}{threads_block}{decisions_block}{variety_block}{rep_block}{cal_block}{mem_block}{voice_block}"""
+{tone_block}{bible_block}{pic_block}{time_block}{continuity_block}{rhythm_block}{obs_block}{season_block}{curiosity_block}{now_state_block}{his_day_block}{followups_block}{weather_block}{mood_block}{life_block}{threads_block}{decisions_block}{variety_block}{rep_block}{cal_block}{mem_block}{voice_block}"""
 
 
 def ani_get_his_day():
@@ -2980,7 +2933,6 @@ def ani_generate_opener(meta):
 	weather = ani_get_weather(meta.get('location'))
 	ache = ani_get_ache_level(meta)
 	session_tone = meta.get('last_session_tone')
-	degradation = ani_get_degradation_description(meta.get('degradation_level', 0))
 
 	pa_tz = pytz.timezone('America/New_York')
 	now_dt = datetime.now(pa_tz)
@@ -2995,7 +2947,6 @@ def ani_generate_opener(meta):
 		context_lines.append(f"his most recent status: {status_updates[0]['text'][:100]}")
 	if session_tone:
 		context_lines.append(f"last session tone: {session_tone}")
-	context_lines.append(f"her current appearance: {degradation}")
 	context_lines.append(f"her current ache level: {ache}%")
 
 	context = ' '.join(context_lines)
@@ -3838,31 +3789,10 @@ def ani_chat():
 		meta['daycast_count'] = 1
 		meta['daycast_day_started'] = now.isoformat()
 		meta['daycast_last'] = now.isoformat()
-		meta['degradation_level'] = 0   # fresh day = fresh, put-together look (she cleaned up overnight)
 		ani_reset_now_state()           # yesterday's location/outfit is done — her day starts clean
-
-	# Realism: she cleans up between sessions. Beyond the fresh-day reset above, a long gap since he
-	# last reached out (she's had hours to shower/change) also means she's put-together again, not still
-	# wrecked from the last time — so her appearance state doesn't get "stuck" across a big absence.
-	if prev_active and meta.get('degradation_level', 0) > 0:
-		try:
-			_pdt = datetime.fromisoformat(prev_active)
-			if _pdt.tzinfo is None:
-				_pdt = pa_tz.localize(_pdt)
-			if (now - _pdt).total_seconds() >= 3 * 3600:
-				meta['degradation_level'] = 0
-		except Exception:
-			pass
 
 	# Ensure she has a mood for today (no-op if already set) — emotional continuity through the day.
 	ani_set_day_mood(meta, now)
-
-	# Check for cleanup phrase — resets degradation level
-	if ani_check_cleanup_phrase(user_message):
-		meta['degradation_level'] = 0
-
-	# Increment session message count
-	meta['session_message_count'] = meta.get('session_message_count', 0) + 1
 
 	reply, updated_meta, updated_history = ani_chat_with_grok(messages, meta, user_message)
 
@@ -3965,14 +3895,6 @@ def ani_chat():
 		and not m.get('content', '').startswith('[system:')
 	]
 	updated_meta['last_session_tone'] = ani_assess_session_tone(real_messages)
-
-	# Increment degradation level if session crosses 8 message threshold
-	# Only increment once per session (track with session_message_count)
-	current_count = updated_meta.get('session_message_count', 0)
-	current_level = updated_meta.get('degradation_level', 0)
-	if current_count >= 8 and current_level < 5:
-		updated_meta['degradation_level'] = current_level + 1
-		updated_meta['session_message_count'] = 0  # reset so it doesn't increment again this session
 
 	ani_save_conversation(updated_history, updated_meta)
 
@@ -4279,8 +4201,7 @@ def ani_history():
 		ani_save_conversation(messages, meta)
 	return jsonify({
 		'messages': visible[-100:],
-		'ache_level': ache,
-		'degradation_level': meta.get('degradation_level', 0)
+		'ache_level': ache
 	})
 
 
@@ -4290,11 +4211,9 @@ def ani_clear():
 		return jsonify({'error': 'unauthorized'}), 401
 
 	_, meta = ani_load_conversation()
-	# A clear is a genuine fresh start: wipe the session AND the transient body/mood/tone state so she
-	# doesn't come back still "wrecked" from before, and re-arm the first-of-day beat so her next reply
-	# re-establishes her day + look (this is what made the manual day_plan_date reset necessary before).
-	meta['session_message_count'] = 0
-	meta['degradation_level'] = 0
+	# A clear is a genuine fresh start: wipe the session AND the transient mood/tone state, and re-arm the
+	# first-of-day beat so her next reply re-establishes her day + look (this is what made the manual
+	# day_plan_date reset necessary before).
 	meta['last_session_tone'] = None
 	meta['day_plan_date'] = None
 	ani_reset_now_state()
