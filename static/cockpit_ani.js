@@ -426,20 +426,68 @@
 	} else {
 	  div.classList.add('ani-msg-ani');
 	  var name = 'ANI' + (when ? ' <span class="ani-time">' + when + '</span>' : '');
-	  var html = '<div class="ani-name">' + name + '</div>' + aniEscapeHtml(content).replace(/\n/g, '<br>');
-	  if (image) html += '<img class="ani-msg-img" src="' + aniEscapeHtml(image) + '" alt="" loading="lazy">';
+	  var html = '<div class="ani-name">' + name + '</div>'
+			   + '<span class="ani-msg-cap">' + aniEscapeHtml(content).replace(/\n/g, '<br>') + '</span>';
+	  if (image) {
+		html += '<img class="ani-msg-img" src="' + aniEscapeHtml(image) + '" alt="" loading="lazy">';
+		// bad render? re-roll it in place — deletes this one, generates a new one from the same scene
+		html += '<button type="button" class="ani-msg-retry" data-img="' + aniEscapeHtml(image) + '" title="bad render? re-roll it">↻ retry</button>';
+	  }
 	  div.innerHTML = html;
 	}
 	aniMsgs.insertBefore(div, aniTyping);
   }
 
-  // Tap a photo to view it larger. Delegated so it works for every rendered image.
+  // Tap a photo to view it larger; tap its retry button to re-roll it. Delegated so both work for every
+  // rendered image, including ones the poller appends later.
   aniMsgs.addEventListener('click', function(e) {
 	var t = e.target;
+	var rb = t && t.closest ? t.closest('.ani-msg-retry') : null;
+	if (rb) { e.stopPropagation(); aniRetryPhoto(rb); return; }
 	if (t && t.classList && t.classList.contains('ani-msg-img')) {
 	  aniLightbox(t.getAttribute('src'));
 	}
   });
+
+  // Re-roll a bad render: swap this photo for a fresh one generated from the same scene, in place.
+  function aniRetryPhoto(btn) {
+	var oldUrl = btn.getAttribute('data-img');
+	if (!oldUrl || btn.disabled) return;
+	var msgDiv = btn.closest('.ani-msg');
+	var img = msgDiv ? msgDiv.querySelector('.ani-msg-img') : null;
+	var cap = msgDiv ? msgDiv.querySelector('.ani-msg-cap') : null;
+	btn.disabled = true;
+	btn.textContent = '↻ developing…';
+	if (img) img.style.opacity = '0.35';
+	fetch('/ani/photo/retry', {
+	  method: 'POST',
+	  headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ image_url: oldUrl })
+	})
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		btn.disabled = false;
+		btn.textContent = '↻ retry';
+		if (data.image_url) {
+		  if (img) { img.src = data.image_url; img.style.opacity = ''; }
+		  btn.setAttribute('data-img', data.image_url);
+		  if (cap) cap.innerHTML = aniEscapeHtml(data.caption || '').replace(/\n/g, '<br>');
+		  // Match the server's stored content so the poller doesn't re-append the swapped photo as a dupe.
+		  aniSeen.add(aniSig('assistant', data.caption || '📷', data.image_url));
+		} else {
+		  if (img) img.style.opacity = '';
+		  aniRenderNotify(data.error === 'blocked'
+			? 'retry blocked by the filter — describe a tamer scene first'
+			: 'could not re-roll that photo — try again');
+		}
+	  })
+	  .catch(function() {
+		btn.disabled = false;
+		btn.textContent = '↻ retry';
+		if (img) img.style.opacity = '';
+		aniRenderNotify('retry failed — try again');
+	  });
+  }
 
   // Lightbox with zoom (pinch / wheel / double-tap) + pan.
   var lbScale = 1, lbX = 0, lbY = 0;

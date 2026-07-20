@@ -116,6 +116,24 @@ def upload_ani_image_to_bunny(image_bytes, filename, content_type='image/jpeg'):
 	return f"{BUNNY_AD_CDN_URL}/ani/pics/{filename}"
 
 
+def delete_ani_image_from_bunny(image_url):
+	"""Best-effort delete of a previously re-hosted Ani image (ani/pics/<file>) given its CDN URL — used
+	when a bad render is retried so the discarded one doesn't linger in the zone. Returns True on delete,
+	False otherwise; never raises."""
+	try:
+		if not (BUNNY_AD_STORAGE_ZONE and BUNNY_AD_API_KEY and image_url and '/ani/pics/' in image_url):
+			return False
+		filename = image_url.rsplit('/ani/pics/', 1)[1].split('?', 1)[0].strip('/')
+		if not filename:
+			return False
+		del_url = f"https://ny.storage.bunnycdn.com/{BUNNY_AD_STORAGE_ZONE}/ani/pics/{filename}"
+		r = req_lib.delete(del_url, headers={'AccessKey': BUNNY_AD_API_KEY}, timeout=30)
+		return r.status_code in (200, 204)
+	except Exception as e:
+		logger.warning(f"Bunny ani delete error: {e}")
+		return False
+
+
 def _allowed_file(filename):
 	return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_FILE_EXTENSIONS
 

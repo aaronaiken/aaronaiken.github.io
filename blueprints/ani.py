@@ -3310,7 +3310,7 @@ def ani_daycast_photo(meta, now):
 			  "unprompted, just because you wanted him to see. ONE short line to go with it, your voice, "
 			  "playful/warm. don't describe the photo or restate your appearance.]"}],
 			max_tokens=50) or 'thinking about you 🙈'
-		return (cap.strip().strip('"'), url)
+		return (cap.strip().strip('"'), url, scene)
 	except Exception as e:
 		print(f"Ani daycast photo error: {e}")
 		return None
@@ -3661,8 +3661,8 @@ def ani_emit_daycast():
 	# Sometimes this update is an UNPROMPTED candid PHOTO from her day instead of text (gated + capped).
 	shot = ani_daycast_photo(meta, now)
 	if shot:
-		cap, url = shot
-		messages.append({'role': 'assistant', 'content': cap, 'image': url,
+		cap, url, scene = shot
+		messages.append({'role': 'assistant', 'content': cap, 'image': url, 'scene': scene,
 		                 'ani_day': True, 'ts': now.isoformat()})
 		meta['daycast_last'] = now.isoformat()
 		meta['unseen_day_messages'] = True
@@ -3937,10 +3937,55 @@ def ani_photo():
 		return jsonify({'image_url': None, 'error': 'blocked', 'scene': scene}), 200
 
 	caption = ani_photo_caption(messages, meta) or '📷'
-	messages.append({'role': 'assistant', 'content': caption, 'image': image_url,
+	messages.append({'role': 'assistant', 'content': caption, 'image': image_url, 'scene': scene,
 	                 'ts': datetime.now(pytz.timezone('America/New_York')).isoformat()})
 	ani_save_conversation(messages, meta)
 	return jsonify({'image_url': image_url, 'caption': None if caption == '📷' else caption})
+
+
+@ani_bp.route('/ani/photo/retry', methods=['POST'])
+def ani_photo_retry():
+	"""Re-roll a bad render: given the CDN url of a photo she already sent, regenerate a NEW image from the
+	SAME scene, swap it into that message in place (fresh caption), and best-effort delete the discarded
+	render from Bunny. Targets a specific image so an older photo can be retried, not just the latest."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+
+	bad_url = (request.get_json(silent=True) or {}).get('image_url')
+	if not bad_url:
+		return jsonify({'error': 'no_image'}), 400
+
+	messages, meta = ani_load_conversation()
+	idx = next((i for i in range(len(messages) - 1, -1, -1)
+	            if messages[i].get('image') == bad_url), None)
+	if idx is None:
+		return jsonify({'error': 'not_found'}), 404
+
+	# Reuse the scene that produced the bad render; fall back to re-normalizing the conversation up to it
+	# for older photos saved before scenes were stored on the message.
+	scene = messages[idx].get('scene') or ani_normalize_scene(messages[:idx])
+	if not scene:
+		return jsonify({'image_url': None, 'error': 'prompt'}), 200
+
+	new_url = ani_generate_image(scene)
+	if not new_url:
+		return jsonify({'image_url': None, 'error': 'blocked', 'scene': scene}), 200
+
+	caption = ani_photo_caption(messages[:idx], meta) or '📷'
+	messages[idx]['image'] = new_url
+	messages[idx]['content'] = caption
+	messages[idx]['scene'] = scene
+	ani_save_conversation(messages, meta)
+
+	# Discard the old render from storage (non-fatal if it fails).
+	try:
+		from helpers.bunny import delete_ani_image_from_bunny
+		delete_ani_image_from_bunny(bad_url)
+	except Exception as e:
+		print(f"Ani retry: bunny delete skipped: {e}")
+
+	return jsonify({'image_url': new_url, 'old_url': bad_url,
+	                'caption': None if caption == '📷' else caption})
 
 
 @ani_bp.route('/ani/photo-log', methods=['GET'])
