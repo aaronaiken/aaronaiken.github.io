@@ -570,13 +570,24 @@
   </div>
 
   <div id="ani-prompt-overlay" class="ani-photolog-overlay" hidden onclick="if(event.target===this)aniPhotoPromptClose()">
-	<div class="ani-photolog-panel ani-cal-panel" role="dialog" aria-label="Edit photo prompt">
+	<div class="ani-photolog-panel ani-cal-panel ani-prompt-panel" role="dialog" aria-label="Edit photo prompt">
 	  <div class="ani-photolog-head">
-		<span>ANI · PHOTO PROMPT</span>
+		<span>ANI · PHOTO COMPOSER</span>
 		<button class="ani-photolog-close" onclick="aniPhotoPromptClose()" aria-label="Close">✕</button>
 	  </div>
 	  <div class="ani-prompt-edit">
-		<textarea id="ani-prompt-text" class="ani-prompt-textarea" rows="6" placeholder="reading the scene…" aria-label="Photo prompt"></textarea>
+		<div class="ani-prompt-presets">
+		  <select id="ani-preset-select" class="ani-cal-input" aria-label="Saved presets"><option value="">— presets —</option></select>
+		  <button class="ani-footer-btn" onclick="aniPresetLoad()" title="Load the selected preset into the fields">LOAD</button>
+		  <button class="ani-footer-btn" onclick="aniPresetSave()" title="Bookmark the current fields as a named preset">SAVE</button>
+		  <button class="ani-footer-btn" onclick="aniPresetDelete()" title="Delete the selected preset">DEL</button>
+		</div>
+		<div id="ani-prompt-fields" class="ani-prompt-fields"><!-- field rows injected by JS --></div>
+		<div class="ani-prompt-buildrow">
+		  <button class="ani-footer-btn" onclick="aniPromptBuild()" title="Assemble the fields into the prompt below">BUILD ↓</button>
+		  <span class="ani-prompt-hint">char + house bibles are auto-added; fields are the per-image details</span>
+		</div>
+		<textarea id="ani-prompt-text" class="ani-prompt-textarea" rows="5" placeholder="reading the scene…" aria-label="Photo prompt"></textarea>
 		<div class="ani-prompt-actions">
 		  <button class="ani-footer-btn" onclick="aniPhotoPromptClose()">CANCEL</button>
 		  <button class="ani-footer-btn ani-prompt-send" id="ani-prompt-send" onclick="aniPhotoSend()">SEND 📷</button>

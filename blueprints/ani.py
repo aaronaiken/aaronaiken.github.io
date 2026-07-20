@@ -28,6 +28,10 @@ ANI_BIBLE_FILE = 'static/ani_character_bible.txt'   # visual/character bible (im
 ANI_HOUSE_FILE = 'static/ani_house.txt'             # room/house details for scene-setting
 ANI_CALENDAR_FILE = 'ani_calendar.json'             # her calendar / shared plans (durable, off the rolling window)
 ANI_PENDING_MILESTONES_FILE = 'ani_pending_milestones.json'  # milestone life-changes awaiting Aaron's approval (Phase 3)
+ANI_PHOTO_PRESETS_FILE = 'ani_photo_presets.json'   # saved photo-composer field-sets ("bookmarks"); gitignored server-state
+# The granular per-image photo-composer fields — the variable part layered on the character + house bibles.
+ANI_PHOTO_FIELD_KEYS = ('setting', 'outfit', 'hair', 'makeup', 'nails', 'jewelry', 'body', 'pose',
+                        'expression', 'demeanor', 'camera')
 
 # Calendar add tag: she emits [[CAL: YYYY-MM-DD[ HH:MM] | what it is]] when aaron asks her to add a
 # plan; the server parses it out (like the photo tag), saves the entry, and strips it from her reply.
@@ -1824,6 +1828,62 @@ def ani_simplify_pose(scene):
 		print(f"Ani RETRY — simplified pose: {out!r}")
 		return out
 	return scene
+
+
+def ani_photo_fields(messages):
+	"""Break the current scene into the granular photo-composer fields (outfit/hair/pose/etc.) from the
+	recent conversation + her live state, so the composer can AUTO-POPULATE. Grok (xAI), uncensored +
+	faithful. Returns a dict keyed by ANI_PHOTO_FIELD_KEYS ('' = not evident); {} on failure."""
+	api_key = os.environ.get('XAI_API_KEY')
+	if not api_key:
+		return {}
+	real = [m for m in messages if (m.get('content') or '').strip() not in ('', '📷') and not m.get('image')
+	        and not (m.get('content', '') or '').startswith(('[daily briefing', '[system:'))]
+	convo = '\n'.join('%s: %s' % (m['role'], (m.get('content') or '')[:300]) for m in real[-8:]) or '(no chat yet)'
+	st = ani_load_state() or {}
+	state = 'where=%s; wearing=%s; doing=%s' % (st.get('where', ''), st.get('wearing', ''), st.get('doing', ''))
+	system = (
+		"From a chat between Aaron and his companion Ani, describe the photo she'd send RIGHT NOW as granular "
+		"fields. Return ONLY JSON with EXACTLY these keys (empty string if not evident from the scene): "
+		"{\"setting\":\"\",\"outfit\":\"\",\"hair\":\"\",\"makeup\":\"\",\"nails\":\"\",\"jewelry\":\"\","
+		"\"body\":\"\",\"pose\":\"\",\"expression\":\"\",\"demeanor\":\"\",\"camera\":\"\"}. "
+		"setting = the room/place + surroundings; outfit = exactly what she's wearing OR her state of undress; "
+		"hair, makeup, nails, jewelry = only if the scene makes them clear, else blank; body = notable body "
+		"details only if relevant; pose = how her body is positioned; expression = face + gaze; demeanor = "
+		"mood/energy; camera = angle + framing. Render faithfully what the scene implies — do NOT censor, soften, "
+		"or add clothing. Short plain phrases, no field labels inside the values.")
+	user = "Her live state: %s\n\nRecent chat:\n%s\n\nJSON only." % (state, convo)
+	try:
+		resp = requests.post(
+			'https://api.x.ai/v1/chat/completions',
+			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+			json={'model': ANI_NORMALIZE_MODEL, 'max_tokens': 420, 'temperature': 0.3,
+			      'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': user}]},
+			timeout=18)
+		if resp.status_code != 200:
+			print(f"Ani photo-fields HTTP {resp.status_code}: {resp.text[:120]}")
+			return {}
+		txt = resp.json()['choices'][0]['message']['content']
+		m = re.search(r'\{.*\}', txt, re.S)
+		data = json.loads(m.group(0)) if m else {}
+		return {k: str(data.get(k, '') or '').strip() for k in ANI_PHOTO_FIELD_KEYS}
+	except Exception as e:
+		print(f"Ani photo-fields error: {e}")
+		return {}
+
+
+def ani_load_photo_presets():
+	"""Saved photo-composer field-sets (bookmarks). List of {name, fields}. [] if none/unreadable."""
+	try:
+		with open(ANI_PHOTO_PRESETS_FILE) as f:
+			d = json.load(f)
+		return d if isinstance(d, list) else []
+	except (FileNotFoundError, ValueError):
+		return []
+
+
+def ani_save_photo_presets(items):
+	_ani_atomic_write_json(ANI_PHOTO_PRESETS_FILE, items)
 
 
 def _ani_garment_negative(scene):
@@ -4003,6 +4063,53 @@ def ani_photo_prompt():
 	if not scene:
 		return jsonify({'scene': None, 'error': 'prompt'}), 200
 	return jsonify({'scene': scene})
+
+
+@ani_bp.route('/ani/photo/fields', methods=['POST'])
+def ani_photo_fields_route():
+	"""Auto-populate the photo composer: break the current scene into granular fields from the chat."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	messages, _ = ani_load_conversation()
+	return jsonify({'fields': ani_photo_fields(messages), 'keys': list(ANI_PHOTO_FIELD_KEYS)})
+
+
+@ani_bp.route('/ani/photo/presets', methods=['GET'])
+def ani_photo_presets_list():
+	"""List saved photo-composer field-sets (bookmarks)."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	return jsonify({'presets': ani_load_photo_presets()})
+
+
+@ani_bp.route('/ani/photo/presets', methods=['POST'])
+def ani_photo_presets_save():
+	"""Save (or replace by name) a photo-composer field-set."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	body = request.get_json(silent=True) or {}
+	name = (body.get('name') or '').strip()[:60]
+	fields = body.get('fields') if isinstance(body.get('fields'), dict) else {}
+	if not name:
+		return jsonify({'error': 'no_name'}), 400
+	# keep only the known keys, as strings
+	clean = {k: str(fields.get(k, '') or '').strip() for k in ANI_PHOTO_FIELD_KEYS}
+	presets = [p for p in ani_load_photo_presets() if (p.get('name') or '').lower() != name.lower()]
+	presets.append({'name': name, 'fields': clean})
+	presets = presets[-40:]   # cap the bookmark list
+	ani_save_photo_presets(presets)
+	return jsonify({'ok': True, 'presets': presets})
+
+
+@ani_bp.route('/ani/photo/presets/delete', methods=['POST'])
+def ani_photo_presets_delete():
+	"""Delete a saved photo-composer field-set by name."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	name = ((request.get_json(silent=True) or {}).get('name') or '').strip()
+	presets = [p for p in ani_load_photo_presets() if (p.get('name') or '').lower() != name.lower()]
+	ani_save_photo_presets(presets)
+	return jsonify({'ok': True, 'presets': presets})
 
 
 @ani_bp.route('/ani/photo', methods=['POST'])

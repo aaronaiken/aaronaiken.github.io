@@ -349,56 +349,161 @@
 	});
   }
 
-  // Both 📷 (new photo) and ↻ (retry) go through the same see-and-edit modal: fetch the prompt, show it
-  // editable, then Send generates with whatever you leave in the box. Mode decides what Send does.
+  // Both 📷 (new photo) and ↻ (retry) go through the same photo composer: granular formula fields (auto-
+  // populated from the chat) + savable presets that BUILD into an editable prompt, then Send generates.
+  // The character + house bibles are auto-added server-side; the fields are the per-image variable details.
   var aniPromptMode = 'new';   // 'new' | 'retry'
   var aniRetryCtx = null;      // { btn, oldUrl } when retrying a specific photo
+  var aniPresets = [];
+  var aniFieldsRendered = false;
+  var ANI_PHOTO_FIELDS = [
+	{ key: 'setting',    label: 'Setting / Room' },
+	{ key: 'outfit',     label: 'Outfit' },
+	{ key: 'hair',       label: 'Hair' },
+	{ key: 'makeup',     label: 'Makeup' },
+	{ key: 'nails',      label: 'Nails' },
+	{ key: 'jewelry',    label: 'Jewelry' },
+	{ key: 'body',       label: 'Body Details' },
+	{ key: 'pose',       label: 'Pose' },
+	{ key: 'expression', label: 'Expression' },
+	{ key: 'demeanor',   label: 'Demeanor' },
+	{ key: 'camera',     label: 'Camera / Framing' }
+  ];
+
+  function aniRenderPromptFields() {
+	if (aniFieldsRendered) return;
+	var wrap = document.getElementById('ani-prompt-fields');
+	if (!wrap) return;
+	var html = '';
+	ANI_PHOTO_FIELDS.forEach(function(f) {
+	  html += '<label class="ani-field-row"><span class="ani-field-label">' + f.label + '</span>'
+		   +  '<input type="text" class="ani-field-input" id="ani-f-' + f.key + '" autocomplete="off"></label>';
+	});
+	wrap.innerHTML = html;
+	aniFieldsRendered = true;
+  }
+  function aniGetFields() {
+	var o = {};
+	ANI_PHOTO_FIELDS.forEach(function(f) { var el = document.getElementById('ani-f-' + f.key); o[f.key] = el ? el.value.trim() : ''; });
+	return o;
+  }
+  function aniSetFields(fields) {
+	fields = fields || {};
+	ANI_PHOTO_FIELDS.forEach(function(f) { var el = document.getElementById('ani-f-' + f.key); if (el) el.value = (fields[f.key] || ''); });
+  }
+  // Assemble the non-empty fields, in formula order, into the editable prompt box.
+  function aniPromptBuild() {
+	var f = aniGetFields(), parts = [];
+	ANI_PHOTO_FIELDS.forEach(function(x) { if (f[x.key]) parts.push(f[x.key]); });
+	var box = document.getElementById('ani-prompt-text');
+	if (box) box.value = parts.join(', ');
+  }
+
+  // Presets (bookmarks) — saved field-sets.
+  function aniRenderPresetOptions(selectName) {
+	var sel = document.getElementById('ani-preset-select');
+	if (!sel) return;
+	sel.innerHTML = '<option value="">— presets —</option>';
+	aniPresets.forEach(function(p) { var o = document.createElement('option'); o.value = p.name; o.textContent = p.name; sel.appendChild(o); });
+	if (selectName) sel.value = selectName;
+  }
+  function aniPresetRefresh() {
+	fetch('/ani/photo/presets').then(function(r) { return r.json(); })
+	  .then(function(data) { aniPresets = data.presets || []; aniRenderPresetOptions(); })
+	  .catch(function() {});
+  }
+  function aniPresetLoad() {
+	var sel = document.getElementById('ani-preset-select');
+	if (!sel || !sel.value) return;
+	var p = aniPresets.filter(function(x) { return x.name === sel.value; })[0];
+	if (p) { aniSetFields(p.fields || {}); aniPromptBuild(); }
+  }
+  function aniPresetSave() {
+	var name = (window.prompt('Bookmark these fields as:') || '').trim();
+	if (!name) return;
+	fetch('/ani/photo/presets', {
+	  method: 'POST', headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ name: name, fields: aniGetFields() })
+	})
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) { if (data.presets) { aniPresets = data.presets; aniRenderPresetOptions(name); } })
+	  .catch(function() { aniRenderNotify('could not save that preset'); });
+  }
+  function aniPresetDelete() {
+	var sel = document.getElementById('ani-preset-select');
+	if (!sel || !sel.value) return;
+	if (!window.confirm('Delete preset "' + sel.value + '"?')) return;
+	fetch('/ani/photo/presets/delete', {
+	  method: 'POST', headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ name: sel.value })
+	})
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) { aniPresets = data.presets || []; aniRenderPresetOptions(); })
+	  .catch(function() {});
+  }
 
   function aniPhoto() {
 	if (aniPhotoBtn.disabled) return;
 	aniPromptMode = 'new'; aniRetryCtx = null;
-	aniPromptOpen(function() {
-	  return fetch('/ani/photo/prompt', { method: 'POST' }).then(function(r) { return r.json(); });
+	aniPromptOpen(function(box, sendBtn) {
+	  // Auto-populate the fields from the current chat, then build them into the box.
+	  fetch('/ani/photo/fields', { method: 'POST' })
+		.then(function(r) { return r.json(); })
+		.then(function(data) {
+		  if (data && data.fields) { aniSetFields(data.fields); aniPromptBuild(); }
+		  box.placeholder = 'fields → BUILD ↓, or type/edit the prompt directly';
+		  sendBtn.disabled = false;
+		  // If the fields came back empty, fall back to the plain normalized scene so the box isn't blank.
+		  if (!box.value.trim()) {
+			fetch('/ani/photo/prompt', { method: 'POST' }).then(function(r) { return r.json(); })
+			  .then(function(d) { if (d && d.scene && !box.value.trim()) box.value = d.scene; });
+		  }
+		})
+		.catch(function() { box.placeholder = 'fill the fields or type a prompt, then Send'; sendBtn.disabled = false; });
 	});
   }
 
-  // ↻ retry: open the editable prompt for THIS photo (its stored scene), then Send re-rolls it in place.
+  // ↻ retry: open the composer for THIS photo (its stored scene in the box), then Send re-rolls it in place.
   function aniRetryPhoto(btn) {
 	var oldUrl = btn.getAttribute('data-img');
 	if (!oldUrl || btn.disabled) return;
 	aniPromptMode = 'retry';
 	aniRetryCtx = { btn: btn, oldUrl: oldUrl };
-	aniPromptOpen(function() {
-	  return fetch('/ani/photo/retry', {
+	aniPromptOpen(function(box, sendBtn) {
+	  fetch('/ani/photo/retry', {
 		method: 'POST', headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ image_url: oldUrl, preview: true })
-	  }).then(function(r) { return r.json(); });
+	  })
+		.then(function(r) { return r.json(); })
+		.then(function(data) {
+		  if (data && data.scene) {
+			box.value = data.scene;
+			box.placeholder = 'edit freely, or use the fields + BUILD to override';
+			sendBtn.disabled = false;
+			box.focus();
+		  } else {
+			box.placeholder = 'no scene yet — describe one first, then retry';
+		  }
+		})
+		.catch(function() { box.placeholder = 'could not read the scene — close and try again'; });
 	});
   }
 
-  // Open the modal and fill it via `fetcher` (a fn returning a promise of {scene}).
-  function aniPromptOpen(fetcher) {
+  // Open the composer: render fields, refresh presets, reset, then let the caller populate (box, sendBtn).
+  function aniPromptOpen(populate) {
 	var overlay = document.getElementById('ani-prompt-overlay');
 	var box = document.getElementById('ani-prompt-text');
 	var sendBtn = document.getElementById('ani-prompt-send');
 	if (!overlay || !box || !sendBtn) return;
+	aniRenderPromptFields();
+	aniPresetRefresh();
+	aniSetFields({});
 	box.value = '';
 	box.placeholder = 'reading the scene…';
 	sendBtn.disabled = true;
 	sendBtn.textContent = aniPromptMode === 'retry' ? 'RE-ROLL 📷' : 'SEND 📷';
 	overlay.hidden = false;
-	fetcher()
-	  .then(function(data) {
-		if (data && data.scene) {
-		  box.value = data.scene;
-		  box.placeholder = 'the scene she photographs — edit freely';
-		  sendBtn.disabled = false;
-		  box.focus();
-		} else {
-		  box.placeholder = 'no scene yet — describe one to her first, then tap 📷';
-		}
-	  })
-	  .catch(function() { box.placeholder = 'could not read the scene — close and try again'; });
+	populate(box, sendBtn);
   }
 
   function aniPhotoPromptClose() {
