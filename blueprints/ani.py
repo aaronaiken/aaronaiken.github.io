@@ -2098,7 +2098,8 @@ def ani_generate_image(scene):
 	# pen-and-paper. Anchor the laptop in the scene and (below) negate the handwriting attractor.
 	writing_scene = bool(_ANI_WRITING_RE.search(clean_scene))
 	if writing_scene and not re.search(r'\b(macbook|laptop|keyboard)\b', clean_scene, re.IGNORECASE):
-		clean_scene += ', typing on her open silver MacBook laptop'
+		clean_scene += (', hands on the keyboard typing on her open silver MacBook laptop, '
+		                'fingers resting on the keys, no pen or paper')
 	bible = ani_get_bible() or ''
 
 	if ANI_IMAGE_BACKEND == 'venice':
@@ -2136,8 +2137,9 @@ def ani_generate_image(scene):
 		pose_neg = _ani_pose_negative(clean_scene)
 		require_rear = bool(_ANI_REAR_INTENT_RE.search(clean_scene))
 		# Keep a writing scene on the laptop — negate the pen-and-paper attractor so it doesn't render by hand.
-		writing_neg = ('pen, pencil, fountain pen, paper, notebook, stationery, handwriting, handwritten, '
-		               'writing by hand, ink') if writing_scene else ''
+		writing_neg = ('pen, pencil, stylus, fountain pen, holding a pen, holding a stylus, pen in hand, '
+		               'writing implement, hand on trackpad, finger on touchpad, paper, notebook, stationery, '
+		               'handwriting, handwritten, writing by hand, ink') if writing_scene else ''
 		# Base realism + always-on dup/anatomy guards + scene-specific garment/pose/writing negatives.
 		negative = ', '.join(p for p in (
 			VENICE_NEGATIVE_PROMPT, VENICE_DUP_NEGATIVE, VENICE_ANATOMY_NEGATIVE, extra_neg, pose_neg, writing_neg) if p)
