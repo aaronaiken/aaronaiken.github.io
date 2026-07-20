@@ -254,6 +254,9 @@ ANI_DAYCAST_EMOTIONAL_CHANCE = float(os.environ.get('ANI_DAYCAST_EMOTIONAL_CHANC
 # hour; a today plan that's underway completes ('done', triggering a 'how it went' beat) after this ET hour.
 ANI_PLAN_START_HOUR = int(os.environ.get('ANI_PLAN_START_HOUR', '10'))
 ANI_PLAN_DONE_HOUR = int(os.environ.get('ANI_PLAN_DONE_HOUR', '20'))
+# Retention: prune calendar entries older than this many days (past-dated only) so the file doesn't
+# accumulate forever. Anything older is already invisible in her context (yesterday+) and panel (last 2 days+).
+ANI_CALENDAR_RETAIN_DAYS = int(os.environ.get('ANI_CALENDAR_RETAIN_DAYS', '7'))
 
 # Self-scheduling (Phase 3 autonomy): once a day she may put a NEW plan of her own on the calendar, drawn
 # from her life — but only if she isn't already booked up in the lookahead window, and only on a chance roll.
@@ -3411,6 +3414,13 @@ def ani_sweep_plans(now):
 	today = now.strftime('%Y-%m-%d')
 	entries = ani_load_calendar()
 	started, completed, changed = [], [], False
+	# Prune long-passed entries (any source) so the calendar file doesn't grow forever. Only touches
+	# past-dated entries older than the retention window; future + dateless entries are kept.
+	cutoff = (now - timedelta(days=ANI_CALENDAR_RETAIN_DAYS)).strftime('%Y-%m-%d')
+	kept = [e for e in entries if not (e.get('date') and e['date'] < cutoff)]
+	if len(kept) != len(entries):
+		entries = kept
+		changed = True
 	for e in entries:
 		if e.get('source') != 'her':
 			continue
