@@ -262,6 +262,26 @@
 .ani-msg-retry:hover { opacity: 1; background: rgba(245, 179, 50, 0.14); }
 .ani-msg-retry:disabled { cursor: default; opacity: 0.5; }
 
+.ani-msg-imgtools { display: flex; gap: 6px; margin-top: 6px; }
+.ani-msg-bookmark {
+  display: inline-block;
+  padding: 3px 10px;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgba(245, 179, 50, 0.85);
+  background: rgba(245, 179, 50, 0.06);
+  border: 1px solid rgba(245, 179, 50, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.ani-msg-bookmark:hover { opacity: 1; background: rgba(245, 179, 50, 0.14); }
+.ani-msg-bookmark:disabled { cursor: default; opacity: 0.5; }
+/* the retry button already has margin-top for the old single-button layout; inside the tools row it's flush */
+.ani-msg-imgtools .ani-msg-retry { margin-top: 0; }
+
 .ani-msg-notify {
   align-self: center;
   background: transparent;

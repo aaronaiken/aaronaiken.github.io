@@ -4112,6 +4112,29 @@ def ani_photo_presets_delete():
 	return jsonify({'ok': True, 'presets': presets})
 
 
+@ani_bp.route('/ani/photo/presets/from-image', methods=['POST'])
+def ani_photo_presets_from_image():
+	"""Bookmark AFTER the fact: save the exact scene that produced an already-sent photo as a named preset,
+	so a keeper can be re-used once you've seen it landed. Loads with the scene straight into the prompt box."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	body = request.get_json(silent=True) or {}
+	img = (body.get('image_url') or '').strip()
+	name = (body.get('name') or '').strip()[:60]
+	if not img or not name:
+		return jsonify({'error': 'bad_request'}), 400
+	messages, _ = ani_load_conversation()
+	msg = next((m for m in reversed(messages) if m.get('image') == img), None)
+	scene = (msg or {}).get('scene')
+	if not scene:
+		return jsonify({'error': 'no_scene'}), 404
+	presets = [p for p in ani_load_photo_presets() if (p.get('name') or '').lower() != name.lower()]
+	presets.append({'name': name, 'fields': {k: '' for k in ANI_PHOTO_FIELD_KEYS}, 'scene': scene})
+	presets = presets[-40:]
+	ani_save_photo_presets(presets)
+	return jsonify({'ok': True, 'presets': presets})
+
+
 @ani_bp.route('/ani/photo', methods=['POST'])
 def ani_photo():
 	"""Button-triggered photo. Normalize the recent conversation into a safe prompt (or use an operator-edited

@@ -416,7 +416,12 @@
 	var sel = document.getElementById('ani-preset-select');
 	if (!sel || !sel.value) return;
 	var p = aniPresets.filter(function(x) { return x.name === sel.value; })[0];
-	if (p) { aniSetFields(p.fields || {}); aniPromptBuild(); }
+	if (!p) return;
+	aniSetFields(p.fields || {});
+	// After-the-fact bookmarks carry the exact scene → drop it straight in. Field-based presets → assemble.
+	var box = document.getElementById('ani-prompt-text');
+	if (p.scene) { if (box) box.value = p.scene; }
+	else { aniPromptBuild(); }
   }
   function aniPresetSave() {
 	var name = (window.prompt('Bookmark these fields as:') || '').trim();
@@ -645,8 +650,12 @@
 			   + '<span class="ani-msg-cap">' + aniEscapeHtml(content).replace(/\n/g, '<br>') + '</span>';
 	  if (image) {
 		html += '<img class="ani-msg-img" src="' + aniEscapeHtml(image) + '" alt="" loading="lazy">';
+		html += '<div class="ani-msg-imgtools">';
 		// bad render? re-roll it in place — deletes this one, generates a new one from the same scene
 		html += '<button type="button" class="ani-msg-retry" data-img="' + aniEscapeHtml(image) + '" title="bad render? re-roll it">↻ retry</button>';
+		// a keeper? bookmark the exact prompt that produced it as a reusable preset
+		html += '<button type="button" class="ani-msg-bookmark" data-img="' + aniEscapeHtml(image) + '" title="bookmark this shot as a preset">★ bookmark</button>';
+		html += '</div>';
 	  }
 	  div.innerHTML = html;
 	}
@@ -659,10 +668,41 @@
 	var t = e.target;
 	var rb = t && t.closest ? t.closest('.ani-msg-retry') : null;
 	if (rb) { e.stopPropagation(); aniRetryPhoto(rb); return; }
+	var bm = t && t.closest ? t.closest('.ani-msg-bookmark') : null;
+	if (bm) { e.stopPropagation(); aniBookmarkPhoto(bm); return; }
 	if (t && t.classList && t.classList.contains('ani-msg-img')) {
 	  aniLightbox(t.getAttribute('src'));
 	}
   });
+
+  // ★ bookmark a keeper after the fact: save the exact prompt that produced this photo as a named preset.
+  function aniBookmarkPhoto(btn) {
+	var img = btn.getAttribute('data-img');
+	if (!img || btn.disabled) return;
+	var name = (window.prompt('Bookmark this shot as:') || '').trim();
+	if (!name) return;
+	btn.disabled = true;
+	var prev = btn.textContent;
+	btn.textContent = '★ saving…';
+	fetch('/ani/photo/presets/from-image', {
+	  method: 'POST', headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ image_url: img, name: name })
+	})
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		btn.disabled = false;
+		if (data && data.ok) {
+		  aniPresets = data.presets || aniPresets;
+		  btn.textContent = '★ saved';
+		  aniRenderNotify('bookmarked as "' + name + '" — load it from the composer presets');
+		  setTimeout(function() { btn.textContent = prev; }, 2500);
+		} else {
+		  btn.textContent = prev;
+		  aniRenderNotify('could not bookmark that shot');
+		}
+	  })
+	  .catch(function() { btn.disabled = false; btn.textContent = prev; aniRenderNotify('bookmark failed — try again'); });
+  }
 
   // (aniRetryPhoto now lives with the photo-prompt modal above — retry routes through the same edit box.)
 
