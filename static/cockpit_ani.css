@@ -1474,3 +1474,117 @@ body.ani-fullscreen #ani-input-row { border-top-width: 1px; }
 }
 .ani-sys-clearbtn:disabled { opacity: 0.4; cursor: not-allowed; }
 .ani-sys-clearbtn:not(:disabled):hover { background: var(--ani-danger); color: #fff; }
+
+/* ── STORY overlay: the bookshelf ──────────────────────────────────────────── */
+.ani-story-panel { max-width: 560px; }
+.ani-story-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--ani-hairline);
+}
+.ani-story-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--ani-foot);
+  font-family: var(--ani-font);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.ani-story-tab:hover { color: var(--ani-sub); }
+.ani-story-tab.on { color: var(--ani-accent); border-bottom-color: var(--ani-accent-dim); }
+.ani-story-body { padding: 10px 12px; }
+.ani-story-subhead {
+  color: var(--ani-milestone);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  margin: 14px 0 8px;
+}
+
+/* ARC — book cards */
+.ani-book {
+  border: 1px solid var(--ani-hairline);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: var(--ani-status-bg);
+}
+.ani-book-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ani-book-title { color: var(--ani-bub-her-tx); font-size: 0.86rem; letter-spacing: 0.02em; }
+.ani-book-kind {
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ani-sub);
+  white-space: nowrap;
+}
+.ani-book-kind.shared { color: var(--ani-shared); }
+.ani-book-kind.hers { color: var(--ani-hers); }
+.ani-book-blurb { color: var(--ani-sub); font-size: 0.66rem; line-height: 1.45; margin-top: 4px; }
+.ani-book-ch { color: var(--ani-time); font-size: 0.64rem; margin-top: 8px; line-height: 1.4; }
+.ani-book-ch b { color: var(--ani-bub-her-tx); font-weight: 500; }
+.ani-book-bar {
+  height: 3px;
+  background: var(--ani-hairline);
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.ani-book-bar span { display: block; height: 100%; background: var(--ani-accent-dim); transition: width 0.4s; }
+.ani-book-meta { color: var(--ani-foot); font-size: 0.56rem; letter-spacing: 0.03em; margin-top: 5px; }
+.ani-book-latest { color: var(--ani-time); font-size: 0.64rem; font-style: italic; margin-top: 8px; line-height: 1.45; }
+.ani-book-recap {
+  background: none;
+  border: none;
+  color: var(--ani-sub);
+  font-family: var(--ani-font);
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  padding: 6px 0 0;
+  cursor: pointer;
+}
+.ani-book-recap:hover { color: var(--ani-accent); }
+.ani-book-recap-out {
+  color: var(--ani-bub-her-tx);
+  font-size: 0.66rem;
+  line-height: 1.5;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--ani-hairline);
+}
+
+/* TIMELINE — beats, stripe-coded */
+.ani-beat {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0 8px 10px;
+  border-left: 2px solid var(--ani-hairline);
+  margin-bottom: 2px;
+}
+.ani-beat.hers { border-left-color: var(--ani-hers); }
+.ani-beat.shared { border-left-color: var(--ani-shared); }
+.ani-beat.milestone { border-left-color: var(--ani-milestone); }
+.ani-beat-glyph { color: var(--ani-milestone); font-size: 0.7rem; line-height: 1.5; }
+.ani-beat-main { flex: 1; }
+.ani-beat-text { color: var(--ani-bub-her-tx); font-size: 0.68rem; line-height: 1.5; }
+.ani-beat.milestone .ani-beat-text { color: var(--ani-milestone); }
+.ani-beat-meta { color: var(--ani-foot); font-size: 0.55rem; letter-spacing: 0.04em; margin-top: 3px; }
+
+/* DECISIONS — reuse .ani-fork; light story tweaks */
+.ani-story-fork { background: var(--ani-status-bg); border: 1px solid var(--ani-hairline); border-radius: 8px; padding: 10px 12px; }
+.ani-fork-status { color: var(--ani-sub); font-size: 0.64rem; line-height: 1.4; margin: 4px 0 8px; }
+
+/* PEOPLE — cast list */
+.ani-person {
+  border-bottom: 1px solid var(--ani-hairline);
+  padding: 10px 0;
+}
+.ani-person:last-child { border-bottom: none; }
+.ani-person-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ani-person-name { color: var(--ani-accent); font-size: 0.76rem; letter-spacing: 0.02em; }
+.ani-person-books { color: var(--ani-foot); font-size: 0.56rem; letter-spacing: 0.03em; text-align: right; }
+.ani-person-beat { color: var(--ani-time); font-size: 0.64rem; font-style: italic; margin-top: 5px; line-height: 1.45; }

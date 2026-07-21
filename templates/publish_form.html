@@ -568,6 +568,7 @@
 	  <button class="ani-footer-btn" onclick="aniCore()" aria-label="Edit core memory" title="Edit her core memory / persona file">CORE</button>
 	  <button class="ani-footer-btn" onclick="aniPhotoLog()" aria-label="View photo log" title="Recent photo generations + QA verdicts">LOG</button>
 	  <button class="ani-footer-btn" onclick="aniLibrary()" aria-label="Favorites library" title="Your favorited photos">LIB ♥</button>
+	  <button class="ani-footer-btn" onclick="aniStoryOpen()" aria-label="Her story" title="The bookshelf — her ongoing storylines">STORY</button>
 	  <button class="ani-footer-btn" onclick="aniSysOpen()" aria-label="System settings" title="Quiet hours · backups · clear history">SYS</button>
 	  <span id="ani-bk-status" class="ani-bk-status" hidden title="Last backup"></span>
 	</div>
@@ -652,6 +653,22 @@
 		</div>
 
 	  </div>
+	</div>
+  </div>
+
+  <div id="ani-story-overlay" class="ani-photolog-overlay" hidden onclick="if(event.target===this)aniStoryClose()">
+	<div class="ani-photolog-panel ani-story-panel" role="dialog" aria-label="Her story">
+	  <div class="ani-photolog-head">
+		<span>ANI · THE BOOKSHELF</span>
+		<button class="ani-photolog-close" onclick="aniStoryClose()" aria-label="Close">✕</button>
+	  </div>
+	  <div class="ani-story-tabs" id="ani-story-tabs">
+		<button class="ani-story-tab on" data-tab="arc" onclick="aniStoryTab('arc')">ARC</button>
+		<button class="ani-story-tab" data-tab="timeline" onclick="aniStoryTab('timeline')">TIMELINE</button>
+		<button class="ani-story-tab" data-tab="decisions" onclick="aniStoryTab('decisions')">DECISIONS</button>
+		<button class="ani-story-tab" data-tab="people" onclick="aniStoryTab('people')">PEOPLE</button>
+	  </div>
+	  <div id="ani-story-body" class="ani-photolog-body ani-story-body"></div>
 	</div>
   </div>
 

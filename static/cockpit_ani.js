@@ -904,6 +904,115 @@
 	}
   }
 
+  // ── STORY overlay: the bookshelf (ARC / TIMELINE / DECISIONS / PEOPLE) ─────
+  var aniStoryData = null, aniStoryCurTab = 'arc';
+  function aniStoryOpen() {
+	var ov = document.getElementById('ani-story-overlay'); if (!ov) return;
+	ov.hidden = false;
+	var body = document.getElementById('ani-story-body');
+	if (body && !aniStoryData) body.innerHTML = '<div class="plog-msg">reading her shelf…</div>';
+	fetch('/ani/story').then(function(r) { return r.json(); }).then(function(data) {
+	  aniStoryData = data; aniStoryRender();
+	}).catch(function() { if (body) body.innerHTML = '<div class="plog-msg">couldn\'t reach her story</div>'; });
+  }
+  function aniStoryClose() { var o = document.getElementById('ani-story-overlay'); if (o) o.hidden = true; }
+  function aniStoryTab(tab) {
+	aniStoryCurTab = tab;
+	Array.prototype.forEach.call(document.querySelectorAll('#ani-story-tabs .ani-story-tab'), function(b) {
+	  b.classList.toggle('on', b.getAttribute('data-tab') === tab);
+	});
+	aniStoryRender();
+  }
+  function aniStoryKindLabel(k) {
+	return ({ relationship: 'relationship', creative: 'creative', 'side-hustle': 'side hustle', shared: 'the two of you' })[k] || k || '';
+  }
+  function aniStoryBeatStripe(kind) { return kind === 'milestone' ? 'milestone' : (kind === 'shared' ? 'shared' : 'hers'); }
+  function aniStoryRender() {
+	var body = document.getElementById('ani-story-body'); if (!body || !aniStoryData) return;
+	var d = aniStoryData, html = '';
+	if (aniStoryCurTab === 'arc') {
+	  var books = (d.books || []).filter(function(b) { return b.status === 'active'; });
+	  if (!books.length) html += '<div class="plog-msg">the shelf is empty</div>';
+	  books.forEach(function(b) {
+		var ch = b.chapter || {}, pct = Math.round((ch.progress || 0) * 100);
+		html += '<div class="ani-book" data-id="' + aniEscapeHtml(b.id) + '">';
+		html += '<div class="ani-book-top"><span class="ani-book-title">' + aniEscapeHtml(b.title || '') + '</span>'
+			 + '<span class="ani-book-kind ' + aniStoryBeatStripe(b.who) + '">' + aniStoryKindLabel(b.kind) + '</span></div>';
+		html += '<div class="ani-book-blurb">' + aniEscapeHtml(b.blurb || '') + '</div>';
+		html += '<div class="ani-book-ch">ch. ' + (ch.n || 1) + ' · <b>' + aniEscapeHtml(ch.title || '') + '</b>'
+			 + (ch.theme ? ' — ' + aniEscapeHtml(ch.theme) : '') + '</div>';
+		html += '<div class="ani-book-bar"><span style="width:' + pct + '%"></span></div>';
+		html += '<div class="ani-book-meta">' + pct + '% through' + (ch.est_weeks ? ' · ~' + ch.est_weeks + 'wk chapter' : '')
+			 + ((b.chapters_done && b.chapters_done.length) ? ' · ' + b.chapters_done.length + ' behind it' : '') + '</div>';
+		var latest = (b.beats || []).slice(-1)[0];
+		if (latest) html += '<div class="ani-book-latest">latest: ' + aniEscapeHtml(latest.text || '') + '</div>';
+		html += '<button class="ani-book-recap" onclick="aniStoryRecap(\'' + aniEscapeHtml(b.id) + '\', this)">story so far ↗</button>';
+		html += '<div class="ani-book-recap-out" hidden></div>';
+		html += '</div>';
+	  });
+	} else if (aniStoryCurTab === 'timeline') {
+	  var tl = d.timeline || [];
+	  if (!tl.length) html += '<div class="plog-msg">no beats yet — check back after her day moves</div>';
+	  tl.forEach(function(bt) {
+		var stripe = aniStoryBeatStripe(bt.kind);
+		html += '<div class="ani-beat ' + stripe + '">'
+			 + (bt.kind === 'milestone' ? '<span class="ani-beat-glyph">◆</span>' : '')
+			 + '<div class="ani-beat-main"><div class="ani-beat-text">' + aniEscapeHtml(bt.text || '') + '</div>'
+			 + '<div class="ani-beat-meta">' + aniEscapeHtml(bt.book || '') + ' · ' + aniFmtMsgTime(bt.ts) + '</div></div></div>';
+	  });
+	} else if (aniStoryCurTab === 'decisions') {
+	  var dec = d.decisions || [], ms = d.milestones || [];
+	  if (!dec.length && !ms.length) html += '<div class="plog-msg">nothing on the table right now</div>';
+	  dec.forEach(function(f) {
+		html += '<div class="ani-fork ani-story-fork"><div class="ani-fork-head"><span class="ani-fork-glyph">⑂</span> '
+			 + aniEscapeHtml(f.name || '') + '</div>';
+		if (f.status) html += '<div class="ani-fork-status">' + aniEscapeHtml(f.status) + '</div>';
+		html += '<div class="ani-fork-opts">';
+		(f.options || []).forEach(function(opt) {
+		  html += '<button class="ani-fork-opt" onclick="aniStoryDecide(\'' + aniEscapeHtml((f.name || '').replace(/'/g, "\\'"))
+			   + '\', \'' + aniEscapeHtml((opt || '').replace(/'/g, "\\'")) + '\', this)">' + aniEscapeHtml(opt) + '</button>';
+		});
+		html += '</div></div>';
+	  });
+	  if (ms.length) html += '<div class="ani-story-subhead">✦ awaiting your call</div>';
+	  ms.forEach(function(m) {
+		html += '<div class="ani-fork ani-story-fork"><div class="ani-fork-head"><span class="ani-fork-glyph">✦</span> '
+			 + aniEscapeHtml(m.text || '') + (m.datelabel ? ' <span class="ani-book-meta">· ' + aniEscapeHtml(m.datelabel) + '</span>' : '') + '</div>'
+			 + '<div class="ani-fork-opts">'
+			 + '<button class="ani-fork-opt" onclick="aniMilestone(\'' + aniEscapeHtml(m.id) + '\', true, this); setTimeout(aniStoryOpen, 400)">add to her life</button>'
+			 + '<button class="ani-fork-opt" onclick="aniMilestone(\'' + aniEscapeHtml(m.id) + '\', false, this); setTimeout(aniStoryOpen, 400)">not yet</button>'
+			 + '</div></div>';
+	  });
+	} else if (aniStoryCurTab === 'people') {
+	  var ppl = d.people || [];
+	  if (!ppl.length) html += '<div class="plog-msg">no one on stage yet</div>';
+	  ppl.forEach(function(p) {
+		html += '<div class="ani-person"><div class="ani-person-top"><span class="ani-person-name">' + aniEscapeHtml(p.name || '') + '</span>'
+			 + '<span class="ani-person-books">' + aniEscapeHtml((p.books || []).join(' · ')) + '</span></div>';
+		if (p.last_beat) html += '<div class="ani-person-beat">' + aniEscapeHtml(p.last_beat) + '</div>';
+		html += '</div>';
+	  });
+	}
+	body.innerHTML = html;
+  }
+  function aniStoryRecap(bookId, btn) {
+	var card = btn.closest('.ani-book'); if (!card) return;
+	var out = card.querySelector('.ani-book-recap-out'); if (!out) return;
+	if (!out.hidden) { out.hidden = true; return; }
+	out.hidden = false; out.textContent = 'gathering the thread…';
+	fetch('/ani/story/recap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: bookId }) })
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) { out.textContent = data.recap || '(nothing written yet)'; })
+	  .catch(function() { out.textContent = 'couldn\'t gather it'; });
+  }
+  function aniStoryDecide(name, choice, btn) {
+	if (btn) { btn.disabled = true; btn.textContent = '…'; }
+	fetch('/ani/decide', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, choice: choice }) })
+	  .then(function(r) { return r.json(); })
+	  .then(function() { aniLoadDecisions(); aniStoryOpen(); })
+	  .catch(function() { if (btn) { btn.disabled = false; } });
+  }
+
   function aniFmtMsgTime(iso) {
 	if (!iso) return '';
 	var d = new Date(iso);

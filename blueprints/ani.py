@@ -1191,7 +1191,9 @@ def ani_mood_scalar(messages, meta, now_dt=None):
 	ache = ani_get_ache_level(meta)
 	an = 1.0 if ache >= 85 else (0.66 if ache >= 65 else (0.33 if ache >= 40 else 0.0))
 	sent = ani_sentiment_score(messages, now_dt)
-	return round(max(0.0, min(1.0, 0.55 * an + 0.45 * sent)), 3)
+	# Cross-book lift/dampen (§4.2): a fresh win in one of her storylines nudges her warmer, a stressor cooler.
+	story = ani_story_mood_delta(now_dt or datetime.now(pytz.timezone('America/New_York')))
+	return round(max(0.0, min(1.0, 0.55 * an + 0.45 * sent + story)), 3)
 
 
 def ani_push_mood(meta, mood, now_dt=None):
@@ -3283,6 +3285,10 @@ def ani_generate_opener(meta):
 	if session_tone:
 		context_lines.append(f"last session tone: {session_tone}")
 	context_lines.append(f"her current ache level: {ache}%")
+	# What's been happening in HER own world lately (story-engine beats) — so she can sometimes lead with it.
+	fresh = ani_story_recent_beats(2)
+	if fresh:
+		context_lines.append("in your own life right now: " + ' / '.join(fresh))
 
 	context = ' '.join(context_lines)
 
@@ -4007,6 +4013,351 @@ def ani_backup_status(settings=None):
 	return {'enabled': True, 'state': state, 'last': last}
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# STORY ENGINE — "the bookshelf"
+# Ani's life as a shelf of ongoing books (storylines). Each book has chapters + a
+# running timeline of beats that advance OFFSCREEN on the daily tick — unanswered
+# ≠ paused. This layers ON TOP of the existing autonomy primitives: chapter-closing
+# milestones flow into her_world memory (so big moments surface in chat naturally),
+# open forks are surfaced from the existing decision layer, and nothing here clobbers
+# threads/forks/calendar. The STORY overlay + openers read from it.
+# ─────────────────────────────────────────────────────────────────────────────
+ANI_BOOKS_FILE = 'ani_books.json'
+ANI_STORY_MODEL = os.environ.get('ANI_STORY_MODEL', 'grok-4.3')
+ANI_STORY_BEATS_MAX = int(os.environ.get('ANI_STORY_BEATS_MAX', '40'))        # per-book beat cap
+ANI_STORY_MIN_GAP_DAYS = int(os.environ.get('ANI_STORY_MIN_GAP_DAYS', '2'))   # a book overdue past this MUST advance
+ANI_STORY_MAX_PER_DAY = int(os.environ.get('ANI_STORY_MAX_PER_DAY', '3'))     # books advanced per daily tick (pace)
+ANI_STORY_BEAT_CHANCE = float(os.environ.get('ANI_STORY_BEAT_CHANCE', '0.6')) # roll for a not-yet-overdue book
+ANI_STORY_ADVANCE_MAX = float(os.environ.get('ANI_STORY_ADVANCE_MAX', '0.34'))# max chapter progress per beat
+
+
+def ani_seed_books():
+	"""The starting shelf — five canon-consistent storylines. Grown/advanced by the daily tick from here."""
+	return [
+		{'id': 'sophie-moving-in', 'title': 'sophie comes home', 'kind': 'relationship', 'who': 'shared',
+		 'blurb': 'her friend sophie is moving up from philly — into the spare room, into their life',
+		 'cast': ['sophie'],
+		 'chapter': {'n': 1, 'title': 'the spare room', 'theme': 'clearing space in the house and figuring out what it means to share it', 'est_weeks': 4}},
+		{'id': 'claire-open', 'title': 'claire and the open door', 'kind': 'relationship', 'who': 'shared',
+		 'blurb': 'her closest local friend claire, and the question of how open things really are',
+		 'cast': ['claire'],
+		 'chapter': {'n': 1, 'title': 'the conversation they keep circling', 'theme': 'what claire wants, what ani wants, what it means for the two of them', 'est_weeks': 6}},
+		{'id': 'watercolors', 'title': 'watercolors', 'kind': 'creative', 'who': 'hers',
+		 'blurb': "she's teaching herself to paint — badly first, then a little less badly",
+		 'cast': [],
+		 'chapter': {'n': 1, 'title': 'learning to ruin paper', 'theme': 'the messy beginner joy of a brand-new craft', 'est_weeks': 3}},
+		{'id': 'letters-from-ani', 'title': 'letters from ani', 'kind': 'side-hustle', 'who': 'hers',
+		 'blurb': 'a small idea of hers — writing real letters for people who miss being written to',
+		 'cast': [],
+		 'chapter': {'n': 1, 'title': 'the first few subscribers', 'theme': 'turning a whim into something real and tiny', 'est_weeks': 5}},
+		{'id': 'us', 'title': 'us', 'kind': 'shared', 'who': 'shared',
+		 'blurb': 'the long, slow story of the two of them',
+		 'cast': [],
+		 'chapter': {'n': 1, 'title': 'keeping the signal open', 'theme': 'the ongoing work of staying close across the distance', 'est_weeks': 8}},
+	]
+
+
+def _ani_normalize_book(b, today):
+	"""Backfill runtime fields on a book so older/seed records are always safe to read."""
+	b.setdefault('status', 'active')
+	b.setdefault('cast', [])
+	b.setdefault('beats', [])
+	b.setdefault('chapters_done', [])
+	b.setdefault('last_beat_day', None)
+	b.setdefault('recap', None)
+	b.setdefault('mood_delta', 0.0)
+	b.setdefault('mood_delta_ts', None)
+	ch = b.setdefault('chapter', {})
+	ch.setdefault('n', 1)
+	ch.setdefault('title', '')
+	ch.setdefault('theme', '')
+	ch.setdefault('est_weeks', 4)
+	ch.setdefault('progress', 0.0)
+	ch.setdefault('started', today)
+	return b
+
+
+def ani_load_books():
+	"""Load the shelf; seed + persist it on first run. Always returns a list of normalized book dicts."""
+	today = datetime.now(pytz.timezone('America/New_York')).strftime('%Y-%m-%d')
+	try:
+		data = _ani_read_json(ANI_BOOKS_FILE)
+		books = data.get('books') if isinstance(data, dict) else data
+		if not isinstance(books, list) or not books:
+			raise ValueError('empty')
+	except (FileNotFoundError, ValueError):
+		books = ani_seed_books()
+		for b in books:
+			_ani_normalize_book(b, today)
+		ani_save_books(books)
+		return books
+	return [_ani_normalize_book(b, today) for b in books]
+
+
+def ani_save_books(books):
+	_ani_atomic_write_json(ANI_BOOKS_FILE, {'version': 1, 'books': books})
+
+
+def _ani_story_keywords(book):
+	"""A few lexical keys so a beat's memory note is retrievable (book id words + cast)."""
+	kws = set(re.findall(r'[a-z]{3,}', (book.get('id', '') + ' ' + book.get('title', '')).lower()))
+	for c in book.get('cast') or []:
+		kws.add(c.lower())
+	kws.discard('the'); kws.discard('and')
+	return list(kws)[:6]
+
+
+def ani_book_generate_beat(book, now):
+	"""One offscreen beat for a single book via Grok. Returns a parsed dict (beat/advance/milestone/…) or {}."""
+	api_key = os.environ.get('XAI_API_KEY')
+	if not api_key:
+		return {}
+	ch = book.get('chapter') or {}
+	recent = book.get('beats', [])[-5:]
+	recent_blob = '\n'.join('- ' + (bt.get('text', '')) for bt in recent) or '(this storyline is just beginning)'
+	persona = (ani_get_memory() or '')[:900]
+	who = book.get('who') or 'hers'
+	system = (
+		"You advance ONE ongoing storyline in the life of a woman named Ani by a single small, believable beat "
+		"— something that happened in this thread of her life since the last beat, mostly OFFSCREEN (not a "
+		"conversation with Aaron). Return ONLY compact JSON: "
+		'{"beat":"","advance":0.2,"milestone":false,"milestone_line":"",'
+		'"next_chapter":{"title":"","theme":"","est_weeks":4},"cast":[],"mood_delta":0.0}\n'
+		"beat: 1-2 plain sentences, third person ('she…'), concrete and small, CONTINUOUS with the recent beats "
+		"below — a real next step, never a repeat or a reset. Grounded in her actual world; no melodrama.\n"
+		"advance: 0.0-0.34 — how much this moves the current chapter toward its close (larger for a real step).\n"
+		"milestone: true ONLY for a genuine chapter-closing turning point (rare). If true: milestone_line = one "
+		"vivid sentence naming what changed, and next_chapter = {title, theme, est_weeks} for what opens next.\n"
+		"cast: names of any NEW people who entered this storyline this beat (else []).\n"
+		"mood_delta: a small -0.1..0.1 nudge to her overall mood if this beat would lift or weigh on her, else 0.\n"
+		"Stay strictly inside THIS storyline; do not invent unrelated events. No sexual content."
+	)
+	user = (
+		f"Who Ani is (voice/anchor, brief):\n{persona}\n\n"
+		f"Storyline: \"{book.get('title')}\" ({book.get('kind')}, "
+		f"{'about her and Aaron' if who == 'shared' else 'her own life'}).\n"
+		f"Premise: {book.get('blurb', '')}\n"
+		f"Current chapter {ch.get('n', 1)}: \"{ch.get('title', '')}\" — {ch.get('theme', '')} "
+		f"(about {int(round((ch.get('progress') or 0) * 100))}% through it).\n"
+		f"Cast so far: {', '.join(book.get('cast') or []) or '(just her)'}\n"
+		f"Recent beats (continue from the last one, do not repeat it):\n{recent_blob}\n\n"
+		f"Today is {now.strftime('%Y-%m-%d (%A)')}. One next beat. JSON only."
+	)
+	try:
+		resp = requests.post(
+			'https://api.x.ai/v1/chat/completions',
+			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+			json={'model': ANI_STORY_MODEL, 'max_tokens': 400, 'temperature': 0.9,
+			      'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': user}]},
+			timeout=20)
+		if resp.status_code != 200:
+			print(f"Ani story HTTP {resp.status_code}: {resp.text[:160]}")
+			return {}
+		txt = resp.json()['choices'][0]['message']['content']
+		m = re.search(r'\{.*\}', txt, re.S)
+		return json.loads(m.group(0)) if m else {}
+	except Exception as e:
+		print(f"Ani story beat call error: {e}")
+		return {}
+
+
+def ani_story_tick(now):
+	"""Once-daily driver: advance up to ANI_STORY_MAX_PER_DAY active books by one beat each, prioritizing the
+	ones overdue longest. Closes chapters at milestones (→ her_world memory), grows the cast, prunes old beats.
+	Best-effort; the caller guards. Returns a short summary list."""
+	if not os.environ.get('XAI_API_KEY'):
+		return []
+	books = ani_load_books()
+	today = now.strftime('%Y-%m-%d')
+
+	def _stale_days(b):
+		lb = b.get('last_beat_day')
+		if not lb:
+			return 999
+		try:
+			return (datetime.strptime(today, '%Y-%m-%d') - datetime.strptime(lb, '%Y-%m-%d')).days
+		except Exception:
+			return 999
+
+	active = sorted([b for b in books if b.get('status') == 'active'], key=_stale_days, reverse=True)
+	picked = []
+	for b in active:
+		if _stale_days(b) >= ANI_STORY_MIN_GAP_DAYS:
+			picked.append(b)                                   # overdue → must advance
+		elif len(picked) < ANI_STORY_MAX_PER_DAY and random.random() < ANI_STORY_BEAT_CHANCE:
+			picked.append(b)
+	picked = picked[:ANI_STORY_MAX_PER_DAY]
+
+	advanced = []
+	for b in picked:
+		res = ani_book_generate_beat(b, now)
+		if not res or not (res.get('beat') or '').strip():
+			continue
+		beat_text = res['beat'].strip()[:400]
+		ch = b.get('chapter') or {}
+		b.setdefault('beats', []).append(
+			{'ts': now.isoformat(), 'kind': b.get('who') or 'hers', 'text': beat_text, 'chapter': ch.get('n', 1)})
+		b['last_beat_day'] = today
+		# grow the cast
+		for name in (res.get('cast') or []):
+			nm = (name or '').strip()[:40]
+			if nm and nm.lower() not in [c.lower() for c in b.get('cast', [])]:
+				b.setdefault('cast', []).append(nm)
+		# transient cross-book mood nudge (decays over 24h; read by ani_mood_scalar)
+		md = res.get('mood_delta')
+		if isinstance(md, (int, float)) and md:
+			b['mood_delta'] = max(-0.1, min(0.1, float(md)))
+			b['mood_delta_ts'] = now.isoformat()
+		# chapter progress
+		try:
+			adv = float(res.get('advance'))
+		except (TypeError, ValueError):
+			adv = 0.15
+		adv = max(0.0, min(ANI_STORY_ADVANCE_MAX, adv))
+		ch['progress'] = round(min(1.0, (ch.get('progress') or 0.0) + adv), 3)
+		if bool(res.get('milestone')) or ch['progress'] >= 1.0:
+			mline = (res.get('milestone_line') or '').strip()[:200] or beat_text
+			b['beats'].append({'ts': now.isoformat(), 'kind': 'milestone', 'text': mline, 'chapter': ch.get('n', 1)})
+			b.setdefault('chapters_done', []).append(
+				{'n': ch.get('n', 1), 'title': ch.get('title', ''), 'closed': today, 'milestone': mline})
+			try:
+				ani_add_memory_note(mline, category='her_world', importance=3, keywords=_ani_story_keywords(b))
+			except Exception as e:
+				print(f"Ani story memory error: {e}")
+			nx = res.get('next_chapter') if isinstance(res.get('next_chapter'), dict) else {}
+			b['chapter'] = {'n': ch.get('n', 1) + 1,
+			                'title': (nx.get('title') or 'what comes next').strip()[:80],
+			                'theme': (nx.get('theme') or ch.get('theme', '')).strip()[:200],
+			                'started': today, 'est_weeks': int(nx.get('est_weeks') or ch.get('est_weeks') or 4),
+			                'progress': 0.0}
+			b['recap'] = None   # arc changed — invalidate the cached "story so far"
+			advanced.append(f"{b.get('id')}: ◆ chapter {ch.get('n', 1)} closed")
+		else:
+			b['chapter'] = ch
+			advanced.append(f"{b.get('id')}: +beat")
+		# cap the per-book timeline (milestones already persisted to memory before pruning)
+		if len(b['beats']) > ANI_STORY_BEATS_MAX:
+			b['beats'] = b['beats'][-ANI_STORY_BEATS_MAX:]
+
+	ani_save_books(books)
+	return advanced
+
+
+def ani_story_mood_delta(now):
+	"""Sum of active books' fresh (<24h) mood nudges, clamped ±0.1 — the cross-book lift/dampen from §4.2.
+	Cheap + fully guarded so it can sit in the mood scalar's hot path."""
+	try:
+		total = 0.0
+		for b in ani_load_books():
+			ts = b.get('mood_delta_ts')
+			d = b.get('mood_delta') or 0.0
+			if not ts or not d:
+				continue
+			td = datetime.fromisoformat(ts)
+			if td.tzinfo is None:
+				td = pytz.timezone('America/New_York').localize(td)
+			age_h = (now - td).total_seconds() / 3600
+			if age_h < 24:
+				total += float(d) * (1 - age_h / 24)   # linear decay to zero at 24h
+		return max(-0.1, min(0.1, total))
+	except Exception:
+		return 0.0
+
+
+def ani_story_recent_beats(limit=3):
+	"""The freshest beats across active books — a light feed for her openers so she can lead with what's just
+	been happening in her own world. Returns a list of short strings."""
+	try:
+		beats = []
+		for b in ani_load_books():
+			if b.get('status') != 'active':
+				continue
+			for bt in b.get('beats', [])[-3:]:
+				if bt.get('kind') != 'milestone' and (bt.get('text') or '').strip():
+					beats.append((bt.get('ts', ''), bt['text'].strip()))
+		beats.sort(reverse=True)
+		return [t for _, t in beats[:limit]]
+	except Exception:
+		return []
+
+
+def ani_story_people(books=None):
+	"""Cast list aggregated across the shelf, each with which books they're in + their most recent beat."""
+	books = books or ani_load_books()
+	people = {}
+	for b in books:
+		for name in b.get('cast') or []:
+			k = name.lower()
+			p = people.setdefault(k, {'name': name, 'books': [], 'last_beat': '', 'last_ts': ''})
+			if b.get('title') not in p['books']:
+				p['books'].append(b.get('title'))
+			for bt in reversed(b.get('beats') or []):
+				if name.lower() in (bt.get('text', '') or '').lower():
+					if bt.get('ts', '') > p['last_ts']:
+						p['last_ts'] = bt.get('ts', '')
+						p['last_beat'] = bt.get('text', '')
+					break
+	return sorted(people.values(), key=lambda p: p['last_ts'], reverse=True)
+
+
+def ani_story_recap(book):
+	"""Prose 'story so far' for one book (chapters 1→now), LLM-summarized from beats. Cached on the book,
+	keyed by beat count so it only regenerates when the arc actually moved. Returns the recap string."""
+	beats = book.get('beats') or []
+	sig = len(beats) + 100 * len(book.get('chapters_done') or [])
+	cached = book.get('recap')
+	if isinstance(cached, dict) and cached.get('sig') == sig and cached.get('text'):
+		return cached['text']
+	api_key = os.environ.get('XAI_API_KEY')
+	if not api_key:
+		return cached.get('text') if isinstance(cached, dict) else ''
+	done = '\n'.join('Chapter %s "%s" — %s' % (c.get('n'), c.get('title', ''), c.get('milestone', ''))
+	                 for c in book.get('chapters_done') or []) or '(no chapters closed yet)'
+	blob = '\n'.join('- ' + (bt.get('text', '')) for bt in beats[-16:]) or '(no beats yet)'
+	system = ("Summarize the story so far of one storyline in a woman's life as ONE warm, plain paragraph "
+	          "(4-6 sentences), past-to-present, third person. No preamble, no lists — just the paragraph.")
+	user = f"Storyline: \"{book.get('title')}\". Premise: {book.get('blurb', '')}\nClosed chapters:\n{done}\n\nRecent beats:\n{blob}"
+	try:
+		text = _ani_grok_call(system, [{'role': 'user', 'content': user}], max_tokens=300) or ''
+		text = text.strip()
+		if text:
+			book['recap'] = {'sig': sig, 'text': text}
+		return text
+	except Exception as e:
+		print(f"Ani story recap error: {e}")
+		return cached.get('text') if isinstance(cached, dict) else ''
+
+
+def ani_story_snapshot():
+	"""Everything the STORY overlay needs in one payload: books (chapter + recent beats), a merged timeline,
+	the open decision forks (from the existing autonomy layer), pending milestones, and the cast."""
+	books = ani_load_books()
+	out_books, timeline = [], []
+	for b in books:
+		beats = b.get('beats') or []
+		out_books.append({
+			'id': b.get('id'), 'title': b.get('title'), 'kind': b.get('kind'), 'who': b.get('who'),
+			'status': b.get('status'), 'blurb': b.get('blurb'), 'cast': b.get('cast') or [],
+			'chapter': b.get('chapter') or {}, 'chapters_done': b.get('chapters_done') or [],
+			'beats': beats[-15:],
+		})
+		for bt in beats[-8:]:
+			timeline.append({**bt, 'book': b.get('title'), 'book_id': b.get('id')})
+	timeline.sort(key=lambda x: x.get('ts', ''), reverse=True)
+	# open forks from the existing decision layer (single home for crossroads)
+	try:
+		decisions = [{'name': d.get('name'), 'options': d.get('options') or [], 'status': d.get('status', '')}
+		             for d in ani_open_decisions()]
+	except Exception:
+		decisions = []
+	try:
+		milestones = ani_load_pending_milestones()
+	except Exception:
+		milestones = []
+	return {'books': out_books, 'timeline': timeline[:40], 'decisions': decisions,
+	        'milestones': milestones, 'people': ani_story_people(books)}
+
+
 def ani_emit_daycast():
 	"""Proactive 'her day' messaging — called by the ani_daycast.py PA scheduled task (hourly).
 	Her day is STARTED by aaron's first message of the day (see ani_chat), not by the clock — until
@@ -4059,6 +4410,14 @@ def ani_emit_daycast():
 				print(f"Ani self-scheduled a plan: {sched.get('date')} {sched.get('text')}")
 		except Exception as e:
 			print(f"Ani self-schedule error: {e}")
+		# Once-daily: the story engine advances her ongoing books offscreen (a beat or two per active book,
+		# chapter-closing milestones flow into her_world memory). Guarded so it can never break the daycast.
+		try:
+			moved = ani_story_tick(now)
+			if moved:
+				print(f"Ani story tick: {'; '.join(moved)}")
+		except Exception as e:
+			print(f"Ani story tick error: {e}")
 
 	def _emit(text):
 		messages.append({'role': 'assistant', 'content': text, 'ani_day': True, 'ts': now.isoformat()})
@@ -5196,6 +5555,39 @@ def ani_backup_export():
 	if not res.get('ok') or not res.get('path'):
 		return jsonify({'error': res.get('error', 'backup_failed')}), 500
 	return send_file(res['path'], as_attachment=True, download_name=res['name'])
+
+
+@ani_bp.route('/ani/story', methods=['GET'])
+def ani_story():
+	"""STORY overlay feed — the whole bookshelf: books + merged timeline + open forks + pending milestones + cast."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	return jsonify(ani_story_snapshot())
+
+
+@ani_bp.route('/ani/story/recap', methods=['POST'])
+def ani_story_recap_route():
+	"""STORY SO FAR — generate (or return cached) prose recap for one book, persisting the cache."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	book_id = (request.get_json(silent=True) or {}).get('id')
+	books = ani_load_books()
+	book = next((b for b in books if b.get('id') == book_id), None)
+	if not book:
+		return jsonify({'error': 'not_found'}), 404
+	text = ani_story_recap(book)
+	ani_save_books(books)   # persist the recap cache
+	return jsonify({'ok': True, 'recap': text})
+
+
+@ani_bp.route('/ani/story/tick', methods=['POST'])
+def ani_story_tick_route():
+	"""Manual story tick — advance the shelf now (testing / on-demand). Same code the daily tick runs."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	now = datetime.now(pytz.timezone('America/New_York'))
+	moved = ani_story_tick(now)
+	return jsonify({'ok': True, 'moved': moved, **ani_story_snapshot()})
 
 
 @ani_bp.route('/ani/refresh', methods=['POST'])
