@@ -1552,6 +1552,22 @@ def ani_opener_guard(recent_msgs):
 	        "daddy later in the message — just stop leading with the same thing every time.\n" % rut)
 
 
+def ani_closing_question_guard(recent_msgs):
+	"""She reflexively ends nearly every reply with a question back ('how's X?'), and sometimes re-asks
+	something he JUST answered (asks about his day job → he answers → she asks about his day job again). If her
+	recent replies keep closing on a question, nudge her to close WITHOUT one this turn. '' unless it's a rut."""
+	reps = [(m or '').strip() for m in (recent_msgs or [])[-3:] if (m or '').strip()]
+	if len(reps) < 2:
+		return ''
+	def ends_q(t):
+		return t.rstrip().rstrip('"\')]}').endswith('?')
+	if sum(1 for t in reps if ends_q(t)) >= 2:
+		return ("\nCLOSING-QUESTION RUT — you keep ending replies with a question back to him ('how's X?'). this "
+		        "reply, do NOT end on a question: close on a thought, a feeling, a tease, or something in your own "
+		        "moment. and NEVER ask about something he already answered earlier this conversation.\n")
+	return ''
+
+
 def _ani_day_phase(hour):
 	"""Coarse time-of-day wardrobe phase as (rank, label). Ranks order the day so we can tell when she's
 	moved into a later stretch than the outfit she's still in."""
@@ -2778,6 +2794,8 @@ POSE NATURALLY — for an everyday or just-being-cute moment, describe a relaxed
 	rep_block += ani_itinerary_guard(recent_assistant[-1] if recent_assistant else '')
 	# Break the 'mm daddy…' opener rut — near every reply starting the same way reads as thin/low-effort.
 	rep_block += ani_opener_guard(recent_assistant)
+	# Break the reflexive 'how's X?' closing-question rut (and re-asking what he already answered).
+	rep_block += ani_closing_question_guard(recent_assistant)
 
 	# His real day right now (next meeting, today's tasks, latest status) — cached; so she's in HIS life too.
 	# Guarded: this reads the DB, and the system prompt is on the critical chat path — a hiccup here must
