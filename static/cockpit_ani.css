@@ -1634,3 +1634,33 @@ body.ani-fullscreen #ani-input-row { border-top-width: 1px; }
 .ani-book-rest { opacity: 0.62; }
 .ani-book-rest .ani-book-title { color: var(--ani-sub); }
 .ani-fork-branches { color: var(--ani-time); font-size: 0.62rem; font-style: italic; margin: 2px 0 8px; line-height: 1.4; }
+
+/* ── NOW card: "what you missed while you were gone" ───────────────────────── */
+#ani-now-card {
+  position: relative;
+  margin: 8px 10px 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--ani-frame);
+  border-radius: 8px;
+  background: var(--ani-status-bg);
+}
+.ani-nowcard-x {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  background: none;
+  border: none;
+  color: var(--ani-foot);
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.ani-nowcard-x:hover { color: var(--ani-sub); }
+.ani-nowcard-head {
+  color: var(--ani-sub);
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.ani-nowcard-line { color: var(--ani-bub-her-tx); font-size: 0.7rem; margin-top: 5px; line-height: 1.45; }
+.ani-nowcard-beat { color: var(--ani-time); font-size: 0.66rem; font-style: italic; margin-top: 5px; line-height: 1.45; }

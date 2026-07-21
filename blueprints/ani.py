@@ -365,7 +365,8 @@ def ani_load_conversation():
 			'proactive_photo_date': data.get('proactive_photo_date', None),
 			'memory_consolidated_date': data.get('memory_consolidated_date', None),
 			'mood_buffer': data.get('mood_buffer', []),   # 24h ring buffer of the mood scalar (sparkline)
-			'last_react_ack': data.get('last_react_ack', None)   # debounce for her reacting to his photo reactions
+			'last_react_ack': data.get('last_react_ack', None),   # debounce for her reacting to his photo reactions
+			'last_open': data.get('last_open', None)   # last time you looked (drives the NOW 'what you missed' card)
 		}
 		return messages, meta
 	except FileNotFoundError:
@@ -389,7 +390,8 @@ def ani_load_conversation():
 			'proactive_photo_date': None,
 			'memory_consolidated_date': None,
 			'mood_buffer': [],
-			'last_react_ack': None
+			'last_react_ack': None,
+			'last_open': None
 		}
 
 
@@ -416,7 +418,8 @@ def ani_save_conversation(messages, meta):
 		'proactive_photo_date': meta.get('proactive_photo_date'),
 		'memory_consolidated_date': meta.get('memory_consolidated_date'),
 		'mood_buffer': meta.get('mood_buffer', []),
-		'last_react_ack': meta.get('last_react_ack')
+		'last_react_ack': meta.get('last_react_ack'),
+		'last_open': meta.get('last_open')
 	}
 	_ani_atomic_write_json(ANI_CONVERSATION_FILE, data)
 
@@ -4606,6 +4609,67 @@ def ani_story_snapshot():
 	        'milestones': milestones, 'people': ani_story_people(books)}
 
 
+ANI_NOW_CARD_MIN_GAP_HOURS = float(os.environ.get('ANI_NOW_CARD_MIN_GAP_HOURS', '3'))
+
+
+def ani_build_now_card(messages, meta, prev_open, now):
+	"""'What you missed' since your last open, when you've been away a while (>= min gap). Summarizes the
+	proactive messages, fresh story beats, chapter milestones, and mood drift over the absence. Returns a
+	compact dict or None (nothing to show / too soon / first open ever)."""
+	if not prev_open:
+		return None
+	try:
+		po = datetime.fromisoformat(prev_open)
+		if po.tzinfo is None:
+			po = pytz.timezone('America/New_York').localize(po)
+	except Exception:
+		return None
+	gap_h = (now - po).total_seconds() / 3600
+	if gap_h < ANI_NOW_CARD_MIN_GAP_HOURS:
+		return None
+	po_iso = po.isoformat()
+	# proactive messages + milestone divers that landed while you were away
+	missed, milestones = 0, 0
+	for m in messages:
+		if m.get('ts', '') <= po_iso:
+			continue
+		if m.get('milestone'):
+			milestones += 1
+		elif m.get('ani_day'):
+			missed += 1
+	# fresh (since-last-open) non-milestone beats across active books
+	beats = []
+	try:
+		for b in ani_load_books():
+			if b.get('status') != 'active':
+				continue
+			for bt in b.get('beats', []):
+				if bt.get('kind') != 'milestone' and bt.get('ts', '') > po_iso and (bt.get('text') or '').strip():
+					beats.append((bt['ts'], bt['text'].strip()))
+	except Exception:
+		pass
+	beats.sort(reverse=True)
+	beat_texts = [t for _, t in beats[:2]]
+	# mood drift from the 24h ring buffer: value nearest last-open vs latest
+	drift = None
+	try:
+		buf = [p for p in (meta.get('mood_buffer') or []) if isinstance(p, (list, tuple)) and len(p) == 2]
+		if len(buf) >= 2:
+			then = None
+			for ts, v in buf:
+				if ts <= po_iso:
+					then = v
+			then = then if then is not None else buf[0][1]
+			delta = buf[-1][1] - then
+			drift = 'warmer' if delta > 0.12 else ('cooler' if delta < -0.12 else None)
+	except Exception:
+		pass
+	if not missed and not beat_texts and not milestones and not drift:
+		return None
+	return {'hours': int(round(gap_h)), 'missed': missed, 'milestones': milestones,
+	        'beats': beat_texts, 'mood_drift': drift}
+
+
 def ani_emit_daycast():
 	"""Proactive 'her day' messaging — called by the ani_daycast.py PA scheduled task (hourly).
 	Her day is STARTED by aaron's first message of the day (see ani_chat), not by the clock — until
@@ -5778,6 +5842,23 @@ def ani_history():
 	if meta.get('unseen_day_messages'):
 		meta['unseen_day_messages'] = False
 		added = True
+	# NOW card — build "what you missed" from the gap since your last look, then advance last_open (throttled
+	# to ~once/min so we don't write on every poll; the card is built off the PRE-advance value so it shows once).
+	now_card = None
+	prev_open = meta.get('last_open')
+	stale = True
+	if prev_open:
+		try:
+			stale = (now_dt - datetime.fromisoformat(prev_open)).total_seconds() > 60
+		except Exception:
+			stale = True
+	if stale:
+		try:
+			now_card = ani_build_now_card(messages, meta, prev_open, now_dt)
+		except Exception as e:
+			print(f"Ani now-card error: {e}")
+		meta['last_open'] = now_dt.isoformat()
+		added = True
 	if added:
 		ani_save_conversation(messages, meta)
 	_settings = ani_load_settings()
@@ -5787,7 +5868,8 @@ def ani_history():
 		'mood': mood,
 		'spark': [round(v, 3) for _, v in buf[-24:]],
 		'quiet': {'armed': ani_in_quiet_hours(now_dt, _settings), 'until': _settings.get('quiet_end')},
-		'backup': ani_backup_status(_settings)
+		'backup': ani_backup_status(_settings),
+		'now_card': now_card
 	})
 
 

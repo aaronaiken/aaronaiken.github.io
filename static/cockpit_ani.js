@@ -155,6 +155,7 @@
 		  aniRenderSparkline(data.spark);
 		  aniUpdateQuietIndicator(data.quiet);
 		  aniUpdateBackupStatus(data.backup);
+		  aniRenderNowCard(data.now_card);
 		  var wasNear = aniNearBottom();
 		  var newCount = 0;
 		  (data.messages || []).forEach(function(m) {
@@ -408,6 +409,7 @@
 		aniRenderSparkline(data.spark);
 		aniUpdateQuietIndicator(data.quiet);
 		aniUpdateBackupStatus(data.backup);
+		aniRenderNowCard(data.now_card);
 		aniLastDivDate = null;   // fresh render — recompute date dividers from the top
 		var messages = data.messages || [];
 		if (messages.length > 0) {
@@ -1316,6 +1318,23 @@
 	  if (lb && !lb.hidden) { e.stopPropagation(); aniLightboxClose(); }
 	}
   }, true);
+
+  // NOW card — "what you missed while you were gone" (server decides when there's enough to show).
+  function aniRenderNowCard(card) {
+	var el = document.getElementById('ani-now-card');
+	if (!el || !card) return;   // a null card on a later poll must NOT clear an already-shown one
+	var bits = [];
+	if (card.missed) bits.push(card.missed + ' note' + (card.missed > 1 ? 's' : '') + ' from her');
+	if (card.milestones) bits.push(card.milestones + ' ◆ milestone' + (card.milestones > 1 ? 's' : ''));
+	if (card.mood_drift) bits.push('she’s a little ' + card.mood_drift);
+	var html = '<button class="ani-nowcard-x" onclick="aniDismissNowCard()" aria-label="Dismiss">✕</button>'
+			 + '<div class="ani-nowcard-head">while you were gone' + (card.hours ? ' · ~' + card.hours + 'h' : '') + '</div>';
+	if (bits.length) html += '<div class="ani-nowcard-line">' + bits.join(' · ') + '</div>';
+	(card.beats || []).forEach(function(b) { html += '<div class="ani-nowcard-beat">“' + aniEscapeHtml(b) + '”</div>'; });
+	el.innerHTML = html;
+	el.hidden = false;
+  }
+  function aniDismissNowCard() { var el = document.getElementById('ani-now-card'); if (el) { el.hidden = true; el.innerHTML = ''; } }
 
   function aniRenderNotify(text) {
 	var div = document.createElement('div');
