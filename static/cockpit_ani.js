@@ -875,6 +875,12 @@
 		if (row) Array.prototype.forEach.call(row.querySelectorAll('.ani-react'), function(b) {
 		  b.classList.toggle('on', data.reactions.indexOf(b.getAttribute('data-emoji')) >= 0);
 		});
+		// She sometimes fires back an in-character line about your reaction — render it live.
+		if (data.ack) {
+		  aniEmpty.style.display = 'none';
+		  aniRenderMessage('assistant', data.ack, null, new Date().toISOString());
+		  aniScrollToBottom();
+		}
 	  })
 	  .catch(function() {});
   }

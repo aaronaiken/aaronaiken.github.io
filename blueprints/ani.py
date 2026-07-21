@@ -263,6 +263,9 @@ ANI_DAYCAST_PHOTO_MAX = int(os.environ.get('ANI_DAYCAST_PHOTO_MAX', '3'))       
 ANI_DAYCAST_PHOTO_CHANCE = float(os.environ.get('ANI_DAYCAST_PHOTO_CHANCE', '0.22'))  # roll per eligible tick
 # Fraction of proactive text updates that are an EMOTIONAL BEAT from her own world vs. a "what I'm doing".
 ANI_DAYCAST_EMOTIONAL_CHANCE = float(os.environ.get('ANI_DAYCAST_EMOTIONAL_CHANCE', '0.4'))
+# Chance she fires back an in-character line when he ADDS a photo reaction (debounced to 90s so toggling
+# doesn't spam). Aware of which reaction + what the photo showed.
+ANI_REACT_ACK_CHANCE = float(os.environ.get('ANI_REACT_ACK_CHANCE', '0.6'))
 
 # Plan lifecycle (autonomy layer): a timeless plan of HERS flips 'underway' once the day is going by this ET
 # hour; a today plan that's underway completes ('done', triggering a 'how it went' beat) after this ET hour.
@@ -345,7 +348,8 @@ def ani_load_conversation():
 			'proactive_photo_count': data.get('proactive_photo_count', 0),
 			'proactive_photo_date': data.get('proactive_photo_date', None),
 			'memory_consolidated_date': data.get('memory_consolidated_date', None),
-			'mood_buffer': data.get('mood_buffer', [])   # 24h ring buffer of the mood scalar (sparkline)
+			'mood_buffer': data.get('mood_buffer', []),   # 24h ring buffer of the mood scalar (sparkline)
+			'last_react_ack': data.get('last_react_ack', None)   # debounce for her reacting to his photo reactions
 		}
 		return messages, meta
 	except FileNotFoundError:
@@ -368,7 +372,8 @@ def ani_load_conversation():
 			'proactive_photo_count': 0,
 			'proactive_photo_date': None,
 			'memory_consolidated_date': None,
-			'mood_buffer': []
+			'mood_buffer': [],
+			'last_react_ack': None
 		}
 
 
@@ -394,7 +399,8 @@ def ani_save_conversation(messages, meta):
 		'proactive_photo_count': meta.get('proactive_photo_count', 0),
 		'proactive_photo_date': meta.get('proactive_photo_date'),
 		'memory_consolidated_date': meta.get('memory_consolidated_date'),
-		'mood_buffer': meta.get('mood_buffer', [])
+		'mood_buffer': meta.get('mood_buffer', []),
+		'last_react_ack': meta.get('last_react_ack')
 	}
 	_ani_atomic_write_json(ANI_CONVERSATION_FILE, data)
 
@@ -4441,13 +4447,43 @@ def ani_photo_react():
 	if not msg:
 		return jsonify({'error': 'not_found'}), 404
 	rx = [e for e in (msg.get('reactions') or []) if isinstance(e, str)]
-	if emoji in rx:
-		rx.remove(emoji)
-	else:
+	added = emoji not in rx
+	if added:
 		rx.append(emoji)
+	else:
+		rx.remove(emoji)
 	msg['reactions'] = rx
+
+	# When he ADDS a reaction, she sometimes fires back a short in-character line (spec §3.1). Chance-gated
+	# + 90s debounced so rapid toggling / multi-emoji reacts don't spam. She sees which emoji + what the shot
+	# showed (its stored vision description). Removing a reaction never acks.
+	ack = None
+	if added:
+		pa_tz = pytz.timezone('America/New_York')
+		now = datetime.now(pa_tz)
+		recent = False
+		last = meta.get('last_react_ack')
+		if last:
+			try:
+				ld = datetime.fromisoformat(last)
+				if ld.tzinfo is None:
+					ld = pa_tz.localize(ld)
+				recent = (now - ld).total_seconds() < 90
+			except Exception:
+				pass
+		if not recent and random.random() < ANI_REACT_ACK_CHANCE:
+			desc = (msg.get('vision') or 'the photo you sent him')[:160]
+			instr = ("[aaron just reacted %s to a photo you sent him (it showed: %s). text him ONE short, in-"
+			         "character line reacting to HIM reacting — playful, teasing, warm, a little turned on. do "
+			         "NOT describe the photo again; just respond to his reaction. one line, no quotes.]" % (emoji, desc))
+			txt = _ani_grok_call(ani_build_system_prompt(meta), [{'role': 'user', 'content': instr}], max_tokens=60)
+			if txt:
+				ack = txt.strip().strip('"')
+				messages.append({'role': 'assistant', 'content': ack, 'ts': now.isoformat()})
+				meta['last_react_ack'] = now.isoformat()
+
 	ani_save_conversation(messages, meta)
-	return jsonify({'ok': True, 'reactions': rx})
+	return jsonify({'ok': True, 'reactions': rx, 'ack': ack})
 
 
 @ani_bp.route('/ani/photo/favorite', methods=['POST'])
