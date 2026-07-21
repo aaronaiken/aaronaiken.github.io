@@ -347,6 +347,7 @@
 				oncontextmenu="event.preventDefault(); aniToggle(); return false;">
 				🦇
 			</button>
+			<button class="pill" id="ani-home-latch" onclick="aniHomeToggle()" title="Home mode — discreet, no attention effects (Ctrl+Shift+H)">🏠</button>
 		</div>
 
 		<div class="scroller utility-belt">
@@ -501,6 +502,9 @@
   <div class="ani-stars ani-stars-mid"></div>
   <div class="ani-stars ani-stars-near"></div>
 </div>
+
+<!-- Attention effects: float-up particles over the dock (bottom-right). Purely decorative. -->
+<div id="ani-particles" aria-hidden="true"></div>
 
 <div id="ani-panel" role="complementary" aria-label="Ani — private comms">
   <div id="ani-header" onclick="aniToggle()">

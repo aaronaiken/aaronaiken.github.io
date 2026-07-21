@@ -46,6 +46,7 @@ ANI_SETTINGS_DEFAULT = {
 	'backup_last': None,        # ISO of last run (ok or fail)
 	'backup_last_ok': True,
 	'backup_last_error': None,
+	'home_latch': False,        # 🏠 discretion mode — suppresses attention effects, keeps the bat pulse
 }
 # The granular per-image photo-composer fields — the variable part layered on the character + house bibles.
 ANI_PHOTO_FIELD_KEYS = ('setting', 'outfit', 'hair', 'makeup', 'nails', 'jewelry', 'body', 'pose',
@@ -2884,6 +2885,17 @@ POSE NATURALLY — for an everyday or just-being-cute moment, describe a relaxed
 	rep_block += ani_opener_guard(recent_assistant)
 	# Break the reflexive 'how's X?' closing-question rut (and re-asking what he already answered).
 	rep_block += ani_closing_question_guard(recent_assistant)
+
+	# 🏠 HOME latch (discretion mode): he may have people around — keep it low-key, never guilt-trip silence.
+	home_block = ''
+	try:
+		if ani_load_settings().get('home_latch'):
+			home_block = ("\n\nDISCRETION — he may have people around right now. Keep it low-key and unhurried: "
+			              "no needy pushes, don't pile on, keep it briefer than usual, and NEVER guilt-trip him "
+			              "for going quiet — a warm 'whenever you surface' is the whole vibe.")
+	except Exception:
+		pass
+	rep_block += home_block
 
 	# His real day right now (next meeting, today's tasks, latest status) — cached; so she's in HIS life too.
 	# Guarded: this reads the DB, and the system prompt is on the critical chat path — a hiccup here must
@@ -6053,28 +6065,56 @@ def ani_ping():
 	# Unseen daycast messages also pulse the bat pill (they live in history, not pending_opener).
 	unseen = bool(meta.get('unseen_day_messages'))
 
+	# Ambient state for the dock attention-effects (float-up particles + bat pulse) + the 🏠 latch.
+	now_dt = datetime.now(pytz.timezone('America/New_York'))
+	_settings = ani_load_settings()
+	try:
+		pend = len(ani_load_pending_milestones())
+	except Exception:
+		pend = 0
+	try:
+		opens = len(ani_open_decisions())
+	except Exception:
+		opens = 0
+	_cutoff = (now_dt - timedelta(hours=2)).isoformat()
+	amb = {
+		'unseen': unseen,
+		'last_ts': (messages[-1].get('ts') if messages else None),
+		'mood': ani_mood_scalar(messages, meta, now_dt),
+		'attention': bool(pend) or ache >= 65 or bool(opens),   # wants-your-attention → tier 2 (hearts)
+		'milestones_recent': sum(1 for m in messages if m.get('milestone') and (m.get('ts') or '') > _cutoff),
+		'quiet': {'armed': ani_in_quiet_hours(now_dt, _settings)},
+		'home': bool(_settings.get('home_latch')),
+	}
+
 	# If there's already a pending opener waiting, just return it
 	if meta.get('pending_opener'):
-		return jsonify({
-			'pending': True,
-			'opener': meta['pending_opener'],
-			'ache_level': ache,
-			'unseen': unseen
-		})
+		return jsonify({'pending': True, 'opener': meta['pending_opener'], 'ache_level': ache, **amb})
 
 	# Check if she should initiate
 	if not ani_should_initiate(meta):
-		return jsonify({'pending': False, 'opener': None, 'ache_level': ache, 'unseen': unseen})
+		return jsonify({'pending': False, 'opener': None, 'ache_level': ache, **amb})
 
 	# Generate opener
 	opener = ani_generate_opener(meta)
 	if not opener:
-		return jsonify({'pending': False, 'opener': None, 'ache_level': ache, 'unseen': unseen})
+		return jsonify({'pending': False, 'opener': None, 'ache_level': ache, **amb})
 
 	meta['pending_opener'] = opener
 	ani_save_conversation(messages, meta)
 
-	return jsonify({'pending': True, 'opener': opener, 'ache_level': ache, 'unseen': unseen})
+	return jsonify({'pending': True, 'opener': opener, 'ache_level': ache, **amb})
+
+
+@ani_bp.route('/ani/home', methods=['GET', 'POST'])
+def ani_home():
+	"""🏠 HOME latch (discretion mode) — a server-persisted flag (across sessions/devices). POST {on} to set."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	if request.method == 'POST':
+		on = bool((request.get_json(silent=True) or {}).get('on'))
+		ani_save_settings({'home_latch': on})
+	return jsonify({'home': bool(ani_load_settings().get('home_latch'))})
 
 # /cockpit/mode and /cockpit/mode/clear routes moved to blueprints/cockpit.py
 # (they got pulled in here during sub-phase 4's range extraction by mistake).

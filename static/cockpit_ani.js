@@ -139,8 +139,89 @@
 		  var batPill = document.getElementById('ani-bat-pill');
 		  if (batPill) batPill.classList.add('ani-bat-waiting');
 		}
+		if (typeof data.home === 'boolean') aniHomeReflect(data.home);
+		aniFxUpdate(data);   // dock attention effects (particles + bat tiers)
 	  })
 	  .catch(function() {});
+  }
+
+  // ── Attention effects: float-up particles over the dock (addendum §1) + 🏠 latch (§2) ──
+  var aniFx = { state: null, lastTs: null, lastMs: 0, dripUntil: 0, dripAt: 0, init: false,
+	reduced: !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) };
+  function aniFxEmitter() { return document.getElementById('ani-particles'); }
+  function aniFxClear() { var e = aniFxEmitter(); if (e) e.innerHTML = ''; }
+  function aniFxColor(mood) {   // indigo #4a5fd0 → rose #c05a78 by mood scalar
+	var a = [74, 95, 208], b = [192, 90, 120], m = Math.max(0, Math.min(1, mood || 0));
+	return 'rgb(' + Math.round(a[0] + (b[0] - a[0]) * m) + ',' + Math.round(a[1] + (b[1] - a[1]) * m) + ',' + Math.round(a[2] + (b[2] - a[2]) * m) + ')';
+  }
+  function aniFxSpawn(kind, mood) {
+	var e = aniFxEmitter(); if (!e || e.childElementCount > 8) return;
+	var glyph, color, size, po;
+	if (kind === 'heart') { glyph = '♥'; color = ['#c05a78', '#b04a68', '#d88a9c'][(Math.random() * 3) | 0]; size = 9 + Math.random() * 3; po = 0.7; }
+	else if (kind === 'gold') { glyph = '✦'; color = '#b08a2e'; size = 9 + Math.random() * 3; po = 0.8; }
+	else { glyph = ['✦', '✧', '·'][(Math.random() * 3) | 0]; color = aniFxColor(mood); size = 7 + Math.random() * 3; po = 0.4 + Math.random() * 0.15; }
+	var s = document.createElement('span');
+	var dx = ((Math.random() * 44 - 22) | 0), rot = ((Math.random() * 24 - 12) | 0), dur = (3.6 + Math.random() * 2.6).toFixed(2);
+	s.textContent = glyph;
+	s.style.cssText = 'position:absolute;bottom:0;left:' + ((Math.random() * 150) | 0) + 'px;color:' + color +
+	  ';font-size:' + Math.round(size) + 'px;--dx:' + dx + 'px;--po:' + po + ';--rot:' + rot + 'deg;animation:anifloat ' + dur + 's linear forwards;';
+	s.addEventListener('animationend', function () { s.remove(); });
+	e.appendChild(s);
+  }
+  function aniFxBurst(kind, n, mood) { for (var i = 0; i < n; i++) { (function (d) { setTimeout(function () { aniFxSpawn(kind, mood); }, d); })(i * 90); } }
+  function aniFxSuppressed(d) {
+	return !d || d.home || (d.quiet && d.quiet.armed) || aniFx.reduced || aniIsOpen;
+  }
+  function aniFxUpdate(data) {
+	aniFx.state = data || null;
+	var bat = document.getElementById('ani-bat-pill');
+	var waiting = data && (data.unseen || (data.pending && data.opener));
+	var attention = data && data.attention;
+	if (bat) {
+	  // The 🦇 pulse STAYS even in HOME — but never escalates to the rose 'urgent' tier there (innocuous tick).
+	  var urgent = !!attention && !aniFx.reduced && !(data && data.home);
+	  var calm = !!(waiting || attention) && !urgent && !aniFx.reduced;
+	  bat.classList.toggle('ani-bat-glow', !!(waiting || attention) && aniFx.reduced);   // reduced-motion → steady glow
+	  bat.classList.toggle('ani-bat-urgent', urgent);
+	  bat.classList.toggle('ani-bat-waiting', calm);
+	}
+	var em = aniFxEmitter();
+	if (em) em.classList.toggle('warm', !!attention && !aniFxSuppressed(data));
+	if (aniFxSuppressed(data)) { aniFxClear(); aniFx.lastTs = data && data.last_ts; aniFx.lastMs = (data && data.milestones_recent) || 0; aniFx.init = true; return; }
+	var now = Date.now();
+	if (!aniFx.init) { aniFx.lastTs = data.last_ts; aniFx.lastMs = data.milestones_recent || 0; aniFx.init = true; if (data.unseen) aniFx.dripUntil = now + 30000; return; }
+	// Tier 1 — a NEW message arrived while unread: burst + open a 30s drip window.
+	if (data.unseen && data.last_ts && data.last_ts !== aniFx.lastTs) { aniFxBurst('spark', 6, data.mood); aniFx.dripUntil = now + 30000; aniFx.dripAt = now; }
+	// Milestone celebration — a fresh ◆ landed: single gold burst, no loop.
+	if ((data.milestones_recent || 0) > aniFx.lastMs) aniFxBurst('gold', 6, 1);
+	aniFx.lastTs = data.last_ts;
+	aniFx.lastMs = data.milestones_recent || 0;
+  }
+  // Fast tick handles the 1-per-8s drip + sustained tier-2 hearts (ping is only every 20s).
+  function aniFxTick() {
+	var d = aniFx.state; if (aniFxSuppressed(d)) return;
+	var now = Date.now();
+	if (d.unseen && now < aniFx.dripUntil && now >= aniFx.dripAt) {
+	  aniFxSpawn(d.attention ? 'heart' : 'spark', d.mood);
+	  if (d.attention) aniFxSpawn('spark', d.mood);
+	  aniFx.dripAt = now + 8000;
+	} else if (d.attention && !d.unseen && Math.random() < 0.35) {
+	  aniFxSpawn('heart', d.mood);   // sustained gentle hearts while she wants you
+	}
+  }
+  setInterval(aniFxTick, 1600);
+
+  // 🏠 HOME latch — server-persisted discretion mode.
+  function aniHomeReflect(on) { var b = document.getElementById('ani-home-latch'); if (b) b.classList.toggle('on', !!on); }
+  function aniHomeToggle() {
+	var b = document.getElementById('ani-home-latch');
+	var next = !(b && b.classList.contains('on'));
+	aniHomeReflect(next);   // optimistic
+	if (next) aniFxClear();
+	fetch('/ani/home', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: next }) })
+	  .then(function (r) { return r.json(); })
+	  .then(function (data) { aniHomeReflect(data.home); })
+	  .catch(function () {});
   }
 
   // Live poll — while the panel is open, append any NEW messages (proactive daycast msgs arrive
@@ -180,6 +261,8 @@
 	}
   }
 
+  // Reflect the persisted 🏠 latch on load (it's a cross-session/device server flag).
+  fetch('/ani/home').then(function(r) { return r.json(); }).then(function(d) { aniHomeReflect(d.home); }).catch(function() {});
   setTimeout(aniPing, 1500);
   setInterval(aniPoll, 20000);
 
@@ -187,7 +270,8 @@
 	aniIsOpen = !aniIsOpen;
 	aniPanel.classList.toggle('ani-open', aniIsOpen);
 	var batPill = document.getElementById('ani-bat-pill');
-	if (batPill) batPill.classList.remove('ani-bat-waiting');
+	if (batPill) batPill.classList.remove('ani-bat-waiting', 'ani-bat-urgent', 'ani-bat-glow');
+	if (aniIsOpen) aniFxClear();   // opening the panel stops all attention effects instantly (addendum §1)
 	if (aniIsOpen && !aniLoaded) {
 	  aniLoadHistory();
 	  aniSendLocation();
@@ -235,6 +319,12 @@
 	if (e.ctrlKey && e.shiftKey && e.key === 'A') {
 	  e.preventDefault();
 	  aniToggle();
+	  return;
+	}
+	// CTRL+SHIFT+H — toggle the 🏠 discretion latch (addendum §2).
+	if (e.ctrlKey && e.shiftKey && (e.key === 'H' || e.key === 'h')) {
+	  e.preventDefault();
+	  aniHomeToggle();
 	  return;
 	}
 	// ESC closes the chat when fullscreen is open. Scoped check avoids
