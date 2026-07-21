@@ -591,6 +591,16 @@
 	</div>
   </div>
 
+  <div id="ani-search-overlay" class="ani-photolog-overlay" hidden onclick="if(event.target===this)aniSearchClose()">
+	<div class="ani-photolog-panel ani-cal-panel ani-search-panel" role="dialog" aria-label="Search">
+	  <div class="ani-search-head">
+		<input type="text" id="ani-search-input" class="ani-search-input" placeholder="search comms · memory · calendar · library…" aria-label="Search" autocomplete="off">
+		<button class="ani-photolog-close" onclick="aniSearchClose()" aria-label="Close">✕</button>
+	  </div>
+	  <div id="ani-search-body" class="ani-photolog-body ani-search-body"></div>
+	</div>
+  </div>
+
   <div id="ani-prompt-overlay" class="ani-photolog-overlay" hidden onclick="if(event.target===this)aniPhotoPromptClose()">
 	<div class="ani-photolog-panel ani-cal-panel ani-prompt-panel" role="dialog" aria-label="Edit photo prompt">
 	  <div class="ani-photolog-head">

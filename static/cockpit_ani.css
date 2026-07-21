@@ -258,6 +258,39 @@ body.ani-fullscreen #ani-avatar-fallback { font-size: 1.1rem; }
   color: var(--ani-foot);
 }
 
+/* --- ⌘K search --- */
+.ani-search-panel { max-width: 520px; }
+.ani-search-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--ani-hairline); }
+.ani-search-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--ani-tx-bg);
+  border: 1px solid var(--ani-tx-bd);
+  border-radius: 4px;
+  color: var(--ani-bub-her-tx);
+  font-family: var(--ani-font);
+  font-size: 0.8rem;
+  padding: 6px 10px;
+}
+.ani-search-input:focus { outline: none; border-color: var(--ani-accent); }
+.ani-search-body { max-height: 60vh; overflow-y: auto; padding: 6px 10px; }
+.ani-srch-group { margin-bottom: 10px; }
+.ani-srch-gtitle { font-family: var(--ani-font); font-size: 0.56rem; letter-spacing: 0.14em; color: var(--ani-sub); margin: 6px 2px 4px; }
+.ani-srch-item {
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  color: var(--ani-bub-her-tx);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ani-srch-item:hover { background: var(--ani-tx-bg); }
+.ani-srch-more { color: var(--ani-accent-dim); font-size: 0.62rem; }
+.ani-msg-flash { animation: ani-msg-flash 1.6s ease; }
+@keyframes ani-msg-flash { 0%, 100% { box-shadow: none; } 30% { box-shadow: 0 0 0 2px var(--ani-accent-dim); } }
+
 #ani-close-btn {
   background: none;
   border: none;

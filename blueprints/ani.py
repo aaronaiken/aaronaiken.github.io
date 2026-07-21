@@ -4524,6 +4524,50 @@ def ani_photo_favorites_list():
 	return jsonify({'favorites': list(reversed(ani_load_favorites()))})
 
 
+@ani_bp.route('/ani/search', methods=['GET'])
+def ani_search():
+	"""Universal ⌘K search across comms / memory / calendar / library. Returns grouped hits (top 3 + total)."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	q = (request.args.get('q') or '').strip().lower()
+	if len(q) < 2:
+		return jsonify({'groups': {}})
+
+	messages, _ = ani_load_conversation()
+	comms = []
+	for m in messages:
+		c = m.get('content') or ''
+		if c and not c.startswith(('[daily briefing', '[system:')) and q in c.lower():
+			comms.append({'text': c[:180], 'ts': m.get('ts'), 'role': m.get('role'), 'image': bool(m.get('image'))})
+
+	mem = []
+	for n in ani_load_remember():
+		t = n.get('text', '')
+		kw = ' '.join(n.get('keywords') or []) if isinstance(n.get('keywords'), list) else ''
+		if q in (t + ' ' + kw).lower():
+			mem.append({'text': t[:180], 'category': n.get('category', '')})
+
+	cal = []
+	for e in ani_load_calendar():
+		if q in (e.get('text') or '').lower():
+			cal.append({'text': e.get('text', ''), 'date': e.get('date'), 'state': e.get('state', '')})
+
+	lib = []
+	for f in ani_load_favorites():
+		hay = ' '.join([f.get('caption', ''), f.get('scene', ''), f.get('description', '')]).lower()
+		if q in hay:
+			lib.append({'url': f.get('url'), 'label': (f.get('caption') or f.get('description') or '')[:120]})
+
+	def pack(items):
+		return {'total': len(items), 'items': items[:3]}
+	return jsonify({'groups': {
+		'comms': pack(list(reversed(comms))),
+		'memory': pack(mem),
+		'calendar': pack(cal),
+		'library': pack(list(reversed(lib)))
+	}})
+
+
 @ani_bp.route('/ani/photo', methods=['POST'])
 def ani_photo():
 	"""Button-triggered photo. Normalize the recent conversation into a safe prompt (or use an operator-edited

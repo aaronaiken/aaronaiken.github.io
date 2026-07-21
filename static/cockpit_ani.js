@@ -1184,6 +1184,93 @@
 	if (th) aniLightbox(th.getAttribute('data-full'));
   });
 
+  // ---- ⌘K universal search (comms / memory / calendar / library) ----
+  function aniSearchOpen() {
+	var ov = document.getElementById('ani-search-overlay');
+	if (!ov) return;
+	ov.hidden = false;
+	var body = document.getElementById('ani-search-body');
+	if (body) body.innerHTML = '<div class="plog-msg">type to search comms · memory · calendar · library</div>';
+	var inp = document.getElementById('ani-search-input');
+	if (inp) { inp.value = ''; setTimeout(function() { inp.focus(); }, 30); }
+  }
+  function aniSearchClose() { var o = document.getElementById('ani-search-overlay'); if (o) o.hidden = true; }
+  var aniSearchTimer = null;
+  function aniSearchInput() { if (aniSearchTimer) clearTimeout(aniSearchTimer); aniSearchTimer = setTimeout(aniSearchRun, 220); }
+  function aniSearchRun() {
+	var inp = document.getElementById('ani-search-input'), body = document.getElementById('ani-search-body');
+	if (!inp || !body) return;
+	var q = inp.value.trim();
+	if (q.length < 2) { body.innerHTML = '<div class="plog-msg">type at least 2 characters</div>'; return; }
+	fetch('/ani/search?q=' + encodeURIComponent(q))
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) { aniRenderSearch(data.groups || {}, q); })
+	  .catch(function() { body.innerHTML = '<div class="plog-msg">search failed</div>'; });
+  }
+  function aniRenderSearch(groups, q) {
+	var body = document.getElementById('ani-search-body');
+	if (!body) return;
+	var order = [['comms', 'COMMS'], ['memory', 'MEMORY'], ['calendar', 'CALENDAR'], ['library', 'LIBRARY']];
+	var html = '', any = false;
+	order.forEach(function(g) {
+	  var grp = groups[g[0]];
+	  if (!grp || !grp.total) return;
+	  any = true;
+	  html += '<div class="ani-srch-group"><div class="ani-srch-gtitle">' + g[1] + ' · ' + grp.total + '</div>';
+	  grp.items.forEach(function(it) {
+		var label = '', data = '';
+		if (g[0] === 'comms') { label = (it.role === 'user' ? 'you: ' : 'ani: ') + (it.image ? '📷 ' : '') + it.text; data = 'data-jump="comms" data-text="' + aniEscapeHtml((it.text || '').slice(0, 60)) + '"'; }
+		else if (g[0] === 'memory') { label = it.text; data = 'data-jump="memory"'; }
+		else if (g[0] === 'calendar') { label = (it.date ? it.date + ' · ' : '') + it.text; data = 'data-jump="calendar"'; }
+		else { label = it.label || '(photo)'; data = 'data-jump="library" data-url="' + aniEscapeHtml(it.url || '') + '"'; }
+		html += '<div class="ani-srch-item" ' + data + '>' + aniEscapeHtml(label) + '</div>';
+	  });
+	  if (grp.total > grp.items.length) html += '<div class="ani-srch-item ani-srch-more" data-jump="' + g[0] + '-all">view all ' + grp.total + ' ↗</div>';
+	  html += '</div>';
+	});
+	body.innerHTML = any ? html : '<div class="plog-msg">no matches for "' + aniEscapeHtml(q) + '"</div>';
+  }
+  function aniJumpToComms(snippet) {
+	if (!snippet) return;
+	if (!aniIsOpen) aniToggle();
+	var els = aniMsgs.querySelectorAll('.ani-msg');
+	for (var i = els.length - 1; i >= 0; i--) {
+	  if (els[i].textContent.indexOf(snippet) >= 0) {
+		els[i].scrollIntoView({ block: 'center' });
+		els[i].classList.add('ani-msg-flash');
+		(function(el) { setTimeout(function() { el.classList.remove('ani-msg-flash'); }, 1600); })(els[i]);
+		return;
+	  }
+	}
+  }
+  var _aniSearchBody = document.getElementById('ani-search-body');
+  if (_aniSearchBody) _aniSearchBody.addEventListener('click', function(e) {
+	var it = e.target.closest ? e.target.closest('.ani-srch-item') : null;
+	if (!it) return;
+	var jump = (it.getAttribute('data-jump') || '').replace('-all', '');
+	aniSearchClose();
+	if (jump === 'comms') aniJumpToComms(it.getAttribute('data-text'));
+	else if (jump === 'memory') aniRemember();
+	else if (jump === 'calendar') aniCalendar();
+	else if (jump === 'library') { var u = it.getAttribute('data-url'); if (u) aniLightbox(u); else aniLibrary(); }
+  });
+  var _aniSearchInput = document.getElementById('ani-search-input');
+  if (_aniSearchInput) {
+	_aniSearchInput.addEventListener('input', aniSearchInput);
+	_aniSearchInput.addEventListener('keydown', function(e) {
+	  if (e.key === 'Enter') { e.preventDefault(); var f = document.querySelector('#ani-search-body .ani-srch-item'); if (f) f.click(); }
+	  else if (e.key === 'Escape') { aniSearchClose(); }
+	});
+  }
+  document.addEventListener('keydown', function(e) {
+	if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && (e.key === 'k' || e.key === 'K')) {
+	  e.preventDefault(); aniSearchOpen();
+	} else if (e.key === 'Escape') {
+	  var so = document.getElementById('ani-search-overlay');
+	  if (so && !so.hidden) aniSearchClose();
+	}
+  });
+
   function aniShortReason(r) {
 	r = (r || '').toLowerCase();
 	if (r.indexOf('not-rear') >= 0 || r.indexOf('not a rear') >= 0 || r.indexOf('facing') >= 0) return 'not rear';
