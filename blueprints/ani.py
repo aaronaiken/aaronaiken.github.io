@@ -1163,7 +1163,7 @@ def ani_sentiment_score(messages, now_dt=None):
 			if ts.tzinfo is None:
 				ts = pytz.timezone('America/New_York').localize(ts)
 			if ts >= cutoff:
-				rcount += sum(1 for e in m['reactions'] if e in ('❤️', '🔥', '💋', '💦'))
+				rcount += sum(1 for e in m['reactions'] if isinstance(e, str))   # all reactions are affectionate
 		except Exception:
 			pass
 	return min(1.0, base + min(0.15, 0.05 * rcount))
