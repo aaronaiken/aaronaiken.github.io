@@ -153,6 +153,8 @@
 		  updateAcheDisplay(data.ache_level);
 		  aniApplyMood(data.mood);
 		  aniRenderSparkline(data.spark);
+		  aniUpdateQuietIndicator(data.quiet);
+		  aniUpdateBackupStatus(data.backup);
 		  var wasNear = aniNearBottom();
 		  var newCount = 0;
 		  (data.messages || []).forEach(function(m) {
@@ -404,6 +406,8 @@
 		updateAcheDisplay(data.ache_level);
 		aniApplyMood(data.mood);
 		aniRenderSparkline(data.spark);
+		aniUpdateQuietIndicator(data.quiet);
+		aniUpdateBackupStatus(data.backup);
 		aniLastDivDate = null;   // fresh render — recompute date dividers from the top
 		var messages = data.messages || [];
 		if (messages.length > 0) {
@@ -787,16 +791,117 @@
 	  .catch(function() {});
   }
 
-  function aniClear() {
-	if (!confirm('clear the whole history? this cannot be undone.')) return;
+  // ── SYS overlay: quiet hours · backups · clear-history ────────────────────
+  var ANI_WEEKDAYS = [['M', 0], ['T', 1], ['W', 2], ['T', 3], ['F', 4], ['S', 5], ['S', 6]];  // Python weekday() Mon=0
+  function aniSysOpen() {
+	var ov = document.getElementById('ani-sys-overlay'); if (!ov) return;
+	fetch('/ani/settings').then(function(r) { return r.json(); }).then(function(data) {
+	  aniSysFill(data.settings || {});
+	  aniUpdateBackupStatus(data.backup);
+	  aniUpdateQuietIndicator(data.quiet);
+	}).catch(function() {});
+	var ci = document.getElementById('ani-clear-confirm'); if (ci) ci.value = '';
+	aniClearConfirmCheck();
+	ov.hidden = false;
+  }
+  function aniSysClose() { var o = document.getElementById('ani-sys-overlay'); if (o) o.hidden = true; }
+  function aniSysFill(s) {
+	function set(id, v) { var el = document.getElementById(id); if (el) el.value = v; }
+	function chk(id, v) { var el = document.getElementById(id); if (el) el.checked = !!v; }
+	chk('ani-quiet-enabled', s.quiet_enabled);
+	set('ani-quiet-start', s.quiet_start || '23:00');
+	set('ani-quiet-end', s.quiet_end || '07:00');
+	chk('ani-backup-enabled', s.backup_enabled);
+	set('ani-backup-time', s.backup_time || '03:00');
+	set('ani-backup-keep', s.backup_keep || 14);
+	// weekday chips
+	var wrap = document.getElementById('ani-quiet-days');
+	if (wrap) {
+	  var days = s.quiet_days || [];
+	  wrap.innerHTML = ANI_WEEKDAYS.map(function(d, i) {
+		var on = days.indexOf(d[1]) >= 0 ? ' on' : '';
+		return '<button type="button" class="ani-sys-day' + on + '" data-day="' + d[1] + '" onclick="aniSysToggleDay(this)">' + d[0] + '</button>';
+	  }).join('');
+	}
+  }
+  function aniSysToggleDay(btn) { btn.classList.toggle('on'); aniSysSave(); }
+  function aniSysGatherDays() {
+	var out = [];
+	Array.prototype.forEach.call(document.querySelectorAll('#ani-quiet-days .ani-sys-day.on'), function(b) {
+	  out.push(parseInt(b.getAttribute('data-day'), 10));
+	});
+	return out;
+  }
+  function aniSysSave() {
+	function val(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+	function chk(id) { var el = document.getElementById(id); return el ? el.checked : false; }
+	var payload = {
+	  quiet_enabled: chk('ani-quiet-enabled'),
+	  quiet_start: val('ani-quiet-start'),
+	  quiet_end: val('ani-quiet-end'),
+	  quiet_days: aniSysGatherDays(),
+	  backup_enabled: chk('ani-backup-enabled'),
+	  backup_time: val('ani-backup-time'),
+	  backup_keep: parseInt(val('ani-backup-keep'), 10) || 14
+	};
+	fetch('/ani/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) { aniUpdateBackupStatus(data.backup); aniUpdateQuietIndicator(data.quiet); })
+	  .catch(function() {});
+  }
+  function aniBackupRun() {
+	var btn = document.getElementById('ani-backup-run'); if (btn) { btn.disabled = true; btn.textContent = 'BACKING UP…'; }
+	fetch('/ani/backup/run', { method: 'POST' }).then(function(r) { return r.json(); }).then(function(data) {
+	  aniUpdateBackupStatus(data.backup);
+	  if (btn) { btn.disabled = false; btn.textContent = 'RUN NOW'; }
+	  aniRenderNotify(data.ok ? ('backup saved ✓ · ' + (data.name || '')) : ('backup failed: ' + (data.error || '')));
+	}).catch(function() { if (btn) { btn.disabled = false; btn.textContent = 'RUN NOW'; } });
+  }
+  function aniBackupExport() { window.location = '/ani/backup/export'; }
+  function aniClearConfirmCheck() {
+	var ci = document.getElementById('ani-clear-confirm'), b = document.getElementById('ani-clear-btn');
+	if (b) b.disabled = !(ci && ci.value.trim().toUpperCase() === 'CLEAR');
+  }
+  function aniClearConfirmed() {
+	var b = document.getElementById('ani-clear-btn'); if (b && b.disabled) return;
 	fetch('/ani/clear', { method: 'POST' })
 	  .then(function() {
 		Array.from(aniMsgs.querySelectorAll('.ani-msg, .ani-msg-notify')).forEach(function(el) { el.remove(); });
 		aniEmpty.style.display = 'block';
 		aniLoaded = false;
+		aniSeen = new Set();
 		var ns = document.getElementById('ani-now-state'); if (ns) { ns.hidden = true; ns.innerHTML = ''; }
+		aniSysClose();
+		aniRenderNotify('history cleared — fresh channel');
 	  })
 	  .catch(function() {});
+  }
+  // Header ☾ + footer BK, kept live from the history poll.
+  function aniFmtBkTime(iso) {
+	if (!iso) return '';
+	var d = new Date(iso); if (isNaN(d.getTime())) return '';
+	return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  function aniUpdateQuietIndicator(q) {
+	var el = document.getElementById('ani-quiet-indicator'); if (!el) return;
+	if (q && q.armed) { el.hidden = false; el.textContent = '☾ ' + (q.until || ''); }
+	else { el.hidden = true; el.textContent = ''; }
+  }
+  function aniUpdateBackupStatus(b) {
+	var pill = document.getElementById('ani-bk-status');
+	var line = document.getElementById('ani-sys-bkstatus');
+	if (!b) { if (pill) pill.hidden = true; if (line) line.textContent = '—'; return; }
+	var glyph = { ok: '✓', stale: '✓', fail: '✕', never: '·', off: '·' }[b.state] || '·';
+	var t = aniFmtBkTime(b.last);
+	if (pill) {
+	  if (!b.enabled) { pill.hidden = true; }
+	  else { pill.hidden = false; pill.textContent = 'BK ' + glyph + (t ? ' ' + t : ''); pill.className = 'ani-bk-status bk-' + b.state; }
+	}
+	if (line) {
+	  var msg = { ok: 'last backup ' + t, stale: 'last backup ' + t + ' (>36h ago)', fail: 'last backup FAILED ' + t,
+				  never: 'no backup yet', off: 'backups off' }[b.state] || '—';
+	  line.textContent = msg; line.className = 'ani-sys-row ani-sys-bkstatus bk-' + b.state;
+	}
   }
 
   function aniFmtMsgTime(iso) {

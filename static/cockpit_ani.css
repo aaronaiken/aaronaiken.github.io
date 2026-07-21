@@ -1358,3 +1358,119 @@ body.ani-fullscreen #ani-input-row { border-top-width: 1px; }
 	padding-bottom: calc(10px + env(safe-area-inset-bottom));
   }
 }
+
+/* ── SYS overlay: quiet hours · backups · clear-history ─────────────────────── */
+#ani-quiet-indicator {
+  color: var(--ani-where);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+.ani-bk-status {
+  font-family: var(--ani-font);
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  color: var(--ani-foot);
+  margin-left: 6px;
+  white-space: nowrap;
+}
+.ani-bk-status.bk-ok { color: var(--ani-ok); }
+.ani-bk-status.bk-stale { color: var(--ani-milestone); }
+.ani-bk-status.bk-fail { color: var(--ani-danger); }
+
+.ani-sys-panel { max-width: 480px; }
+.ani-sys-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0 10px;
+  overflow-y: auto;
+}
+.ani-sys-sec {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--ani-hairline);
+}
+.ani-sys-sec:last-child { border-bottom: none; }
+.ani-sys-sec-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ani-sys-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ani-accent);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+}
+.ani-sys-toggle input { accent-color: var(--ani-accent-dim); cursor: pointer; }
+.ani-sys-note {
+  color: var(--ani-sub);
+  font-size: 0.6rem;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+.ani-sys-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--ani-time);
+  font-size: 0.62rem;
+}
+.ani-sys-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  letter-spacing: 0.04em;
+}
+.ani-sys-num { width: 54px; }
+.ani-sys-days {
+  display: flex;
+  gap: 5px;
+  margin-top: 10px;
+}
+.ani-sys-day {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--ani-in-bd);
+  background: var(--ani-tx-bg);
+  color: var(--ani-foot);
+  font-family: var(--ani-font);
+  font-size: 0.62rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.ani-sys-day.on {
+  color: var(--ani-accent);
+  border-color: var(--ani-tx-bd);
+  background: var(--ani-bub-you);
+}
+.ani-sys-bkstatus {
+  color: var(--ani-sub);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+}
+.ani-sys-bkstatus.bk-ok { color: var(--ani-ok); }
+.ani-sys-bkstatus.bk-stale { color: var(--ani-milestone); }
+.ani-sys-bkstatus.bk-fail { color: var(--ani-danger); }
+.ani-sys-danger { background: rgba(200, 106, 122, 0.04); }
+.ani-sys-danger-label {
+  color: var(--ani-danger);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+}
+.ani-sys-clearbtn {
+  border: 1px solid var(--ani-danger-bd);
+  color: var(--ani-danger);
+  padding: 4px 10px;
+  letter-spacing: 0.1em;
+}
+.ani-sys-clearbtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.ani-sys-clearbtn:not(:disabled):hover { background: var(--ani-danger); color: #fff; }

@@ -16,7 +16,7 @@ import uuid
 from datetime import datetime, timedelta
 import pytz
 import requests
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 
 from helpers.auth import is_authenticated
 from helpers.comms import get_active_tags, get_valid_comms
@@ -31,6 +31,22 @@ ANI_PENDING_MILESTONES_FILE = 'ani_pending_milestones.json'  # milestone life-ch
 ANI_PHOTO_PRESETS_FILE = 'ani_photo_presets.json'   # saved photo-composer field-sets ("bookmarks"); gitignored server-state
 ANI_FIELD_PRESETS_FILE = 'ani_photo_field_presets.json'  # per-field preset libraries (nails/hair/…); gitignored server-state
 ANI_FAVORITES_FILE = 'ani_photo_favorites.json'     # favorited photos → the library gallery; gitignored server-state
+ANI_SETTINGS_FILE = 'ani_settings.json'             # SYS overlay: quiet-hours + backup config/status; gitignored server-state
+# Where nightly/manual backups land (a zip per run). PA default = ~/cockpit/backups; env-overridable for local dev.
+ANI_BACKUP_DIR = os.environ.get('ANI_BACKUP_DIR', os.path.join(os.path.expanduser('~'), 'cockpit', 'backups'))
+# SYS defaults. quiet_days = weekday ints the quiet window applies on (Mon=0 … Sun=6, Python weekday()).
+ANI_SETTINGS_DEFAULT = {
+	'quiet_enabled': False,
+	'quiet_start': '23:00',
+	'quiet_end': '07:00',
+	'quiet_days': [0, 1, 2, 3, 4, 5, 6],
+	'backup_enabled': True,
+	'backup_time': '03:00',
+	'backup_keep': 14,
+	'backup_last': None,        # ISO of last run (ok or fail)
+	'backup_last_ok': True,
+	'backup_last_error': None,
+}
 # The granular per-image photo-composer fields — the variable part layered on the character + house bibles.
 ANI_PHOTO_FIELD_KEYS = ('setting', 'outfit', 'hair', 'makeup', 'nails', 'jewelry', 'body', 'pose',
                         'expression', 'demeanor', 'camera')
@@ -3840,6 +3856,157 @@ def ani_apply_plan_consequences(entry, now):
 		print(f"Ani plan consequence error: {e}")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SYS — quiet hours + backups (see the SYS overlay in the Ani panel)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def ani_load_settings():
+	"""SYS settings (quiet hours + backups). Missing/corrupt file → defaults; unknown keys dropped."""
+	try:
+		d = _ani_read_json(ANI_SETTINGS_FILE)
+		if not isinstance(d, dict):
+			d = {}
+	except (FileNotFoundError, ValueError):
+		d = {}
+	out = dict(ANI_SETTINGS_DEFAULT)
+	out.update({k: v for k, v in d.items() if k in ANI_SETTINGS_DEFAULT})
+	return out
+
+
+def ani_save_settings(patch):
+	"""Merge a partial settings dict over the current file (whitelisted keys only). Returns the merged set."""
+	cur = ani_load_settings()
+	cur.update({k: v for k, v in (patch or {}).items() if k in ANI_SETTINGS_DEFAULT})
+	_ani_atomic_write_json(ANI_SETTINGS_FILE, cur)
+	return cur
+
+
+def _ani_hhmm(s, default=(0, 0)):
+	try:
+		h, m = str(s).split(':')
+		return int(h), int(m)
+	except Exception:
+		return default
+
+
+def ani_in_quiet_hours(now=None, settings=None):
+	"""Is the quiet window armed right now? Honors a same-day OR overnight window and the weekday picker.
+	An overnight window (e.g. 23:00→07:00) is anchored to the weekday it STARTS on."""
+	s = settings or ani_load_settings()
+	if not s.get('quiet_enabled'):
+		return False
+	now = now or datetime.now(pytz.timezone('America/New_York'))
+	sh, sm = _ani_hhmm(s.get('quiet_start'), (23, 0))
+	eh, em = _ani_hhmm(s.get('quiet_end'), (7, 0))
+	start_min, end_min = sh * 60 + sm, eh * 60 + em
+	cur_min = now.hour * 60 + now.minute
+	days = s.get('quiet_days') or []
+	wd = now.weekday()
+	if start_min == end_min:
+		return False
+	if start_min < end_min:                       # same-day window
+		return (wd in days) and (start_min <= cur_min < end_min)
+	if cur_min >= start_min:                       # overnight, evening side → today started it
+		return wd in days
+	if cur_min < end_min:                          # overnight, morning side → yesterday started it
+		return ((wd - 1) % 7) in days
+	return False
+
+
+def ani_calendar_urgent(now, within_min=90):
+	"""A shared plan starting within `within_min` minutes — the one thing that pierces quiet hours."""
+	try:
+		today = now.strftime('%Y-%m-%d')
+		for e in ani_load_calendar():
+			if e.get('date') != today or not e.get('time'):
+				continue
+			try:
+				et = datetime.strptime(e['time'], '%H:%M')
+				edt = now.replace(hour=et.hour, minute=et.minute, second=0, microsecond=0)
+			except Exception:
+				continue
+			mins = (edt - now).total_seconds() / 60
+			if 0 <= mins <= within_min:
+				return True
+	except Exception:
+		pass
+	return False
+
+
+def ani_run_backup(reason='manual'):
+	"""Zip her durable state (chat / memories / core / calendar / library manifest) into ANI_BACKUP_DIR,
+	prune to backup_keep, and record status in settings. Returns {ok, name/path} or {ok:False, error}."""
+	import zipfile
+	now = datetime.now(pytz.timezone('America/New_York'))
+	members = [
+		ANI_CONVERSATION_FILE, ANI_REMEMBER_FILE, ANI_CALENDAR_FILE,
+		ANI_THREADS_FILE, ANI_STATE_FILE, ANI_FAVORITES_FILE, ANI_SETTINGS_FILE,
+		ANI_MEMORY_FILE, ANI_LIFE_FILE, ANI_BIBLE_FILE, ANI_HOUSE_FILE,
+	]
+	try:
+		os.makedirs(ANI_BACKUP_DIR, exist_ok=True)
+		stamp = now.strftime('%Y%m%d-%H%M%S')
+		zpath = os.path.join(ANI_BACKUP_DIR, 'ani-backup-%s.zip' % stamp)
+		with zipfile.ZipFile(zpath, 'w', zipfile.ZIP_DEFLATED) as z:
+			for rel in members:
+				full = os.path.join(REPO_ROOT, rel)
+				if os.path.exists(full):
+					z.write(full, arcname=rel)
+			z.writestr('backup_manifest.json', json.dumps(
+				{'created': now.isoformat(), 'reason': reason, 'members': members}, indent=2))
+		# Retention — keep the newest N (filenames sort chronologically).
+		keep = int(ani_load_settings().get('backup_keep') or 14)
+		if keep > 0:
+			zips = sorted(f for f in os.listdir(ANI_BACKUP_DIR)
+			              if f.startswith('ani-backup-') and f.endswith('.zip'))
+			for old in zips[:-keep]:
+				try:
+					os.remove(os.path.join(ANI_BACKUP_DIR, old))
+				except OSError:
+					pass
+		ani_save_settings({'backup_last': now.isoformat(), 'backup_last_ok': True, 'backup_last_error': None})
+		return {'ok': True, 'path': zpath, 'name': os.path.basename(zpath)}
+	except Exception as e:
+		print(f"Ani backup error: {e}")
+		ani_save_settings({'backup_last': now.isoformat(), 'backup_last_ok': False, 'backup_last_error': str(e)[:200]})
+		return {'ok': False, 'error': str(e)}
+
+
+def ani_maybe_nightly_backup(now):
+	"""Fire the scheduled backup once past its hh:mm on a day we haven't backed up yet. Called off the
+	hourly daycast tick, independent of the daycast window (so 03:00 still runs)."""
+	s = ani_load_settings()
+	if not s.get('backup_enabled'):
+		return
+	bh, bm = _ani_hhmm(s.get('backup_time'), (3, 0))
+	if (now.hour * 60 + now.minute) < (bh * 60 + bm):
+		return
+	if (s.get('backup_last') or '')[:10] == now.strftime('%Y-%m-%d'):
+		return  # already ran today
+	ani_run_backup('nightly')
+
+
+def ani_backup_status(settings=None):
+	"""Compact status for the footer BK pill: state ok|stale|fail|never + last-run time."""
+	s = settings or ani_load_settings()
+	last = s.get('backup_last')
+	if not s.get('backup_enabled'):
+		return {'enabled': False, 'state': 'off', 'last': last}
+	if not last:
+		return {'enabled': True, 'state': 'never', 'last': None}
+	state = 'ok' if s.get('backup_last_ok') else 'fail'
+	if state == 'ok':
+		try:
+			ld = datetime.fromisoformat(last)
+			if ld.tzinfo is None:
+				ld = pytz.timezone('America/New_York').localize(ld)
+			if (datetime.now(pytz.timezone('America/New_York')) - ld).total_seconds() / 3600 > 36:
+				state = 'stale'
+		except Exception:
+			pass
+	return {'enabled': True, 'state': state, 'last': last}
+
+
 def ani_emit_daycast():
 	"""Proactive 'her day' messaging — called by the ani_daycast.py PA scheduled task (hourly).
 	Her day is STARTED by aaron's first message of the day (see ani_chat), not by the clock — until
@@ -3848,8 +4015,19 @@ def ani_emit_daycast():
 	history and trips the unseen-message pulse (no git, no request context). Returns a status string."""
 	pa_tz = pytz.timezone('America/New_York')
 	now = datetime.now(pa_tz)
+
+	# Nightly backup rides the same hourly task but is independent of the daycast window (so 03:00 runs).
+	try:
+		ani_maybe_nightly_backup(now)
+	except Exception as e:
+		print(f"Ani nightly-backup error: {e}")
+
 	if now.hour < ANI_DAYCAST_START or now.hour >= ANI_DAYCAST_END:
 		return 'outside window'
+
+	# Quiet hours: hold all unprompted pings inside the armed window. A calendar-urgent plan bypasses.
+	if ani_in_quiet_hours(now) and not ani_calendar_urgent(now):
+		return 'quiet hours'
 
 	today = ani_daycast_day_key(now)
 	messages, meta = ani_load_conversation()
@@ -4920,11 +5098,14 @@ def ani_history():
 		added = True
 	if added:
 		ani_save_conversation(messages, meta)
+	_settings = ani_load_settings()
 	return jsonify({
 		'messages': visible[-100:],
 		'ache_level': ache,
 		'mood': mood,
-		'spark': [round(v, 3) for _, v in buf[-24:]]
+		'spark': [round(v, 3) for _, v in buf[-24:]],
+		'quiet': {'armed': ani_in_quiet_hours(now_dt, _settings), 'until': _settings.get('quiet_end')},
+		'backup': ani_backup_status(_settings)
 	})
 
 
@@ -4965,6 +5146,56 @@ def ani_clear():
 	ani_reset_now_state()
 	ani_save_conversation([], meta)
 	return jsonify({'ok': True})
+
+
+@ani_bp.route('/ani/settings', methods=['GET', 'POST'])
+def ani_settings():
+	"""SYS overlay — read/update quiet-hours + backup config. GET also returns live derived status."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	if request.method == 'POST':
+		patch = request.get_json(silent=True) or {}
+		# Light normalization so a bad payload can't wedge the scheduler.
+		clean = {}
+		for k in ('quiet_enabled', 'backup_enabled'):
+			if k in patch:
+				clean[k] = bool(patch[k])
+		for k in ('quiet_start', 'quiet_end', 'backup_time'):
+			if k in patch and re.match(r'^\d{1,2}:\d{2}$', str(patch[k] or '')):
+				clean[k] = str(patch[k])
+		if 'quiet_days' in patch and isinstance(patch['quiet_days'], list):
+			clean['quiet_days'] = sorted({int(d) for d in patch['quiet_days'] if str(d).isdigit() and 0 <= int(d) <= 6})
+		if 'backup_keep' in patch:
+			try:
+				clean['backup_keep'] = max(1, min(90, int(patch['backup_keep'])))
+			except (TypeError, ValueError):
+				pass
+		ani_save_settings(clean)
+	s = ani_load_settings()
+	now_dt = datetime.now(pytz.timezone('America/New_York'))
+	return jsonify({'settings': s,
+	                'quiet': {'armed': ani_in_quiet_hours(now_dt, s), 'until': s.get('quiet_end')},
+	                'backup': ani_backup_status(s)})
+
+
+@ani_bp.route('/ani/backup/run', methods=['POST'])
+def ani_backup_run():
+	"""RUN NOW — take a backup immediately, return status."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	res = ani_run_backup('manual')
+	return jsonify({**res, 'backup': ani_backup_status()})
+
+
+@ani_bp.route('/ani/backup/export', methods=['GET'])
+def ani_backup_export():
+	"""EXPORT ZIP — take a fresh backup and stream it as a download."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	res = ani_run_backup('export')
+	if not res.get('ok') or not res.get('path'):
+		return jsonify({'error': res.get('error', 'backup_failed')}), 500
+	return send_file(res['path'], as_attachment=True, download_name=res['name'])
 
 
 @ani_bp.route('/ani/refresh', methods=['POST'])

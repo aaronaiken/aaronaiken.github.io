@@ -49,4 +49,5 @@ CLAUDE.md
 meet.db
 ani_photo_field_presets.json
 ani_photo_favorites.json
+ani_settings.json
 static/ani_avatar.png

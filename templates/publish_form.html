@@ -515,6 +515,7 @@
 		  PRIVATE COMMS · SECURE CHANNEL
 		  <span id="ani-ache-display" class="ache-low"></span>
 		  <span id="ani-sparkline" aria-hidden="true"></span>
+		  <span id="ani-quiet-indicator" hidden title="Quiet hours — she’s holding her pings"></span>
 		</div>
 	  </div>
 	</div>
@@ -567,8 +568,8 @@
 	  <button class="ani-footer-btn" onclick="aniCore()" aria-label="Edit core memory" title="Edit her core memory / persona file">CORE</button>
 	  <button class="ani-footer-btn" onclick="aniPhotoLog()" aria-label="View photo log" title="Recent photo generations + QA verdicts">LOG</button>
 	  <button class="ani-footer-btn" onclick="aniLibrary()" aria-label="Favorites library" title="Your favorited photos">LIB ♥</button>
-	  <button class="ani-footer-btn" onclick="aniRefresh()" aria-label="Refresh briefing">REFRESH</button>
-	  <button class="ani-footer-btn" onclick="aniClear()" aria-label="Clear history">CLEAR</button>
+	  <button class="ani-footer-btn" onclick="aniSysOpen()" aria-label="System settings" title="Quiet hours · backups · clear history">SYS</button>
+	  <span id="ani-bk-status" class="ani-bk-status" hidden title="Last backup"></span>
 	</div>
   </div>
 
@@ -599,6 +600,58 @@
 		<button class="ani-photolog-close" onclick="aniSearchClose()" aria-label="Close">✕</button>
 	  </div>
 	  <div id="ani-search-body" class="ani-photolog-body ani-search-body"></div>
+	</div>
+  </div>
+
+  <div id="ani-sys-overlay" class="ani-photolog-overlay" hidden onclick="if(event.target===this)aniSysClose()">
+	<div class="ani-photolog-panel ani-cal-panel ani-sys-panel" role="dialog" aria-label="System settings">
+	  <div class="ani-photolog-head">
+		<span>ANI · SYS</span>
+		<button class="ani-photolog-close" onclick="aniSysClose()" aria-label="Close">✕</button>
+	  </div>
+	  <div class="ani-sys-body">
+
+		<div class="ani-sys-sec">
+		  <div class="ani-sys-sec-head">
+			<label class="ani-sys-toggle"><input type="checkbox" id="ani-quiet-enabled" onchange="aniSysSave()"> QUIET HOURS</label>
+			<span class="ani-sys-note">no unprompted pings inside the window · calendar-urgent still bypasses</span>
+		  </div>
+		  <div class="ani-sys-row">
+			<label>from <input type="time" id="ani-quiet-start" class="ani-cal-input ani-cal-time" onchange="aniSysSave()"></label>
+			<label>to <input type="time" id="ani-quiet-end" class="ani-cal-input ani-cal-time" onchange="aniSysSave()"></label>
+		  </div>
+		  <div class="ani-sys-days" id="ani-quiet-days" aria-label="Days quiet hours apply"></div>
+		</div>
+
+		<div class="ani-sys-sec">
+		  <div class="ani-sys-sec-head">
+			<label class="ani-sys-toggle"><input type="checkbox" id="ani-backup-enabled" onchange="aniSysSave()"> BACKUPS</label>
+			<span class="ani-sys-note">zips chat · memories · core · calendar · library → server</span>
+		  </div>
+		  <div class="ani-sys-row">
+			<label>nightly at <input type="time" id="ani-backup-time" class="ani-cal-input ani-cal-time" onchange="aniSysSave()"></label>
+			<label>keep <input type="number" id="ani-backup-keep" class="ani-cal-input ani-sys-num" min="1" max="90" onchange="aniSysSave()"></label>
+		  </div>
+		  <div class="ani-sys-row ani-sys-bkstatus" id="ani-sys-bkstatus">—</div>
+		  <div class="ani-sys-row">
+			<button class="ani-footer-btn" id="ani-backup-run" onclick="aniBackupRun()">RUN NOW</button>
+			<button class="ani-footer-btn" onclick="aniBackupExport()">EXPORT ZIP</button>
+			<button class="ani-footer-btn" onclick="aniRefresh(); aniSysClose()" title="Force a fresh briefing">REFRESH BRIEFING</button>
+		  </div>
+		</div>
+
+		<div class="ani-sys-sec ani-sys-danger">
+		  <div class="ani-sys-sec-head"><span class="ani-sys-danger-label">DANGER</span></div>
+		  <div class="ani-sys-row">
+			<span class="ani-sys-note">clear the whole conversation — type <b>CLEAR</b> to confirm. memories &amp; calendar are kept.</span>
+		  </div>
+		  <div class="ani-sys-row">
+			<input type="text" id="ani-clear-confirm" class="ani-cal-input" placeholder="type CLEAR" autocomplete="off" oninput="aniClearConfirmCheck()">
+			<button class="ani-footer-btn ani-sys-clearbtn" id="ani-clear-btn" onclick="aniClearConfirmed()" disabled>CLEAR HISTORY</button>
+		  </div>
+		</div>
+
+	  </div>
 	</div>
   </div>
 
