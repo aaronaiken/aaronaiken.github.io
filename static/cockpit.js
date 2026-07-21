@@ -107,13 +107,10 @@
 					fill.style.width = integrity + '%';
 					const scanSpeed = Math.max(2, (latency / 50));
 					document.body.style.setProperty('--scan-speed', `${scanSpeed}s`);
-					if (latency > 300) {
-						fill.style.background = '#cc3322';
-						document.body.style.filter = "contrast(1.2) brightness(0.8)";
-					} else {
-						fill.style.background = integrity < 50 ? '#d4880a' : '#4dbb6a';
-						document.body.style.filter = "none";
-					}
+					// Reflect latency in the shield indicator ONLY. (Previously this dimmed the whole
+					// screen via body filter:brightness(0.8) on any >300ms check — a random full-screen
+					// flicker on slow requests, and a body `filter` also breaks fixed-position overlays.)
+					fill.style.background = latency > 300 ? '#cc3322' : (integrity < 50 ? '#d4880a' : '#4dbb6a');
 				});
 		}
 

@@ -431,7 +431,7 @@
   border: none;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.6);
-  color: var(--ani-accent);
+  color: #fff;   /* always light — it sits on a dark scrim over the photo, in both themes */
   font-size: 11px;
   cursor: pointer;
   opacity: 0.75;
