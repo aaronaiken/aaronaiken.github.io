@@ -153,15 +153,21 @@
 		  updateAcheDisplay(data.ache_level);
 		  aniApplyMood(data.mood);
 		  aniRenderSparkline(data.spark);
-		  var appended = false;
+		  var wasNear = aniNearBottom();
+		  var newCount = 0;
 		  (data.messages || []).forEach(function(m) {
 			if (!aniSeen.has(aniSig(m.role, m.content, m.image))) {
 			  aniEmpty.style.display = 'none';
 			  aniRenderMessage(m.role, m.content, m.image, m.ts, { reactions: m.reactions, favorited: m.favorited });
-			  appended = true;
+			  newCount++;
 			}
 		  });
-		  if (appended) { aniLoadState(); aniScrollToBottom(); }
+		  if (newCount) {
+			aniLoadState();
+			// Only auto-scroll if you were already at the bottom; otherwise raise the ↓ LATEST pill.
+			if (wasNear) { aniScrollToBottom(); }
+			else { aniUnread += newCount; aniShowLatestPill(); }
+		  }
 		})
 		.catch(function() {});
 	  aniLoadDecisions();
@@ -398,6 +404,7 @@
 		updateAcheDisplay(data.ache_level);
 		aniApplyMood(data.mood);
 		aniRenderSparkline(data.spark);
+		aniLastDivDate = null;   // fresh render — recompute date dividers from the top
 		var messages = data.messages || [];
 		if (messages.length > 0) {
 		  aniEmpty.style.display = 'none';
@@ -409,6 +416,7 @@
 		  aniPendingOpener = null;
 		}
 		aniScrollToBottom();
+		aniRestoreDraft();
 	  })
 	  .catch(function() {});
   }
@@ -420,6 +428,7 @@
 	aniRenderMessage('user', text, null, new Date().toISOString());
 	aniInput.value = '';
 	aniInput.style.height = 'auto';
+	aniClearDraft();
 	aniSendBtn.disabled = true;
 	aniShowTyping(true);
 	aniScrollToBottom();
@@ -806,6 +815,7 @@
 	opts = opts || {};
 	if (content.startsWith('[daily briefing') || content.startsWith('[system:')) return;
 	aniSeen.add(aniSig(role, content, image));   // mark rendered so the poller won't re-append it
+	if (ts) aniMaybeDateDivider(ts);   // TODAY / weekday divider when the day changes
 	var when = aniFmtMsgTime(ts);
 	var div = document.createElement('div');
 	div.classList.add('ani-msg');
@@ -1057,6 +1067,49 @@
   function aniScrollToBottom() {
 	aniMsgs.scrollTop = aniMsgs.scrollHeight;
   }
+
+  // ---- THREAD QoL (Phase 4): date dividers, ↓ LATEST pill, draft autosave ----
+  var aniLastDivDate = null;
+  function aniDayKey(ts) { var d = new Date(ts); return isNaN(d) ? null : (d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate()); }
+  function aniDayLabel(ts) {
+	var d = new Date(ts), now = new Date(), y = new Date(); y.setDate(now.getDate() - 1);
+	var k = aniDayKey(ts);
+	if (k === aniDayKey(now)) return 'TODAY';
+	if (k === aniDayKey(y)) return 'YESTERDAY';
+	return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
+  }
+  function aniMaybeDateDivider(ts) {
+	var k = aniDayKey(ts);
+	if (!k || k === aniLastDivDate) return;
+	aniLastDivDate = k;
+	var div = document.createElement('div');
+	div.className = 'ani-date-divider';
+	div.innerHTML = '<span>' + aniDayLabel(ts) + '</span>';
+	aniMsgs.insertBefore(div, aniTyping);
+  }
+
+  var aniUnread = 0;
+  function aniNearBottom() { return aniMsgs.scrollHeight - aniMsgs.scrollTop - aniMsgs.clientHeight < aniMsgs.clientHeight; }
+  function aniShowLatestPill() {
+	var p = document.getElementById('ani-latest-pill');
+	if (p) { p.hidden = false; p.textContent = '↓ LATEST' + (aniUnread > 0 ? ' · ' + aniUnread : ''); }
+  }
+  function aniHideLatestPill() { var p = document.getElementById('ani-latest-pill'); if (p) p.hidden = true; aniUnread = 0; }
+  aniMsgs.addEventListener('scroll', function() { if (aniNearBottom()) aniHideLatestPill(); });
+
+  var aniDraftTimer = null;
+  function aniFmtClock() { var d = new Date(); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+  function aniShowDraftNote(txt) { var n = document.getElementById('ani-draft-note'); if (!n) return; if (txt) { n.textContent = txt; n.hidden = false; } else n.hidden = true; }
+  function aniSaveDraft() {
+	var v = aniInput.value;
+	try { if (v.trim()) localStorage.setItem('ani_draft', v); else localStorage.removeItem('ani_draft'); } catch (e) {}
+	aniShowDraftNote(v.trim() ? 'DRAFT · AUTOSAVED ' + aniFmtClock() : '');
+  }
+  function aniRestoreDraft() {
+	try { var v = localStorage.getItem('ani_draft'); if (v && !aniInput.value) { aniInput.value = v; aniShowDraftNote('DRAFT · restored'); } } catch (e) {}
+  }
+  function aniClearDraft() { try { localStorage.removeItem('ani_draft'); } catch (e) {} aniShowDraftNote(''); }
+  aniInput.addEventListener('input', function() { if (aniDraftTimer) clearTimeout(aniDraftTimer); aniDraftTimer = setTimeout(aniSaveDraft, 1000); });
 
   function aniPhotoLog() {
 	var overlay = document.getElementById('ani-photolog-overlay');

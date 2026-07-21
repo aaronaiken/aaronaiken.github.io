@@ -218,6 +218,46 @@ body.ani-fullscreen #ani-avatar-fallback { font-size: 1.1rem; }
   transition: height .6s ease, background .8s ease;
 }
 
+/* --- date dividers --- */
+.ani-date-divider { display: flex; align-items: center; gap: 8px; margin: 8px 2px; }
+.ani-date-divider::before, .ani-date-divider::after { content: ''; flex: 1; height: 1px; background: var(--ani-hairline); }
+.ani-date-divider span {
+  font-family: var(--ani-font);
+  font-size: 0.56rem;
+  letter-spacing: 0.14em;
+  color: var(--ani-foot);
+  white-space: nowrap;
+}
+
+/* --- ↓ LATEST pill --- */
+#ani-latest-pill {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 82px;
+  z-index: 5;
+  padding: 4px 13px;
+  font-family: var(--ani-font);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: var(--ani-accent);
+  background: var(--ani-head);
+  border: 1px solid var(--ani-accent-dim);
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+#ani-latest-pill:hover { border-color: var(--ani-accent); }
+
+/* --- draft autosave microline --- */
+#ani-draft-note {
+  padding: 2px 14px 4px;
+  font-family: var(--ani-font);
+  font-size: 0.54rem;
+  letter-spacing: 0.08em;
+  color: var(--ani-foot);
+}
+
 #ani-close-btn {
   background: none;
   border: none;

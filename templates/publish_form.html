@@ -535,7 +535,7 @@
   <div id="ani-messages" aria-live="polite">
 	<div id="ani-empty-state">
 	  SECURE CHANNEL OPEN<br>
-	  <span style="color:#2e1e08">· · ·</span>
+	  <span style="color:var(--ani-foot)">· · ·</span>
 	</div>
 	<div class="ani-typing" id="ani-typing-indicator">
 	  <div class="ani-typing-dots">
@@ -543,6 +543,8 @@
 	  </div>
 	</div>
   </div>
+
+  <button id="ani-latest-pill" hidden onclick="aniScrollToBottom(); aniHideLatestPill()" aria-label="Jump to latest">↓ LATEST</button>
 
   <div id="ani-input-row">
 	<textarea
@@ -554,6 +556,7 @@
 	<button id="ani-photo-btn" onclick="aniPhoto()" aria-label="Request a photo" title="Send a photo of the scene you just described">📷</button>
 	<button id="ani-send-btn" onclick="aniSend()" aria-label="Send">TX</button>
   </div>
+  <div id="ani-draft-note" hidden></div>
 
   <div id="ani-footer-row">
 	<span id="ani-shortcut-hint">CTRL+SHIFT+A · LONG-PRESS 🦇</span>
