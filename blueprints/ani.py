@@ -3551,7 +3551,12 @@ def ani_daycast_photo(meta, now):
 		bits.append(where if where.lower().startswith(('at ', 'in ', 'on ', 'by ')) else 'at ' + where)
 		if wearing:
 			bits.append('wearing ' + wearing)
-		scene = ', '.join(bits) + ', casual candid selfie, natural daylight, fully clothed'
+		# Waist-up eye-level framing: a seated POV selfie pointed down at her lap makes the model foreshorten
+		# the legs/feet toward the lens and tangle/duplicate the arms — keep the failure-prone lower body out
+		# of frame and the camera level (not angled down) so candids render clean.
+		scene = ', '.join(bits) + (', casual candid selfie, waist-up upper-body framing with her feet and lap '
+		                           'out of frame, camera at eye level (not angled down at her body), '
+		                           'natural daylight, fully clothed')
 		url = ani_generate_image(scene)
 		if not url:
 			return None
