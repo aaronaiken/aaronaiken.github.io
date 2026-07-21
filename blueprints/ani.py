@@ -30,6 +30,7 @@ ANI_CALENDAR_FILE = 'ani_calendar.json'             # her calendar / shared plan
 ANI_PENDING_MILESTONES_FILE = 'ani_pending_milestones.json'  # milestone life-changes awaiting Aaron's approval (Phase 3)
 ANI_PHOTO_PRESETS_FILE = 'ani_photo_presets.json'   # saved photo-composer field-sets ("bookmarks"); gitignored server-state
 ANI_FIELD_PRESETS_FILE = 'ani_photo_field_presets.json'  # per-field preset libraries (nails/hair/…); gitignored server-state
+ANI_FAVORITES_FILE = 'ani_photo_favorites.json'     # favorited photos → the library gallery; gitignored server-state
 # The granular per-image photo-composer fields — the variable part layered on the character + house bibles.
 ANI_PHOTO_FIELD_KEYS = ('setting', 'outfit', 'hair', 'makeup', 'nails', 'jewelry', 'body', 'pose',
                         'expression', 'demeanor', 'camera')
@@ -1921,6 +1922,20 @@ def ani_load_field_presets():
 
 def ani_save_field_presets(d):
 	_ani_atomic_write_json(ANI_FIELD_PRESETS_FILE, d)
+
+
+def ani_load_favorites():
+	"""Favorited photos (the library). List of {url, caption, scene, description, ts}. [] if none/unreadable."""
+	try:
+		with open(ANI_FAVORITES_FILE) as f:
+			d = json.load(f)
+		return d if isinstance(d, list) else []
+	except (FileNotFoundError, ValueError):
+		return []
+
+
+def ani_save_favorites(items):
+	_ani_atomic_write_json(ANI_FAVORITES_FILE, items)
 
 
 def _ani_garment_negative(scene):
@@ -3895,10 +3910,16 @@ def ani_chat_with_grok(messages_history, meta, user_message):
 	def _tsprefix(m):
 		lbl = _ani_fmt_msg_time(m.get('ts'), now_dt)
 		c = m.get('content', '')
-		# For a photo she sent, append what it ACTUALLY showed (from her vision pass) so she can recall +
-		# reference her own pictures in later turns — she's text-only here, so this is how she "remembers" them.
-		if m.get('image') and m.get('vision'):
-			c = ((c + ' ') if c and c != '📷' else '') + '[photo you sent him — it showed: %s]' % m['vision']
+		# For a photo she sent, append what it ACTUALLY showed (her vision pass) + how he reacted, so she can
+		# recall her own pictures + feel his response — she's text-only here, so this is how she "sees" both.
+		if m.get('image'):
+			extras = []
+			if m.get('vision'):
+				extras.append('it showed: %s' % m['vision'])
+			if m.get('reactions'):
+				extras.append('he reacted %s' % ''.join(m['reactions']))
+			if extras:
+				c = ((c + ' ') if c and c != '📷' else '') + '[photo you sent him — %s]' % '; '.join(extras)
 		return {'role': m['role'], 'content': f"({lbl}) {c}" if lbl else c}
 	convo = [_tsprefix(m) for m in recent] + [
 		{'role': 'user', 'content': f"({_ani_fmt_msg_time(now_dt.isoformat(), now_dt)}) {user_message}"}]
@@ -4265,6 +4286,68 @@ def ani_photo_field_presets_delete():
 		d[field] = [v for v in d[field] if isinstance(v, str) and v.lower() != value.lower()]
 		ani_save_field_presets(d)
 	return jsonify({'ok': True, 'field_presets': d})
+
+
+@ani_bp.route('/ani/photo/react', methods=['POST'])
+def ani_photo_react():
+	"""Toggle an emoji reaction on a photo she sent. Stored on the message; she becomes aware of it in chat."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	body = request.get_json(silent=True) or {}
+	url = (body.get('image_url') or '').strip()
+	emoji = (body.get('emoji') or '').strip()[:8]
+	if not url or not emoji:
+		return jsonify({'error': 'bad_request'}), 400
+	messages, meta = ani_load_conversation()
+	msg = next((m for m in reversed(messages) if m.get('image') == url), None)
+	if not msg:
+		return jsonify({'error': 'not_found'}), 404
+	rx = [e for e in (msg.get('reactions') or []) if isinstance(e, str)]
+	if emoji in rx:
+		rx.remove(emoji)
+	else:
+		rx.append(emoji)
+	msg['reactions'] = rx
+	ani_save_conversation(messages, meta)
+	return jsonify({'ok': True, 'reactions': rx})
+
+
+@ani_bp.route('/ani/photo/favorite', methods=['POST'])
+def ani_photo_favorite():
+	"""Toggle a photo into/out of the favorites library. Add captures the scene/caption/description so the
+	library survives even if the chat is later cleared. Also flags the in-chat message for its ♥ state."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	url = ((request.get_json(silent=True) or {}).get('image_url') or '').strip()
+	if not url:
+		return jsonify({'error': 'bad_request'}), 400
+	favs = ani_load_favorites()
+	messages, meta = ani_load_conversation()
+	msg = next((m for m in reversed(messages) if m.get('image') == url), None)
+	if any(f.get('url') == url for f in favs):
+		favs = [f for f in favs if f.get('url') != url]
+		fav = False
+	else:
+		favs.append({'url': url,
+		             'caption': (msg.get('content') if msg else '') or '',
+		             'scene': (msg.get('scene') if msg else '') or '',
+		             'description': (msg.get('vision') if msg else '') or '',
+		             'ts': (msg.get('ts') if msg else '') or ''})
+		favs = favs[-1000:]
+		fav = True
+	ani_save_favorites(favs)
+	if msg is not None:
+		msg['favorited'] = fav
+		ani_save_conversation(messages, meta)
+	return jsonify({'ok': True, 'favorited': fav})
+
+
+@ani_bp.route('/ani/photo/favorites', methods=['GET'])
+def ani_photo_favorites_list():
+	"""The favorites library — newest first."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	return jsonify({'favorites': list(reversed(ani_load_favorites()))})
 
 
 @ani_bp.route('/ani/photo', methods=['POST'])

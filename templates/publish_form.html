@@ -554,6 +554,7 @@
 	  <button class="ani-footer-btn" onclick="aniRemember()" aria-label="What she remembers" title="What she remembers — her life + yours">MEM</button>
 	  <button class="ani-footer-btn" onclick="aniCore()" aria-label="Edit core memory" title="Edit her core memory / persona file">CORE</button>
 	  <button class="ani-footer-btn" onclick="aniPhotoLog()" aria-label="View photo log" title="Recent photo generations + QA verdicts">LOG</button>
+	  <button class="ani-footer-btn" onclick="aniLibrary()" aria-label="Favorites library" title="Your favorited photos">LIB ♥</button>
 	  <button class="ani-footer-btn" onclick="aniRefresh()" aria-label="Refresh briefing">REFRESH</button>
 	  <button class="ani-footer-btn" onclick="aniClear()" aria-label="Clear history">CLEAR</button>
 	</div>
@@ -566,6 +567,16 @@
 		<button class="ani-photolog-close" onclick="aniPhotoLogClose()" aria-label="Close">✕</button>
 	  </div>
 	  <div id="ani-photolog-body" class="ani-photolog-body"></div>
+	</div>
+  </div>
+
+  <div id="ani-library-overlay" class="ani-photolog-overlay" hidden onclick="if(event.target===this)aniLibraryClose()">
+	<div class="ani-photolog-panel" role="dialog" aria-label="Favorites library">
+	  <div class="ani-photolog-head">
+		<span>ANI · LIBRARY ♥</span>
+		<button class="ani-photolog-close" onclick="aniLibraryClose()" aria-label="Close">✕</button>
+	  </div>
+	  <div id="ani-library-body" class="ani-library-body"></div>
 	</div>
   </div>
 

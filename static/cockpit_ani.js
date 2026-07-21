@@ -55,7 +55,7 @@
 		  (data.messages || []).forEach(function(m) {
 			if (!aniSeen.has(aniSig(m.role, m.content, m.image))) {
 			  aniEmpty.style.display = 'none';
-			  aniRenderMessage(m.role, m.content, m.image, m.ts);
+			  aniRenderMessage(m.role, m.content, m.image, m.ts, { reactions: m.reactions, favorited: m.favorited });
 			  appended = true;
 			}
 		  });
@@ -297,7 +297,7 @@
 		var messages = data.messages || [];
 		if (messages.length > 0) {
 		  aniEmpty.style.display = 'none';
-		  messages.forEach(function(m) { aniRenderMessage(m.role, m.content, m.image, m.ts); });
+		  messages.forEach(function(m) { aniRenderMessage(m.role, m.content, m.image, m.ts, { reactions: m.reactions, favorited: m.favorited }); });
 		}
 		if (aniPendingOpener) {
 		  aniEmpty.style.display = 'none';
@@ -694,8 +694,11 @@
 	return d.toLocaleDateString([], { weekday: 'short' }) + ' ' + t;
   }
 
-  function aniRenderMessage(role, content, image, ts) {
+  var ANI_REACTIONS = ['❤️', '💋', '🔥', '💦', '🍆', '😍'];
+
+  function aniRenderMessage(role, content, image, ts, opts) {
 	content = content || '';
+	opts = opts || {};
 	if (content.startsWith('[daily briefing') || content.startsWith('[system:')) return;
 	aniSeen.add(aniSig(role, content, image));   // mark rendered so the poller won't re-append it
 	var when = aniFmtMsgTime(ts);
@@ -711,12 +714,23 @@
 	  var html = '<div class="ani-name">' + name + '</div>'
 			   + '<span class="ani-msg-cap">' + aniEscapeHtml(content).replace(/\n/g, '<br>') + '</span>';
 	  if (image) {
-		html += '<img class="ani-msg-img" src="' + aniEscapeHtml(image) + '" alt="" loading="lazy">';
+		var esc = aniEscapeHtml(image);
+		var rx = opts.reactions || [];
+		html += '<img class="ani-msg-img" src="' + esc + '" alt="" loading="lazy">';
+		// react bar — tap an emoji to toggle it on this photo (lit = you reacted)
+		html += '<div class="ani-react-row">';
+		ANI_REACTIONS.forEach(function(em) {
+		  var on = rx.indexOf(em) >= 0 ? ' on' : '';
+		  html += '<button type="button" class="ani-react' + on + '" data-emoji="' + em + '" data-img="' + esc + '">' + em + '</button>';
+		});
+		html += '</div>';
 		html += '<div class="ani-msg-imgtools">';
-		// bad render? re-roll it in place — deletes this one, generates a new one from the same scene
-		html += '<button type="button" class="ani-msg-retry" data-img="' + aniEscapeHtml(image) + '" title="bad render? re-roll it">↻ retry</button>';
-		// a keeper? bookmark the exact prompt that produced it as a reusable preset
-		html += '<button type="button" class="ani-msg-bookmark" data-img="' + aniEscapeHtml(image) + '" title="bookmark this shot as a preset">★ bookmark</button>';
+		// bad render? re-roll it in place from the same scene
+		html += '<button type="button" class="ani-msg-retry" data-img="' + esc + '" title="bad render? re-roll it">↻ retry</button>';
+		// a keeper image? favorite it into your library
+		html += '<button type="button" class="ani-msg-favorite' + (opts.favorited ? ' on' : '') + '" data-img="' + esc + '" title="favorite → add to your library">♥</button>';
+		// bookmark the PROMPT that produced it (reusable in the composer)
+		html += '<button type="button" class="ani-msg-bookmark" data-img="' + esc + '" title="bookmark this shot’s prompt as a preset">★ prompt</button>';
 		html += '</div>';
 	  }
 	  div.innerHTML = html;
@@ -732,10 +746,51 @@
 	if (rb) { e.stopPropagation(); aniRetryPhoto(rb); return; }
 	var bm = t && t.closest ? t.closest('.ani-msg-bookmark') : null;
 	if (bm) { e.stopPropagation(); aniBookmarkPhoto(bm); return; }
+	var rx = t && t.closest ? t.closest('.ani-react') : null;
+	if (rx) { e.stopPropagation(); aniReactPhoto(rx); return; }
+	var fv = t && t.closest ? t.closest('.ani-msg-favorite') : null;
+	if (fv) { e.stopPropagation(); aniFavoritePhoto(fv); return; }
 	if (t && t.classList && t.classList.contains('ani-msg-img')) {
 	  aniLightbox(t.getAttribute('src'));
 	}
   });
+
+  // Toggle an emoji reaction on a photo (lit = reacted); she becomes aware of it in chat.
+  function aniReactPhoto(btn) {
+	var img = btn.getAttribute('data-img'), em = btn.getAttribute('data-emoji');
+	if (!img || !em) return;
+	fetch('/ani/photo/react', {
+	  method: 'POST', headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ image_url: img, emoji: em })
+	})
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		if (!data.reactions) return;
+		var row = btn.closest('.ani-react-row');
+		if (row) Array.prototype.forEach.call(row.querySelectorAll('.ani-react'), function(b) {
+		  b.classList.toggle('on', data.reactions.indexOf(b.getAttribute('data-emoji')) >= 0);
+		});
+	  })
+	  .catch(function() {});
+  }
+
+  // Toggle a photo into your favorites library (♥ lit = saved).
+  function aniFavoritePhoto(btn) {
+	var img = btn.getAttribute('data-img');
+	if (!img || btn.disabled) return;
+	btn.disabled = true;
+	fetch('/ani/photo/favorite', {
+	  method: 'POST', headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ image_url: img })
+	})
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		btn.disabled = false;
+		btn.classList.toggle('on', !!data.favorited);
+		aniRenderNotify(data.favorited ? 'added to your library ♥' : 'removed from library');
+	  })
+	  .catch(function() { btn.disabled = false; aniRenderNotify('could not update favorite'); });
+  }
 
   // ★ bookmark a keeper after the fact: save the exact prompt that produced this photo as a named preset.
   function aniBookmarkPhoto(btn) {
@@ -906,6 +961,64 @@
   function aniPhotoLogClose() {
 	document.getElementById('ani-photolog-overlay').hidden = true;
   }
+
+  // Favorites library — a gallery of the photos you've ♥'d.
+  function aniLibrary() {
+	var overlay = document.getElementById('ani-library-overlay');
+	var body = document.getElementById('ani-library-body');
+	if (!overlay || !body) return;
+	body.innerHTML = '<div class="plog-msg">loading…</div>';
+	overlay.hidden = false;
+	fetch('/ani/photo/favorites')
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) { aniRenderLibrary(data.favorites || []); })
+	  .catch(function() { body.innerHTML = '<div class="plog-msg">could not load your library</div>'; });
+  }
+  function aniLibraryClose() {
+	var o = document.getElementById('ani-library-overlay'); if (o) o.hidden = true;
+  }
+  function aniRenderLibrary(favs) {
+	var body = document.getElementById('ani-library-body');
+	if (!body) return;
+	if (!favs.length) { body.innerHTML = '<div class="plog-msg">no favorites yet — tap ♥ on a photo to add it</div>'; return; }
+	var html = '<div class="ani-lib-grid">';
+	favs.forEach(function(f) {
+	  var u = aniEscapeHtml(f.url || '');
+	  if (!u) return;
+	  html += '<div class="ani-lib-item">'
+		   +  '<img class="ani-lib-thumb" src="' + u + '" alt="" loading="lazy" data-full="' + u + '">'
+		   +  '<button type="button" class="ani-lib-remove" data-img="' + u + '" title="remove from library">✕</button>'
+		   +  '</div>';
+	});
+	html += '</div>';
+	body.innerHTML = html;
+  }
+  function aniLibraryRemove(url, btn) {
+	if (!url) return;
+	fetch('/ani/photo/favorite', {
+	  method: 'POST', headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ image_url: url })
+	})
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		if (data.favorited) return;   // still favorited somehow — leave it
+		var it = btn.closest('.ani-lib-item'); if (it) it.remove();
+		// un-light any in-chat ♥ for this image too
+		Array.prototype.forEach.call(document.querySelectorAll('.ani-msg-favorite'), function(b) {
+		  if (b.getAttribute('data-img') === url) b.classList.remove('on');
+		});
+		var body = document.getElementById('ani-library-body');
+		if (body && !body.querySelector('.ani-lib-item')) body.innerHTML = '<div class="plog-msg">no favorites yet — tap ♥ on a photo to add it</div>';
+	  })
+	  .catch(function() {});
+  }
+  var _aniLibBody = document.getElementById('ani-library-body');
+  if (_aniLibBody) _aniLibBody.addEventListener('click', function(e) {
+	var rm = e.target.closest ? e.target.closest('.ani-lib-remove') : null;
+	if (rm) { aniLibraryRemove(rm.getAttribute('data-img'), rm); return; }
+	var th = e.target.closest ? e.target.closest('.ani-lib-thumb') : null;
+	if (th) aniLightbox(th.getAttribute('data-full'));
+  });
 
   function aniShortReason(r) {
 	r = (r || '').toLowerCase();

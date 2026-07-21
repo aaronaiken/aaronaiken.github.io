@@ -262,7 +262,72 @@
 .ani-msg-retry:hover { opacity: 1; background: rgba(245, 179, 50, 0.14); }
 .ani-msg-retry:disabled { cursor: default; opacity: 0.5; }
 
-.ani-msg-imgtools { display: flex; gap: 6px; margin-top: 6px; }
+.ani-react-row { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.ani-react {
+  padding: 2px 6px;
+  font-size: 14px;
+  line-height: 1.2;
+  background: rgba(245, 179, 50, 0.05);
+  border: 1px solid rgba(245, 179, 50, 0.22);
+  border-radius: 12px;
+  cursor: pointer;
+  opacity: 0.5;
+  filter: grayscale(0.5);
+  transition: opacity 0.12s ease, filter 0.12s ease, background 0.12s ease;
+}
+.ani-react:hover { opacity: 0.9; filter: grayscale(0); }
+.ani-react.on { opacity: 1; filter: grayscale(0); background: rgba(245, 179, 50, 0.18); border-color: rgba(245, 179, 50, 0.55); }
+
+.ani-msg-favorite {
+  display: inline-block;
+  padding: 3px 10px;
+  font: inherit;
+  font-size: 12px;
+  color: rgba(245, 179, 50, 0.7);
+  background: rgba(245, 179, 50, 0.06);
+  border: 1px solid rgba(245, 179, 50, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+.ani-msg-favorite:hover { opacity: 1; }
+.ani-msg-favorite.on { opacity: 1; color: #ff5b7f; border-color: rgba(255, 91, 127, 0.55); background: rgba(255, 91, 127, 0.12); }
+.ani-msg-favorite:disabled { cursor: default; opacity: 0.5; }
+
+/* Favorites library gallery */
+.ani-library-body { padding: 10px 12px; overflow-y: auto; }
+.ani-lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.ani-lib-item { position: relative; }
+.ani-lib-thumb {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid rgba(245, 179, 50, 0.25);
+  cursor: zoom-in;
+  display: block;
+}
+.ani-lib-remove {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #f5b332;
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.ani-lib-remove:hover { opacity: 1; background: rgba(0, 0, 0, 0.85); }
+body.ani-fullscreen .ani-lib-thumb { border-color: #2a3360; }
+
+.ani-msg-imgtools { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
 .ani-msg-bookmark {
   display: inline-block;
   padding: 3px 10px;
