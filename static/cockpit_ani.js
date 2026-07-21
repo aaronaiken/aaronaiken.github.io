@@ -979,15 +979,15 @@
 	  var dec = d.decisions || [], ms = d.milestones || [];
 	  if (!dec.length && !ms.length) html += '<div class="plog-msg">nothing on the table right now</div>';
 	  dec.forEach(function(f) {
+		var nm = aniEscapeHtml((f.name || '').replace(/'/g, "\\'"));
 		html += '<div class="ani-fork ani-story-fork"><div class="ani-fork-head"><span class="ani-fork-glyph">⑂</span> '
 			 + aniEscapeHtml(f.name || '') + '</div>';
 		if (f.status) html += '<div class="ani-fork-status">' + aniEscapeHtml(f.status) + '</div>';
-		html += '<div class="ani-fork-opts">';
-		(f.options || []).forEach(function(opt) {
-		  html += '<button class="ani-fork-opt" onclick="aniStoryDecide(\'' + aniEscapeHtml((f.name || '').replace(/'/g, "\\'"))
-			   + '\', \'' + aniEscapeHtml((opt || '').replace(/'/g, "\\'")) + '\', this)">' + aniEscapeHtml(opt) + '</button>';
-		});
-		html += '</div></div>';
+		if ((f.options || []).length) html += '<div class="ani-fork-branches">' + (f.options || []).map(function(o) { return aniEscapeHtml(o); }).join('  ·  ') + '</div>';
+		html += '<div class="ani-fork-opts">'
+			 + '<button class="ani-fork-opt" onclick="aniStoryWeighIn(\'' + nm + '\', this)" title="she raises it in chat so you can talk it through">weigh in ↗</button>'
+			 + '<button class="ani-fork-opt" onclick="aniStoryHerCall(\'' + nm + '\', this)" title="let her decide on her own">her call</button>'
+			 + '</div></div>';
 	  });
 	  if (ms.length) html += '<div class="ani-story-subhead">✦ awaiting your call</div>';
 	  ms.forEach(function(m) {
@@ -1020,12 +1020,25 @@
 	  .then(function(data) { out.textContent = data.recap || '(nothing written yet)'; })
 	  .catch(function() { out.textContent = 'couldn\'t gather it'; });
   }
-  function aniStoryDecide(name, choice, btn) {
+  // WEIGH IN → she raises the fork in chat; close the overlay so you can talk it through when it lands.
+  function aniStoryWeighIn(name, btn) {
 	if (btn) { btn.disabled = true; btn.textContent = '…'; }
-	fetch('/ani/decide', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, choice: choice }) })
+	fetch('/ani/story/weigh-in', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name }) })
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		aniStoryClose();
+		if (!aniIsOpen) aniToggle();
+		aniRenderNotify(data.ok ? 'she\'s bringing it up…' : 'couldn\'t raise it right now');
+	  })
+	  .catch(function() { if (btn) { btn.disabled = false; btn.textContent = 'weigh in ↗'; } });
+  }
+  // HER CALL → she decides on her own and reports back; refresh the shelf + decisions.
+  function aniStoryHerCall(name, btn) {
+	if (btn) { btn.disabled = true; btn.textContent = 'deciding…'; }
+	fetch('/ani/story/her-call', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name }) })
 	  .then(function(r) { return r.json(); })
 	  .then(function() { aniLoadDecisions(); aniStoryOpen(); })
-	  .catch(function() { if (btn) { btn.disabled = false; } });
+	  .catch(function() { if (btn) { btn.disabled = false; btn.textContent = 'her call'; } });
   }
 
   function aniFmtMsgTime(iso) {

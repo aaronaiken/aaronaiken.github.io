@@ -1633,3 +1633,4 @@ body.ani-fullscreen #ani-input-row { border-top-width: 1px; }
 /* Resting / finished books in ARC */
 .ani-book-rest { opacity: 0.62; }
 .ani-book-rest .ani-book-title { color: var(--ani-sub); }
+.ani-fork-branches { color: var(--ani-time); font-size: 0.62rem; font-style: italic; margin: 2px 0 8px; line-height: 1.4; }

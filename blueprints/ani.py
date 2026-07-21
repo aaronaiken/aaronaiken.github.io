@@ -1718,6 +1718,14 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 		else:
 			tlines.append('- %s : %s' % (t.get('name', ''), t.get('status', '')))
 	threads_blob = '\n'.join(tlines) or '(none yet)'
+	# Her active story-engine books + who's already in each, so a person mentioned this turn can be attributed
+	# to the RIGHT storyline (and only a genuinely new one gets added).
+	try:
+		books_blob = '\n'.join('- [%s] "%s" — cast: %s' % (
+			b.get('id'), b.get('title', ''), ', '.join(b.get('cast') or []) or '(just her)')
+			for b in ani_load_books() if b.get('status') == 'active') or '(none)'
+	except Exception:
+		books_blob = '(none)'
 	today_ymd = now_dt.strftime('%Y-%m-%d')
 	# Her upcoming (not-done, not-cancelled) plans with ids, so a move/cancel this turn can target one exactly.
 	upcoming = sorted([e for e in ani_load_calendar()
@@ -1733,7 +1741,8 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 		"\"threads\": [{\"name\":\"\",\"status\":\"\"}], \"life\": [], \"fork\": null, \"decide\": null, "
 		"\"calendar\": [{\"date\":\"YYYY-MM-DD\",\"time\":\"\",\"text\":\"\",\"source\":\"her\","
 		"\"thread\":\"\",\"milestone\":false}], "
-		"\"calendar_ops\": [{\"id\":\"\",\"op\":\"move\",\"date\":\"YYYY-MM-DD\",\"time\":\"\"}]}.\n"
+		"\"calendar_ops\": [{\"id\":\"\",\"op\":\"move\",\"date\":\"YYYY-MM-DD\",\"time\":\"\"}], "
+		"\"story_cast\": [{\"book_id\":\"\",\"name\":\"\"}]}.\n"
 		"facts: NEW durable, worth-remembering things about AARON (his plans, commitments, the people in "
 		"his life, preferences, lasting situations). DROP small talk, momentary mood, roleplay/flirtation/"
 		"anything sexual, and anything already known. For each fact: text = one short sentence starting "
@@ -1777,12 +1786,17 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 		"calendar_ops: if a plan ALREADY on her calendar got CHANGED or DROPPED this turn ('let's move dinner "
 		"to friday', 'i'm gonna skip the market this week'), reference it by its id from her upcoming-plans list "
 		"below: op='move' with a new date (+ time if given) to reschedule, or op='cancel' to drop it. Use ONLY "
-		"an id that appears in that list; never invent one. Default [].")
+		"an id that appears in that list; never invent one. Default [].\n"
+		"story_cast: a NEW person who clearly belongs to one of HER story books listed below (a friend of "
+		"sophie's who showed up, someone from her class, a new name in an ongoing storyline) — as "
+		"{book_id: the EXACT id from the list, name: their name}. ONLY a genuinely new person tied to a listed "
+		"book, and NOT someone already in that book's cast; never Aaron. Default [].")
 	user = (
 		f"Already-known facts (don't repeat these or minor rewordings):\n{known}\n\n"
 		f"Her current storylines (advance one by reusing its name; only 'decide' a fork listed as OPEN FORK):\n"
 		f"{threads_blob}\n\n"
 		f"Her upcoming plans (move/cancel one only by its [id] here):\n{up_blob}\n\n"
+		f"Her story books (attribute a new person to one only by its [id]):\n{books_blob}\n\n"
 		f"Aaron said: {(user_message or '')[:800]}\n"
 		f"Ani replied: {(reply or '')[:600]}\n\nJSON only.")
 	try:
@@ -1825,8 +1839,13 @@ def ani_extract_turn(user_message, reply, existing_notes, now_dt):
 			if isinstance(op, dict) and (op.get('id') or '').strip() and op.get('op') in ('move', 'cancel'):
 				calendar_ops.append({'id': op['id'].strip(), 'op': op['op'],
 				                     'date': (op.get('date') or '').strip(), 'time': (op.get('time') or '').strip()})
+		story_cast = []
+		for sc in (data.get('story_cast') or [])[:4]:
+			if isinstance(sc, dict) and (sc.get('book_id') or '').strip() and (sc.get('name') or '').strip():
+				story_cast.append({'book_id': sc['book_id'].strip(), 'name': sc['name'].strip()})
 		return {'facts': facts, 'state': state, 'threads': threads, 'life': life,
-		        'fork': fork, 'decide': decide, 'calendar': calendar, 'calendar_ops': calendar_ops}
+		        'fork': fork, 'decide': decide, 'calendar': calendar, 'calendar_ops': calendar_ops,
+		        'story_cast': story_cast}
 	except Exception as e:
 		print(f"Ani extract error: {e}")
 		return {}
@@ -4490,6 +4509,26 @@ def ani_story_recent_beats(limit=3):
 	return [b['text'] for b in ani_story_unspoken_beats(limit)]
 
 
+def ani_book_add_cast(book_id, name):
+	"""Add a person to a specific book's cast (from a chat mention). De-dupes case-insensitively. Best-effort."""
+	nm = (name or '').strip()[:40]
+	if not book_id or not nm:
+		return False
+	try:
+		books = ani_load_books()
+		for b in books:
+			if b.get('id') != book_id:
+				continue
+			if nm.lower() in [c.lower() for c in b.get('cast') or []]:
+				return False
+			b.setdefault('cast', []).append(nm)
+			ani_save_books(books)
+			return True
+	except Exception as e:
+		print(f"Ani add-cast error: {e}")
+	return False
+
+
 def ani_story_people(books=None):
 	"""Cast list aggregated across the shelf, each with which books they're in + their most recent beat."""
 	books = books or ani_load_books()
@@ -4976,6 +5015,9 @@ def ani_chat():
 						ani_cancel_calendar_entry(op.get('id'), when)
 					elif op.get('op') == 'move' and (op.get('date') or '').strip():
 						ani_move_calendar_entry(op.get('id'), op['date'].strip(), op.get('time'), when)
+				# A person Aaron introduced this turn who belongs to one of her storylines joins that book's cast.
+				for sc in res.get('story_cast', []):
+					ani_book_add_cast(sc.get('book_id'), sc.get('name'))
 			except Exception as e:
 				print(f"Ani extract thread error: {e}")
 		threading.Thread(target=_extract, daemon=True).start()
@@ -5553,6 +5595,75 @@ def ani_decide():
 	except Exception as e:
 		print(f"Ani decide reaction error: {e}")
 	return jsonify({'ok': True, 'name': t.get('name'), 'resolution': choice, 'pruned': pruned, 'reacted': reacted})
+
+
+@ani_bp.route('/ani/story/weigh-in', methods=['POST'])
+def ani_story_weigh_in():
+	"""WEIGH IN — she RAISES an open fork with him in chat (proactive), so you two talk it through instead of
+	tapping a button. Appends her message + trips the unseen pulse. Does NOT resolve the fork."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	name = (request.get_json(silent=True) or {}).get('name')
+	if not name:
+		return jsonify({'error': 'missing name'}), 400
+	t = ani_load_threads().get((name or '').strip().lower()[:40], {})
+	if t.get('kind') != 'decision' or t.get('state') != 'open':
+		return jsonify({'ok': False, 'error': 'no such open decision'}), 404
+	now_dt = datetime.now(pytz.timezone('America/New_York'))
+	messages, meta = ani_load_conversation()
+	system = ani_build_system_prompt(meta)
+	instr = ("[bring up this crossroads in your own life with aaron RIGHT NOW, like you want to talk it through "
+	         "with him: \"%s\" — you're torn between: %s. open it warmly in your own voice, say where your head's "
+	         "at and ask what he thinks. 1-3 sentences. don't list it like options on a form — just talk to him.]"
+	         % (t.get('name'), ' OR '.join(t.get('options') or [])))
+	txt = _ani_grok_call(system, [{'role': 'user', 'content': instr}], max_tokens=180)
+	if not txt:
+		return jsonify({'ok': False, 'error': 'generation failed'}), 200
+	messages.append({'role': 'assistant', 'content': txt, 'ani_day': True, 'ts': now_dt.isoformat()})
+	meta['unseen_day_messages'] = True
+	ani_save_conversation(messages, meta)
+	return jsonify({'ok': True, 'message': txt})
+
+
+@ani_bp.route('/ani/story/her-call', methods=['POST'])
+def ani_story_her_call():
+	"""HER CALL — she decides an open fork by her OWN leanings, then reports back. Picks a branch via Grok,
+	resolves it (settles memory + prunes the loop), and drops her reaction into the thread."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	name = (request.get_json(silent=True) or {}).get('name')
+	if not name:
+		return jsonify({'error': 'missing name'}), 400
+	t = ani_load_threads().get((name or '').strip().lower()[:40], {})
+	if t.get('kind') != 'decision' or t.get('state') != 'open':
+		return jsonify({'ok': False, 'error': 'no such open decision'}), 404
+	now_dt = datetime.now(pytz.timezone('America/New_York'))
+	options = t.get('options') or []
+	# Let her choose in-character — pick the exact branch text she leans toward.
+	system = ani_build_system_prompt(ani_load_conversation()[1])
+	pick = _ani_grok_call(system, [{'role': 'user', 'content':
+		"[decide this for yourself, by your own gut: \"%s\". your options are exactly: %s. reply with ONLY the "
+		"exact text of the one you choose — nothing else.]" % (t.get('name'), ' | '.join(options))}], max_tokens=60)
+	choice = None
+	if pick:
+		pl = pick.strip().strip('"').lower()
+		choice = next((o for o in options if o.lower() in pl or pl in o.lower()), None)
+	if not choice:
+		choice = options[0] if options else None
+	if not choice:
+		return jsonify({'ok': False, 'error': 'no options'}), 200
+	resolved, pruned = ani_resolve_fork(t.get('name'), choice, now_dt)
+	messages, meta = ani_load_conversation()
+	system = ani_build_system_prompt(meta)
+	instr = ("[you just made up your own mind about this: %s → you chose \"%s\". tell aaron what you decided and "
+	         "why, warmly and in your own voice, like you worked it out yourself and wanted him to know. 1-3 "
+	         "sentences; don't reopen it.]" % (t.get('name'), choice))
+	txt = _ani_grok_call(system, [{'role': 'user', 'content': instr}], max_tokens=160)
+	if txt:
+		messages.append({'role': 'assistant', 'content': txt, 'ani_day': True, 'ts': now_dt.isoformat()})
+		meta['unseen_day_messages'] = True
+		ani_save_conversation(messages, meta)
+	return jsonify({'ok': True, 'name': t.get('name'), 'resolution': choice, 'pruned': pruned, 'message': txt})
 
 
 @ani_bp.route('/ani/milestones/pending', methods=['GET'])
