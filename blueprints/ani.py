@@ -4048,6 +4048,10 @@ ANI_STORY_MAX_PER_DAY = int(os.environ.get('ANI_STORY_MAX_PER_DAY', '3'))     # 
 ANI_STORY_BEAT_CHANCE = float(os.environ.get('ANI_STORY_BEAT_CHANCE', '0.6')) # roll for a not-yet-overdue book
 ANI_STORY_ADVANCE_MAX = float(os.environ.get('ANI_STORY_ADVANCE_MAX', '0.34'))# max chapter progress per beat
 ANI_STORY_TELL_CHANCE = float(os.environ.get('ANI_STORY_TELL_CHANCE', '0.5'))  # extra odds she voices a waiting beat on a non-emotional daycast tick
+ANI_STORY_MAX_BOOKS = int(os.environ.get('ANI_STORY_MAX_BOOKS', '9'))          # shelf cap — she won't spawn past this
+ANI_STORY_NEW_BOOK_CHANCE = float(os.environ.get('ANI_STORY_NEW_BOOK_CHANCE', '0.18'))  # daily odds her world throws off a new storyline
+ANI_STORY_NEW_BOOK_MIN_DAYS = int(os.environ.get('ANI_STORY_NEW_BOOK_MIN_DAYS', '5'))    # min days between new books (rate-limit)
+ANI_STORY_KINDS = ('relationship', 'creative', 'side-hustle', 'shared')
 
 
 def ani_seed_books():
@@ -4079,6 +4083,7 @@ def ani_seed_books():
 def _ani_normalize_book(b, today):
 	"""Backfill runtime fields on a book so older/seed records are always safe to read."""
 	b.setdefault('status', 'active')
+	b.setdefault('created', today)   # book birthday — rate-limits how often a NEW book can spawn
 	b.setdefault('cast', [])
 	b.setdefault('beats', [])
 	b.setdefault('chapters_done', [])
@@ -4259,7 +4264,122 @@ def ani_story_tick(now):
 			b['beats'] = b['beats'][-ANI_STORY_BEATS_MAX:]
 
 	ani_save_books(books)
+	# Her world can also throw off a WHOLE new storyline (rate-limited + grounded). Self-contained; guarded.
+	try:
+		nb = ani_maybe_new_book(now)
+		if nb:
+			advanced.append(f"NEW BOOK: {nb.get('id')} — {nb.get('title')}")
+	except Exception as e:
+		print(f"Ani new-book error: {e}")
 	return advanced
+
+
+def ani_propose_new_book(books, now):
+	"""Ask Grok whether a genuinely NEW, distinct storyline has emerged in her life that deserves its own book
+	and isn't already covered. Returns a validated new-book dict or None (it returns {"new": false} freely —
+	we do NOT force one)."""
+	api_key = os.environ.get('XAI_API_KEY')
+	if not api_key:
+		return None
+	existing = '\n'.join('- "%s": %s' % (b.get('title', ''), b.get('blurb', '')) for b in books) or '(none)'
+	# What's actually been going on: recent beats + her own life file + recent her-world memories.
+	recent_beats = []
+	for b in books:
+		for bt in (b.get('beats') or [])[-2:]:
+			if (bt.get('text') or '').strip():
+				recent_beats.append('- ' + bt['text'].strip())
+	beats_blob = '\n'.join(recent_beats[-16:]) or '(quiet lately)'
+	life = (ani_get_life() or '')[:700]
+	mems = []
+	try:
+		for n in ani_load_remember():
+			if n.get('category') == 'her_world' and (n.get('text') or '').strip():
+				mems.append('- ' + n['text'].strip())
+	except Exception:
+		pass
+	mem_blob = '\n'.join(mems[-10:]) or '(none)'
+	system = (
+		"You watch the life of a woman named Ani. Decide whether a genuinely NEW, distinct storyline has "
+		"emerged that deserves its OWN 'book' and is NOT already one of her current books. Be conservative: "
+		"most days the answer is no. Return ONLY JSON — either {\"new\": false}, or "
+		'{"new":true,"id":"kebab-case-slug","title":"short lowercase title","kind":"relationship|creative|'
+		'side-hustle|shared","who":"hers|shared","blurb":"one plain sentence","cast":[],'
+		'"chapter":{"title":"","theme":"","est_weeks":4}}.\n'
+		"Only propose one if it's REAL and clearly separate from the existing books below — a new creative "
+		"pursuit, a new friendship or person becoming central, a new little project or chapter of her life. "
+		"who = 'shared' only if Aaron is genuinely part of it, else 'hers'. Grounded in her actual life; no "
+		"melodrama, no sexual content. When unsure, return {\"new\": false}."
+	)
+	user = (f"Her current books:\n{existing}\n\nHer own life notes:\n{life}\n\n"
+	        f"Recent beats across her stories:\n{beats_blob}\n\nRecent things from her world she remembers:\n{mem_blob}\n\n"
+	        f"Today is {now.strftime('%Y-%m-%d (%A)')}. Has a NEW distinct storyline emerged? JSON only.")
+	try:
+		resp = requests.post(
+			'https://api.x.ai/v1/chat/completions',
+			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+			json={'model': ANI_STORY_MODEL, 'max_tokens': 300, 'temperature': 0.7,
+			      'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': user}]},
+			timeout=20)
+		if resp.status_code != 200:
+			print(f"Ani new-book HTTP {resp.status_code}: {resp.text[:160]}")
+			return None
+		txt = resp.json()['choices'][0]['message']['content']
+		m = re.search(r'\{.*\}', txt, re.S)
+		data = json.loads(m.group(0)) if m else {}
+	except Exception as e:
+		print(f"Ani new-book call error: {e}")
+		return None
+	if not isinstance(data, dict) or not data.get('new'):
+		return None
+	title = (data.get('title') or '').strip()[:80]
+	blurb = (data.get('blurb') or '').strip()[:200]
+	if not title or not blurb:
+		return None
+	# slug + de-dupe against existing ids
+	base = re.sub(r'[^a-z0-9]+', '-', (data.get('id') or title).lower()).strip('-')[:40] or 'new-story'
+	ids = {b.get('id') for b in books}
+	bid, i = base, 2
+	while bid in ids:
+		bid = f"{base}-{i}"; i += 1
+	kind = data.get('kind') if data.get('kind') in ANI_STORY_KINDS else 'creative'
+	who = data.get('who') if data.get('who') in ('hers', 'shared') else 'hers'
+	ch = data.get('chapter') if isinstance(data.get('chapter'), dict) else {}
+	cast = [c.strip()[:40] for c in (data.get('cast') or []) if isinstance(c, str) and c.strip()][:6]
+	today = now.strftime('%Y-%m-%d')
+	book = {'id': bid, 'title': title, 'kind': kind, 'who': who, 'blurb': blurb, 'cast': cast,
+	        'chapter': {'n': 1, 'title': (ch.get('title') or 'how it starts').strip()[:80],
+	                    'theme': (ch.get('theme') or blurb).strip()[:200],
+	                    'est_weeks': int(ch.get('est_weeks') or 4)}}
+	return _ani_normalize_book(book, today)
+
+
+def ani_maybe_new_book(now, force=False):
+	"""Once-daily: her world may spin up a brand-new book. Gated by the shelf cap, a per-book-birthday
+	rate limit (no two new books within ANI_STORY_NEW_BOOK_MIN_DAYS), and a chance roll — then only if the
+	LLM actually finds a real new storyline. `force` skips the rate-limit + chance gates (still honors the
+	cap and still requires the LLM to find one). Returns the new book or None."""
+	books = ani_load_books()
+	if len([b for b in books if b.get('status') == 'active']) >= ANI_STORY_MAX_BOOKS:
+		return None
+	if not force:
+		# rate limit: how recently was the newest book born?
+		today = datetime.strptime(now.strftime('%Y-%m-%d'), '%Y-%m-%d')
+		newest = 999
+		for b in books:
+			try:
+				newest = min(newest, (today - datetime.strptime((b.get('created') or '')[:10], '%Y-%m-%d')).days)
+			except Exception:
+				pass
+		if newest < ANI_STORY_NEW_BOOK_MIN_DAYS:
+			return None
+		if random.random() >= ANI_STORY_NEW_BOOK_CHANCE:
+			return None
+	nb = ani_propose_new_book(books, now)
+	if not nb:
+		return None
+	books.append(nb)
+	ani_save_books(books)
+	return nb
 
 
 def ani_story_mood_delta(now):
@@ -5636,6 +5756,14 @@ def ani_story_tick_route():
 		return jsonify({'error': 'unauthorized'}), 401
 	now = datetime.now(pytz.timezone('America/New_York'))
 	moved = ani_story_tick(now)
+	# Optional: force-consider a brand-new book right now (skips the rate-limit/chance gates for testing).
+	if (request.get_json(silent=True) or {}).get('force_book'):
+		try:
+			nb = ani_maybe_new_book(now, force=True)
+			if nb:
+				moved = list(moved) + [f"NEW BOOK: {nb.get('id')} — {nb.get('title')}"]
+		except Exception as e:
+			print(f"Ani force new-book error: {e}")
 	return jsonify({'ok': True, 'moved': moved, **ani_story_snapshot()})
 
 
