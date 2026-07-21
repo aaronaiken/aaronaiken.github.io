@@ -1125,6 +1125,50 @@ def ani_get_ache_level(meta):
 		return 0
 
 
+# Warmth/closeness cues for the mood scalar's sentiment component — affect words, not graphic anatomy (the
+# sexual-tension dimension is already carried by the ache component). Heuristic only, no API cost.
+_ANI_WARMTH_RE = re.compile(
+	r"\b(love|miss(?:ed|ing)?|want|need|crave|ache|aching|close|closer|hold|held|kiss(?:es|ing|ed)?|touch|"
+	r"cuddl\w*|warm|soft|yours|together|come here|thinking about you|daddy|baby|babe|blush\w*|nervous|"
+	r"can'?t wait|mine|obsessed|butterflies)\b", re.IGNORECASE)
+
+
+def ani_sentiment_score(messages, now_dt=None):
+	"""Rolling 0→1 intimacy/warmth score of the last ~6 real messages (spec §1.2), nudged by recent photo
+	reactions (+0.05 per ❤️/🔥/💋/💦 within 2h, cap +0.15). Pure heuristic — no LLM call."""
+	real = [m for m in messages if (m.get('content') or '').strip() not in ('', '📷')
+	        and not (m.get('content') or '').startswith(('[daily briefing', '[system:'))]
+	base = 0.0
+	if real[-6:]:
+		text = ' '.join((m.get('content') or '') for m in real[-6:]).lower()
+		base = min(1.0, len(_ANI_WARMTH_RE.findall(text)) / 8.0)   # ~8 cues across 6 msgs → saturated
+	if now_dt is None:
+		now_dt = datetime.now(pytz.timezone('America/New_York'))
+	cutoff = now_dt - timedelta(hours=2)
+	rcount = 0
+	for m in messages[-40:]:
+		if not (m.get('image') and m.get('reactions')):
+			continue
+		try:
+			ts = datetime.fromisoformat(m.get('ts'))
+			if ts.tzinfo is None:
+				ts = pytz.timezone('America/New_York').localize(ts)
+			if ts >= cutoff:
+				rcount += sum(1 for e in m['reactions'] if e in ('❤️', '🔥', '💋', '💦'))
+		except Exception:
+			pass
+	return min(1.0, base + min(0.15, 0.05 * rcount))
+
+
+def ani_mood_scalar(messages, meta, now_dt=None):
+	"""The Starlight⇄Afterglow mood scalar (0=Starlight, 1=Afterglow): 0.55*ache + 0.45*sentiment.
+	Ache is banded to match the ache display (low/mid/high/urgent → 0/.33/.66/1)."""
+	ache = ani_get_ache_level(meta)
+	an = 1.0 if ache >= 85 else (0.66 if ache >= 65 else (0.33 if ache >= 40 else 0.0))
+	sent = ani_sentiment_score(messages, now_dt)
+	return round(max(0.0, min(1.0, 0.55 * an + 0.45 * sent)), 3)
+
+
 def ani_assess_session_tone(messages):
 	"""
 	Read the last 4 messages (2 exchanges) and assess the session tone.
@@ -4129,7 +4173,7 @@ def ani_chat():
 
 	ani_save_conversation(updated_history, updated_meta)
 
-	return jsonify({'reply': reply})
+	return jsonify({'reply': reply, 'mood': ani_mood_scalar(updated_history, updated_meta)})
 
 
 def ani_photo_caption(messages, meta):
@@ -4721,13 +4765,15 @@ def ani_history():
 		and not m.get('content', '').startswith('[system:')
 	]
 	ache = ani_get_ache_level(meta)
+	mood = ani_mood_scalar(messages, meta)
 	# Opening the panel = daycast messages seen; clear the pulse flag.
 	if meta.get('unseen_day_messages'):
 		meta['unseen_day_messages'] = False
 		ani_save_conversation(messages, meta)
 	return jsonify({
 		'messages': visible[-100:],
-		'ache_level': ache
+		'ache_level': ache,
+		'mood': mood
 	})
 
 

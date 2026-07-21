@@ -26,6 +26,68 @@
 	}
   }
 
+  // ---- MOOD SCALAR (Starlight ⇄ Afterglow) ----
+  // Server sends mood 0..1; we lerp each --ani-X token toward its --ani-X-hot pair and set it inline on the
+  // panel + starfield. Elements carry 0.8s color transitions (CSS), so the shift is ambient, never a snap.
+  var aniStar = document.getElementById('ani-starfield');
+  var ANI_MOOD_TOKENS = ['bg-a', 'bg-b', 'bg-c', 'frame', 'head', 'hairline', 'status-bg', 'accent',
+	'accent-dim', 'sub', 'foot', 'time', 'bub-her', 'bub-her-bd', 'bub-her-tx', 'bub-you', 'bub-you-bd',
+	'bub-you-tx', 'in-bg', 'in-bd', 'tx-bd', 'tx-bg', 'where', 'wear', 'ache', 'star'];
+  var aniTokenBase = {};   // { token: {base:[r,g,b,a], hot:[r,g,b,a]} } — read from the stylesheet, pre-override
+  var aniMood = 0;
+
+  function aniParseColor(s) {
+	s = (s || '').trim();
+	if (!s || s === 'transparent') return [0, 0, 0, 0];
+	var m = s.match(/^#([0-9a-f]{3,8})$/i);
+	if (m) {
+	  var h = m[1];
+	  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+	  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16),
+			  h.length >= 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1];
+	}
+	m = s.match(/rgba?\(([^)]+)\)/i);
+	if (m) { var p = m[1].split(',').map(parseFloat); return [p[0] || 0, p[1] || 0, p[2] || 0, p.length > 3 ? p[3] : 1]; }
+	return null;
+  }
+  function aniColorAt(a, b, t) {
+	function ch(i) { return Math.round(a[i] + (b[i] - a[i]) * t); }
+	return 'rgba(' + ch(0) + ',' + ch(1) + ',' + ch(2) + ',' + (a[3] + (b[3] - a[3]) * t).toFixed(3) + ')';
+  }
+  // Cache base + hot values from the stylesheet. MUST run before any inline override is set (getComputedStyle
+  // would otherwise return our override). Re-run on light/dark switch (after clearing overrides).
+  function aniCacheTokenBases() {
+	if (!aniPanel) return;
+	var cs = getComputedStyle(aniPanel);
+	aniTokenBase = {};
+	ANI_MOOD_TOKENS.forEach(function(t) {
+	  var base = aniParseColor(cs.getPropertyValue('--ani-' + t));
+	  var hot = aniParseColor(cs.getPropertyValue('--ani-' + t + '-hot'));
+	  if (base && hot) aniTokenBase[t] = { base: base, hot: hot };
+	});
+  }
+  function aniApplyMood(mood) {
+	if (typeof mood !== 'number' || isNaN(mood)) return;
+	aniMood = Math.max(0, Math.min(1, mood));
+	Object.keys(aniTokenBase).forEach(function(t) {
+	  var p = aniTokenBase[t], v = aniColorAt(p.base, p.hot, aniMood);
+	  if (aniPanel) aniPanel.style.setProperty('--ani-' + t, v);
+	  if (aniStar) aniStar.style.setProperty('--ani-' + t, v);
+	});
+  }
+  aniCacheTokenBases();
+  try {
+	window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+	  // clear inline overrides so the fresh (light/dark) stylesheet values are readable, then re-cache + re-apply
+	  ANI_MOOD_TOKENS.forEach(function(t) {
+		if (aniPanel) aniPanel.style.removeProperty('--ani-' + t);
+		if (aniStar) aniStar.style.removeProperty('--ani-' + t);
+	  });
+	  aniCacheTokenBases();
+	  aniApplyMood(aniMood);
+	});
+  } catch (e) {}
+
   function aniPing() {
 	fetch('/ani/ping')
 	  .then(function(r) { return r.json(); })
@@ -51,6 +113,7 @@
 		.then(function(r) { return r.json(); })
 		.then(function(data) {
 		  updateAcheDisplay(data.ache_level);
+		  aniApplyMood(data.mood);
 		  var appended = false;
 		  (data.messages || []).forEach(function(m) {
 			if (!aniSeen.has(aniSig(m.role, m.content, m.image))) {
@@ -294,6 +357,7 @@
 	  .then(function(r) { return r.json(); })
 	  .then(function(data) {
 		updateAcheDisplay(data.ache_level);
+		aniApplyMood(data.mood);
 		var messages = data.messages || [];
 		if (messages.length > 0) {
 		  aniEmpty.style.display = 'none';
@@ -328,6 +392,7 @@
 	.then(function(data) {
 	  aniShowTyping(false);
 	  aniSendBtn.disabled = false;
+	  if (typeof data.mood === 'number') aniApplyMood(data.mood);
 	  if (data.reply || data.image_url) {
 		aniRenderMessage('assistant', data.reply || '', data.image_url, new Date().toISOString());
 		updateAcheDisplay(0);
