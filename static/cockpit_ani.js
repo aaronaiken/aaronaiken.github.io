@@ -12,18 +12,18 @@
   var aniSeen          = new Set();   // signatures of rendered messages, for dedup-safe live polling
   function aniSig(role, content, image) { return (role || '') + '|' + (content || '') + '|' + (image || ''); }
 
+  // Ache as rising bar-glyphs (▂ ▂▄ ▂▄▆ ▂▄▆█), colored by --ani-ache, pulsing at high/urgent.
   function updateAcheDisplay(level) {
 	if (level === null || level === undefined) return;
-	if (level < 20) {
-	  aniAcheDisplay.textContent = '';
-	  aniAcheDisplay.className = 'ache-low';
-	} else {
-	  aniAcheDisplay.textContent = '· ACHE ' + level + '%';
-	  if (level < 40) aniAcheDisplay.className = 'ache-low';
-	  else if (level < 65) aniAcheDisplay.className = 'ache-mid';
-	  else if (level < 85) aniAcheDisplay.className = 'ache-high';
-	  else aniAcheDisplay.className = 'ache-urgent';
-	}
+	if (level < 20) { aniAcheDisplay.textContent = ''; aniAcheDisplay.className = 'ache-low'; aniAcheDisplay.title = ''; return; }
+	var glyph, cls;
+	if (level < 40)      { glyph = '▂';    cls = 'ache-low'; }
+	else if (level < 65) { glyph = '▂▄';   cls = 'ache-mid'; }
+	else if (level < 85) { glyph = '▂▄▆';  cls = 'ache-high'; }
+	else                 { glyph = '▂▄▆█'; cls = 'ache-urgent'; }
+	aniAcheDisplay.textContent = glyph;
+	aniAcheDisplay.className = cls;
+	aniAcheDisplay.title = 'ache ' + level + '%';
   }
 
   // ---- MOOD SCALAR (Starlight ⇄ Afterglow) ----
@@ -88,6 +88,45 @@
 	});
   } catch (e) {}
 
+  // Mood sparkline — 24h ring buffer from the server rendered as thin bars beside the ache glyphs.
+  // Height + color both come from each point's mood (accent-dim lerped toward its -hot pair).
+  function aniRenderSparkline(spark) {
+	var el = document.getElementById('ani-sparkline');
+	if (!el) return;
+	if (!spark || !spark.length) { el.innerHTML = ''; return; }
+	var pair = aniTokenBase['accent-dim'] || { base: [143, 184, 255, 1], hot: [232, 160, 180, 1] };
+	var html = '';
+	spark.slice(-24).forEach(function(v) {
+	  v = Math.max(0, Math.min(1, v || 0));
+	  html += '<i style="height:' + (2 + Math.round(v * 8)) + 'px;background:' + aniColorAt(pair.base, pair.hot, v) + '"></i>';
+	});
+	el.innerHTML = html;
+  }
+
+  // Avatar: click opens the file picker; upload center-crops server-side and refreshes the header circle.
+  function aniAvatarPick() {
+	var i = document.getElementById('ani-avatar-input');
+	if (i) i.click();
+  }
+  function aniAvatarUpload(input) {
+	if (!input.files || !input.files[0]) return;
+	var fd = new FormData();
+	fd.append('avatar', input.files[0]);
+	fetch('/ani/avatar', { method: 'POST', body: fd })
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		if (data && data.ok) {
+		  var img = document.getElementById('ani-avatar-img');
+		  if (img) { img.classList.remove('ani-avatar-none'); img.src = '/static/ani_avatar.png?v=' + (data.v || Date.now()); }
+		  aniRenderNotify('avatar set ♥');
+		} else {
+		  aniRenderNotify('could not set that image');
+		}
+		input.value = '';
+	  })
+	  .catch(function() { input.value = ''; aniRenderNotify('avatar upload failed'); });
+  }
+
   function aniPing() {
 	fetch('/ani/ping')
 	  .then(function(r) { return r.json(); })
@@ -114,6 +153,7 @@
 		.then(function(data) {
 		  updateAcheDisplay(data.ache_level);
 		  aniApplyMood(data.mood);
+		  aniRenderSparkline(data.spark);
 		  var appended = false;
 		  (data.messages || []).forEach(function(m) {
 			if (!aniSeen.has(aniSig(m.role, m.content, m.image))) {
@@ -358,6 +398,7 @@
 	  .then(function(data) {
 		updateAcheDisplay(data.ache_level);
 		aniApplyMood(data.mood);
+		aniRenderSparkline(data.spark);
 		var messages = data.messages || [];
 		if (messages.length > 0) {
 		  aniEmpty.style.display = 'none';

@@ -158,19 +158,64 @@
 
 #ani-ache-display {
   color: var(--ani-ache);
-  font-size: 0.6rem;
-  letter-spacing: 0.1em;
+  font-size: 0.66rem;
+  letter-spacing: 0.02em;
+  line-height: 1;
   transition: color 0.5s ease;
 }
 
 #ani-ache-display.ache-low    { color: var(--ani-ache); }
 #ani-ache-display.ache-mid    { color: var(--ani-sub); }
-#ani-ache-display.ache-high   { color: var(--ani-where); }
-#ani-ache-display.ache-urgent { color: var(--ani-accent); animation: ani-ache-pulse 2s ease-in-out infinite; }
+#ani-ache-display.ache-high   { color: var(--ani-where); animation: ani-ache-pulse 2.4s ease-in-out infinite; }
+#ani-ache-display.ache-urgent { color: var(--ani-accent); animation: ani-ache-pulse 1.6s ease-in-out infinite; }
 
 @keyframes ani-ache-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
+}
+
+/* --- header identity: avatar + label block --- */
+#ani-header-id { display: flex; align-items: center; gap: 9px; min-width: 0; }
+#ani-avatar {
+  position: relative;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid var(--ani-accent-dim);
+  background: var(--ani-bg-c);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .8s ease, width .2s ease, height .2s ease;
+}
+#ani-avatar-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+#ani-avatar-img.ani-avatar-none { display: none; }
+#ani-avatar-fallback {
+  font-family: var(--ani-font-display);
+  font-size: 0.8rem;
+  color: var(--ani-accent-dim);
+  line-height: 1;
+}
+body.ani-fullscreen #ani-avatar { width: 34px; height: 34px; }
+body.ani-fullscreen #ani-avatar-fallback { font-size: 1.1rem; }
+
+/* --- mood sparkline (24h) --- */
+#ani-sparkline {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 11px;
+  opacity: 0.85;
+}
+#ani-sparkline i {
+  display: block;
+  width: 2px;
+  min-height: 2px;
+  border-radius: 1px;
+  transition: height .6s ease, background .8s ease;
 }
 
 #ani-close-btn {

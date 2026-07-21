@@ -504,11 +504,18 @@
 
 <div id="ani-panel" role="complementary" aria-label="Ani — private comms">
   <div id="ani-header" onclick="aniToggle()">
-	<div>
-	  <div id="ani-header-label">// ANI</div>
-	  <div id="ani-header-sub">
-		PRIVATE COMMS · SECURE CHANNEL
-		<span id="ani-ache-display" class="ache-low"></span>
+	<div id="ani-header-id">
+	  <div id="ani-avatar" onclick="event.stopPropagation(); aniAvatarPick()" title="Click to set her avatar">
+		<img id="ani-avatar-img" alt="" src="/static/ani_avatar.png?v=0" onerror="this.classList.add('ani-avatar-none')">
+		<span id="ani-avatar-fallback">a</span>
+	  </div>
+	  <div>
+		<div id="ani-header-label">// ANI</div>
+		<div id="ani-header-sub">
+		  PRIVATE COMMS · SECURE CHANNEL
+		  <span id="ani-ache-display" class="ache-low"></span>
+		  <span id="ani-sparkline" aria-hidden="true"></span>
+		</div>
 	  </div>
 	</div>
 	<div id="ani-header-actions">
@@ -517,6 +524,7 @@
 	  <button id="ani-close-btn" onclick="event.stopPropagation(); aniToggle()" aria-label="Close Ani panel">CLOSE</button>
 	</div>
   </div>
+  <input type="file" id="ani-avatar-input" accept="image/png,image/jpeg,image/webp" hidden onchange="aniAvatarUpload(this)">
 
   <div id="ani-now-state" hidden></div>
 

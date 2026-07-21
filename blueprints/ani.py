@@ -344,7 +344,8 @@ def ani_load_conversation():
 			'events_mentioned': data.get('events_mentioned', []),
 			'proactive_photo_count': data.get('proactive_photo_count', 0),
 			'proactive_photo_date': data.get('proactive_photo_date', None),
-			'memory_consolidated_date': data.get('memory_consolidated_date', None)
+			'memory_consolidated_date': data.get('memory_consolidated_date', None),
+			'mood_buffer': data.get('mood_buffer', [])   # 24h ring buffer of the mood scalar (sparkline)
 		}
 		return messages, meta
 	except FileNotFoundError:
@@ -366,7 +367,8 @@ def ani_load_conversation():
 			'events_mentioned': [],
 			'proactive_photo_count': 0,
 			'proactive_photo_date': None,
-			'memory_consolidated_date': None
+			'memory_consolidated_date': None,
+			'mood_buffer': []
 		}
 
 
@@ -391,7 +393,8 @@ def ani_save_conversation(messages, meta):
 		'events_mentioned': meta.get('events_mentioned', []),
 		'proactive_photo_count': meta.get('proactive_photo_count', 0),
 		'proactive_photo_date': meta.get('proactive_photo_date'),
-		'memory_consolidated_date': meta.get('memory_consolidated_date')
+		'memory_consolidated_date': meta.get('memory_consolidated_date'),
+		'mood_buffer': meta.get('mood_buffer', [])
 	}
 	_ani_atomic_write_json(ANI_CONVERSATION_FILE, data)
 
@@ -1167,6 +1170,40 @@ def ani_mood_scalar(messages, meta, now_dt=None):
 	an = 1.0 if ache >= 85 else (0.66 if ache >= 65 else (0.33 if ache >= 40 else 0.0))
 	sent = ani_sentiment_score(messages, now_dt)
 	return round(max(0.0, min(1.0, 0.55 * an + 0.45 * sent)), 3)
+
+
+def ani_push_mood(meta, mood, now_dt=None):
+	"""Append the mood scalar to the 24h ring buffer (drives the header sparkline), at most one point per
+	~10 min. Prunes points older than 24h. Mutates meta['mood_buffer'] (list of [iso_ts, value]). Returns it."""
+	if now_dt is None:
+		now_dt = datetime.now(pytz.timezone('America/New_York'))
+	buf = [p for p in (meta.get('mood_buffer') or []) if isinstance(p, (list, tuple)) and len(p) == 2]
+	cutoff = now_dt - timedelta(hours=24)
+	kept = []
+	for ts, v in buf:
+		try:
+			dt = datetime.fromisoformat(ts)
+			if dt.tzinfo is None:
+				dt = pytz.timezone('America/New_York').localize(dt)
+			if dt >= cutoff:
+				kept.append([ts, v])
+		except Exception:
+			pass
+	# throttle: only add a new point if the last one is >= 10 min old
+	add = True
+	if kept:
+		try:
+			last = datetime.fromisoformat(kept[-1][0])
+			if last.tzinfo is None:
+				last = pytz.timezone('America/New_York').localize(last)
+			add = (now_dt - last).total_seconds() >= 600
+		except Exception:
+			pass
+	if add:
+		kept.append([now_dt.isoformat(), mood])
+	kept = kept[-160:]   # 24h / 10min ≈ 144, cap with headroom
+	meta['mood_buffer'] = kept
+	return kept
 
 
 def ani_assess_session_tone(messages):
@@ -4788,16 +4825,45 @@ def ani_history():
 		and not m.get('content', '').startswith('[system:')
 	]
 	ache = ani_get_ache_level(meta)
-	mood = ani_mood_scalar(messages, meta)
+	now_dt = datetime.now(pytz.timezone('America/New_York'))
+	mood = ani_mood_scalar(messages, meta, now_dt)
+	buf = ani_push_mood(meta, mood, now_dt)
+	added = bool(buf) and buf[-1][0] == now_dt.isoformat()
 	# Opening the panel = daycast messages seen; clear the pulse flag.
 	if meta.get('unseen_day_messages'):
 		meta['unseen_day_messages'] = False
+		added = True
+	if added:
 		ani_save_conversation(messages, meta)
 	return jsonify({
 		'messages': visible[-100:],
 		'ache_level': ache,
-		'mood': mood
+		'mood': mood,
+		'spark': [round(v, 3) for _, v in buf[-24:]]
 	})
+
+
+@ani_bp.route('/ani/avatar', methods=['POST'])
+def ani_avatar_upload():
+	"""Set her header avatar: center-crop + resize an uploaded image to a square PNG at static/ani_avatar.png."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	f = request.files.get('avatar')
+	if not f or not f.filename:
+		return jsonify({'error': 'no_file'}), 400
+	try:
+		from PIL import Image, ImageOps
+		img = ImageOps.exif_transpose(Image.open(f.stream)).convert('RGB')
+		w, h = img.size
+		s = min(w, h)
+		left, top = (w - s) // 2, (h - s) // 2
+		img = img.crop((left, top, left + s, top + s)).resize((160, 160), Image.LANCZOS)
+		static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static')
+		img.save(os.path.join(static_dir, 'ani_avatar.png'), 'PNG')
+		return jsonify({'ok': True, 'v': int(time.time())})
+	except Exception as e:
+		print(f"Ani avatar error: {e}")
+		return jsonify({'error': 'bad_image'}), 400
 
 
 @ani_bp.route('/ani/clear', methods=['POST'])
