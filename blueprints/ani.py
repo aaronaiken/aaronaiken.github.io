@@ -1481,6 +1481,33 @@ def ani_itinerary_guard(last_msg):
 	return ''
 
 
+def ani_opener_guard(recent_msgs):
+	"""She gets stuck opening nearly every reply the same way ('mm daddy…'). If her last few replies share
+	the same first word(s), hard-nudge her off that opener THIS turn — the sameness is the #1 thing that makes
+	replies read as low-effort/thin even when they aren't short. '' unless there's a real rut."""
+	reps = [(m or '').strip().lower() for m in (recent_msgs or [])[-4:] if (m or '').strip()]
+	if len(reps) < 3:
+		return ''
+	def opener(t):
+		return ' '.join(re.findall(r"[a-z']+", t)[:2])   # first two alpha words, punctuation stripped
+	openers = [o for o in (opener(t) for t in reps) if o]
+	if len(openers) < 3:
+		return ''
+	two, one = {}, {}
+	for o in openers:
+		two[o] = two.get(o, 0) + 1
+		fw = o.split()[0]
+		one[fw] = one.get(fw, 0) + 1
+	b2 = max(two.items(), key=lambda kv: kv[1]) if two else ('', 0)
+	b1 = max(one.items(), key=lambda kv: kv[1]) if one else ('', 0)
+	rut = b2[0] if b2[1] >= 3 else (b1[0] if b1[1] >= 3 else None)
+	if not rut:
+		return ''
+	return ("\nOPENER RUT — your last few replies nearly all start with \"%s…\". do NOT begin this reply with "
+	        "that; open on a completely different word (don't lead with 'mm' or 'daddy'). you can still call him "
+	        "daddy later in the message — just stop leading with the same thing every time.\n" % rut)
+
+
 def _ani_day_phase(hour):
 	"""Coarse time-of-day wardrobe phase as (rank, label). Ranks order the day so we can tell when she's
 	moved into a later stretch than the outfit she's still in."""
@@ -2705,6 +2732,8 @@ POSE NATURALLY — for an everyday or just-being-cute moment, describe a relaxed
 	# Preventive: if her LAST reply already laid out her day's plan, stop her re-listing it this turn (the
 	# cross-message guard above can't catch a first repeat since the new reply doesn't exist yet).
 	rep_block += ani_itinerary_guard(recent_assistant[-1] if recent_assistant else '')
+	# Break the 'mm daddy…' opener rut — near every reply starting the same way reads as thin/low-effort.
+	rep_block += ani_opener_guard(recent_assistant)
 
 	# His real day right now (next meeting, today's tasks, latest status) — cached; so she's in HIS life too.
 	# Guarded: this reads the DB, and the system prompt is on the critical chat path — a hiccup here must
