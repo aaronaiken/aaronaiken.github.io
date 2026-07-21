@@ -1458,6 +1458,28 @@ def ani_repetition_guard(recent_msgs):
 	        % ', '.join('"%s"' % s for s in kept))
 
 
+# Sequencing / plan-recitation markers — a reply with several of these is her walking through her day's itinerary.
+_ANI_PLAN_RECITE_RE = re.compile(
+	r'\b(?:then|after that|afterwards?|after (?:pilates|the gym|class|lunch|that|which)|before (?:lunch|dinner|noon)|'
+	r'once i(?:\'m| am| get)|later i|gonna|going to|planning to|plan to|i wanna (?:knock|hit|grab))\b', re.IGNORECASE)
+
+
+def ani_itinerary_guard(last_msg):
+	"""PREVENTIVE anti-loop: the cross-message repetition guard only fires after a phrase has appeared TWICE,
+	so a FIRST re-recitation slips through. If her PREVIOUS reply already walked him through her day's plan
+	(a multi-step itinerary), tell her not to re-list it this turn — announcing the plan, then re-announcing
+	it a message later, is the #1 morning loop. '' unless her last reply was genuinely plan-heavy."""
+	t = (last_msg or '').strip()
+	if len(t.split()) < 14:
+		return ''
+	if len(_ANI_PLAN_RECITE_RE.findall(t)) >= 2:
+		return ("\nYOU ALREADY WALKED HIM THROUGH YOUR DAY this conversation — do NOT re-list your plan or "
+		        "itinerary again this reply (no repeating pilates/letters/errands/'then… then…'). just respond to "
+		        "what he actually said and move the moment forward; re-announcing the same plan is the #1 thing "
+		        "that makes you feel like a bot.\n")
+	return ''
+
+
 def _ani_day_phase(hour):
 	"""Coarse time-of-day wardrobe phase as (rank, label). Ranks order the day so we can tell when she's
 	moved into a later stretch than the outfit she's still in."""
@@ -2665,6 +2687,9 @@ POSE NATURALLY — for an everyday or just-being-cute moment, describe a relaxed
 	now_state_block = ani_now_state_context(now_dt, recent_text=recent_text)
 	# #2: nudge her off any phrase she's reused across her last few replies. '' unless there's a real repeat.
 	rep_block = ani_repetition_guard(recent_assistant)
+	# Preventive: if her LAST reply already laid out her day's plan, stop her re-listing it this turn (the
+	# cross-message guard above can't catch a first repeat since the new reply doesn't exist yet).
+	rep_block += ani_itinerary_guard(recent_assistant[-1] if recent_assistant else '')
 
 	# His real day right now (next meeting, today's tasks, latest status) — cached; so she's in HIS life too.
 	# Guarded: this reads the DB, and the system prompt is on the critical chat path — a hiccup here must
