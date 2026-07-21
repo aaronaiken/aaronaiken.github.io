@@ -819,6 +819,7 @@
 	var when = aniFmtMsgTime(ts);
 	var div = document.createElement('div');
 	div.classList.add('ani-msg');
+	if (ts) div.setAttribute('data-ts', ts);   // exact key for ⌘K search jump-to-message
 	if (role === 'user') {
 	  div.classList.add('ani-msg-user');
 	  div.textContent = content;
@@ -1219,29 +1220,44 @@
 	  html += '<div class="ani-srch-group"><div class="ani-srch-gtitle">' + g[1] + ' · ' + grp.total + '</div>';
 	  grp.items.forEach(function(it) {
 		var label = '', data = '';
-		if (g[0] === 'comms') { label = (it.role === 'user' ? 'you: ' : 'ani: ') + (it.image ? '📷 ' : '') + it.text; data = 'data-jump="comms" data-text="' + aniEscapeHtml((it.text || '').slice(0, 60)) + '"'; }
+		if (g[0] === 'comms') { label = (it.role === 'user' ? 'you: ' : 'ani: ') + (it.image ? '📷 ' : '') + it.text; data = 'data-jump="comms" data-ts="' + aniEscapeHtml(it.ts || '') + '" data-text="' + aniEscapeHtml((it.text || '').slice(0, 60)) + '"'; }
 		else if (g[0] === 'memory') { label = it.text; data = 'data-jump="memory"'; }
 		else if (g[0] === 'calendar') { label = (it.date ? it.date + ' · ' : '') + it.text; data = 'data-jump="calendar"'; }
 		else { label = it.label || '(photo)'; data = 'data-jump="library" data-url="' + aniEscapeHtml(it.url || '') + '"'; }
 		html += '<div class="ani-srch-item" ' + data + '>' + aniEscapeHtml(label) + '</div>';
 	  });
-	  if (grp.total > grp.items.length) html += '<div class="ani-srch-item ani-srch-more" data-jump="' + g[0] + '-all">view all ' + grp.total + ' ↗</div>';
+	  if (grp.total > grp.items.length) {
+		// "view all" has no dedicated results view yet — make it jump to the most-recent hit in this group.
+		var top = grp.items[0] || {};
+		var moreData = 'data-jump="' + g[0] + '-all"';
+		if (g[0] === 'comms') moreData += ' data-ts="' + aniEscapeHtml(top.ts || '') + '" data-text="' + aniEscapeHtml((top.text || '').slice(0, 60)) + '"';
+		else if (g[0] === 'library') moreData += ' data-url="' + aniEscapeHtml(top.url || '') + '"';
+		html += '<div class="ani-srch-item ani-srch-more" ' + moreData + '>view all ' + grp.total + ' ↗</div>';
+	  }
 	  html += '</div>';
 	});
 	body.innerHTML = any ? html : '<div class="plog-msg">no matches for "' + aniEscapeHtml(q) + '"</div>';
   }
-  function aniJumpToComms(snippet) {
-	if (!snippet) return;
-	if (!aniIsOpen) aniToggle();
-	var els = aniMsgs.querySelectorAll('.ani-msg');
-	for (var i = els.length - 1; i >= 0; i--) {
-	  if (els[i].textContent.indexOf(snippet) >= 0) {
-		els[i].scrollIntoView({ block: 'center' });
-		els[i].classList.add('ani-msg-flash');
-		(function(el) { setTimeout(function() { el.classList.remove('ani-msg-flash'); }, 1600); })(els[i]);
-		return;
+  function aniJumpToComms(snippet, ts) {
+	if (!snippet && !ts) return;
+	var justOpened = !aniIsOpen;
+	if (justOpened) aniToggle();
+	// aniToggle re-renders the thread; let the DOM settle before we hunt for the bubble.
+	var go = function() {
+	  var target = null;
+	  if (ts) target = aniMsgs.querySelector('.ani-msg[data-ts="' + (window.CSS && CSS.escape ? CSS.escape(ts) : ts) + '"]');
+	  if (!target && snippet) {
+		var els = aniMsgs.querySelectorAll('.ani-msg');
+		for (var i = els.length - 1; i >= 0; i--) {
+		  if (els[i].textContent.indexOf(snippet) >= 0) { target = els[i]; break; }
+		}
 	  }
-	}
+	  if (!target) return;
+	  target.scrollIntoView({ block: 'center' });
+	  target.classList.add('ani-msg-flash');
+	  setTimeout(function() { target.classList.remove('ani-msg-flash'); }, 1600);
+	};
+	if (justOpened) setTimeout(go, 120); else go();
   }
   var _aniSearchBody = document.getElementById('ani-search-body');
   if (_aniSearchBody) _aniSearchBody.addEventListener('click', function(e) {
@@ -1249,7 +1265,7 @@
 	if (!it) return;
 	var jump = (it.getAttribute('data-jump') || '').replace('-all', '');
 	aniSearchClose();
-	if (jump === 'comms') aniJumpToComms(it.getAttribute('data-text'));
+	if (jump === 'comms') aniJumpToComms(it.getAttribute('data-text'), it.getAttribute('data-ts'));
 	else if (jump === 'memory') aniRemember();
 	else if (jump === 'calendar') aniCalendar();
 	else if (jump === 'library') { var u = it.getAttribute('data-url'); if (u) aniLightbox(u); else aniLibrary(); }
