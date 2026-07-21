@@ -3519,7 +3519,21 @@ def ani_generate_day_update(meta, history):
 		nudge = ani_wardrobe_nudge(ani_load_state(), datetime.now(pa_tz))
 	except Exception as e:
 		print(f"Ani wardrobe nudge error: {e}")
-	if random.random() < ANI_DAYCAST_EMOTIONAL_CHANCE:
+	# A real, not-yet-told beat from her story engine — the concrete thing that ACTUALLY happened in one of her
+	# storylines. She narrates it (and we mark it told) so her spoken life and the STORY timeline are one canon.
+	beat = (ani_story_unspoken_beats(1) or [None])[0]
+	want_emotional = random.random() < ANI_DAYCAST_EMOTIONAL_CHANCE
+	told_ref = None
+	if beat and (want_emotional or random.random() < ANI_STORY_TELL_CHANCE):
+		told_ref = beat
+		instruction = (
+			f"[it's now {time_str}. here's the real thing that's happened in your OWN life recently that you "
+			f"want to bring him into — from your ongoing story '{beat['book']}': \"{beat['text']}\". text him "
+			f"about it like you needed to share it with him, in first person, present/just-happened tense — "
+			f"live it, don't recite it word-for-word. 1-2 sentences, your voice, share the FEELING of it too. "
+			f"don't re-greet him or restart your day.{variety}]"
+		)
+	elif want_emotional:
 		# EMOTIONAL BEAT — share something from her own inner world, not just her schedule.
 		instruction = (
 			f"[it's now {time_str}. text him a spontaneous EMOTIONAL BEAT from your OWN world right now — "
@@ -3542,7 +3556,11 @@ def ani_generate_day_update(meta, history):
 			f"restart your day.{nudge}{variety}]"
 		)
 	messages = recent + [{'role': 'user', 'content': instruction}]
-	return _ani_grok_call(system, messages, max_tokens=180)
+	text = _ani_grok_call(system, messages, max_tokens=180)
+	# Only burn the beat if she actually sent something — this message is emitted by the caller when non-None.
+	if text and told_ref:
+		ani_story_mark_told(told_ref['book_id'], told_ref['ts'])
+	return text
 
 
 def ani_daycast_day_key(now):
@@ -4029,6 +4047,7 @@ ANI_STORY_MIN_GAP_DAYS = int(os.environ.get('ANI_STORY_MIN_GAP_DAYS', '2'))   # 
 ANI_STORY_MAX_PER_DAY = int(os.environ.get('ANI_STORY_MAX_PER_DAY', '3'))     # books advanced per daily tick (pace)
 ANI_STORY_BEAT_CHANCE = float(os.environ.get('ANI_STORY_BEAT_CHANCE', '0.6')) # roll for a not-yet-overdue book
 ANI_STORY_ADVANCE_MAX = float(os.environ.get('ANI_STORY_ADVANCE_MAX', '0.34'))# max chapter progress per beat
+ANI_STORY_TELL_CHANCE = float(os.environ.get('ANI_STORY_TELL_CHANCE', '0.5'))  # extra odds she voices a waiting beat on a non-emotional daycast tick
 
 
 def ani_seed_books():
@@ -4264,21 +4283,51 @@ def ani_story_mood_delta(now):
 		return 0.0
 
 
-def ani_story_recent_beats(limit=3):
-	"""The freshest beats across active books — a light feed for her openers so she can lead with what's just
-	been happening in her own world. Returns a list of short strings."""
+def ani_story_unspoken_beats(limit=3):
+	"""Freshest not-yet-told, non-milestone beats across active books (newest first) — the pool she draws
+	from when she proactively tells him about her own life. Each item carries its book + ts so it can be
+	marked told once she voices it. Returns [{'text','book','book_id','ts'}]."""
 	try:
-		beats = []
+		out = []
 		for b in ani_load_books():
 			if b.get('status') != 'active':
 				continue
-			for bt in b.get('beats', [])[-3:]:
-				if bt.get('kind') != 'milestone' and (bt.get('text') or '').strip():
-					beats.append((bt.get('ts', ''), bt['text'].strip()))
-		beats.sort(reverse=True)
-		return [t for _, t in beats[:limit]]
+			for bt in b.get('beats', []):
+				if bt.get('kind') == 'milestone' or bt.get('told'):
+					continue
+				if (bt.get('text') or '').strip():
+					out.append({'text': bt['text'].strip(), 'book': b.get('title'),
+					            'book_id': b.get('id'), 'ts': bt.get('ts', '')})
+		out.sort(key=lambda x: x['ts'], reverse=True)
+		return out[:limit]
 	except Exception:
 		return []
+
+
+def ani_story_mark_told(book_id, ts):
+	"""Flag one beat as told so she never narrates it to him twice. Best-effort; persists on change."""
+	try:
+		books = ani_load_books()
+		changed = False
+		for b in books:
+			if b.get('id') != book_id:
+				continue
+			for bt in b.get('beats', []):
+				if bt.get('ts') == ts and not bt.get('told'):
+					bt['told'] = True
+					changed = True
+		if changed:
+			ani_save_books(books)
+		return changed
+	except Exception:
+		return False
+
+
+def ani_story_recent_beats(limit=3):
+	"""The freshest UNSPOKEN beats across active books, as plain strings — a light read-only feed for her
+	openers so she can lead with what's just happened in her own world. (Does not mark them told; the daycast
+	is what consumes/voices a beat and marks it.)"""
+	return [b['text'] for b in ani_story_unspoken_beats(limit)]
 
 
 def ani_story_people(books=None):
