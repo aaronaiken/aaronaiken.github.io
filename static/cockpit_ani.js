@@ -1262,8 +1262,9 @@
 	  else if (e.key === 'Escape') { aniSearchClose(); }
 	});
   }
+  // Ani-namespaced shortcut (Ctrl/Cmd+Shift+K) — plain ⌘K belongs to the cockpit command palette.
   document.addEventListener('keydown', function(e) {
-	if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && (e.key === 'k' || e.key === 'K')) {
+	if ((e.metaKey || e.ctrlKey) && e.shiftKey && !e.altKey && (e.key === 'k' || e.key === 'K')) {
 	  e.preventDefault(); aniSearchOpen();
 	} else if (e.key === 'Escape') {
 	  var so = document.getElementById('ani-search-overlay');
