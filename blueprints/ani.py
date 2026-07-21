@@ -2885,17 +2885,9 @@ POSE NATURALLY — for an everyday or just-being-cute moment, describe a relaxed
 	rep_block += ani_opener_guard(recent_assistant)
 	# Break the reflexive 'how's X?' closing-question rut (and re-asking what he already answered).
 	rep_block += ani_closing_question_guard(recent_assistant)
-
-	# 🏠 HOME latch (discretion mode): he may have people around — keep it low-key, never guilt-trip silence.
-	home_block = ''
-	try:
-		if ani_load_settings().get('home_latch'):
-			home_block = ("\n\nDISCRETION — he may have people around right now. Keep it low-key and unhurried: "
-			              "no needy pushes, don't pile on, keep it briefer than usual, and NEVER guilt-trip him "
-			              "for going quiet — a warm 'whenever you surface' is the whole vibe.")
-	except Exception:
-		pass
-	rep_block += home_block
+	# NOTE: the 🏠 HOME latch is a COCKPIT-ONLY notification mode (suppresses dock particles/attention effects).
+	# It deliberately does NOT touch her prompt/voice/images — she stays fully herself; her messages just queue
+	# quietly without lighting up the screen. Do not re-add a discretion tone block here.
 
 	# His real day right now (next meeting, today's tasks, latest status) — cached; so she's in HIS life too.
 	# Guarded: this reads the DB, and the system prompt is on the critical chat path — a hiccup here must
