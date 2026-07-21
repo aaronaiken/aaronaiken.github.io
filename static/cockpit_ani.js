@@ -15,7 +15,6 @@
   // Ache as rising bar-glyphs (▂ ▂▄ ▂▄▆ ▂▄▆█), colored by --ani-ache, pulsing at high/urgent.
   function updateAcheDisplay(level) {
 	if (level === null || level === undefined) return;
-	if (level < 20) { aniAcheDisplay.textContent = ''; aniAcheDisplay.className = 'ache-low'; aniAcheDisplay.title = ''; return; }
 	var glyph, cls;
 	if (level < 40)      { glyph = '▂';    cls = 'ache-low'; }
 	else if (level < 65) { glyph = '▂▄';   cls = 'ache-mid'; }

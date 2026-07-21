@@ -1199,6 +1199,11 @@ def ani_push_mood(meta, mood, now_dt=None):
 			add = (now_dt - last).total_seconds() >= 600
 		except Exception:
 			pass
+	if len(kept) < 4:
+		# Still sparse (first use or aged out) — seed a short flat history at the current mood so the sparkline
+		# is visible immediately instead of taking hours to fill. Real variation replaces it through the day.
+		kept = [[(now_dt - timedelta(minutes=10 * i)).isoformat(), mood] for i in range(18, 0, -1)]
+		add = True
 	if add:
 		kept.append([now_dt.isoformat(), mood])
 	kept = kept[-160:]   # 24h / 10min ≈ 144, cap with headroom
