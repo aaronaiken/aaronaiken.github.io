@@ -160,7 +160,7 @@
 		  (data.messages || []).forEach(function(m) {
 			if (!aniSeen.has(aniSig(m.role, m.content, m.image))) {
 			  aniEmpty.style.display = 'none';
-			  aniRenderMessage(m.role, m.content, m.image, m.ts, { reactions: m.reactions, favorited: m.favorited });
+			  aniRenderMessage(m.role, m.content, m.image, m.ts, { reactions: m.reactions, favorited: m.favorited, milestone: m.milestone, book: m.book, scene: m.scene });
 			  newCount++;
 			}
 		  });
@@ -412,7 +412,7 @@
 		var messages = data.messages || [];
 		if (messages.length > 0) {
 		  aniEmpty.style.display = 'none';
-		  messages.forEach(function(m) { aniRenderMessage(m.role, m.content, m.image, m.ts, { reactions: m.reactions, favorited: m.favorited }); });
+		  messages.forEach(function(m) { aniRenderMessage(m.role, m.content, m.image, m.ts, { reactions: m.reactions, favorited: m.favorited, milestone: m.milestone, book: m.book, scene: m.scene }); });
 		}
 		if (aniPendingOpener) {
 		  aniEmpty.style.display = 'none';
@@ -931,9 +931,11 @@
 	var body = document.getElementById('ani-story-body'); if (!body || !aniStoryData) return;
 	var d = aniStoryData, html = '';
 	if (aniStoryCurTab === 'arc') {
-	  var books = (d.books || []).filter(function(b) { return b.status === 'active'; });
-	  if (!books.length) html += '<div class="plog-msg">the shelf is empty</div>';
-	  books.forEach(function(b) {
+	  var all = d.books || [];
+	  var active = all.filter(function(b) { return b.status === 'active'; });
+	  var resting = all.filter(function(b) { return b.status !== 'active'; });
+	  if (!active.length && !resting.length) html += '<div class="plog-msg">the shelf is empty</div>';
+	  active.forEach(function(b) {
 		var ch = b.chapter || {}, pct = Math.round((ch.progress || 0) * 100);
 		html += '<div class="ani-book" data-id="' + aniEscapeHtml(b.id) + '">';
 		html += '<div class="ani-book-top"><span class="ani-book-title">' + aniEscapeHtml(b.title || '') + '</span>'
@@ -950,6 +952,19 @@
 		html += '<div class="ani-book-recap-out" hidden></div>';
 		html += '</div>';
 	  });
+	  if (resting.length) {
+		html += '<div class="ani-story-subhead">previously</div>';
+		resting.forEach(function(b) {
+		  var done = (b.chapters_done || []).length;
+		  html += '<div class="ani-book ani-book-rest" data-id="' + aniEscapeHtml(b.id) + '">'
+			   + '<div class="ani-book-top"><span class="ani-book-title">' + aniEscapeHtml(b.title || '') + '</span>'
+			   + '<span class="ani-book-kind">' + (b.status === 'closed' ? 'finished' : 'resting') + '</span></div>'
+			   + '<div class="ani-book-blurb">' + aniEscapeHtml(b.blurb || '') + '</div>'
+			   + (done ? '<div class="ani-book-meta">' + done + ' chapter' + (done > 1 ? 's' : '') + ' told</div>' : '')
+			   + '<button class="ani-book-recap" onclick="aniStoryRecap(\'' + aniEscapeHtml(b.id) + '\', this)">story so far ↗</button>'
+			   + '<div class="ani-book-recap-out" hidden></div></div>';
+		});
+	  }
 	} else if (aniStoryCurTab === 'timeline') {
 	  var tl = d.timeline || [];
 	  if (!tl.length) html += '<div class="plog-msg">no beats yet — check back after her day moves</div>';
@@ -1030,6 +1045,19 @@
 	if (content.startsWith('[daily briefing') || content.startsWith('[system:')) return;
 	aniSeen.add(aniSig(role, content, image));   // mark rendered so the poller won't re-append it
 	if (ts) aniMaybeDateDivider(ts);   // TODAY / weekday divider when the day changes
+	// A chapter-close milestone renders as a gold ◆ divider in the thread (not a chat bubble), with an
+	// optional "capture this" photo offer seeded from the beat's scene.
+	if (opts.milestone) {
+	  var md = document.createElement('div');
+	  md.className = 'ani-milestone-divider';
+	  if (ts) md.setAttribute('data-ts', ts);
+	  var mh = '<span class="ani-md-glyph">◆</span><span class="ani-md-text">' + aniEscapeHtml(content) + '</span>';
+	  if (opts.book) mh += '<span class="ani-md-book">' + aniEscapeHtml(opts.book) + '</span>';
+	  if (opts.scene) mh += '<button type="button" class="ani-md-photo" data-scene="' + aniEscapeHtml(opts.scene) + '" title="capture this moment">📷 capture this</button>';
+	  md.innerHTML = mh;
+	  aniMsgs.insertBefore(md, aniTyping);
+	  return;
+	}
 	var when = aniFmtMsgTime(ts);
 	var div = document.createElement('div');
 	div.classList.add('ani-msg');
@@ -1080,10 +1108,23 @@
 	if (rx) { e.stopPropagation(); aniReactPhoto(rx); return; }
 	var fv = t && t.closest ? t.closest('.ani-msg-favorite') : null;
 	if (fv) { e.stopPropagation(); aniFavoritePhoto(fv); return; }
+	var mp = t && t.closest ? t.closest('.ani-md-photo') : null;
+	if (mp) { e.stopPropagation(); aniCaptureMilestone(mp.getAttribute('data-scene')); return; }
 	if (t && t.classList && t.classList.contains('ani-msg-img')) {
 	  aniLightbox(t.getAttribute('src'));
 	}
   });
+
+  // Milestone "capture this" → open the photo composer prefilled with the beat's scene (a keepsake of the moment).
+  function aniCaptureMilestone(scene) {
+	aniPromptMode = 'new'; aniRetryCtx = null;
+	aniPromptOpen(function(box, sendBtn) {
+	  box.value = scene || '';
+	  box.placeholder = 'tweak the scene or Send to capture this moment';
+	  sendBtn.disabled = !box.value.trim();
+	  box.focus();
+	});
+  }
 
   // Toggle an emoji reaction on a photo (lit = reacted); she becomes aware of it in chat.
   function aniReactPhoto(btn) {

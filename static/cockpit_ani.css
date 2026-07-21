@@ -1588,3 +1588,48 @@ body.ani-fullscreen #ani-input-row { border-top-width: 1px; }
 .ani-person-name { color: var(--ani-accent); font-size: 0.76rem; letter-spacing: 0.02em; }
 .ani-person-books { color: var(--ani-foot); font-size: 0.56rem; letter-spacing: 0.03em; text-align: right; }
 .ani-person-beat { color: var(--ani-time); font-size: 0.64rem; font-style: italic; margin-top: 5px; line-height: 1.45; }
+
+/* ── In-thread ◆ milestone divider (chapter close) ─────────────────────────── */
+.ani-milestone-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 14px 6px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--ani-milestone);
+  border-bottom: 1px solid var(--ani-milestone);
+  background: linear-gradient(180deg, rgba(245,201,106,0.06), transparent);
+}
+.ani-md-glyph { color: var(--ani-milestone); font-size: 0.8rem; }
+.ani-md-text {
+  flex: 1;
+  min-width: 140px;
+  color: var(--ani-milestone);
+  font-size: 0.7rem;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+}
+.ani-md-book {
+  color: var(--ani-foot);
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ani-md-photo {
+  background: none;
+  border: 1px solid var(--ani-milestone);
+  color: var(--ani-milestone);
+  font-family: var(--ani-font);
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ani-md-photo:hover { background: rgba(245,201,106,0.14); }
+
+/* Resting / finished books in ARC */
+.ani-book-rest { opacity: 0.62; }
+.ani-book-rest .ani-book-title { color: var(--ani-sub); }

@@ -4052,6 +4052,7 @@ ANI_STORY_MAX_BOOKS = int(os.environ.get('ANI_STORY_MAX_BOOKS', '9'))          #
 ANI_STORY_NEW_BOOK_CHANCE = float(os.environ.get('ANI_STORY_NEW_BOOK_CHANCE', '0.18'))  # daily odds her world throws off a new storyline
 ANI_STORY_NEW_BOOK_MIN_DAYS = int(os.environ.get('ANI_STORY_NEW_BOOK_MIN_DAYS', '5'))    # min days between new books (rate-limit)
 ANI_STORY_KINDS = ('relationship', 'creative', 'side-hustle', 'shared')
+ANI_STORY_SOFT_ACTIVE = int(os.environ.get('ANI_STORY_SOFT_ACTIVE', '6'))      # past this, the stalest active book rests (dormant)
 
 
 def ani_seed_books():
@@ -4145,13 +4146,15 @@ def ani_book_generate_beat(book, now):
 		"You advance ONE ongoing storyline in the life of a woman named Ani by a single small, believable beat "
 		"— something that happened in this thread of her life since the last beat, mostly OFFSCREEN (not a "
 		"conversation with Aaron). Return ONLY compact JSON: "
-		'{"beat":"","advance":0.2,"milestone":false,"milestone_line":"",'
+		'{"beat":"","advance":0.2,"milestone":false,"milestone_line":"","closes_book":false,'
 		'"next_chapter":{"title":"","theme":"","est_weeks":4},"cast":[],"mood_delta":0.0}\n'
 		"beat: 1-2 plain sentences, third person ('she…'), concrete and small, CONTINUOUS with the recent beats "
 		"below — a real next step, never a repeat or a reset. Grounded in her actual world; no melodrama.\n"
 		"advance: 0.0-0.34 — how much this moves the current chapter toward its close (larger for a real step).\n"
 		"milestone: true ONLY for a genuine chapter-closing turning point (rare). If true: milestone_line = one "
 		"vivid sentence naming what changed, and next_chapter = {title, theme, est_weeks} for what opens next.\n"
+		"closes_book: true ONLY if this milestone is the natural END of the WHOLE storyline (it's genuinely "
+		"resolved/concluded), not just a chapter — very rare. If true, next_chapter is ignored.\n"
 		"cast: names of any NEW people who entered this storyline this beat (else []).\n"
 		"mood_delta: a small -0.1..0.1 nudge to her overall mood if this beat would lift or weigh on her, else 0.\n"
 		"Stay strictly inside THIS storyline; do not invent unrelated events. No sexual content."
@@ -4185,6 +4188,21 @@ def ani_book_generate_beat(book, now):
 		return {}
 
 
+def ani_emit_milestone_dividers(dividers, now):
+	"""Append chapter-close milestones to the conversation as ◆ divider messages (rendered in-thread, not as
+	chat bubbles) + trip the unseen pulse. Each carries the beat as a `scene` seed for the 'capture this' photo
+	offer. Loads/saves the conversation directly — the daycast caller re-reads after its once-daily block."""
+	if not dividers:
+		return
+	messages, meta = ani_load_conversation()
+	for d in dividers:
+		messages.append({'role': 'assistant', 'content': (d.get('text') or '').strip(),
+		                 'milestone': True, 'ani_day': True, 'book': d.get('book'),
+		                 'scene': d.get('scene') or '', 'ts': now.isoformat()})
+	meta['unseen_day_messages'] = True
+	ani_save_conversation(messages, meta)
+
+
 def ani_story_tick(now):
 	"""Once-daily driver: advance up to ANI_STORY_MAX_PER_DAY active books by one beat each, prioritizing the
 	ones overdue longest. Closes chapters at milestones (→ her_world memory), grows the cast, prunes old beats.
@@ -4213,6 +4231,7 @@ def ani_story_tick(now):
 	picked = picked[:ANI_STORY_MAX_PER_DAY]
 
 	advanced = []
+	dividers = []   # chapter-close milestones to drop into the thread as ◆ dividers
 	for b in picked:
 		res = ani_book_generate_beat(b, now)
 		if not res or not (res.get('beat') or '').strip():
@@ -4248,14 +4267,21 @@ def ani_story_tick(now):
 				ani_add_memory_note(mline, category='her_world', importance=3, keywords=_ani_story_keywords(b))
 			except Exception as e:
 				print(f"Ani story memory error: {e}")
-			nx = res.get('next_chapter') if isinstance(res.get('next_chapter'), dict) else {}
-			b['chapter'] = {'n': ch.get('n', 1) + 1,
-			                'title': (nx.get('title') or 'what comes next').strip()[:80],
-			                'theme': (nx.get('theme') or ch.get('theme', '')).strip()[:200],
-			                'started': today, 'est_weeks': int(nx.get('est_weeks') or ch.get('est_weeks') or 4),
-			                'progress': 0.0}
+			# a chapter close lands in the thread as a ◆ divider (with the beat as a photo seed)
+			dividers.append({'text': mline, 'book': b.get('title'), 'scene': beat_text})
+			if res.get('closes_book'):
+				b['status'] = 'closed'
+				b['closed'] = today
+				advanced.append(f"{b.get('id')}: ■ BOOK CLOSED — {mline[:40]}")
+			else:
+				nx = res.get('next_chapter') if isinstance(res.get('next_chapter'), dict) else {}
+				b['chapter'] = {'n': ch.get('n', 1) + 1,
+				                'title': (nx.get('title') or 'what comes next').strip()[:80],
+				                'theme': (nx.get('theme') or ch.get('theme', '')).strip()[:200],
+				                'started': today, 'est_weeks': int(nx.get('est_weeks') or ch.get('est_weeks') or 4),
+				                'progress': 0.0}
+				advanced.append(f"{b.get('id')}: ◆ chapter {ch.get('n', 1)} closed")
 			b['recap'] = None   # arc changed — invalidate the cached "story so far"
-			advanced.append(f"{b.get('id')}: ◆ chapter {ch.get('n', 1)} closed")
 		else:
 			b['chapter'] = ch
 			advanced.append(f"{b.get('id')}: +beat")
@@ -4264,6 +4290,12 @@ def ani_story_tick(now):
 			b['beats'] = b['beats'][-ANI_STORY_BEATS_MAX:]
 
 	ani_save_books(books)
+	# Drop each chapter-close into the conversation as a ◆ milestone divider (in-thread, trips the unseen pulse).
+	if dividers:
+		try:
+			ani_emit_milestone_dividers(dividers, now)
+		except Exception as e:
+			print(f"Ani milestone divider error: {e}")
 	# Her world can also throw off a WHOLE new storyline (rate-limited + grounded). Self-contained; guarded.
 	try:
 		nb = ani_maybe_new_book(now)
@@ -4378,6 +4410,14 @@ def ani_maybe_new_book(now, force=False):
 	if not nb:
 		return None
 	books.append(nb)
+	# Keep the active rotation manageable: if the shelf is crowded, the stalest active storyline rests (dormant).
+	# 'us' (the anchor) and the newborn are never the one put to rest.
+	if len([b for b in books if b.get('status') == 'active']) > ANI_STORY_SOFT_ACTIVE:
+		candidates = [b for b in books if b.get('status') == 'active' and b.get('id') not in (nb['id'], 'us')]
+		if candidates:
+			stalest = min(candidates, key=lambda b: b.get('last_beat_day') or '')
+			stalest['status'] = 'dormant'
+			stalest['dormant_since'] = now.strftime('%Y-%m-%d')
 	ani_save_books(books)
 	return nb
 
@@ -4587,6 +4627,9 @@ def ani_emit_daycast():
 				print(f"Ani story tick: {'; '.join(moved)}")
 		except Exception as e:
 			print(f"Ani story tick error: {e}")
+		# Sub-tasks above (esp. story milestone dividers) write the conversation directly — re-read so this
+		# tick's later _emit builds on the fresh copy instead of clobbering those writes.
+		messages, meta = ani_load_conversation()
 
 	def _emit(text):
 		messages.append({'role': 'assistant', 'content': text, 'ani_day': True, 'ts': now.isoformat()})
