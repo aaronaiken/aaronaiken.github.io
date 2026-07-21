@@ -962,7 +962,7 @@ body.ani-fullscreen .ani-prompt-textarea:focus { border-color: #4a5288; }
   overflow-y: auto;
   padding: 2px 1px;
 }
-.ani-field-row { display: flex; align-items: center; gap: 8px; }
+.ani-field-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .ani-field-label {
   flex: 0 0 92px;
   font-family: 'Share Tech Mono', monospace;
@@ -974,7 +974,7 @@ body.ani-fullscreen .ani-prompt-textarea:focus { border-color: #4a5288; }
 }
 .ani-field-input {
   flex: 1;
-  min-width: 0;
+  min-width: 100px;
   background: #0c0e08;
   border: 1px solid #2e1e08;
   border-radius: 3px;
@@ -984,6 +984,35 @@ body.ani-fullscreen .ani-prompt-textarea:focus { border-color: #4a5288; }
   padding: 4px 6px;
 }
 .ani-field-input:focus { outline: none; border-color: #6a4818; }
+.ani-field-preset {
+  flex: 0 0 auto;
+  max-width: 100px;
+  background: #0c0e08;
+  border: 1px solid #2e1e08;
+  border-radius: 3px;
+  color: #c89040;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  padding: 3px 2px;
+}
+.ani-field-preset:focus { outline: none; border-color: #6a4818; }
+.ani-field-btn {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  padding: 0;
+  background: rgba(245, 179, 50, 0.06);
+  border: 1px solid rgba(245, 179, 50, 0.3);
+  border-radius: 3px;
+  color: rgba(245, 179, 50, 0.85);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.ani-field-btn:hover { opacity: 1; background: rgba(245, 179, 50, 0.14); }
+body.ani-fullscreen .ani-field-preset { background: #0a0f24; border-color: #2a3360; color: #a8b8e8; }
+body.ani-fullscreen .ani-field-preset:focus { border-color: #4a5288; }
 .ani-prompt-buildrow { display: flex; align-items: center; gap: 8px; }
 .ani-prompt-hint { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: #6a5028; opacity: 0.85; }
 body.ani-fullscreen .ani-field-label { color: #6a78a8; }

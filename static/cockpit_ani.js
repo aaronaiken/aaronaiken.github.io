@@ -370,17 +370,78 @@
 	{ key: 'camera',     label: 'Camera / Framing' }
   ];
 
+  var aniFieldPresets = {};   // { fieldKey: [value, ...] }
+
   function aniRenderPromptFields() {
 	if (aniFieldsRendered) return;
 	var wrap = document.getElementById('ani-prompt-fields');
 	if (!wrap) return;
 	var html = '';
 	ANI_PHOTO_FIELDS.forEach(function(f) {
-	  html += '<label class="ani-field-row"><span class="ani-field-label">' + f.label + '</span>'
-		   +  '<input type="text" class="ani-field-input" id="ani-f-' + f.key + '" autocomplete="off"></label>';
+	  html += '<div class="ani-field-row">'
+		   +  '<span class="ani-field-label">' + f.label + '</span>'
+		   +  '<input type="text" class="ani-field-input" id="ani-f-' + f.key + '" autocomplete="off">'
+		   +  '<select class="ani-field-preset" data-key="' + f.key + '" title="' + f.label + ' presets"><option value="">▾</option></select>'
+		   +  '<button type="button" class="ani-field-btn ani-field-save" data-key="' + f.key + '" title="save this ' + f.label + ' as a preset">＋</button>'
+		   +  '<button type="button" class="ani-field-btn ani-field-del" data-key="' + f.key + '" title="delete the selected ' + f.label + ' preset">✕</button>'
+		   +  '</div>';
 	});
 	wrap.innerHTML = html;
+	// Delegated wiring: pick a field preset → fill its input; save/delete manage that field's library.
+	wrap.addEventListener('change', function(e) {
+	  var sel = e.target.closest ? e.target.closest('.ani-field-preset') : null;
+	  if (!sel) return;
+	  var inp = document.getElementById('ani-f-' + sel.getAttribute('data-key'));
+	  if (inp && sel.value) inp.value = sel.value;
+	});
+	wrap.addEventListener('click', function(e) {
+	  var sv = e.target.closest ? e.target.closest('.ani-field-save') : null;
+	  if (sv) { aniFieldPresetSave(sv.getAttribute('data-key')); return; }
+	  var dl = e.target.closest ? e.target.closest('.ani-field-del') : null;
+	  if (dl) { aniFieldPresetDelete(dl.getAttribute('data-key')); return; }
+	});
 	aniFieldsRendered = true;
+  }
+
+  function aniFieldPresetLabel(v) { v = v || ''; return v.length > 42 ? v.slice(0, 40) + '…' : v; }
+  function aniPopulateFieldSelect(key) {
+	var sel = document.querySelector('.ani-field-preset[data-key="' + key + '"]');
+	if (!sel) return;
+	sel.innerHTML = '<option value="">▾</option>';
+	(aniFieldPresets[key] || []).forEach(function(v) {
+	  var o = document.createElement('option'); o.value = v; o.textContent = aniFieldPresetLabel(v); sel.appendChild(o);
+	});
+  }
+  function aniLoadFieldPresets() {
+	fetch('/ani/photo/field-presets').then(function(r) { return r.json(); })
+	  .then(function(data) { aniFieldPresets = data.field_presets || {}; ANI_PHOTO_FIELDS.forEach(function(f) { aniPopulateFieldSelect(f.key); }); })
+	  .catch(function() {});
+  }
+  function aniFieldPresetSave(key) {
+	var inp = document.getElementById('ani-f-' + key);
+	var v = inp ? inp.value.trim() : '';
+	if (!v) { aniRenderNotify('nothing in that field to save'); return; }
+	fetch('/ani/photo/field-presets', {
+	  method: 'POST', headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ field: key, value: v })
+	})
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		if (data.field_presets) { aniFieldPresets = data.field_presets; aniPopulateFieldSelect(key);
+		  var sel = document.querySelector('.ani-field-preset[data-key="' + key + '"]'); if (sel) sel.value = v; }
+	  })
+	  .catch(function() { aniRenderNotify('could not save that preset'); });
+  }
+  function aniFieldPresetDelete(key) {
+	var sel = document.querySelector('.ani-field-preset[data-key="' + key + '"]');
+	if (!sel || !sel.value) { aniRenderNotify('pick a preset in that field to delete'); return; }
+	fetch('/ani/photo/field-presets/delete', {
+	  method: 'POST', headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ field: key, value: sel.value })
+	})
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) { aniFieldPresets = data.field_presets || {}; aniPopulateFieldSelect(key); })
+	  .catch(function() {});
   }
   function aniGetFields() {
 	var o = {};
@@ -502,6 +563,7 @@
 	if (!overlay || !box || !sendBtn) return;
 	aniRenderPromptFields();
 	aniPresetRefresh();
+	aniLoadFieldPresets();
 	aniSetFields({});
 	box.value = '';
 	box.placeholder = 'reading the scene…';

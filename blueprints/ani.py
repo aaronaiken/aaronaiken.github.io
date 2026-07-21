@@ -29,6 +29,7 @@ ANI_HOUSE_FILE = 'static/ani_house.txt'             # room/house details for sce
 ANI_CALENDAR_FILE = 'ani_calendar.json'             # her calendar / shared plans (durable, off the rolling window)
 ANI_PENDING_MILESTONES_FILE = 'ani_pending_milestones.json'  # milestone life-changes awaiting Aaron's approval (Phase 3)
 ANI_PHOTO_PRESETS_FILE = 'ani_photo_presets.json'   # saved photo-composer field-sets ("bookmarks"); gitignored server-state
+ANI_FIELD_PRESETS_FILE = 'ani_photo_field_presets.json'  # per-field preset libraries (nails/hair/…); gitignored server-state
 # The granular per-image photo-composer fields — the variable part layered on the character + house bibles.
 ANI_PHOTO_FIELD_KEYS = ('setting', 'outfit', 'hair', 'makeup', 'nails', 'jewelry', 'body', 'pose',
                         'expression', 'demeanor', 'camera')
@@ -1884,6 +1885,20 @@ def ani_load_photo_presets():
 
 def ani_save_photo_presets(items):
 	_ani_atomic_write_json(ANI_PHOTO_PRESETS_FILE, items)
+
+
+def ani_load_field_presets():
+	"""Per-field preset libraries: { field_key: [value, ...] }. {} if none/unreadable."""
+	try:
+		with open(ANI_FIELD_PRESETS_FILE) as f:
+			d = json.load(f)
+		return d if isinstance(d, dict) else {}
+	except (FileNotFoundError, ValueError):
+		return {}
+
+
+def ani_save_field_presets(d):
+	_ani_atomic_write_json(ANI_FIELD_PRESETS_FILE, d)
 
 
 def _ani_garment_negative(scene):
@@ -4184,6 +4199,47 @@ def ani_photo_presets_from_image():
 	presets = presets[-40:]
 	ani_save_photo_presets(presets)
 	return jsonify({'ok': True, 'presets': presets})
+
+
+@ani_bp.route('/ani/photo/field-presets', methods=['GET'])
+def ani_photo_field_presets_list():
+	"""Per-field preset libraries (saved nails / hair / … values) for the composer."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	return jsonify({'field_presets': ani_load_field_presets()})
+
+
+@ani_bp.route('/ani/photo/field-presets', methods=['POST'])
+def ani_photo_field_presets_save():
+	"""Save a value into ONE field's preset library (e.g. a nails option)."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	body = request.get_json(silent=True) or {}
+	field = (body.get('field') or '').strip()
+	value = (body.get('value') or '').strip()[:400]
+	if field not in ANI_PHOTO_FIELD_KEYS or not value:
+		return jsonify({'error': 'bad_request'}), 400
+	d = ani_load_field_presets()
+	lst = [v for v in (d.get(field) or []) if isinstance(v, str) and v.lower() != value.lower()]
+	lst.append(value)
+	d[field] = lst[-30:]   # cap per field
+	ani_save_field_presets(d)
+	return jsonify({'ok': True, 'field_presets': d})
+
+
+@ani_bp.route('/ani/photo/field-presets/delete', methods=['POST'])
+def ani_photo_field_presets_delete():
+	"""Remove a value from ONE field's preset library."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	body = request.get_json(silent=True) or {}
+	field = (body.get('field') or '').strip()
+	value = (body.get('value') or '').strip()
+	d = ani_load_field_presets()
+	if field in d:
+		d[field] = [v for v in d[field] if isinstance(v, str) and v.lower() != value.lower()]
+		ani_save_field_presets(d)
+	return jsonify({'ok': True, 'field_presets': d})
 
 
 @ani_bp.route('/ani/photo', methods=['POST'])
