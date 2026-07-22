@@ -1561,6 +1561,24 @@
 		p.style.display = shown ? 'none' : 'flex';
 	}
 
+	// PIN-gate OPENING the ▷ VIDEO player (After Dark PIN, verified server-side).
+	// Hiding needs no PIN; the unlock persists for the browser session. Bound to
+	// the Ctrl+K palette + Ctrl+Shift+V so the player can't be summoned without it.
+	function adPlayerToggleGated() {
+		const p = document.getElementById('ad-player');
+		if (!p) return;
+		const shown = getComputedStyle(p).display !== 'none';
+		if (shown || sessionStorage.getItem('videoUnlocked') === '1') { adPlayerToggle(); return; }
+		const pin = prompt('▷ VIDEO — PIN');
+		if (pin == null || pin === '') return;
+		fetch('/cockpit/video-unlock', {
+			method: 'POST', headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ pin: pin })
+		}).then(r => r.json()).then(d => {
+			if (d && d.ok) { sessionStorage.setItem('videoUnlocked', '1'); adPlayerToggle(); }
+		}).catch(() => {});
+	}
+
 	function adLibraryToggle() {
 		adLibraryVisible = !adLibraryVisible;
 		const drawer = document.getElementById('ad-player-library');
@@ -2347,7 +2365,7 @@
 		{ icon: '⌇', label: 'Publish Status', hint: '/publish',       action: () => window.location.href = '/publish' },
 		{ icon: '✦', label: 'Brain Dump',     hint: 'Ctrl+Space',     action: () => { cmdClose(); brainDumpOpen(); } },
 		{ icon: '▶', label: 'Toggle YouTube Player', hint: 'Ctrl+Shift+Y', action: () => { cmdClose(); ytPlayerToggle(); } },
-		{ icon: '▹', label: 'Toggle Video Player', hint: 'Ctrl+Shift+V', action: () => { cmdClose(); adPlayerToggle(); } },
+		{ icon: '▹', label: 'Toggle Video Player', hint: 'Ctrl+Shift+V', action: () => { cmdClose(); adPlayerToggleGated(); } },
 		{ icon: '♪', label: 'Toggle Music Player', hint: '', action: () => { cmdClose(); adMusicPlayerToggle(); } },
 		{ icon: '◱', label: 'Toggle Focus Mode', hint: 'Ctrl+Shift+F', action: () => { cmdClose(); if (typeof toggleFocus === 'function') toggleFocus(); } },
 		{ icon: '🦇', label: 'Toggle Ani',    hint: 'Ctrl+Shift+A',   action: () => { cmdClose(); if (typeof aniToggle === 'function') aniToggle(); } },
@@ -2388,7 +2406,7 @@
 		if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'v' || e.key === 'V')) {
 			const t = e.target;
 			const editable = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
-			if (!editable) { e.preventDefault(); adPlayerToggle(); }
+			if (!editable) { e.preventDefault(); adPlayerToggleGated(); }
 		}
 		// Cmd/Ctrl+Shift+F — focus mode (collapse everything but the transmission box)
 		if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'f' || e.key === 'F')) {

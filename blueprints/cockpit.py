@@ -331,6 +331,17 @@ def cockpit_mode():
 	return resp
 
 
+@cockpit_bp.route('/cockpit/video-unlock', methods=['POST'])
+def video_unlock():
+	"""Verify the After Dark PIN before the ▷ VIDEO player opens (from Ctrl+K /
+	Ctrl+Shift+V). Soft privacy gate — the client keeps the unlock for the session."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	data = request.get_json(silent=True) or {}
+	pin = str(data.get('pin', '')).strip()
+	return jsonify({'ok': bool(AFTER_DARK_PIN) and pin == AFTER_DARK_PIN})
+
+
 @cockpit_bp.route('/cockpit/mode/clear', methods=['POST'])
 def cockpit_mode_clear():
 	"""Purge & Hide — resets to default (no mode)."""
