@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd agent: pull ~/db-backups/ from PythonAnywhere to ~/pa-backups/.
+
+  Install (one-time):
+    cp tools/pull-backups/com.aaronaiken.pa-backups.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.aaronaiken.pa-backups.plist
+
+  Runs daily at 10:00 local AND once at load. If the Mac is asleep at 10:00,
+  launchd fires the job the next time the Mac is awake (that's why pull, not
+  push — see pull-backups.sh). Uninstall: launchctl unload <plist> && rm it.
+
+  If you move the repo, update the ProgramArguments path below.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.aaronaiken.pa-backups</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/aaronaiken/myblog/aaronaiken.github.io/tools/pull-backups/pull-backups.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>10</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/aaronaiken/pa-backups/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/aaronaiken/pa-backups/launchd.err.log</string>
+</dict>
+</plist>

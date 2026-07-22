@@ -54,19 +54,44 @@ MOZZIE_FILE = os.environ.get('MOZZIE_FILE', os.path.join(REPO_ROOT, 'mozzie_game
 
 # Each target: (absolute path, type tag matching HANDLERS below).
 # Add new at-risk files here. Order doesn't matter — sweep is per-file.
+# A target that isn't present on this environment is skipped, not failed,
+# so it's safe to list files that only exist once a feature has run.
 TARGETS = [
+	# --- Databases (Tier 1) ---
 	(os.path.join(REPO_ROOT, 'assets/data/command_deck.db'), 'sqlite'),
 	(os.path.join(REPO_ROOT, 'assets/data/ledger.db'),       'sqlite'),
-	(os.path.join(REPO_ROOT, 'assets/data/scratch.json'),    'json'),
-	(os.path.join(REPO_ROOT, 'assets/data/scratch_work.json'),'json'),
+
+	# --- Cockpit / notebook state ---
+	(os.path.join(REPO_ROOT, 'assets/data/notebook.json'),   'json'),  # 48pages side-door: field notes + cabinet
+	(os.path.join(REPO_ROOT, 'assets/data/cockpit_layout.json'),'json'),  # focus-mode definitions
+	(os.path.join(REPO_ROOT, 'assets/data/scratch.json'),    'json'),  # retired (pre-redesign), still snapshot if present
+	(os.path.join(REPO_ROOT, 'assets/data/scratch_work.json'),'json'),  # retired (pre-redesign)
 	(os.path.join(REPO_ROOT, 'assets/data/below_deck.json'), 'json'),  # retired stub
+	(MOZZIE_FILE,                                            'json'),
+
+	# --- Ani: conversation + memory + life/state (Tier 1) ---
 	(os.path.join(REPO_ROOT, 'ani_conversation.json'),       'json'),
 	(os.path.join(REPO_ROOT, 'ani_calendar.json'),           'json'),
 	(os.path.join(REPO_ROOT, 'ani_remember.json'),           'json'),
-	(MOZZIE_FILE,                                            'json'),
+	(os.path.join(REPO_ROOT, 'ani_books.json'),              'json'),  # story-engine books/beats
+	(os.path.join(REPO_ROOT, 'ani_threads.json'),            'json'),  # storylines
+	(os.path.join(REPO_ROOT, 'ani_state.json'),              'json'),  # right-now state
+	(os.path.join(REPO_ROOT, 'ani_settings.json'),           'json'),
+	(os.path.join(REPO_ROOT, 'ani_pending_milestones.json'), 'json'),
 	(os.path.join(REPO_ROOT, 'static/ani_memory.txt'),       'text'),
+	(os.path.join(REPO_ROOT, 'static/ani_life.txt'),         'text'),
+	(os.path.join(REPO_ROOT, 'static/ani_character_bible.txt'),'text'),  # signature look
+	(os.path.join(REPO_ROOT, 'static/ani_house.txt'),        'text'),
+
+	# --- Ani: photo composer presets (user-created, worth keeping) ---
+	(os.path.join(REPO_ROOT, 'ani_photo_favorites.json'),    'json'),
+	(os.path.join(REPO_ROOT, 'ani_photo_field_presets.json'),'json'),
+	(os.path.join(REPO_ROOT, 'ani_photo_presets.json'),      'json'),
+	(os.path.join(REPO_ROOT, 'ani_photo_log.json'),          'json'),  # gen event log (lower value)
+
+	# --- Comms prefixes (Tier 3) ---
 	(os.path.join(REPO_ROOT, 'static/comms.txt'),            'text'),
-	(os.path.join(REPO_ROOT, 'static/after_dark_comms.txt'), 'text'),
+	(os.path.join(REPO_ROOT, 'static/after_dark_comms.txt'), 'text'),  # players' library backend
 ]
 
 
