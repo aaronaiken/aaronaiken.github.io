@@ -104,7 +104,8 @@
 		var page = document.getElementById('nb-page-input');
 		if (!page) return;
 		var gaugeLabel = document.getElementById('nb-page-gauge');
-		var gaugeFill = document.getElementById('nb-gauge-fill');
+		var meter = document.getElementById('nb-meter');
+		var meterTicks = document.getElementById('nb-meter-ticks');
 		var status = document.getElementById('nb-page-status');
 		var banner = document.getElementById('nb-triage-banner');
 		var scrapBar = document.getElementById('nb-scrap-bar');
@@ -114,14 +115,29 @@
 		var bdInput = document.getElementById('nb-bd-input');
 		var saveTimer = null, lastBudget = null;
 
+		// Build the 48 page ticks once. The 39th (index 38) is the triage boundary.
+		var TICKS = [];
+		if (meterTicks && !meterTicks.children.length) {
+			for (var i = 0; i < 48; i++) {
+				var t = document.createElement('div');
+				t.className = 'nb-tick' + (i === 38 ? ' is-triage-mark' : '');
+				meterTicks.appendChild(t); TICKS.push(t);
+			}
+		}
+
 		function paint(b) {
 			if (!b) return;
 			lastBudget = b;
-			if (gaugeLabel) gaugeLabel.textContent = fmtGauge(b);
-			if (gaugeFill) {
-				gaugeFill.style.height = Math.round((b.fill || 0) * 100) + '%';
-				gaugeFill.classList.toggle('is-triage', !!b.triage);
+			var used = b.pages_used || 0;
+			var fill = used <= 0 ? 0 : Math.min(b.page_budget, Math.max(1, Math.ceil(used)));
+			var left = Math.max(0, b.page_budget - Math.ceil(used));
+			if (gaugeLabel) gaugeLabel.textContent = 'PG ' + fill + '/' + b.page_budget + ' · ' + left + ' LEFT';
+			for (var i = 0; i < TICKS.length; i++) {
+				var isFilled = i < fill;
+				TICKS[i].classList.toggle('is-filled', isFilled);
+				TICKS[i].classList.toggle('past-triage', isFilled && i >= 38);
 			}
+			if (meter) meter.classList.toggle('is-triage', !!b.triage);
 			if (pageWrap) pageWrap.classList.toggle('is-triage', !!b.triage);
 			if (banner) banner.classList.toggle('is-on', !!b.triage);
 		}

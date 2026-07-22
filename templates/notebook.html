@@ -22,16 +22,15 @@
 			</div>
 		</div>
 
-		<div class="nb-fs-body">
-			<!-- INK GAUGE — vertical rail, fills bottom-up. Triage past PG 39 / 48. -->
-			<div class="nb-gauge" title="Page capacity">
-				<div class="nb-gauge-track">
-					<div class="nb-gauge-fill" id="nb-gauge-fill"></div>
-					<div class="nb-gauge-triage-line"></div>
-				</div>
-				<div class="nb-gauge-label" id="nb-page-gauge">PG 0/48</div>
-			</div>
+		<!-- PAGE METER — 48 discrete page ticks across the top (the 48pages budget bar).
+		     Fills left→right as pages fill; red tick marks PG 39 = triage; bleeds red past it. -->
+		<div class="nb-meter" id="nb-meter">
+			<span class="nb-meter-cap">PG&nbsp;1</span>
+			<div class="nb-meter-ticks" id="nb-meter-ticks"></div>
+			<span class="nb-meter-read" id="nb-page-gauge">PG 0/48 · 48 LEFT</span>
+		</div>
 
+		<div class="nb-fs-body">
 			<!-- LEFT PAGE — scrap paper. Scrap = block between blank lines. -->
 			<div class="nb-fs-page" id="nb-fs-page">
 				<div class="nb-triage-banner" id="nb-triage-banner">PAGE HEAVY — FILE, ROLL, OR TEAR TO KEEP WRITING</div>
