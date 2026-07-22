@@ -259,6 +259,17 @@
 		</div>
 	</div>
 
+	<!-- ▷ VIDEO PIN gate — styled inline entry (replaces the browser prompt). -->
+	<div id="video-pin-overlay" role="dialog" aria-label="Video player PIN" onclick="if(event.target===this)videoPinClose()">
+		<div id="video-pin-box">
+			<div id="video-pin-label">▷ VIDEO · ENTER PIN</div>
+			<input type="password" id="video-pin-input" inputmode="numeric" autocomplete="off" maxlength="12"
+			       aria-label="Video PIN"
+			       onkeydown="if(event.key==='Enter'){event.preventDefault();videoPinSubmit();}else if(event.key==='Escape'){videoPinClose();}">
+			<div id="video-pin-msg" aria-live="polite"></div>
+		</div>
+	</div>
+
 	<div id="secret-comm">
 		<div id="secret-text"></div>
 	</div>

@@ -1569,14 +1569,70 @@
 		if (!p) return;
 		const shown = getComputedStyle(p).display !== 'none';
 		if (shown || sessionStorage.getItem('videoUnlocked') === '1') { adPlayerToggle(); return; }
-		const pin = prompt('▷ VIDEO — PIN');
-		if (pin == null || pin === '') return;
+		videoPinOpen();
+	}
+
+	// Styled inline PIN gate for the ▷ VIDEO player (replaces the raw prompt()).
+	// Server-verified; 3 wrong tries in a row cool down for 30s. Unlock is per-session.
+	let _videoPinStrikes = 0, _videoPinLockUntil = 0;
+	function videoPinOpen() {
+		const ov = document.getElementById('video-pin-overlay');
+		if (!ov) { adPlayerToggle(); return; }   // graceful fallback if markup absent
+		const inp = document.getElementById('video-pin-input');
+		const msg = document.getElementById('video-pin-msg');
+		if (msg) msg.textContent = '';
+		if (inp) { inp.value = ''; inp.disabled = Date.now() < _videoPinLockUntil; }
+		ov.classList.add('is-open');
+		if (inp && !inp.disabled) setTimeout(function () { inp.focus(); }, 60);
+		_videoPinCoolTick();
+	}
+	function videoPinClose() {
+		const ov = document.getElementById('video-pin-overlay');
+		if (ov) ov.classList.remove('is-open');
+	}
+	function _videoPinCoolTick() {
+		const msg = document.getElementById('video-pin-msg');
+		const inp = document.getElementById('video-pin-input');
+		const left = Math.ceil((_videoPinLockUntil - Date.now()) / 1000);
+		if (left > 0) {
+			if (msg) msg.textContent = 'LOCKED · ' + left + 's';
+			if (inp) inp.disabled = true;
+			setTimeout(_videoPinCoolTick, 500);
+		} else if (inp && inp.disabled) {
+			inp.disabled = false; if (msg) msg.textContent = '';
+			const ov = document.getElementById('video-pin-overlay');
+			if (ov && ov.classList.contains('is-open')) inp.focus();
+		}
+	}
+	function videoPinSubmit() {
+		if (Date.now() < _videoPinLockUntil) return;
+		const inp = document.getElementById('video-pin-input');
+		const box = document.getElementById('video-pin-box');
+		const msg = document.getElementById('video-pin-msg');
+		const pin = inp ? inp.value.trim() : '';
+		if (!pin) return;
 		fetch('/cockpit/video-unlock', {
 			method: 'POST', headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ pin: pin })
-		}).then(r => r.json()).then(d => {
-			if (d && d.ok) { sessionStorage.setItem('videoUnlocked', '1'); adPlayerToggle(); }
-		}).catch(() => {});
+		}).then(function (r) { return r.json(); }).then(function (d) {
+			if (d && d.ok) {
+				_videoPinStrikes = 0;
+				sessionStorage.setItem('videoUnlocked', '1');
+				videoPinClose();
+				adPlayerToggle();
+			} else {
+				_videoPinStrikes++;
+				if (box) { box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); }
+				if (inp) { inp.value = ''; inp.focus(); }
+				if (_videoPinStrikes >= 3) {
+					_videoPinStrikes = 0;
+					_videoPinLockUntil = Date.now() + 30000;
+					_videoPinCoolTick();
+				} else if (msg) {
+					msg.textContent = 'WRONG PIN';
+				}
+			}
+		}).catch(function () { if (msg) msg.textContent = 'ERROR'; });
 	}
 
 	function adLibraryToggle() {
