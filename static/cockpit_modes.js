@@ -2423,6 +2423,11 @@
 		{ icon: '▶', label: 'Toggle YouTube Player', hint: 'Ctrl+Shift+Y', action: () => { cmdClose(); ytPlayerToggle(); } },
 		{ icon: '▹', label: 'Toggle Video Player', hint: 'Ctrl+Shift+V', action: () => { cmdClose(); adPlayerToggleGated(); } },
 		{ icon: '♪', label: 'Toggle Music Player', hint: '', action: () => { cmdClose(); adMusicPlayerToggle(); } },
+		{ icon: '◧', label: 'Mode: Write', hint: 'Ctrl+1', action: () => { cmdClose(); if (window.cockpitSetMode) cockpitSetMode('write'); } },
+		{ icon: '◧', label: 'Mode: Desk', hint: 'Ctrl+2', action: () => { cmdClose(); if (window.cockpitSetMode) cockpitSetMode('desk'); } },
+		{ icon: '◧', label: 'Mode: Watch', hint: 'Ctrl+3', action: () => { cmdClose(); if (window.cockpitSetMode) cockpitSetMode('watch'); } },
+		{ icon: '◧', label: 'Mode: Theater', hint: 'Ctrl+4', action: () => { cmdClose(); if (window.cockpitSetMode) cockpitSetMode('theater'); } },
+		{ icon: '◧', label: 'Mode: Minimal', hint: 'Ctrl+5', action: () => { cmdClose(); if (window.cockpitSetMode) cockpitSetMode('minimal'); } },
 		{ icon: '◱', label: 'Toggle Focus Mode', hint: 'Ctrl+Shift+F', action: () => { cmdClose(); if (typeof toggleFocus === 'function') toggleFocus(); } },
 		{ icon: '🦇', label: 'Toggle Ani',    hint: 'Ctrl+Shift+A',   action: () => { cmdClose(); if (typeof aniToggle === 'function') aniToggle(); } },
 		{ icon: '$', label: 'The Ledger',     hint: '/ledger/',       action: () => cmdGo('/ledger/') },
@@ -2572,3 +2577,118 @@
 	}
 
 
+
+	// ============================================================
+	// FOCUS-MODE DIAL + SWITCHBOARD (redesign §5)
+	// Named panel-visibility layouts; long-press/right-click a mode edits its set.
+	// Persists to localStorage + /cockpit/layout. Modes change VISIBILITY only.
+	// ============================================================
+	(function () {
+		var PANELS = [
+			{ key: 'tx', label: ') TX', sel: '#tx-panel' },
+			{ key: 'slip', label: '📓 NOTEBOOK', sel: '#nb-slip' },
+			{ key: 'yt', label: '▶ YT', sel: '#rail-yt' },
+			{ key: 'music', label: '♪ MUSIC', sel: '#rail-music' },
+			{ key: 'mlog', label: '// MISSION LOG', sel: '#mission-log-panel' },
+			{ key: 'ledger', label: '$ LEDGER', sel: '#ledger-pill-row' }
+		];
+		var MODES = ['write', 'desk', 'watch', 'theater', 'minimal'];
+		var MODE_LABEL = { write: 'WRITE', desk: 'DESK', watch: 'WATCH', theater: 'THEATER', minimal: 'MINIMAL' };
+		var DEFAULTS = {
+			write:   { tx: true, slip: true, yt: false, music: false, mlog: false, ledger: false },
+			desk:    { tx: true, slip: true, yt: true, music: true, mlog: true, ledger: true },
+			watch:   { tx: false, slip: true, yt: true, music: false, mlog: false, ledger: false },
+			theater: { tx: false, slip: false, yt: true, music: true, mlog: false, ledger: false },
+			minimal: { tx: true, slip: false, yt: false, music: false, mlog: false, ledger: false }
+		};
+		var LS_KEY = 'cockpit-modes-v1';
+		var state = { active: 'desk', modes: {} };
+		var sbFor = null;
+
+		function normalize() {
+			MODES.forEach(function (m) {
+				if (!state.modes[m]) state.modes[m] = {};
+				PANELS.forEach(function (p) { if (typeof state.modes[m][p.key] !== 'boolean') state.modes[m][p.key] = DEFAULTS[m][p.key]; });
+			});
+			if (MODES.indexOf(state.active) < 0) state.active = 'desk';
+		}
+		function loadState() {
+			try { var s = JSON.parse(localStorage.getItem(LS_KEY)); if (s && s.modes) state = s; } catch (e) {}
+			normalize();
+			fetch('/cockpit/layout').then(function (r) { return r.json(); }).then(function (d) {
+				if (d && d.modes) { state = d; normalize(); applyMode(state.active); renderDial(); }
+			}).catch(function () {});
+		}
+		function saveState() {
+			try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {}
+			fetch('/cockpit/layout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state) }).catch(function () {});
+		}
+		function applyMode(mode) {
+			var set = state.modes[mode] || DEFAULTS[mode] || {};
+			PANELS.forEach(function (p) {
+				var el = document.querySelector(p.sel);
+				if (el) el.classList.toggle('mode-off', set[p.key] === false);
+			});
+			state.active = mode;
+			document.body.setAttribute('data-mode', mode);
+		}
+		function renderDial() {
+			var wrap = document.getElementById('mode-dial-btns'); if (!wrap) return;
+			wrap.innerHTML = MODES.map(function (m) {
+				var held = (sbFor === m) ? ' ● HELD…' : (m === state.active ? ' ●' : '');
+				return '<button class="mode-btn' + (m === state.active ? ' is-active' : '') + (sbFor === m ? ' is-held' : '') + '" data-mode="' + m + '">' + MODE_LABEL[m] + held + '</button>';
+			}).join('');
+			Array.prototype.forEach.call(wrap.querySelectorAll('.mode-btn'), function (btn) {
+				var m = btn.getAttribute('data-mode'), lp = null, longFired = false;
+				btn.addEventListener('click', function () { if (longFired) { longFired = false; return; } setActive(m); });
+				btn.addEventListener('contextmenu', function (e) { e.preventDefault(); openSwitchboard(m); });
+				btn.addEventListener('mousedown', function () { longFired = false; lp = setTimeout(function () { longFired = true; openSwitchboard(m); }, 600); });
+				btn.addEventListener('mouseup', function () { clearTimeout(lp); });
+				btn.addEventListener('mouseleave', function () { clearTimeout(lp); });
+				btn.addEventListener('touchstart', function () { longFired = false; lp = setTimeout(function () { longFired = true; openSwitchboard(m); }, 600); }, { passive: true });
+				btn.addEventListener('touchend', function () { clearTimeout(lp); });
+			});
+		}
+		function setActive(mode) { applyMode(mode); saveState(); closeSwitchboard(); renderDial(); }
+		function openSwitchboard(mode) {
+			sbFor = mode;
+			var sb = document.getElementById('mode-switchboard'), grid = document.getElementById('mode-sb-grid'), title = document.getElementById('mode-sb-title');
+			if (!sb || !grid) return;
+			if (title) title.textContent = '// ' + MODE_LABEL[mode] + ' — SWITCHBOARD';
+			var set = state.modes[mode];
+			grid.innerHTML = PANELS.map(function (p) {
+				var on = set[p.key] !== false;
+				return '<button class="mode-sw' + (on ? ' is-on' : '') + '" data-panel="' + p.key + '"><span>' + p.label + '</span><span class="mode-sw-knob"></span></button>';
+			}).join('');
+			Array.prototype.forEach.call(grid.querySelectorAll('.mode-sw'), function (sw) {
+				sw.addEventListener('click', function () {
+					var k = sw.getAttribute('data-panel'), newOn = !(set[k] !== false);
+					set[k] = newOn; sw.classList.toggle('is-on', newOn);
+					if (sbFor === state.active) applyMode(state.active);
+					saveState();
+				});
+			});
+			sb.classList.add('is-open');
+			renderDial();
+		}
+		function closeSwitchboard() { var sb = document.getElementById('mode-switchboard'); if (sb) sb.classList.remove('is-open'); if (sbFor) { sbFor = null; renderDial(); } }
+
+		window.cockpitSetMode = setActive;
+		window.cockpitOpenSwitchboard = openSwitchboard;
+
+		document.addEventListener('keydown', function (e) {
+			if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key >= '1' && e.key <= '5' && document.getElementById('mode-dial')) {
+				var idx = parseInt(e.key, 10) - 1;
+				if (MODES[idx]) { e.preventDefault(); setActive(MODES[idx]); }
+			}
+			if (e.key === 'Escape') { var sb = document.getElementById('mode-switchboard'); if (sb && sb.classList.contains('is-open')) closeSwitchboard(); }
+		});
+		document.addEventListener('click', function (e) {
+			var sb = document.getElementById('mode-switchboard');
+			if (sb && sb.classList.contains('is-open') && !sb.contains(e.target) && !(e.target.closest && e.target.closest('.mode-btn'))) closeSwitchboard();
+		});
+		document.addEventListener('DOMContentLoaded', function () {
+			if (!document.getElementById('mode-dial')) return;
+			loadState(); applyMode(state.active); renderDial();
+		});
+	})();

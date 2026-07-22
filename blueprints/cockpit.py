@@ -342,6 +342,35 @@ def video_unlock():
 	return jsonify({'ok': bool(AFTER_DARK_PIN) and pin == AFTER_DARK_PIN})
 
 
+COCKPIT_LAYOUT_FILE = 'assets/data/cockpit_layout.json'
+
+
+@cockpit_bp.route('/cockpit/layout')
+def cockpit_layout_get():
+	"""Per-mode panel-visibility sets for the focus-mode dial (server-persisted, with a
+	localStorage fallback on the client)."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	try:
+		with open(COCKPIT_LAYOUT_FILE) as f:
+			return jsonify(json.load(f))
+	except (FileNotFoundError, ValueError):
+		return jsonify({})
+
+
+@cockpit_bp.route('/cockpit/layout', methods=['POST'])
+def cockpit_layout_save():
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	data = request.get_json(silent=True) or {}
+	os.makedirs(os.path.dirname(COCKPIT_LAYOUT_FILE), exist_ok=True)
+	tmp = COCKPIT_LAYOUT_FILE + '.tmp'
+	with open(tmp, 'w') as f:
+		json.dump(data, f)
+	os.replace(tmp, COCKPIT_LAYOUT_FILE)
+	return jsonify({'ok': True})
+
+
 @cockpit_bp.route('/cockpit/mode/clear', methods=['POST'])
 def cockpit_mode_clear():
 	"""Purge & Hide — resets to default (no mode)."""

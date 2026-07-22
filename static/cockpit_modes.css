@@ -301,3 +301,33 @@
 	}
 
 
+
+	/* ---- MODE DIAL + SWITCHBOARD (redesign §5) ---- */
+	.cockpit__hdr-emoji { background: none; border: none; cursor: pointer; font-size: 1rem; line-height: 1; padding: 2px 4px; }
+	#ani-home-latch { border: 1px solid var(--border-hi); border-radius: 3px; }
+
+	.mode-dial { display: flex; align-items: center; gap: 12px; margin: 2px 0 10px; flex-wrap: wrap; }
+	.mode-dial-label { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.18em; color: var(--muted); }
+	.mode-dial-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+	.mode-btn { background: var(--pill-bg); border: 1px solid var(--border); border-radius: 2px; color: var(--muted); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; letter-spacing: 0.14em; padding: 6px 12px; user-select: none; -webkit-user-select: none; }
+	.mode-btn:hover { border-color: var(--amber-lo); color: var(--amber); }
+	.mode-btn.is-active { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+	.mode-btn.is-held { border-color: var(--amber); color: var(--amber-hi); }
+	.mode-dial-hint { font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; letter-spacing: 0.12em; color: var(--faint, var(--border-hi)); margin-left: auto; }
+
+	.mode-switchboard { display: none; border: 1px solid var(--amber-lo); border-radius: 4px; background: var(--bg2); padding: 16px; margin: 0 0 12px; box-shadow: var(--shadow-pop, 0 10px 30px rgba(0,0,0,.3)); }
+	.mode-switchboard.is-open { display: block; }
+	.mode-sb-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 10px; flex-wrap: wrap; }
+	#mode-sb-title { font-family: 'Share Tech Mono', monospace; font-size: 0.66rem; letter-spacing: 0.16em; color: var(--amber); }
+	.mode-sb-hint { font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; letter-spacing: 0.12em; color: var(--muted); }
+	.mode-sb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+	.mode-sw { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--pill-bg); border: 1px solid var(--border); border-radius: 3px; color: var(--muted); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.66rem; letter-spacing: 0.1em; padding: 12px 14px; }
+	.mode-sw.is-on { border-color: var(--amber-lo); color: var(--amber); background: var(--amber-dim); }
+	.mode-sw-knob { width: 30px; height: 16px; border-radius: 8px; background: var(--border-hi); position: relative; transition: background 0.2s; flex-shrink: 0; }
+	.mode-sw-knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg2); transition: left 0.2s; }
+	.mode-sw.is-on .mode-sw-knob { background: var(--amber); }
+	.mode-sw.is-on .mode-sw-knob::after { left: 16px; }
+	@media (max-width: 600px) { .mode-sb-grid { grid-template-columns: 1fr; } }
+
+	/* panel visibility toggled by the active mode */
+	.mode-off { display: none !important; }

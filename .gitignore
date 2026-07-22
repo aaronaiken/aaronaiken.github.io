@@ -32,6 +32,7 @@ static/ani_house.txt
 static/ani_life.txt
 assets/data/scratch.json
 assets/data/notebook.json
+assets/data/cockpit_layout.json
 assets/data/below_deck.json
 assets/data/command_deck.db
 assets/data/command_deck.db-shm

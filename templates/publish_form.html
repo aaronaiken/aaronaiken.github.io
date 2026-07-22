@@ -307,7 +307,29 @@
 				<a class="cockpit__ctrl-btn" href="/below-deck" style="text-decoration:none;">BELOW DECK</a>
 				<a href="/command-deck/" class="cockpit__ctrl-btn">COMMAND DECK</a>
 				<a href="/ledger/" class="cockpit__ctrl-btn" style="text-decoration:none;">LEDGER</a>
+				<!-- 🦇 Ani + 🏠 HOME latch — always visible in the header, every mode (never focus-hidden). -->
+				<button class="cockpit__hdr-emoji" id="ani-bat-pill"
+					style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;"
+					ontouchstart="startAni(event)" ontouchend="endAni(event)" ontouchmove="endAni(event)"
+					oncontextmenu="event.preventDefault(); aniToggle(); return false;"
+					title="Ani — long-press / right-click / Ctrl+Shift+A">🦇</button>
+				<button class="cockpit__hdr-emoji" id="ani-home-latch" onclick="aniHomeToggle()" title="Home mode — discreet, no attention effects (Ctrl+Shift+H)">🏠</button>
 			</div>
+		</div>
+
+		<!-- MODE DIAL — 5 focus layouts (Ctrl+1…5); long-press / right-click a mode
+		     opens its switchboard of panel toggles. -->
+		<div class="mode-dial" id="mode-dial">
+			<span class="mode-dial-label">MODE</span>
+			<div class="mode-dial-btns" id="mode-dial-btns"></div>
+			<span class="mode-dial-hint">CTRL+1…5 · LONG-PRESS = SWITCHBOARD</span>
+		</div>
+		<div class="mode-switchboard" id="mode-switchboard" role="dialog" aria-label="Mode switchboard">
+			<div class="mode-sb-head">
+				<span id="mode-sb-title">// SWITCHBOARD</span>
+				<span class="mode-sb-hint">ESC · CHANGES SAVE TO THIS MODE</span>
+			</div>
+			<div class="mode-sb-grid" id="mode-sb-grid"></div>
 		</div>
 
 		<!-- Now-playing chip — surfaces the active media player with mini controls. Hidden until playback. -->
@@ -322,7 +344,7 @@
 		   Quiet always-visible reminder per Aaron's spec; sits between
 		   the status-bar and the Quick Insert section so it never
 		   collides with the floating today panel or wraps the controls row. #}
-		<div class="focus-hide" style="display:flex; justify-content:flex-end; padding:10px 4px 4px;">
+		<div class="focus-hide" id="ledger-pill-row" style="display:flex; justify-content:flex-end; padding:10px 4px 4px;">
 			{% include 'includes/ledger_footer_badge.html' %}
 		</div>
 
@@ -345,16 +367,6 @@
 			<button class="pill" onclick="insertText('☕️')">☕️</button>
 			<button class="pill" onclick="insertText('💻')">💻</button>
 			<button class="pill" onclick="insertText('🛠️')">🛠️</button>
-			<button class="pill"
-				id="ani-bat-pill"
-				style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;"
-				ontouchstart="startAni(event)"
-				ontouchend="endAni(event)"
-				ontouchmove="endAni(event)"
-				oncontextmenu="event.preventDefault(); aniToggle(); return false;">
-				🦇
-			</button>
-			<button class="pill" id="ani-home-latch" onclick="aniHomeToggle()" title="Home mode — discreet, no attention effects (Ctrl+Shift+H)">🏠</button>
 		</div>
 
 		<div class="scroller utility-belt">
@@ -366,6 +378,7 @@
 		</div><!-- end quickinsert-body -->
 		</div><!-- end quickinsert-section -->
 
+		<div id="tx-panel">
 		<div class="section-label">// Transmission</div>
 		{% with messages = get_flashed_messages(with_categories=true) %}
 			{% if messages %}
@@ -409,6 +422,8 @@
 			</form>
 		</div>
 
+		</div><!-- end tx-panel -->
+
 		<!-- NOTEBOOK SLIP — blank scrap paper. Enter-Enter files it to the bottom of the
 		     notebook page; Ctrl+Enter rolls it straight to Below Deck; ⤢ / Ctrl+Shift+N
 		     opens the notebook fullscreen. (Replaces the old HOME/DESK scratch pad — one
@@ -446,7 +461,7 @@
 		</div>
 
 		<!-- TASKS -->
-		<div class="tasks-section focus-hide">
+		<div class="tasks-section focus-hide" id="mission-log-panel">
 			<div class="log-header tasks-toggle" onclick="toggleTasks()">
 				// Mission Log
 				<span class="tasks-toggle-arrow" id="tasks-arrow">▾</span>
