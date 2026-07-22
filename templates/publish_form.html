@@ -362,20 +362,18 @@
 				</div>
 				<div class="tx-expand">
 					<div class="scroller">
-						<button type="button" class="pill" onclick="insertText('🚀')">🚀</button>
-						<button type="button" class="pill"
+						<button type="button" class="pill" id="tx-emoji-btn" onclick="txEmojiToggle(event)"
 							style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;"
-							onclick="insertText('🛰️')"
 							ontouchstart="startSecret()" ontouchend="endSecret()"
-							oncontextmenu="event.preventDefault(); triggerDesktopSecret(); return false;">🛰️</button>
-						<button type="button" class="pill" onclick="insertText('☕️')">☕️</button>
-						<button type="button" class="pill" onclick="insertText('💻')">💻</button>
-						<button type="button" class="pill" onclick="insertText('🛠️')">🛠️</button>
+							oncontextmenu="event.preventDefault(); triggerDesktopSecret(); return false;"
+							title="Pick an emoji">😊 EMOJI</button>
 						<button type="button" class="pill util" onclick="wrapText('**', '**')" title="Bold (⌘/Ctrl+B)">BOLD</button>
 						<button type="button" class="pill util" onclick="wrapText('*', '*')" title="Italic (⌘/Ctrl+I)">ITALIC</button>
 						<button type="button" class="pill util" onclick="smartURL()" title="Insert a markdown link">🔗 LINK</button>
 						<button type="button" class="pill util" onclick="insertGratefulLog()" title="Insert grateful-log template">🙏 GRATEFUL</button>
 					</div>
+					<!-- emoji picker popover (populated by cockpit.js) -->
+					<div class="tx-emoji-pop" id="tx-emoji-pop" role="dialog" aria-label="Emoji picker"></div>
 					<div class="counter-wrap">
 						<div class="payload-controls">
 							<input type="file" name="image" id="image-upload" accept="image/*" style="display:none;" onchange="updatePayloadStatus()">

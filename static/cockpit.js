@@ -771,3 +771,61 @@
 	if (document.readyState !== 'loading') txInit();
 	else document.addEventListener('DOMContentLoaded', txInit);
 })();
+
+/* ---- Emoji picker (TX composer) ---- */
+(function () {
+	// Curated set: [emoji, search keywords]. Enough to cover everyday posting;
+	// the search filters by keyword so you don't have to scroll.
+	var EMOJI = [
+		['😀','grin happy smile'],['😃','happy smile'],['😄','laugh happy'],['😁','grin'],['😅','sweat laugh'],['😂','joy laugh cry tears'],['🤣','rofl laugh'],['🙂','slight smile'],['😉','wink'],['😊','blush happy'],['🥰','love hearts'],['😍','heart eyes love'],['😘','kiss'],['😎','cool sunglasses'],['🤩','star struck wow'],['🥳','party celebrate'],['🤔','thinking hmm'],['🫡','salute'],['😴','sleep tired'],['😭','cry sob'],['😢','cry sad'],['😤','frustrated steam'],['😡','angry mad'],['🤯','mind blown'],['🥴','woozy'],['🤪','crazy silly'],
+		['👍','thumbs up yes like'],['👎','thumbs down no'],['👏','clap applause'],['🙌','praise raise hands'],['🙏','pray thanks please'],['🤝','handshake deal'],['💪','muscle strong'],['👊','fist bump'],['✌️','peace victory'],['🤞','fingers crossed luck'],['👌','ok perfect'],['🫶','love heart hands'],['🖖','vulcan spock'],['👋','wave hi bye'],['🫰','money fingers'],
+		['🔥','fire hot lit'],['✨','sparkles shiny magic'],['⭐','star'],['🌟','glowing star'],['💫','dizzy stars'],['⚡','lightning bolt power'],['💥','boom explosion'],['🎉','party tada celebrate'],['🎊','confetti'],['🚀','rocket launch ship'],['🛰️','satellite space'],['🌙','moon night'],['☀️','sun sunny'],['⛅','cloud sun weather'],['🌈','rainbow'],['❄️','snow cold'],['🌊','wave water ocean'],
+		['❤️','heart love red'],['🧡','orange heart'],['💛','yellow heart'],['💚','green heart'],['💙','blue heart'],['💜','purple heart'],['🖤','black heart'],['🤍','white heart'],['💔','broken heart'],['💯','hundred perfect'],['✅','check done yes'],['❌','cross no wrong'],['⚠️','warning caution'],['❓','question'],['❗','exclamation'],['💡','idea lightbulb'],['📌','pin'],['📎','clip attach'],
+		['☕️','coffee tea'],['🍺','beer drink'],['🍷','wine'],['🥃','whiskey drink'],['🍕','pizza food'],['🌮','taco'],['🍔','burger'],['🍎','apple fruit'],['🍞','bread'],['🎂','cake birthday'],['🍫','chocolate'],
+		['💻','laptop computer work code'],['🖥️','desktop computer'],['📱','phone mobile'],['⌨️','keyboard'],['🛠️','tools build fix'],['🔧','wrench'],['🔨','hammer'],['⚙️','gear settings'],['📷','camera photo'],['🎥','movie film video'],['🎧','headphones music'],['🎵','music note'],['📚','books read'],['📝','memo write note'],['✏️','pencil write'],['📖','book open'],['📬','mail inbox'],['📈','chart up growth'],['📉','chart down'],['💰','money bag'],['💵','dollar cash'],
+		['🏠','house home'],['🚗','car drive'],['✈️','plane travel flight'],['🚂','train'],['🚴','bike cycle'],['🏃','run running'],['⛺','tent camp'],['🗺️','map'],['📍','location pin'],['🌆','city dusk'],['🌲','tree forest'],['🐈','cat'],['🐕','dog'],['🦇','bat ani'],
+		['🎯','target goal dart'],['🏆','trophy win'],['🥇','gold medal first'],['🎮','game controller'],['🎸','guitar music'],['🎹','piano'],['♟️','chess'],['🧩','puzzle'],['🕹️','joystick arcade']
+	];
+	var built = false, pop, btn;
+	function build() {
+		pop = document.getElementById('tx-emoji-pop');
+		btn = document.getElementById('tx-emoji-btn');
+		if (!pop) return false;
+		pop.innerHTML = '<input type="text" id="tx-emoji-search" class="tx-emoji-search" placeholder="search emoji…" autocomplete="off">'
+			+ '<div class="tx-emoji-grid" id="tx-emoji-grid"></div>';
+		var search = document.getElementById('tx-emoji-search');
+		var grid = document.getElementById('tx-emoji-grid');
+		function render(q) {
+			q = (q || '').trim().toLowerCase();
+			var html = '';
+			EMOJI.forEach(function (e) {
+				if (q && e[1].indexOf(q) < 0 && e[0].indexOf(q) < 0) return;
+				html += '<button type="button" class="tx-emoji-cell" data-e="' + e[0] + '" title="' + e[1] + '">' + e[0] + '</button>';
+			});
+			grid.innerHTML = html || '<div class="tx-emoji-none">nothing matches</div>';
+			Array.prototype.forEach.call(grid.querySelectorAll('.tx-emoji-cell'), function (c) {
+				c.addEventListener('click', function () {
+					if (typeof insertText === 'function') insertText(c.getAttribute('data-e'));
+					closePop();
+				});
+			});
+		}
+		if (search) search.addEventListener('input', function () { render(search.value); });
+		render('');
+		built = true;
+		return true;
+	}
+	function closePop() { if (pop) pop.classList.remove('is-open'); }
+	window.txEmojiToggle = function (ev) {
+		if (ev) ev.stopPropagation();
+		if (!built && !build()) return;
+		var open = pop.classList.toggle('is-open');
+		if (open) { var s = document.getElementById('tx-emoji-search'); if (s) setTimeout(function () { s.focus(); }, 40); }
+	};
+	document.addEventListener('click', function (e) {
+		if (!pop || !pop.classList.contains('is-open')) return;
+		if (pop.contains(e.target) || (btn && btn.contains(e.target))) return;
+		closePop();
+	});
+	document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closePop(); });
+})();

@@ -740,3 +740,23 @@
 	/* Header topline (2b): logo left · shields/weather/🦇/🏠 right, wraps on narrow. */
 	.cockpit__topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 	.cockpit__hdr-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+	/* Emoji picker popover (TX composer) */
+	.tx-expand { position: relative; }
+	.tx-emoji-pop {
+		display: none; position: absolute; z-index: 30; left: 0; top: 40px;
+		width: min(340px, 94%); max-height: 260px; box-sizing: border-box;
+		background: var(--bg2); border: 1px solid var(--border-hi); border-radius: 4px;
+		box-shadow: 0 10px 30px rgba(0,0,0,.3); padding: 8px; flex-direction: column;
+	}
+	.tx-emoji-pop.is-open { display: flex; }
+	.tx-emoji-search {
+		width: 100%; box-sizing: border-box; background: var(--input-bg); border: 1px solid var(--border);
+		border-radius: 2px; color: var(--text-body); font-family: 'Share Tech Mono', monospace;
+		font-size: 0.72rem; padding: 6px 8px; margin-bottom: 8px; outline: none;
+	}
+	.tx-emoji-search:focus { border-color: var(--amber-lo); }
+	.tx-emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 2px; overflow-y: auto; }
+	.tx-emoji-cell { background: none; border: none; cursor: pointer; font-size: 1.2rem; line-height: 1; padding: 6px 0; border-radius: 3px; }
+	.tx-emoji-cell:hover { background: var(--amber-dim); }
+	.tx-emoji-none { color: var(--muted); font-size: 0.7rem; padding: 10px; grid-column: 1 / -1; text-align: center; }
