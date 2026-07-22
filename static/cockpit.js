@@ -749,3 +749,25 @@
 			});
 		})();
 
+
+/* Compact expand-on-focus TX (2b): focus opens the composer + formatting row;
+   blurring away with an empty box collapses it back to one line. */
+(function () {
+	function txInit() {
+		var txc = document.getElementById('tx-compose');
+		var ta = document.getElementById('status-input');
+		if (!txc || !ta) return;
+		function open() { document.body.classList.add('tx-open'); }
+		function maybeClose() {
+			setTimeout(function () {
+				if (!txc.contains(document.activeElement) && !ta.value.trim()) document.body.classList.remove('tx-open');
+			}, 120);
+		}
+		txc.addEventListener('focusin', open);
+		txc.addEventListener('focusout', maybeClose);
+		ta.addEventListener('input', function () { if (ta.value.trim()) open(); });
+		if (ta.value.trim()) open();   // a restored draft keeps it open
+	}
+	if (document.readyState !== 'loading') txInit();
+	else document.addEventListener('DOMContentLoaded', txInit);
+})();

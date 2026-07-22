@@ -301,12 +301,7 @@
 				</div>
 			</div>
 			<div class="cockpit__controls">
-				<button class="cockpit__ctrl-btn" onclick="settingsOpen()" title="Settings (Ctrl+,)">⚙</button>
-				<button class="cockpit__ctrl-btn" id="focus-btn" onclick="toggleFocus()" title="Focus mode — collapse everything but the transmission box (Ctrl+Shift+F)">◱ FOCUS</button>
-				<button class="cockpit__ctrl-btn" onclick="window.location.reload()">REFRESH</button>
-				<a class="cockpit__ctrl-btn" href="/below-deck" style="text-decoration:none;">BELOW DECK</a>
-				<a href="/command-deck/" class="cockpit__ctrl-btn">COMMAND DECK</a>
-				<a href="/ledger/" class="cockpit__ctrl-btn" style="text-decoration:none;">LEDGER</a>
+				<!-- Clean header per 2b: nav lives in the footer + ⌘K; settings on Ctrl+, ; focus via the mode dial. -->
 				<!-- 🦇 Ani + 🏠 HOME latch — always visible in the header, every mode (never focus-hidden). -->
 				<button class="cockpit__hdr-emoji" id="ani-bat-pill"
 					style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;"
@@ -348,38 +343,7 @@
 			{% include 'includes/ledger_footer_badge.html' %}
 		</div>
 
-		<div class="quickinsert-section focus-hide">
-		<div class="section-label tasks-toggle" onclick="toggleQuickInsert()">
-			// Quick Insert
-			<span class="tasks-toggle-arrow" id="quickinsert-arrow">▾</span>
-		</div>
-		<div class="tasks-body" id="quickinsert-body">
-		<div class="scroller">
-			<button class="pill" onclick="insertText('🚀')">🚀</button>
-			<button class="pill"
-				style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;"
-				onclick="insertText('🛰️')"
-				ontouchstart="startSecret()"
-				ontouchend="endSecret()"
-				oncontextmenu="event.preventDefault(); triggerDesktopSecret(); return false;">
-				🛰️
-			</button>
-			<button class="pill" onclick="insertText('☕️')">☕️</button>
-			<button class="pill" onclick="insertText('💻')">💻</button>
-			<button class="pill" onclick="insertText('🛠️')">🛠️</button>
-		</div>
-
-		<div class="scroller utility-belt">
-			<button class="pill util" onclick="wrapText('**', '**')" title="Bold (⌘/Ctrl+B)">BOLD</button>
-			<button class="pill util" onclick="wrapText('*', '*')" title="Italic (⌘/Ctrl+I)">ITALIC</button>
-			<button class="pill util" onclick="smartURL()" title="Insert a markdown link">🔗 LINK</button>
-			<button class="pill util" onclick="insertGratefulLog()" title="Insert grateful-log template">🙏 GRATEFUL</button>
-		</div>
-		</div><!-- end quickinsert-body -->
-		</div><!-- end quickinsert-section -->
-
 		<div id="tx-panel">
-		<div class="section-label">// Transmission</div>
 		{% with messages = get_flashed_messages(with_categories=true) %}
 			{% if messages %}
 				{% for category, message in messages %}
@@ -387,41 +351,45 @@
 				{% endfor %}
 			{% endif %}
 		{% endwith %}
-		<div class="input-wrap">
+		<div class="input-wrap tx-compose" id="tx-compose">
 			<form action="/publish" method="post" id="status-form" enctype="multipart/form-data">
-				<!-- Set by logAsStatus() when posting from a completed Mission Log
-				     task → backend links that task to this status update. -->
 				<input type="hidden" name="link_task_id" id="link-task-id" value="">
-				<textarea
-					name="status"
-					id="status-input"
-					placeholder="Ready for input..."
-					autofocus
-					oninput="updateHUD()"
-				></textarea>
-
-				<div class="counter-wrap">
-					<div class="payload-controls">
-						<input type="file" name="image" id="image-upload" accept="image/*" style="display:none;" onchange="updatePayloadStatus()">
-						<label for="image-upload" id="payload-label" onclick="playCockpitSound('payload')">
-							+ ATTACH PAYLOAD
-						</label>
-						<span id="payload-name">LOADED</span>
+				<div class="tx-line">
+					<span class="tx-tag">// TX</span>
+					<textarea name="status" id="status-input" rows="1" placeholder="Ready for input..." oninput="updateHUD()"></textarea>
+					<span class="tx-count"><span id="char-count">0</span>/280</span>
+					<button type="submit" id="publish-btn" class="tx-send" onclick="playCockpitSound('success')">⟩ SEND</button>
+				</div>
+				<div class="tx-expand">
+					<div class="scroller">
+						<button type="button" class="pill" onclick="insertText('🚀')">🚀</button>
+						<button type="button" class="pill"
+							style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;"
+							onclick="insertText('🛰️')"
+							ontouchstart="startSecret()" ontouchend="endSecret()"
+							oncontextmenu="event.preventDefault(); triggerDesktopSecret(); return false;">🛰️</button>
+						<button type="button" class="pill" onclick="insertText('☕️')">☕️</button>
+						<button type="button" class="pill" onclick="insertText('💻')">💻</button>
+						<button type="button" class="pill" onclick="insertText('🛠️')">🛠️</button>
+						<button type="button" class="pill util" onclick="wrapText('**', '**')" title="Bold (⌘/Ctrl+B)">BOLD</button>
+						<button type="button" class="pill util" onclick="wrapText('*', '*')" title="Italic (⌘/Ctrl+I)">ITALIC</button>
+						<button type="button" class="pill util" onclick="smartURL()" title="Insert a markdown link">🔗 LINK</button>
+						<button type="button" class="pill util" onclick="insertGratefulLog()" title="Insert grateful-log template">🙏 GRATEFUL</button>
 					</div>
-					<div><span id="char-count">0</span> / 280</div>
+					<div class="counter-wrap">
+						<div class="payload-controls">
+							<input type="file" name="image" id="image-upload" accept="image/*" style="display:none;" onchange="updatePayloadStatus()">
+							<label for="image-upload" id="payload-label" onclick="playCockpitSound('payload')">+ ATTACH PAYLOAD</label>
+							<span id="payload-name">LOADED</span>
+						</div>
+					</div>
+					<div id="alt-text-row">
+						<input type="text" name="image_alt" id="alt-text-input" placeholder="Alt text — describe the image" maxlength="160" autocomplete="off">
+						<button type="button" id="alt-suggest-btn" onclick="suggestAltText()" title="Suggest alt text with AI">✨ SUGGEST</button>
+					</div>
 				</div>
-
-				<div id="alt-text-row">
-					<input type="text" name="image_alt" id="alt-text-input" placeholder="Alt text — describe the image" maxlength="160" autocomplete="off">
-					<button type="button" id="alt-suggest-btn" onclick="suggestAltText()" title="Suggest alt text with AI">✨ SUGGEST</button>
-				</div>
-
-				<button type="submit" id="publish-btn" onclick="playCockpitSound('success')">
-					⌇ EXECUTE TRANSMISSION
-				</button>
 			</form>
 		</div>
-
 		</div><!-- end tx-panel -->
 
 		<!-- NOTEBOOK SLIP — blank scrap paper. Enter-Enter files it to the bottom of the
@@ -517,6 +485,7 @@
 		<footer class="cockpit__footer">
 			<a href="https://aaronaiken.me">← Site</a>
 			<a href="/command-deck/">Command Deck</a>
+			<a href="/below-deck">Below Deck</a>
 			<span class="cockpit__footer-quote">"She may not look like much..."</span>
 			<a href="https://aaronaiken.me/status">Status →</a>
 		</footer>
