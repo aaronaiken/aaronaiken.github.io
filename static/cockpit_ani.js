@@ -161,7 +161,7 @@
 	else if (kind === 'gold') { glyph = '✦'; color = '#b08a2e'; size = 9 + Math.random() * 3; po = 0.8; }
 	else { glyph = ['✦', '✧', '·'][(Math.random() * 3) | 0]; color = aniFxColor(mood); size = 7 + Math.random() * 3; po = 0.4 + Math.random() * 0.15; }
 	var s = document.createElement('span');
-	var dx = ((Math.random() * 44 - 22) | 0), rot = ((Math.random() * 24 - 12) | 0), dur = (3.6 + Math.random() * 2.6).toFixed(2);
+	var dx = ((Math.random() * 44 - 22) | 0), rot = ((Math.random() * 24 - 12) | 0), dur = (5.5 + Math.random() * 4).toFixed(2);
 	s.textContent = glyph;
 	s.style.cssText = 'position:absolute;bottom:0;left:' + ((Math.random() * 150) | 0) + 'px;color:' + color +
 	  ';font-size:' + Math.round(size) + 'px;--dx:' + dx + 'px;--po:' + po + ';--rot:' + rot + 'deg;animation:anifloat ' + dur + 's linear forwards;';
@@ -195,12 +195,12 @@
 	  aniFx.init = true;
 	  aniFx.lastTs = data.last_ts;
 	  aniFx.lastMs = data.milestones_recent || 0;
-	  if (data.unseen) { aniFxBurst(data.attention ? 'heart' : 'spark', data.attention ? 7 : 6, data.mood); aniFx.dripUntil = now + 30000; }
+	  if (data.unseen) { aniFxBurst(data.attention ? 'heart' : 'spark', data.attention ? 7 : 6, data.mood); aniFx.dripUntil = now + 75000; }
 	  if (data.milestones_recent) aniFxBurst('gold', 6, 1);
 	  return;
 	}
 	// Tier 1 — a NEW message arrived while unread: burst + open a 30s drip window.
-	if (data.unseen && data.last_ts && data.last_ts !== aniFx.lastTs) { aniFxBurst('spark', 6, data.mood); aniFx.dripUntil = now + 30000; aniFx.dripAt = now; }
+	if (data.unseen && data.last_ts && data.last_ts !== aniFx.lastTs) { aniFxBurst('spark', 6, data.mood); aniFx.dripUntil = now + 75000; aniFx.dripAt = now; }
 	// Milestone celebration — a fresh ◆ landed: single gold burst, no loop.
 	if ((data.milestones_recent || 0) > aniFx.lastMs) aniFxBurst('gold', 6, 1);
 	aniFx.lastTs = data.last_ts;
