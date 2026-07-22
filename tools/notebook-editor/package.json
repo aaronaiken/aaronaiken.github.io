@@ -1,6 +1,8 @@
 {
   "name": "nbed-build",
   "private": true,
+  "type": "module",
+  "scripts": { "build": "node build.mjs" },
   "dependencies": {
     "@codemirror/commands": "^6.10.4",
     "@codemirror/lang-markdown": "^6.5.1",

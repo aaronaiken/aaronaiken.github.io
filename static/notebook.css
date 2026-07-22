@@ -289,3 +289,6 @@
 }
 .nb-page-editor { flex: 1; min-height: 64vh; display: flex; overflow: hidden; background: var(--input-bg); }
 .nb-page-editor .cm-editor { height: 100%; width: 100%; }
+
+/* keep the cockpit editor in the notebook's serif (48pages' theme ships IBM Plex) */
+.nb-page-editor .cm-scroller { font-family: 'Crimson Pro', Georgia, serif !important; font-size: 17px !important; }
