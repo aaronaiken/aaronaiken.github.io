@@ -602,6 +602,7 @@
 
 		handle.addEventListener('mousedown', function(e) {
 			if (e.target.tagName === 'BUTTON') return; // don't drag on button clicks
+			cockpitDetachDock(player);                 // pop out of the dock into a floating window
 			dragging = true;
 			const rect = player.getBoundingClientRect();
 			startX = e.clientX;
@@ -800,12 +801,39 @@
 	// which clears the iframe src). Bound to Cmd/Ctrl+Shift+Y and the command
 	// palette. Showing a previously-closed player just reveals the idle frame —
 	// no autoplay surprise; LIB / NEXT launch a video.
-	function ytPlayerToggle() {
-		const p = document.getElementById('yt-player');
+	// ---- DOCK ⇄ FLOAT for rail players (YT / Music) ----
+	// A rail summons its player DOCKED inline right below the rail (slides open).
+	// Dragging the player's titlebar pops it out into a free-floating window.
+	function cockpitDockToggle(playerId, railId) {
+		var p = document.getElementById(playerId);
 		if (!p) return;
-		const hidden = getComputedStyle(p).display === 'none';
-		p.style.display = hidden ? '' : 'none';
+		var shown = getComputedStyle(p).display !== 'none';
+		if (shown) { p.style.display = 'none'; p.classList.remove('is-docked'); return; }
+		var rail = document.getElementById(railId);
+		if (rail && rail.offsetParent !== null) {
+			rail.insertAdjacentElement('afterend', p);
+			p.classList.add('is-docked');
+			p.style.position = ''; p.style.left = ''; p.style.top = ''; p.style.right = ''; p.style.bottom = ''; p.style.width = '';
+		} else {
+			p.classList.remove('is-docked');   // no visible rail → float it
+		}
+		p.style.display = 'flex';
 	}
+	function cockpitDetachDock(player) {
+		if (!player || !player.classList.contains('is-docked')) return;
+		var r = player.getBoundingClientRect();
+		document.body.appendChild(player);
+		player.classList.remove('is-docked');
+		player.style.position = 'fixed';
+		player.style.left = r.left + 'px';
+		player.style.top = r.top + 'px';
+		player.style.width = r.width + 'px';
+		player.style.right = 'auto';
+		player.style.bottom = 'auto';
+	}
+	window.cockpitDetachDock = cockpitDetachDock;
+
+	function ytPlayerToggle() { cockpitDockToggle('yt-player', 'rail-yt'); }
 
 	function ytLibraryToggle() {
 		ytLibraryVisible = !ytLibraryVisible;
@@ -1340,6 +1368,7 @@
 		let dragging = false, startX, startY, startL, startT;
 		handle.addEventListener('mousedown', function (e) {
 			if (e.target.tagName === 'BUTTON') return;
+			cockpitDetachDock(player);                 // pop out of the dock into a floating window
 			dragging = true;
 			const rect = player.getBoundingClientRect();
 			startX = e.clientX; startY = e.clientY;
@@ -1507,6 +1536,7 @@
         if (!player || !handle) return;
         let dragging = false, startX, startY, startL, startT;
         handle.addEventListener('mousedown', function(e) {
+            cockpitDetachDock(player);                 // pop out of the dock into a floating window
             dragging = true;
             const rect = player.getBoundingClientRect();
             startX = e.clientX; startY = e.clientY;
@@ -2052,12 +2082,8 @@
 		const p = document.getElementById('ad-music-player');
 		if (!p) return false;
 		const shown = getComputedStyle(p).display !== 'none';
-		if (shown) {
-			p.style.display = 'none';
-		} else {
-			p.style.display = 'flex';
-			if (!adMusicLoaded) { adMusicLoaded = true; adLoadMusic(); }
-		}
+		cockpitDockToggle('ad-music-player', 'rail-music');
+		if (!shown && !adMusicLoaded) { adMusicLoaded = true; adLoadMusic(); }
 		return !shown;
 	}
 
@@ -2653,6 +2679,11 @@
 		function applyMode(mode) {
 			var md = state.modes[mode]; if (!md) return;
 			ensureZones();
+			// a layout change closes any docked player (it re-docks from its new rail on click)
+			['yt-player', 'ad-music-player'].forEach(function (id) {
+				var pl = document.getElementById(id);
+				if (pl && pl.classList.contains('is-docked')) { pl.classList.remove('is-docked'); pl.style.display = 'none'; }
+			});
 			PANELS.forEach(function (p) {
 				var el = document.querySelector(p.sel); if (!el) return;
 				var col = md.panels[p.key] || 'off';

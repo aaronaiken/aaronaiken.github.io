@@ -367,3 +367,15 @@
 
 	/* panel hidden by the active mode */
 	.mode-off { display: none !important; }
+
+	/* docked player — a rail's player slides open inline; titlebar-drag pops it out */
+	.is-docked {
+		position: static !important;
+		left: auto !important; top: auto !important; right: auto !important; bottom: auto !important;
+		width: 100% !important; max-width: 100% !important; margin: 0 !important;
+		z-index: auto !important; box-shadow: none !important;
+		border: 1px solid var(--border-hi) !important;
+		animation: cockpit-dock-open 0.22s ease;
+	}
+	@keyframes cockpit-dock-open { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+	.is-docked [id$="-titlebar"], .is-docked #ad-music-titlebar { cursor: grab; }
