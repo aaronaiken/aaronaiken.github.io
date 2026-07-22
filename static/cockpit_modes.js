@@ -2592,12 +2592,14 @@
 			{ key: 'ledger', label: '$ LEDGER',       sel: '#ledger-pill-row' }
 		];
 		var COLS = ['off', 'full', 'left', 'right'];
+		var WIDTHS = ['narrow', 'normal', 'wide', 'full'];
+		var WIDTH_PX = { narrow: '560px', normal: '820px', wide: '1100px', full: '96vw' };
 		var BUILTIN = {
-			write:   { label: 'WRITE',   panels: { tx: 'full', slip: 'full',  yt: 'off',   music: 'off',   mlog: 'off',  ledger: 'off' } },
-			desk:    { label: 'DESK',    panels: { tx: 'full', slip: 'left',  yt: 'right', music: 'right', mlog: 'left', ledger: 'right' } },
-			watch:   { label: 'WATCH',   panels: { tx: 'off',  slip: 'right', yt: 'left',  music: 'off',   mlog: 'off',  ledger: 'off' } },
-			theater: { label: 'THEATER', panels: { tx: 'off',  slip: 'off',   yt: 'left',  music: 'right', mlog: 'off',  ledger: 'off' } },
-			minimal: { label: 'MINIMAL', panels: { tx: 'full', slip: 'off',   yt: 'off',   music: 'off',   mlog: 'off',  ledger: 'off' } }
+			write:   { label: 'WRITE',   width: 'narrow', panels: { tx: 'full', slip: 'full',  yt: 'off',   music: 'off',   mlog: 'off',  ledger: 'off' } },
+			desk:    { label: 'DESK',    width: 'normal', panels: { tx: 'full', slip: 'left',  yt: 'right', music: 'right', mlog: 'left', ledger: 'right' } },
+			watch:   { label: 'WATCH',   width: 'normal', panels: { tx: 'off',  slip: 'right', yt: 'left',  music: 'off',   mlog: 'off',  ledger: 'off' } },
+			theater: { label: 'THEATER', width: 'wide',   panels: { tx: 'off',  slip: 'off',   yt: 'left',  music: 'right', mlog: 'off',  ledger: 'off' } },
+			minimal: { label: 'MINIMAL', width: 'narrow', panels: { tx: 'full', slip: 'off',   yt: 'off',   music: 'off',   mlog: 'off',  ledger: 'off' } }
 		};
 		var BUILTIN_ORDER = ['write', 'desk', 'watch', 'theater', 'minimal'];
 		var LS_KEY = 'cockpit-modes-v2';
@@ -2622,10 +2624,12 @@
 				state.modes[m].builtin = true;
 				if (!state.modes[m].label) state.modes[m].label = BUILTIN[m].label;
 				if (!state.modes[m].panels) state.modes[m].panels = {};
+				if (WIDTHS.indexOf(state.modes[m].width) < 0) state.modes[m].width = BUILTIN[m].width;
 				PANELS.forEach(function (p) { if (COLS.indexOf(state.modes[m].panels[p.key]) < 0) state.modes[m].panels[p.key] = BUILTIN[m].panels[p.key]; });
 			});
 			Object.keys(state.modes).forEach(function (m) {
 				var md = state.modes[m]; if (!md.panels) md.panels = {};
+				if (WIDTHS.indexOf(md.width) < 0) md.width = 'normal';
 				PANELS.forEach(function (p) { if (COLS.indexOf(md.panels[p.key]) < 0) md.panels[p.key] = 'off'; });
 			});
 			if (!state.order || !state.order.length) state.order = BUILTIN_ORDER.slice();
@@ -2662,6 +2666,8 @@
 			document.body.setAttribute('data-mode', mode);
 			var cols = document.getElementById('stack-cols');
 			if (cols) cols.classList.toggle('one-col', !(zones.left.children.length && zones.right.children.length));
+			var cont = document.querySelector('.container');
+			if (cont) cont.style.maxWidth = WIDTH_PX[md.width] || WIDTH_PX.normal;
 		}
 
 		function thumbHTML(md) {
@@ -2685,10 +2691,9 @@
 			var html = state.order.map(function (m) {
 				var md = state.modes[m];
 				return '<button class="mode-btn' + (m === state.active ? ' is-active' : '') + (sbFor === m ? ' is-held' : '') + '" data-mode="' + m + '">'
-					+ thumbHTML(md)
-					+ '<span class="mode-btn-label">' + esc(md.label) + (m === state.active ? ' ●' : '') + '</span></button>';
+					+ esc(md.label) + (m === state.active ? ' ●' : '') + '</button>';
 			}).join('');
-			html += '<button class="mode-btn mode-new" id="mode-new-btn" title="Create a new mode"><span class="mode-thumb mt-new">+</span><span class="mode-btn-label">NEW</span></button>';
+			html += '<button class="mode-btn mode-new" id="mode-new-btn" title="Create a new mode">+ NEW</button>';
 			wrap.innerHTML = html;
 			Array.prototype.forEach.call(wrap.querySelectorAll('.mode-btn[data-mode]'), function (btn) {
 				var m = btn.getAttribute('data-mode'), lp = null, longFired = false;
@@ -2720,18 +2725,33 @@
 				nameIn.disabled = !!md.builtin;
 				nameIn.oninput = function () { md.label = nameIn.value.toUpperCase().slice(0, 14); if (title) title.textContent = '// ' + md.label + ' — SWITCHBOARD'; renderDial(); saveState(); };
 			}
-			grid.innerHTML = PANELS.map(function (p) {
+			var thumbBlock = '<div class="mode-sb-thumb" id="mode-sb-thumb">' + thumbHTML(md) + '</div>';
+			var widthRow = '<div class="mode-sw-row"><span class="mode-sw-label">↔ WIDTH</span><span class="mode-segs">'
+				+ WIDTHS.map(function (w) { return '<button class="mode-seg mode-wseg' + (md.width === w ? ' is-on' : '') + '" data-width="' + w + '">' + w.toUpperCase() + '</button>'; }).join('')
+				+ '</span></div>';
+			var panelRows = PANELS.map(function (p) {
 				var cur = md.panels[p.key] || 'off';
 				var segs = COLS.map(function (c) { return '<button class="mode-seg' + (cur === c ? ' is-on' : '') + '" data-panel="' + p.key + '" data-col="' + c + '">' + c.toUpperCase() + '</button>'; }).join('');
 				return '<div class="mode-sw-row"><span class="mode-sw-label">' + p.label + '</span><span class="mode-segs">' + segs + '</span></div>';
 			}).join('');
-			Array.prototype.forEach.call(grid.querySelectorAll('.mode-seg'), function (seg) {
+			grid.innerHTML = thumbBlock + widthRow + panelRows;
+			function refreshThumb() { var t = document.getElementById('mode-sb-thumb'); if (t) t.innerHTML = thumbHTML(md); }
+			Array.prototype.forEach.call(grid.querySelectorAll('.mode-seg[data-panel]'), function (seg) {
 				seg.addEventListener('click', function () {
 					var k = seg.getAttribute('data-panel'), c = seg.getAttribute('data-col');
 					md.panels[k] = c;
 					Array.prototype.forEach.call(grid.querySelectorAll('.mode-seg[data-panel="' + k + '"]'), function (s) { s.classList.toggle('is-on', s.getAttribute('data-col') === c); });
+					refreshThumb();
 					if (mode === state.active) applyMode(state.active);
 					renderDial(); saveState();
+				});
+			});
+			Array.prototype.forEach.call(grid.querySelectorAll('.mode-wseg'), function (seg) {
+				seg.addEventListener('click', function () {
+					md.width = seg.getAttribute('data-width');
+					Array.prototype.forEach.call(grid.querySelectorAll('.mode-wseg'), function (s) { s.classList.toggle('is-on', s === seg); });
+					if (mode === state.active) applyMode(state.active);
+					saveState();
 				});
 			});
 			if (foot) {

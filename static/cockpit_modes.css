@@ -307,22 +307,21 @@
 	#ani-home-latch { border: 1px solid var(--border-hi); border-radius: 3px; }
 	#ani-home-latch.on { border-color: var(--amber); background: var(--amber-dim); }
 
-	.mode-dial { display: flex; align-items: flex-start; gap: 12px; margin: 4px 0 12px; flex-wrap: wrap; }
-	.mode-dial-label { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.18em; color: var(--muted); padding-top: 26px; }
-	.mode-dial-btns { display: flex; gap: 8px; flex-wrap: wrap; }
-	.mode-dial-hint { font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; letter-spacing: 0.12em; color: var(--faint, var(--border-hi)); margin-left: auto; padding-top: 26px; }
+	.mode-dial { display: flex; align-items: center; gap: 12px; margin: 4px 0 12px; flex-wrap: wrap; }
+	.mode-dial-label { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.18em; color: var(--muted); }
+	.mode-dial-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+	.mode-dial-hint { font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; letter-spacing: 0.12em; color: var(--faint, var(--border-hi)); margin-left: auto; }
 
-	/* dial button = layout thumbnail + label */
-	.mode-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--pill-bg); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; padding: 8px; width: 94px; user-select: none; -webkit-user-select: none; transition: border-color 0.15s; }
-	.mode-btn:hover { border-color: var(--amber-lo); }
-	.mode-btn.is-active { border-color: var(--amber); }
-	.mode-btn.is-held { border-color: var(--amber-hi); }
-	.mode-btn-label { font-family: 'Share Tech Mono', monospace; font-size: 0.56rem; letter-spacing: 0.12em; color: var(--muted); white-space: nowrap; }
-	.mode-btn.is-active .mode-btn-label { color: var(--amber); }
+	/* dial button — compact text (the layout thumbnail lives in the switchboard) */
+	.mode-btn { background: var(--pill-bg); border: 1px solid var(--border); border-radius: 2px; color: var(--muted); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; letter-spacing: 0.14em; padding: 6px 12px; user-select: none; -webkit-user-select: none; transition: border-color 0.15s, color 0.15s; }
+	.mode-btn:hover { border-color: var(--amber-lo); color: var(--amber); }
+	.mode-btn.is-active { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+	.mode-btn.is-held { border-color: var(--amber-hi); color: var(--amber-hi); }
+	.mode-btn.mode-new { color: var(--muted); }
 
-	/* thumbnail diagram of the mode's layout */
-	.mode-thumb { display: flex; flex-direction: column; gap: 2px; width: 100%; height: 46px; padding: 4px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 2px; background: var(--input-bg); }
-	.mode-btn.is-active .mode-thumb { border-color: var(--amber-lo); }
+	/* thumbnail diagram — shown as the switchboard preview */
+	.mode-sb-thumb { margin-bottom: 14px; }
+	.mode-thumb { display: flex; flex-direction: column; gap: 3px; width: 100%; height: 96px; padding: 5px; box-sizing: border-box; border: 1px solid var(--border-hi); border-radius: 3px; background: var(--input-bg); }
 	.mt-row, .mt-cols { display: flex; gap: 2px; flex: 1; min-height: 0; }
 	.mt-col { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 	.mt-blk { flex: 1; min-height: 4px; border-radius: 1px; background: var(--border-hi); }
