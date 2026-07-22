@@ -18,9 +18,6 @@
 </head>
 <body class="{{ cockpit_mode or '' }}">
 
-	<!-- After Dark heartbeat overlay -->
-	<div id="ad-heartbeat-overlay" aria-hidden="true"></div>
-
 	<!-- Mode dot + PIN input (top-right) -->
 	<div id="mode-dot-wrap">
 		<span id="work-indicator">WORK</span>
@@ -64,11 +61,9 @@
 		</div>
 	</div>
 
-	<!-- ANI Lounge pill (After Dark) -->
-	<div id="ad-ani-pill" onclick="adAniToggle()" title="ANI lounge">ANI</div>
-
-	<!-- ANI Lounge panel (After Dark) -->
-	<div id="ad-panel" aria-label="Ani Lounge">
+	<!-- Ani LOOPS panel — loop-video viewer inside Ani's fullscreen (her LOOPS button →
+	     aniFsLoopsToggle). Kept after the After Dark mode was removed; no standalone pill. -->
+	<div id="ad-panel" aria-label="Ani loops">
 		<div id="ad-panel-header">
 			<span id="ad-panel-title">// ANI</span>
 			<button id="ad-panel-close" onclick="adAniToggle()">CLOSE</button>
@@ -84,7 +79,7 @@
 		</div>
 	</div>
 
-	<!-- After Dark Floating Video Player -->
+	<!-- Floating Video Player (PH — PIN-gated per §6) -->
 	<div id="ad-player" aria-label="Video player">
 		<div id="ad-player-titlebar" id="ad-player-drag-handle">
 			<span id="ad-player-title">// VIEWER</span>

@@ -301,7 +301,10 @@ def scratch_work_post():
 	return jsonify({'ok': True, 'last_modified': last_modified})
 
 
-# ---- COCKPIT MODE (PIN-gated work / after-dark mode toggle) ----
+# ---- COCKPIT MODE (PIN-gated work mode toggle) ----
+# NOTE: the After Dark *mode* was removed in the cockpit redesign. The AFTER_DARK_PIN
+# still lives on, repurposed to gate the PH ▷ VIDEO floating player (see §6 / the PH
+# player unlock flow) — it just no longer sets a body mode here.
 
 @cockpit_bp.route('/cockpit/mode', methods=['POST'])
 def cockpit_mode():
@@ -313,8 +316,6 @@ def cockpit_mode():
 
 	if WORK_MODE_PIN and pin == WORK_MODE_PIN:
 		mode = 'mode-work'
-	elif AFTER_DARK_PIN and pin == AFTER_DARK_PIN:
-		mode = 'mode-after-dark'
 	else:
 		# Silent fail — return 200 with no_match so JS does nothing
 		return jsonify({'ok': False, 'match': False})
@@ -757,7 +758,8 @@ def after_dark_resolve_titles():
 
 @cockpit_bp.route('/cockpit/after-dark/music')
 def after_dark_music():
-	"""List audio files from Bunny AD zone /music/ subfolder."""
+	"""List audio files from Bunny AD zone /music/ subfolder. Backs the (kept) floating
+	Music player — the 'after-dark' path prefix is legacy naming, not a mode gate."""
 	if not is_authenticated():
 		return jsonify({'error': 'unauthorized'}), 401
 	items = list_bunny_ad_folder('music')
@@ -766,7 +768,8 @@ def after_dark_music():
 
 @cockpit_bp.route('/cockpit/after-dark/ani-loops')
 def after_dark_ani_loops():
-	"""List Ani loop video files from Bunny AD zone /ani/ subfolder."""
+	"""List Ani loop video files from Bunny AD zone /ani/ subfolder. Backs the LOOPS
+	button inside Ani's fullscreen panel (kept after the After Dark mode was removed)."""
 	if not is_authenticated():
 		return jsonify({'error': 'unauthorized'}), 401
 	items = list_bunny_ad_folder('ani')

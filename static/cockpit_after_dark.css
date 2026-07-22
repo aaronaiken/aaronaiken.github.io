@@ -1,76 +1,7 @@
-	/* ---- AFTER DARK MODE ---- */
-
-	body.mode-after-dark {
-		--ad-crimson: rgba(139, 26, 26, 0.18);
-		--ad-crimson-hi: rgba(180, 40, 40, 0.4);
-		--ad-dark: #0e0608;
-	}
-
-	/* Heartbeat pulse on screen edges */
-	@keyframes ad-heartbeat {
-		0%   { box-shadow: inset 0 0 40px rgba(139,26,26,0.0), inset 0 0 80px rgba(139,26,26,0.0); }
-		15%  { box-shadow: inset 0 0 40px rgba(139,26,26,0.12), inset 0 0 80px rgba(139,26,26,0.06); }
-		30%  { box-shadow: inset 0 0 40px rgba(139,26,26,0.05), inset 0 0 80px rgba(139,26,26,0.02); }
-		45%  { box-shadow: inset 0 0 40px rgba(139,26,26,0.14), inset 0 0 80px rgba(139,26,26,0.07); }
-		100% { box-shadow: inset 0 0 40px rgba(139,26,26,0.0), inset 0 0 80px rgba(139,26,26,0.0); }
-	}
-
-	#ad-heartbeat-overlay {
-		display: none;
-		position: fixed;
-		inset: 0;
-		pointer-events: none;
-		z-index: 9996;
-		animation: ad-heartbeat 3.6s ease-in-out infinite;
-		border: 1px solid transparent;
-	}
-
-	.mode-after-dark #ad-heartbeat-overlay { display: block; }
-
-	/* After dark container tint */
-	.mode-after-dark .container {
-		border-color: #7a2828;
-	}
-
-	.mode-after-dark .cockpit__logo {
-		text-shadow: 0 0 18px rgba(212,136,10,0.45), 0 0 50px rgba(139,26,26,0.2);
-	}
-
-	/* ---- ANI LOUNGE PILL (After Dark) ---- */
-	#ad-ani-pill {
-		display: none;
-		position: fixed;
-		left: 0;
-		top: 50%;
-		transform: translateY(-50%);
-		z-index: 10001;
-		writing-mode: vertical-lr;
-		text-orientation: mixed;
-		background: #140808;
-		border: 1px solid #4a1818;
-		border-left: none;
-		border-radius: 0 3px 3px 0;
-		color: #c04040;
-		font-family: 'Share Tech Mono', monospace;
-		font-size: 0.58rem;
-		letter-spacing: 0.18em;
-		text-transform: uppercase;
-		padding: 12px 5px;
-		cursor: pointer;
-		transition: background 0.2s, border-color 0.2s, color 0.2s;
-		box-shadow: 2px 0 12px rgba(139,26,26,0.15);
-	}
-
-	#ad-ani-pill:hover {
-		background: #1a0a0a;
-		border-color: #8b1a1a;
-		color: #e05050;
-		box-shadow: 2px 0 18px rgba(139,26,26,0.3);
-	}
-
-	.mode-after-dark #ad-ani-pill { display: block; }
-
-	/* ---- ANI LOUNGE PANEL ---- */
+	/* ---- ANI LOOPS PANEL ----
+	   The loop-video viewer inside Ani's fullscreen (toggled by her LOOPS button via
+	   aniFsLoopsToggle). Kept when the After Dark *mode* was removed — reachable ONLY
+	   from her panel now, never from a separate mode. */
 	#ad-panel {
 		display: none;
 		position: fixed;
@@ -87,7 +18,6 @@
 		transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
-	.mode-after-dark #ad-panel { display: flex; }
 	#ad-panel.ad-panel-open { transform: translateX(0); }
 
 	/* Ani fullscreen mode: lounge panel is reachable via the LOOPS button
@@ -98,7 +28,6 @@
 		z-index: 10010;
 	}
 	body.ani-fullscreen.ani-fs-loops-open #ad-panel { transform: translateX(0); }
-	body.ani-fullscreen #ad-ani-pill { display: none !important; }
 	@media (max-width: 700px) {
 		body.ani-fullscreen #ad-panel { display: none !important; }
 	}
@@ -1066,24 +995,6 @@
 	}
 
 	/* ---- AFTER DARK: FULL PAGE PALETTE OVERRIDE ---- */
-body.mode-after-dark {
-	--bg:           #0e0608;
-	--bg2:          #140810;
-	--amber:        #c04040;
-	--amber-hi:     #e05555;
-	--amber-lo:     #8b2828;
-	--amber-dim:    #2a0f0f;
-	--text:         #c04040;
-	--text-body:    #a03838;
-	--text-dim:     #6b2020;
-	--border:       #2a0f0f;
-	--border-hi:    #4a1818;
-	--muted:        #6b2020;
-	--pill-bg:      #140810;
-	--input-bg:     #0e0608;
-	--accent:       #c04040;
-	--scan:         rgba(139,26,26,0.12);
-}
 
     /* ---- AFTER DARK: HIDE PAGE CONTENT (same as work mode) ---- */
     .mode-after-dark .scroller,
