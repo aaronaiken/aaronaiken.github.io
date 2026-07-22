@@ -171,3 +171,73 @@
 	.nb-fs-right { grid-column: 1 / -1; border-top: 1px solid var(--border); }
 	.nb-meter-cap { display: none; }
 }
+
+/* ---------- CABINET ---------- */
+.nb-cab-tab {
+	position: fixed; right: 0; top: 46%; z-index: 40;
+	writing-mode: vertical-rl; text-orientation: mixed;
+	background: var(--panel, var(--bg2)); color: var(--amber);
+	border: 1px solid var(--border-hi); border-right: none; border-radius: 3px 0 0 3px;
+	font-family: 'Share Tech Mono', monospace; font-size: 0.58rem; letter-spacing: 0.18em;
+	text-transform: uppercase; padding: 12px 6px; cursor: pointer;
+	transition: color 0.15s, border-color 0.15s;
+}
+.nb-cab-tab:hover { color: var(--amber-hi); border-color: var(--amber-lo); }
+
+.nb-cabinet {
+	position: fixed; top: 0; right: 0; height: 100vh; width: min(440px, 92vw);
+	background: var(--cab-bg, var(--bg2)); border-left: 1px solid var(--border-hi);
+	box-shadow: var(--shadow-drawer, -8px 0 24px rgba(0,0,0,.3));
+	z-index: 60; transform: translateX(100%); transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+	display: flex; flex-direction: column; overflow: hidden;
+}
+.nb-cabinet.is-open { transform: translateX(0); }
+.nb-cab-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.nb-cab-htitle { font-family: 'VT323', monospace; font-size: 1.3rem; color: var(--amber); letter-spacing: 0.06em; }
+.nb-cab-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; }
+.nb-cab-close:hover { color: var(--amber); }
+.nb-cab-sub { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+
+/* filing panel */
+.nb-cab-filing { display: none; padding: 16px 18px; overflow-y: auto; }
+.nb-file-preview {
+	background: var(--input-bg); border: 1px solid var(--border); border-left: 3px solid var(--nb-scrap-accent, var(--amber-lo));
+	border-radius: 2px; padding: 10px 12px; margin-bottom: 14px;
+	font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--ink, var(--text-body));
+	white-space: pre-wrap; max-height: 180px; overflow-y: auto;
+}
+.nb-file-l { display: block; font-family: 'Share Tech Mono', monospace; font-size: 0.54rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin: 10px 0 5px; }
+.nb-file-in { width: 100%; box-sizing: border-box; background: var(--input-bg); border: 1px solid var(--border); border-radius: 2px; color: var(--text-body); font-family: 'Share Tech Mono', monospace; font-size: 0.78rem; padding: 8px 10px; outline: none; }
+.nb-file-in:focus { border-color: var(--amber-lo); }
+.nb-file-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.nb-file-tag { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; color: var(--muted); border: 1px solid var(--border-hi); border-radius: 2px; padding: 3px 7px; cursor: pointer; }
+.nb-file-tag.is-on { color: var(--btn-solid-text, var(--bg)); background: var(--amber-lo); border-color: var(--amber-lo); }
+.nb-file-tag:hover { border-color: var(--amber-lo); }
+.nb-file-frees { margin: 12px 0; font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--green); }
+.nb-file-actions { display: flex; flex-direction: column; gap: 8px; }
+.nb-file-go { background: var(--btn-solid); border: 1px solid var(--btn-solid); color: var(--btn-solid-text); border-radius: 2px; cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.66rem; letter-spacing: 0.14em; padding: 10px; }
+.nb-file-keep { background: none; border: 1px dashed var(--border-hi); color: var(--muted); border-radius: 2px; cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.12em; padding: 9px; }
+.nb-file-keep:hover { color: var(--amber); border-color: var(--amber-lo); }
+
+/* browse panel */
+.nb-cab-browse { display: none; flex-direction: column; min-height: 0; flex: 1; padding: 14px 16px; overflow: hidden; }
+.nb-cab-search-row { display: flex; gap: 6px; margin-bottom: 10px; }
+.nb-cab-search { flex: 1; background: var(--input-bg); border: 1px solid var(--border); border-radius: 2px; color: var(--text-body); font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; padding: 7px 10px; outline: none; }
+.nb-cab-search:focus { border-color: var(--amber-lo); }
+.nb-cab-sort { background: var(--input-bg); border: 1px solid var(--border); border-radius: 2px; color: var(--muted); font-family: 'Share Tech Mono', monospace; font-size: 0.56rem; letter-spacing: 0.1em; padding: 0 6px; }
+.nb-cab-tagrail { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+.nb-cab-tagbtn { background: var(--cab-rail-bg, var(--bg2)); border: 1px solid var(--border); border-radius: 2px; color: var(--muted); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.58rem; letter-spacing: 0.06em; padding: 3px 8px; }
+.nb-cab-tagbtn.is-on { color: var(--amber-hi); border-color: var(--amber-lo); background: var(--cab-active-bg, var(--amber-dim)); }
+.nb-cab-tagbtn:hover { border-color: var(--amber-lo); }
+.nb-cab-cards { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.nb-cab-card { background: var(--cab-card-bg, var(--bg)); border: 1px solid var(--border); border-radius: 3px; padding: 10px 12px; }
+.nb-cab-card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.nb-cab-ctitle { font-family: 'Crimson Pro', Georgia, serif; font-size: 0.98rem; color: var(--ink, var(--text-body)); }
+.nb-cab-cage { font-family: 'Share Tech Mono', monospace; font-size: 0.52rem; letter-spacing: 0.1em; color: var(--faint, var(--border-hi)); white-space: nowrap; }
+.nb-cab-cexc { font-family: 'Crimson Pro', Georgia, serif; font-size: 0.82rem; color: var(--muted); margin: 4px 0 6px; }
+.nb-cab-ctags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.nb-cab-ctag { font-family: 'Share Tech Mono', monospace; font-size: 0.52rem; letter-spacing: 0.06em; color: var(--muted); border: 1px solid var(--border); border-radius: 2px; padding: 2px 6px; }
+.nb-cab-cacts { display: flex; gap: 6px; }
+.nb-cab-cacts button { flex: 1; background: none; border: 1px solid var(--border-hi); border-radius: 2px; color: var(--muted); cursor: pointer; font-size: 0.72rem; padding: 4px 0; }
+.nb-cab-cacts button:hover { color: var(--amber); border-color: var(--amber-lo); }
+.nb-cab-empty { padding: 20px 4px; color: var(--muted); font-style: italic; font-family: 'Crimson Pro', Georgia, serif; }

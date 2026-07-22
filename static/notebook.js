@@ -204,6 +204,7 @@
 				e.preventDefault(); flash('PAGE FULL — file, roll, or tear'); return;
 			}
 			if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); window.nbRollCurrent(); }
+			if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'f' || e.key === 'F')) { e.preventDefault(); window.nbFileCurrent(); }
 		});
 
 		// ---- right page: live Below Deck (same store as /below-deck) ----
@@ -241,9 +242,159 @@
 		window.nbBdComplete = function (id) { bdPost('/below-deck/complete', id, loadBelowDeck); };
 		window.nbBdDelete = function (id) { bdPost('/below-deck/delete', id, loadBelowDeck); };
 
+		// ---- cabinet (file / browse) ----
+		var cab = document.getElementById('nb-cabinet');
+		var cabCount = document.getElementById('nb-cab-count');
+		var cabFiling = document.getElementById('nb-cab-filing');
+		var cabBrowse = document.getElementById('nb-cab-browse');
+		var filePreview = document.getElementById('nb-file-preview');
+		var fileTitle = document.getElementById('nb-file-title');
+		var fileTagsWrap = document.getElementById('nb-file-tags');
+		var fileNewTag = document.getElementById('nb-file-newtag');
+		var fileFrees = document.getElementById('nb-file-frees');
+		var cabCards = document.getElementById('nb-cab-cards');
+		var cabTagRail = document.getElementById('nb-cab-tagrail');
+		var cabSearchInp = document.getElementById('nb-cab-search');
+		var cabSortSel = document.getElementById('nb-cab-sort');
+		var fileTags = [], fileBlock = null, cabActiveTag = '', cabAllTags = {}, cabItems = [];
+
+		function estPages(text) {
+			if (!text) return 0;
+			var u = 0; text.split('\n').forEach(function (l) { u += Math.max(1, Math.ceil(l.length / 60)); });
+			return u / 20;
+		}
+		function updateCabCount() {
+			fetch('/notebook/cabinet').then(function (r) { return r.json(); })
+				.then(function (d) { if (cabCount) cabCount.textContent = (d.items || []).length; cabAllTags = (d && d.tags) || cabAllTags; }).catch(function () {});
+		}
+		function openDrawer(mode) {
+			if (!cab) return;
+			cab.classList.add('is-open');
+			if (cabFiling) cabFiling.style.display = mode === 'file' ? 'block' : 'none';
+			if (cabBrowse) cabBrowse.style.display = mode === 'browse' ? 'block' : 'none';
+		}
+		window.nbCabClose = function () { if (cab) cab.classList.remove('is-open'); };
+
+		// filing
+		function renderFileTags() {
+			if (!fileTagsWrap) return;
+			var chosen = fileTags.map(function (t) {
+				return '<span class="nb-file-tag is-on" onclick="nbFileDropTag(\'' + esc(t) + '\')">' + esc(t) + ' ×</span>';
+			}).join('');
+			var sugg = Object.keys(cabAllTags).filter(function (t) { return fileTags.indexOf(t) < 0; }).map(function (t) {
+				return '<span class="nb-file-tag" onclick="nbFilePickTag(\'' + esc(t) + '\')">' + esc(t) + '</span>';
+			}).join('');
+			fileTagsWrap.innerHTML = chosen + sugg;
+		}
+		window.nbFilePickTag = function (t) { if (fileTags.indexOf(t) < 0) fileTags.push(t); renderFileTags(); };
+		window.nbFileDropTag = function (t) { fileTags = fileTags.filter(function (x) { return x !== t; }); renderFileTags(); };
+		window.nbFileAddTag = function () {
+			if (!fileNewTag) return;
+			var t = fileNewTag.value.trim().toLowerCase();
+			if (t && fileTags.indexOf(t) < 0) fileTags.push(t);
+			fileNewTag.value = ''; renderFileTags();
+		};
+		window.nbFileCurrent = function () {
+			var blk = currentBlock(); if (!blk.text) return;
+			fileBlock = blk; fileTags = [];
+			if (filePreview) filePreview.textContent = blk.text;
+			if (fileTitle) fileTitle.value = '';
+			if (fileNewTag) fileNewTag.value = '';
+			var p = estPages(blk.text);
+			if (fileFrees) fileFrees.textContent = 'FREES ~' + (p < 1 ? '<1' : p.toFixed(1)) + (p >= 2 ? ' PAGES' : ' PAGE');
+			fetch('/notebook/cabinet').then(function (r) { return r.json(); })
+				.then(function (d) { cabAllTags = d.tags || {}; renderFileTags(); }).catch(function () { renderFileTags(); });
+			openDrawer('file');
+			if (fileTitle) setTimeout(function () { fileTitle.focus(); }, 60);
+		};
+		window.nbFileConfirm = function (keep) {
+			if (!fileBlock) return;
+			var body = { title: fileTitle ? fileTitle.value : '', body_md: fileBlock.text, tags: fileTags };
+			fetch('/notebook/cabinet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+				.then(function (r) { return r.json(); }).then(function (d) {
+					if (d && d.ok) {
+						if (!keep) { removeBlock(fileBlock); saveNow(); refreshScrapBar(); }
+						fileBlock = null; window.nbCabClose(); updateCabCount(); flash(keep ? 'filed (kept)' : 'filed');
+					}
+				}).catch(function () { flash('offline'); });
+		};
+
+		// browse
+		function ageStr(iso) {
+			if (!iso) return '';
+			try {
+				var days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+				if (days < 1) return 'today';
+				if (days < 7) return days + 'd';
+				if (days < 31) return Math.floor(days / 7) + 'w';
+				return Math.floor(days / 30) + 'mo';
+			} catch (e) { return ''; }
+		}
+		window.nbCabToggle = function () {
+			if (cab && cab.classList.contains('is-open') && cabBrowse && cabBrowse.style.display !== 'none') { window.nbCabClose(); return; }
+			openDrawer('browse'); window.nbCabRender();
+		};
+		window.nbCabTag = function (t) { cabActiveTag = (cabActiveTag === t ? '' : t); window.nbCabRender(); };
+		window.nbCabSearch = function () { window.nbCabRender(); };
+		window.nbCabRender = function () {
+			if (!cabCards) return;
+			var search = cabSearchInp ? cabSearchInp.value.trim() : '';
+			var url = '/notebook/cabinet?search=' + encodeURIComponent(search) + '&tag=' + encodeURIComponent(cabActiveTag);
+			fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+				var items = (d.items || []).slice(); cabAllTags = d.tags || {};
+				var sort = cabSortSel ? cabSortSel.value : 'new';
+				if (sort === 'old') items.reverse();
+				else if (sort === 'az') items.sort(function (a, b) { return (a.title || '').localeCompare(b.title || ''); });
+				cabItems = items;
+				if (cabTagRail) {
+					var rail = '<button class="nb-cab-tagbtn' + (cabActiveTag === '' ? ' is-on' : '') + '" onclick="nbCabTag(\'\')">ALL</button>';
+					Object.keys(cabAllTags).sort().forEach(function (t) {
+						rail += '<button class="nb-cab-tagbtn' + (cabActiveTag === t ? ' is-on' : '') + '" onclick="nbCabTag(\'' + esc(t) + '\')">' + esc(t) + ' ' + cabAllTags[t] + '</button>';
+					});
+					cabTagRail.innerHTML = rail;
+				}
+				if (!items.length) { cabCards.innerHTML = '<div class="nb-cab-empty">nothing filed' + (search || cabActiveTag ? ' here' : ' yet') + '.</div>'; return; }
+				cabCards.innerHTML = items.map(function (c) {
+					var excerpt = (c.body_md || '').replace(/\n/g, ' ').slice(0, 90);
+					var tags = (c.tags || []).map(function (t) { return '<span class="nb-cab-ctag">' + esc(t) + '</span>'; }).join('');
+					return '<div class="nb-cab-card"><div class="nb-cab-card-top"><span class="nb-cab-ctitle">' + esc(c.title) + '</span><span class="nb-cab-cage">' + ageStr(c.filed) + '</span></div>'
+						+ '<div class="nb-cab-cexc">' + esc(excerpt) + '</div>'
+						+ (tags ? '<div class="nb-cab-ctags">' + tags + '</div>' : '')
+						+ '<div class="nb-cab-cacts"><button onclick="nbCabToPage(' + c.id + ')" title="Return to page">↩</button>'
+						+ '<button onclick="nbCabRoll(' + c.id + ')" title="Roll to Below Deck">→</button>'
+						+ '<button onclick="nbCabCopy(' + c.id + ')" title="Copy text">⧉</button>'
+						+ '<button onclick="nbCabShred(' + c.id + ')" title="Shred">⌦</button></div></div>';
+				}).join('');
+			}).catch(function () {});
+		};
+		function cabItemById(id) { return cabItems.filter(function (c) { return c.id === id; })[0]; }
+		window.nbCabToPage = function (id) {
+			var c = cabItemById(id); if (!c) return;
+			page.value = (page.value.replace(/\n+$/, '') + (page.value.trim() ? '\n\n' : '') + c.body_md).replace(/^\n+/, '');
+			saveNow(); refreshScrapBar();
+			fetch('/notebook/cabinet/' + id + '/delete', { method: 'POST' }).then(function () { updateCabCount(); window.nbCabRender(); }).catch(function () {});
+			flash('returned to page');
+		};
+		window.nbCabRoll = function (id) {
+			var c = cabItemById(id); if (!c) return;
+			var b = new URLSearchParams(); b.set('title', c.title || (c.body_md || '').split('\n')[0]);
+			fetch(BELOW_ADD_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: b.toString() })
+				.then(function () { loadBelowDeck(); flash('rolled ↩'); }).catch(function () {});
+		};
+		window.nbCabCopy = function (id) {
+			var c = cabItemById(id); if (!c) return;
+			try { navigator.clipboard.writeText(c.body_md || c.title || ''); flash('copied'); } catch (e) {}
+		};
+		window.nbCabShred = function (id) {
+			if (!confirm('Shred this filed scrap? (gone for good)')) return;
+			fetch('/notebook/cabinet/' + id + '/delete', { method: 'POST' })
+				.then(function () { updateCabCount(); window.nbCabRender(); }).catch(function () {});
+		};
+
 		// initial paint
 		loadBelowDeck();
 		refreshScrapBar();
+		updateCabCount();
 		fetch(PAGE_URL).then(function (r) { return r.json(); }).then(function (d) { paint(d.budget); }).catch(function () {});
 	}
 
@@ -281,8 +432,14 @@
 			if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'N' || e.key === 'n')) {
 				e.preventDefault(); window.nbOpenFullscreen();
 			}
-			// Esc closes the fullscreen back to the cockpit.
+			// Ctrl+Shift+C → toggle the cabinet drawer (fullscreen only).
+			if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'C' || e.key === 'c') && document.getElementById('nb-cabinet')) {
+				e.preventDefault(); if (window.nbCabToggle) window.nbCabToggle();
+			}
+			// Esc closes the cabinet if open, otherwise returns to the cockpit.
 			if (e.key === 'Escape' && document.getElementById('nb-page-input')) {
+				var cabEl = document.getElementById('nb-cabinet');
+				if (cabEl && cabEl.classList.contains('is-open')) { if (window.nbCabClose) window.nbCabClose(); return; }
 				window.location.href = '/publish';
 			}
 		});

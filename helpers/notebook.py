@@ -85,29 +85,123 @@ def _migrate_from_scratch():
 	return '\n\n'.join(parts)
 
 
-def load_notebook():
-	"""Return {page, last_modified}. On the first ever load, migrate scratch content in."""
+def _read_store():
 	try:
 		with open(NOTEBOOK_FILE) as f:
-			data = json.load(f)
-		return {'page': data.get('page', ''), 'last_modified': data.get('last_modified')}
+			return json.load(f)
 	except (FileNotFoundError, ValueError):
-		page = _migrate_from_scratch()
-		lm = save_page(page, force=True) if page else None
-		return {'page': page, 'last_modified': lm}
+		return None
 
 
-def save_page(content, force=False):
-	"""Persist the whole page buffer (autosave from the notebook fullscreen)."""
-	if content is None:
-		content = ''
-	lm = _now_iso()
+def _write_store(data):
 	os.makedirs(os.path.dirname(NOTEBOOK_FILE), exist_ok=True)
 	tmp = NOTEBOOK_FILE + '.tmp'
 	with open(tmp, 'w') as f:
-		json.dump({'page': content, 'last_modified': lm}, f)
+		json.dump(data, f)
 	os.replace(tmp, NOTEBOOK_FILE)
-	return lm
+
+
+def load_notebook():
+	"""Return {page, last_modified, cabinet}. On the first ever load, migrate scratch in."""
+	data = _read_store()
+	if data is None:
+		page = _migrate_from_scratch()
+		data = {'page': page, 'last_modified': _now_iso() if page else None, 'cabinet': []}
+		if page:
+			_write_store(data)
+	return {
+		'page': data.get('page', ''),
+		'last_modified': data.get('last_modified'),
+		'cabinet': data.get('cabinet', []),
+	}
+
+
+def save_page(content, force=False):
+	"""Persist the page buffer (autosave). Preserves the cabinet in the same store file."""
+	if content is None:
+		content = ''
+	data = _read_store() or {}
+	data['page'] = content
+	data['last_modified'] = _now_iso()
+	data.setdefault('cabinet', [])
+	_write_store(data)
+	return data['last_modified']
+
+
+# ---- cabinet (the unbounded archive; page is scarce, this isn't) ----
+
+def _clean_tags(tags):
+	out = []
+	for t in (tags or []):
+		t = str(t).strip().lower()
+		if t and t not in out:
+			out.append(t)
+	return out
+
+
+def cabinet_all():
+	return (_read_store() or {}).get('cabinet', [])
+
+
+def cabinet_tag_counts():
+	counts = {}
+	for c in cabinet_all():
+		for t in c.get('tags', []):
+			counts[t] = counts.get(t, 0) + 1
+	return counts
+
+
+def cabinet_list(search='', tag=''):
+	items = cabinet_all()
+	if tag:
+		items = [c for c in items if tag in c.get('tags', [])]
+	if search:
+		s = search.lower()
+		items = [c for c in items if s in (
+			(c.get('title', '') + ' ' + c.get('body_md', '') + ' ' + ' '.join(c.get('tags', []))).lower()
+		)]
+	return items
+
+
+def cabinet_file(title, body_md, tags):
+	"""Copy a scrap into the cabinet. Mirrors the 48pages FILE verb (copy-then-tear;
+	the tear from the page happens client-side). Returns the new item."""
+	data = _read_store() or {'page': '', 'last_modified': None, 'cabinet': []}
+	cab = data.setdefault('cabinet', [])
+	body = (body_md or '').strip()
+	item = {
+		'id': (max([c.get('id', 0) for c in cab], default=0) + 1),
+		'title': (title or '').strip() or (body.split('\n')[0][:80] if body else 'untitled'),
+		'body_md': body,
+		'tags': _clean_tags(tags),
+		'filed': _now_iso(),
+	}
+	cab.insert(0, item)   # newest first
+	_write_store(data)
+	return item
+
+
+def cabinet_delete(item_id):
+	data = _read_store()
+	if not data:
+		return False
+	cab = data.get('cabinet', [])
+	kept = [c for c in cab if c.get('id') != item_id]
+	data['cabinet'] = kept
+	_write_store(data)
+	return len(kept) < len(cab)
+
+
+def cabinet_retag(item_id, tags):
+	data = _read_store()
+	if not data:
+		return None
+	for c in data.get('cabinet', []):
+		if c.get('id') == item_id:
+			c['tags'] = _clean_tags(tags)
+			_write_store(data)
+			return c
+	return None
 
 
 def append_slip(text):

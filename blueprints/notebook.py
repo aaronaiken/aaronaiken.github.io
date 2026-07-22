@@ -79,3 +79,44 @@ def notebook_slip():
 	d = request.get_json(silent=True) or {}
 	res = nb.append_slip(d.get('text', ''))
 	return jsonify({'ok': True, **res})
+
+
+@notebook_bp.route('/notebook/cabinet')
+def notebook_cabinet():
+	"""List filed scraps (+ tag counts). Mirrors 48pages GET /v1/cabinet?search=&tag=."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	search = request.args.get('search', '').strip()
+	tag = request.args.get('tag', '').strip().lower()
+	return jsonify({
+		'items': nb.cabinet_list(search, tag),
+		'tags': nb.cabinet_tag_counts(),
+	})
+
+
+@notebook_bp.route('/notebook/cabinet', methods=['POST'])
+def notebook_cabinet_file():
+	"""File a scrap into the cabinet (copy). The page-side tear is done client-side."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	d = request.get_json(silent=True) or {}
+	item = nb.cabinet_file(d.get('title', ''), d.get('body_md', ''), d.get('tags', []))
+	return jsonify({'ok': True, 'item': item})
+
+
+@notebook_bp.route('/notebook/cabinet/<int:item_id>/delete', methods=['POST'])
+def notebook_cabinet_delete(item_id):
+	"""Shred a filed scrap. (The cockpit's local placeholder allows delete; the 48pages
+	/v1 contract deliberately has no DELETE — tearing needs the notebook in hand.)"""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	return jsonify({'ok': nb.cabinet_delete(item_id)})
+
+
+@notebook_bp.route('/notebook/cabinet/<int:item_id>/retag', methods=['POST'])
+def notebook_cabinet_retag(item_id):
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	d = request.get_json(silent=True) or {}
+	item = nb.cabinet_retag(item_id, d.get('tags', []))
+	return jsonify({'ok': item is not None, 'item': item})
