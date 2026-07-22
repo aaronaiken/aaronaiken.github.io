@@ -148,16 +148,31 @@
 			if (pageWrap) pageWrap.classList.toggle('is-triage', !!b.triage);
 			if (banner) banner.classList.toggle('is-on', !!b.triage);
 		}
+		var lastSaved = null, saving = false;
+		function agoStr(ms) {
+			var s = Math.floor((Date.now() - ms) / 1000);
+			if (s < 5) return 'JUST NOW';
+			if (s < 60) return s + 'S AGO';
+			var m = Math.floor(s / 60); if (m < 60) return m + 'M AGO';
+			return Math.floor(m / 60) + 'H AGO';
+		}
+		function renderStatus() {
+			if (!status) return;
+			if (saving) { status.textContent = 'SAVING…'; return; }
+			status.textContent = lastSaved ? ('SAVED · ' + agoStr(lastSaved)) : 'SAVED';
+		}
 		function flash(msg) { if (status) status.textContent = msg; }
 		function saveNow() {
+			saving = true; renderStatus();
 			fetch(PAGE_URL, {
 				method: 'POST', headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ content: page.value, force: true })
 			}).then(function (r) { return r.json(); })
-				.then(function (d) { paint(d.budget); flash('saved'); })
-				.catch(function () { flash('offline'); });
+				.then(function (d) { paint(d.budget); saving = false; lastSaved = Date.now(); renderStatus(); })
+				.catch(function () { saving = false; if (status) status.textContent = 'OFFLINE'; });
 		}
-		function scheduleSave() { flash('saving…'); clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 1500); }
+		function scheduleSave() { saving = true; renderStatus(); clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 1500); }
+		setInterval(renderStatus, 5000);
 
 		// The scrap the caret sits in = the block between the surrounding blank lines.
 		function currentBlock() {
@@ -423,9 +438,23 @@
 	// Expand action for the slip's ⤢ button + Ctrl+Shift+N.
 	window.nbOpenFullscreen = function () { window.location.href = '/notebook'; };
 
+	// Home latch on the notebook — same server flag as the cockpit (/ani/home).
+	window.nbHomeToggle = function () {
+		var b = document.getElementById('ani-home-latch'); if (!b) return;
+		var next = !b.classList.contains('on');
+		b.classList.toggle('on', next);
+		fetch('/ani/home', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: next }) }).catch(function () {});
+	};
+	function nbHomeInit() {
+		var b = document.getElementById('ani-home-latch'); if (!b) return;
+		fetch('/ani/home').then(function (r) { return r.json(); })
+			.then(function (d) { b.classList.toggle('on', !!(d && d.home)); }).catch(function () {});
+	}
+
 	document.addEventListener('DOMContentLoaded', function () {
 		initSlip();
 		initFullscreen();
+		nbHomeInit();
 		if (document.getElementById('media-rails')) nbReflectRails();
 		document.addEventListener('keydown', function (e) {
 			// Ctrl+Shift+N → notebook fullscreen (browser may reserve this; ⤢ is the sure path).

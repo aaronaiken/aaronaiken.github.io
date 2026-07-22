@@ -15,10 +15,13 @@
 		<div class="nb-fs-bar">
 			<div class="nb-fs-brand">
 				<span class="nb-fs-title">NOTEBOOK</span>
-				<a href="/publish" title="Back to the cockpit (Esc)">← COCKPIT</a>
+				<span class="nb-fs-sub2">// FIELD NOTES</span>
 			</div>
 			<div class="nb-fs-meta">
-				<span id="nb-page-status">saved</span>
+				<span id="nb-page-status">SAVED</span>
+				<button class="nb-hdr-emoji" id="ani-bat-pill" onclick="window.location.href='/publish'" title="Ani lives in the cockpit — tap to return">🦇</button>
+				<button class="nb-hdr-emoji" id="ani-home-latch" onclick="nbHomeToggle()" title="Home mode — discreet, no attention effects">🏠</button>
+				<a href="/publish" class="nb-esc-btn" title="Back to the cockpit (Esc)">ESC · COCKPIT</a>
 			</div>
 		</div>
 

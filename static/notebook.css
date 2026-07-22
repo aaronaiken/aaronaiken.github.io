@@ -241,3 +241,17 @@
 .nb-cab-cacts button { flex: 1; background: none; border: 1px solid var(--border-hi); border-radius: 2px; color: var(--muted); cursor: pointer; font-size: 0.72rem; padding: 4px 0; }
 .nb-cab-cacts button:hover { color: var(--amber); border-color: var(--amber-lo); }
 .nb-cab-empty { padding: 20px 4px; color: var(--muted); font-style: italic; font-family: 'Crimson Pro', Georgia, serif; }
+
+/* notebook header right cluster (image 18): SAVED · Ns AGO · 🦇 · 🏠 · ESC·COCKPIT */
+.nb-fs-sub2 { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.nb-fs-meta { display: flex; align-items: center; gap: 14px; }
+#nb-page-status { font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.nb-hdr-emoji { background: none; border: none; cursor: pointer; font-size: 1rem; line-height: 1; padding: 2px 4px; }
+#ani-home-latch { border: 1px solid var(--border-hi); border-radius: 3px; }
+#ani-home-latch.on { border-color: var(--amber); background: var(--amber-dim); }
+.nb-fs-bar .nb-esc-btn {
+	border: 1px solid var(--border-hi); border-radius: 3px; color: var(--muted);
+	padding: 6px 12px; font-family: 'Share Tech Mono', monospace; font-size: 0.6rem;
+	letter-spacing: 0.16em; text-transform: uppercase; text-decoration: none;
+}
+.nb-fs-bar .nb-esc-btn:hover { color: var(--amber); border-color: var(--amber-lo); }
