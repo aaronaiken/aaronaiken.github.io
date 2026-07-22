@@ -10,12 +10,35 @@
 	var SLIP_URL = '/notebook/slip';
 	var BELOW_ADD_URL = '/below-deck/add';
 
-	// PG n/48 label — a page is "used" the moment any ink lands on it (ceil, min 1).
-	function fmtGauge(b) {
-		if (!b) return 'PG 0/48';
-		var used = b.pages_used || 0;
-		var pg = used <= 0 ? 0 : Math.max(1, Math.ceil(used));
-		return 'PG ' + Math.min(pg, b.page_budget) + '/' + b.page_budget;
+	// Shared page-meter (48 ticks) — used by both the home slip and the fullscreen.
+	// A page is "used" the moment any ink lands on it (ceil, min 1); tick 38 = PG 39 triage.
+	function buildTicks(container) {
+		var ticks = [];
+		if (container && !container.children.length) {
+			for (var i = 0; i < 48; i++) {
+				var t = document.createElement('div');
+				t.className = 'nb-tick' + (i === 38 ? ' is-triage-mark' : '');
+				container.appendChild(t); ticks.push(t);
+			}
+		}
+		return ticks;
+	}
+	function pagesFilled(b) {
+		var used = (b && b.pages_used) || 0;
+		return used <= 0 ? 0 : Math.min(b.page_budget, Math.max(1, Math.ceil(used)));
+	}
+	function paintTicks(ticks, b) {
+		var fill = pagesFilled(b);
+		for (var i = 0; i < ticks.length; i++) {
+			var f = i < fill;
+			ticks[i].classList.toggle('is-filled', f);
+			ticks[i].classList.toggle('past-triage', f && i >= 38);
+		}
+	}
+	function readText(b) {
+		if (!b) return 'PG 0/48 · 48 LEFT';
+		var left = Math.max(0, b.page_budget - Math.ceil(b.pages_used || 0));
+		return 'PG ' + pagesFilled(b) + '/' + b.page_budget + ' · ' + left + ' LEFT';
 	}
 
 	// ---------- SLIP (on /publish) ----------
@@ -23,19 +46,18 @@
 		var slip = document.getElementById('nb-slip-input');
 		if (!slip) return;
 		var gauge = document.getElementById('nb-slip-gauge');
-		var spineFill = document.getElementById('nb-slip-spine-fill');
+		var meterTicks = document.getElementById('nb-slip-meter-ticks');
 		var flash = document.getElementById('nb-slip-flash');
 		var DRAFT_KEY = 'cockpit-nb-slip-draft';
+		var slipTicks = buildTicks(meterTicks);
 
 		// Restore any unflushed draft so a refresh never loses keystrokes.
 		try { var d = localStorage.getItem(DRAFT_KEY); if (d) slip.value = d; } catch (e) {}
 
 		function paintBudget(b) {
-			if (gauge) gauge.textContent = fmtGauge(b);
-			if (spineFill && b) {
-				spineFill.style.height = Math.round((b.fill || 0) * 100) + '%';
-				spineFill.classList.toggle('is-triage', !!b.triage);
-			}
+			if (!b) return;
+			if (gauge) gauge.textContent = readText(b);
+			paintTicks(slipTicks, b);
 		}
 		function loadBudget() {
 			fetch(PAGE_URL).then(function (r) { return r.json(); })
@@ -115,28 +137,13 @@
 		var bdInput = document.getElementById('nb-bd-input');
 		var saveTimer = null, lastBudget = null;
 
-		// Build the 48 page ticks once. The 39th (index 38) is the triage boundary.
-		var TICKS = [];
-		if (meterTicks && !meterTicks.children.length) {
-			for (var i = 0; i < 48; i++) {
-				var t = document.createElement('div');
-				t.className = 'nb-tick' + (i === 38 ? ' is-triage-mark' : '');
-				meterTicks.appendChild(t); TICKS.push(t);
-			}
-		}
+		var TICKS = buildTicks(meterTicks);
 
 		function paint(b) {
 			if (!b) return;
 			lastBudget = b;
-			var used = b.pages_used || 0;
-			var fill = used <= 0 ? 0 : Math.min(b.page_budget, Math.max(1, Math.ceil(used)));
-			var left = Math.max(0, b.page_budget - Math.ceil(used));
-			if (gaugeLabel) gaugeLabel.textContent = 'PG ' + fill + '/' + b.page_budget + ' · ' + left + ' LEFT';
-			for (var i = 0; i < TICKS.length; i++) {
-				var isFilled = i < fill;
-				TICKS[i].classList.toggle('is-filled', isFilled);
-				TICKS[i].classList.toggle('past-triage', isFilled && i >= 38);
-			}
+			if (gaugeLabel) gaugeLabel.textContent = readText(b);
+			paintTicks(TICKS, b);
 			if (meter) meter.classList.toggle('is-triage', !!b.triage);
 			if (pageWrap) pageWrap.classList.toggle('is-triage', !!b.triage);
 			if (banner) banner.classList.toggle('is-on', !!b.triage);

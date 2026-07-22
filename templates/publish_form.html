@@ -407,14 +407,17 @@
 				<span class="section-label">// Notebook — fresh slip</span>
 				<div class="nb-slip-meta">
 					<span class="nb-slip-flash" id="nb-slip-flash" aria-live="polite"></span>
-					<span class="nb-slip-gauge" id="nb-slip-gauge" title="Page capacity">PG 0/48</span>
 					<button type="button" class="nb-slip-expand" onclick="nbOpenFullscreen()" title="Open the notebook (Ctrl+Shift+N)">⤢</button>
 				</div>
 			</div>
 			<div class="nb-slip-paper">
-				<div class="nb-slip-spine" title="Page fill"><div class="nb-slip-spine-fill" id="nb-slip-spine-fill"></div></div>
 				<textarea id="nb-slip-input" class="nb-slip-input" spellcheck="true"
 				          placeholder="jot it — Enter Enter files it to the page · Ctrl+Enter rolls it to Below Deck"></textarea>
+			</div>
+			<!-- same 48-tick page meter as the notebook fullscreen -->
+			<div class="nb-slip-meter">
+				<div class="nb-meter-ticks" id="nb-slip-meter-ticks"></div>
+				<span class="nb-meter-read" id="nb-slip-gauge">PG 0/48 · 48 LEFT</span>
 			</div>
 			<div class="nb-slip-hint">ENTER ENTER → PAGE · CTRL+ENTER → BELOW DECK · ⤢ NOTEBOOK</div>
 		</div>

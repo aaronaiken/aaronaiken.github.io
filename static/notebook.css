@@ -38,23 +38,16 @@
 }
 .nb-slip-expand:hover { color: var(--amber); border-color: var(--amber-lo); }
 
-/* Paper card — ink spine on the left edge showing page fill, ruled writing surface. */
+/* Paper card — ruled writing surface. */
 .nb-slip-paper {
 	position: relative; display: flex;
 	background: var(--input-bg);
 	border: 1px solid var(--border); border-radius: 3px;
 	overflow: hidden;
 }
-.nb-slip-spine {
-	position: relative; flex: 0 0 5px; align-self: stretch;
-	background: var(--border); overflow: hidden;
-}
-.nb-slip-spine-fill {
-	position: absolute; left: 0; bottom: 0; width: 100%; height: 0%;
-	background: linear-gradient(to top, var(--amber-lo), var(--amber));
-	transition: height 0.4s ease, background 0.3s;
-}
-.nb-slip-spine-fill.is-triage { background: linear-gradient(to top, var(--red), var(--amber-lo)); }
+/* the same 48-tick page meter as the fullscreen, compact under the slip */
+.nb-slip-meter { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.nb-slip-meter .nb-meter-ticks { height: 11px; }
 
 .nb-slip-input {
 	flex: 1; width: 100%; min-height: var(--nb-slip-min); resize: vertical;
