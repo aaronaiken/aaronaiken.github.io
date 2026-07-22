@@ -23,6 +23,8 @@
 		--heat:         rgba(212,136,10,0);
 		--secret-neon:  #ff00ff;
 		--scan-speed:   10s;
+		--btn-solid:      #d4880a;
+		--btn-solid-text: #080a06;
 	}
 
 	*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -674,6 +676,8 @@
 			--green:     #2a6e3f;
 			--green-lo:  #4a8c60;
 			--shield:    #2a6e3f;
+			--btn-solid:      #3a2a10;
+			--btn-solid-text: #fdf9f3;
 		}
 		body::before, body::after { display: none; }
 		.cockpit__logo { text-shadow: none; animation: none; color: #5a2e00; }
