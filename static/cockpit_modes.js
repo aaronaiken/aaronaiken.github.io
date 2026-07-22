@@ -2576,42 +2576,64 @@
 		}
 	}
 
-
-
 	// ============================================================
-	// FOCUS-MODE DIAL + SWITCHBOARD (redesign §5)
-	// Named panel-visibility layouts; long-press/right-click a mode edits its set.
-	// Persists to localStorage + /cockpit/layout. Modes change VISIBILITY only.
+	// FOCUS-MODE DIAL + SPATIAL LAYOUT ENGINE (1g)
+	// Named modes place each panel into a layout zone (full / left / right / off).
+	// Long-press a mode to edit it; "+ NEW" creates custom modes. Reparents the
+	// panels into #nb-zone-*. Persists to /cockpit/layout (localStorage fallback).
 	// ============================================================
 	(function () {
 		var PANELS = [
-			{ key: 'tx', label: ') TX', sel: '#tx-panel' },
-			{ key: 'slip', label: '📓 NOTEBOOK', sel: '#nb-slip' },
-			{ key: 'yt', label: '▶ YT', sel: '#rail-yt' },
-			{ key: 'music', label: '♪ MUSIC', sel: '#rail-music' },
-			{ key: 'mlog', label: '// MISSION LOG', sel: '#mission-log-panel' },
-			{ key: 'ledger', label: '$ LEDGER', sel: '#ledger-pill-row' }
+			{ key: 'tx',     label: ') TX',           sel: '#tx-panel' },
+			{ key: 'slip',   label: '\u{1F4D3} NOTEBOOK',   sel: '#nb-slip' },
+			{ key: 'yt',     label: '▶ YT',           sel: '#rail-yt' },
+			{ key: 'music',  label: '♪ MUSIC',        sel: '#rail-music' },
+			{ key: 'mlog',   label: '// MISSION LOG', sel: '#mission-log-panel' },
+			{ key: 'ledger', label: '$ LEDGER',       sel: '#ledger-pill-row' }
 		];
-		var MODES = ['write', 'desk', 'watch', 'theater', 'minimal'];
-		var MODE_LABEL = { write: 'WRITE', desk: 'DESK', watch: 'WATCH', theater: 'THEATER', minimal: 'MINIMAL' };
-		var DEFAULTS = {
-			write:   { tx: true, slip: true, yt: false, music: false, mlog: false, ledger: false },
-			desk:    { tx: true, slip: true, yt: true, music: true, mlog: true, ledger: true },
-			watch:   { tx: false, slip: true, yt: true, music: false, mlog: false, ledger: false },
-			theater: { tx: false, slip: false, yt: true, music: true, mlog: false, ledger: false },
-			minimal: { tx: true, slip: false, yt: false, music: false, mlog: false, ledger: false }
+		var COLS = ['off', 'full', 'left', 'right'];
+		var BUILTIN = {
+			write:   { label: 'WRITE',   panels: { tx: 'full', slip: 'full',  yt: 'off',   music: 'off',   mlog: 'off',  ledger: 'off' } },
+			desk:    { label: 'DESK',    panels: { tx: 'full', slip: 'left',  yt: 'right', music: 'right', mlog: 'left', ledger: 'right' } },
+			watch:   { label: 'WATCH',   panels: { tx: 'off',  slip: 'right', yt: 'left',  music: 'off',   mlog: 'off',  ledger: 'off' } },
+			theater: { label: 'THEATER', panels: { tx: 'off',  slip: 'off',   yt: 'left',  music: 'right', mlog: 'off',  ledger: 'off' } },
+			minimal: { label: 'MINIMAL', panels: { tx: 'full', slip: 'off',   yt: 'off',   music: 'off',   mlog: 'off',  ledger: 'off' } }
 		};
-		var LS_KEY = 'cockpit-modes-v1';
-		var state = { active: 'desk', modes: {} };
-		var sbFor = null;
+		var BUILTIN_ORDER = ['write', 'desk', 'watch', 'theater', 'minimal'];
+		var LS_KEY = 'cockpit-modes-v2';
+		var state = { active: 'desk', order: BUILTIN_ORDER.slice(), modes: {} };
+		var sbFor = null, zones = {};
+
+		function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+
+		function ensureZones() {
+			zones.full = document.getElementById('nb-zone-full');
+			zones.left = document.getElementById('nb-zone-left');
+			zones.right = document.getElementById('nb-zone-right');
+			var h = document.getElementById('nb-zone-hidden');
+			if (!h) { h = document.createElement('div'); h.id = 'nb-zone-hidden'; h.style.display = 'none'; document.body.appendChild(h); }
+			zones.hidden = h;
+		}
 
 		function normalize() {
-			MODES.forEach(function (m) {
-				if (!state.modes[m]) state.modes[m] = {};
-				PANELS.forEach(function (p) { if (typeof state.modes[m][p.key] !== 'boolean') state.modes[m][p.key] = DEFAULTS[m][p.key]; });
+			if (!state.modes) state.modes = {};
+			BUILTIN_ORDER.forEach(function (m) {
+				if (!state.modes[m]) state.modes[m] = { label: BUILTIN[m].label, builtin: true, panels: {} };
+				state.modes[m].builtin = true;
+				if (!state.modes[m].label) state.modes[m].label = BUILTIN[m].label;
+				if (!state.modes[m].panels) state.modes[m].panels = {};
+				PANELS.forEach(function (p) { if (COLS.indexOf(state.modes[m].panels[p.key]) < 0) state.modes[m].panels[p.key] = BUILTIN[m].panels[p.key]; });
 			});
-			if (MODES.indexOf(state.active) < 0) state.active = 'desk';
+			Object.keys(state.modes).forEach(function (m) {
+				var md = state.modes[m]; if (!md.panels) md.panels = {};
+				PANELS.forEach(function (p) { if (COLS.indexOf(md.panels[p.key]) < 0) md.panels[p.key] = 'off'; });
+			});
+			if (!state.order || !state.order.length) state.order = BUILTIN_ORDER.slice();
+			Object.keys(state.modes).forEach(function (m) { if (state.order.indexOf(m) < 0) state.order.push(m); });
+			state.order = state.order.filter(function (m) { return state.modes[m]; });
+			if (state.order.indexOf(state.active) < 0) state.active = state.order[0] || 'desk';
 		}
+
 		function loadState() {
 			try { var s = JSON.parse(localStorage.getItem(LS_KEY)); if (s && s.modes) state = s; } catch (e) {}
 			normalize();
@@ -2623,63 +2645,134 @@
 			try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {}
 			fetch('/cockpit/layout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state) }).catch(function () {});
 		}
+
 		function applyMode(mode) {
-			var set = state.modes[mode] || DEFAULTS[mode] || {};
+			var md = state.modes[mode]; if (!md) return;
+			ensureZones();
 			PANELS.forEach(function (p) {
-				var el = document.querySelector(p.sel);
-				if (el) el.classList.toggle('mode-off', set[p.key] === false);
+				var el = document.querySelector(p.sel); if (!el) return;
+				var col = md.panels[p.key] || 'off';
+				el.classList.remove('mode-off');
+				if (col === 'full') zones.full.appendChild(el);
+				else if (col === 'left') zones.left.appendChild(el);
+				else if (col === 'right') zones.right.appendChild(el);
+				else { zones.hidden.appendChild(el); el.classList.add('mode-off'); }
 			});
 			state.active = mode;
 			document.body.setAttribute('data-mode', mode);
+			var cols = document.getElementById('stack-cols');
+			if (cols) cols.classList.toggle('one-col', !(zones.left.children.length && zones.right.children.length));
 		}
+
+		function thumbHTML(md) {
+			var full = [], left = [], right = [];
+			PANELS.forEach(function (p) {
+				var c = md.panels[p.key];
+				if (c === 'full') full.push(p); else if (c === 'left') left.push(p); else if (c === 'right') right.push(p);
+			});
+			function blk(p) { return '<span class="mt-blk t-' + p.key + '"></span>'; }
+			var h = '<span class="mode-thumb">';
+			full.forEach(function (p) { h += '<span class="mt-row mt-full">' + blk(p) + '</span>'; });
+			if (left.length || right.length) {
+				h += '<span class="mt-cols"><span class="mt-col">' + left.map(blk).join('') + '</span><span class="mt-col">' + right.map(blk).join('') + '</span></span>';
+			}
+			if (!full.length && !left.length && !right.length) h += '<span class="mt-empty"></span>';
+			return h + '</span>';
+		}
+
 		function renderDial() {
 			var wrap = document.getElementById('mode-dial-btns'); if (!wrap) return;
-			wrap.innerHTML = MODES.map(function (m) {
-				var held = (sbFor === m) ? ' ● HELD…' : (m === state.active ? ' ●' : '');
-				return '<button class="mode-btn' + (m === state.active ? ' is-active' : '') + (sbFor === m ? ' is-held' : '') + '" data-mode="' + m + '">' + MODE_LABEL[m] + held + '</button>';
+			var html = state.order.map(function (m) {
+				var md = state.modes[m];
+				return '<button class="mode-btn' + (m === state.active ? ' is-active' : '') + (sbFor === m ? ' is-held' : '') + '" data-mode="' + m + '">'
+					+ thumbHTML(md)
+					+ '<span class="mode-btn-label">' + esc(md.label) + (m === state.active ? ' ●' : '') + '</span></button>';
 			}).join('');
-			Array.prototype.forEach.call(wrap.querySelectorAll('.mode-btn'), function (btn) {
+			html += '<button class="mode-btn mode-new" id="mode-new-btn" title="Create a new mode"><span class="mode-thumb mt-new">+</span><span class="mode-btn-label">NEW</span></button>';
+			wrap.innerHTML = html;
+			Array.prototype.forEach.call(wrap.querySelectorAll('.mode-btn[data-mode]'), function (btn) {
 				var m = btn.getAttribute('data-mode'), lp = null, longFired = false;
 				btn.addEventListener('click', function () { if (longFired) { longFired = false; return; } setActive(m); });
 				btn.addEventListener('contextmenu', function (e) { e.preventDefault(); openSwitchboard(m); });
-				btn.addEventListener('mousedown', function () { longFired = false; lp = setTimeout(function () { longFired = true; openSwitchboard(m); }, 600); });
+				btn.addEventListener('mousedown', function () { longFired = false; lp = setTimeout(function () { longFired = true; openSwitchboard(m); }, 550); });
 				btn.addEventListener('mouseup', function () { clearTimeout(lp); });
 				btn.addEventListener('mouseleave', function () { clearTimeout(lp); });
-				btn.addEventListener('touchstart', function () { longFired = false; lp = setTimeout(function () { longFired = true; openSwitchboard(m); }, 600); }, { passive: true });
+				btn.addEventListener('touchstart', function () { longFired = false; lp = setTimeout(function () { longFired = true; openSwitchboard(m); }, 550); }, { passive: true });
 				btn.addEventListener('touchend', function () { clearTimeout(lp); });
 			});
+			var nb = document.getElementById('mode-new-btn');
+			if (nb) nb.addEventListener('click', newMode);
 		}
+
 		function setActive(mode) { applyMode(mode); saveState(); closeSwitchboard(); renderDial(); }
+
 		function openSwitchboard(mode) {
 			sbFor = mode;
-			var sb = document.getElementById('mode-switchboard'), grid = document.getElementById('mode-sb-grid'), title = document.getElementById('mode-sb-title');
+			var sb = document.getElementById('mode-switchboard'), grid = document.getElementById('mode-sb-grid'),
+				title = document.getElementById('mode-sb-title'), nameIn = document.getElementById('mode-sb-name'),
+				foot = document.getElementById('mode-sb-foot');
 			if (!sb || !grid) return;
-			if (title) title.textContent = '// ' + MODE_LABEL[mode] + ' — SWITCHBOARD';
-			var set = state.modes[mode];
+			var md = state.modes[mode];
+			if (title) title.textContent = '// ' + md.label + ' — SWITCHBOARD';
+			if (nameIn) {
+				nameIn.style.display = '';
+				nameIn.value = md.label;
+				nameIn.disabled = !!md.builtin;
+				nameIn.oninput = function () { md.label = nameIn.value.toUpperCase().slice(0, 14); if (title) title.textContent = '// ' + md.label + ' — SWITCHBOARD'; renderDial(); saveState(); };
+			}
 			grid.innerHTML = PANELS.map(function (p) {
-				var on = set[p.key] !== false;
-				return '<button class="mode-sw' + (on ? ' is-on' : '') + '" data-panel="' + p.key + '"><span>' + p.label + '</span><span class="mode-sw-knob"></span></button>';
+				var cur = md.panels[p.key] || 'off';
+				var segs = COLS.map(function (c) { return '<button class="mode-seg' + (cur === c ? ' is-on' : '') + '" data-panel="' + p.key + '" data-col="' + c + '">' + c.toUpperCase() + '</button>'; }).join('');
+				return '<div class="mode-sw-row"><span class="mode-sw-label">' + p.label + '</span><span class="mode-segs">' + segs + '</span></div>';
 			}).join('');
-			Array.prototype.forEach.call(grid.querySelectorAll('.mode-sw'), function (sw) {
-				sw.addEventListener('click', function () {
-					var k = sw.getAttribute('data-panel'), newOn = !(set[k] !== false);
-					set[k] = newOn; sw.classList.toggle('is-on', newOn);
-					if (sbFor === state.active) applyMode(state.active);
-					saveState();
+			Array.prototype.forEach.call(grid.querySelectorAll('.mode-seg'), function (seg) {
+				seg.addEventListener('click', function () {
+					var k = seg.getAttribute('data-panel'), c = seg.getAttribute('data-col');
+					md.panels[k] = c;
+					Array.prototype.forEach.call(grid.querySelectorAll('.mode-seg[data-panel="' + k + '"]'), function (s) { s.classList.toggle('is-on', s.getAttribute('data-col') === c); });
+					if (mode === state.active) applyMode(state.active);
+					renderDial(); saveState();
 				});
 			});
-			sb.classList.add('is-open');
+			if (foot) {
+				foot.innerHTML = md.builtin ? '<span class="mode-sb-note">built-in mode</span>' : '<button class="mode-del-btn" id="mode-del-btn">DELETE MODE</button>';
+				var del = document.getElementById('mode-del-btn');
+				if (del) del.addEventListener('click', function () { deleteMode(mode); });
+			}
 			renderDial();
+			sb.classList.add('is-open');
 		}
 		function closeSwitchboard() { var sb = document.getElementById('mode-switchboard'); if (sb) sb.classList.remove('is-open'); if (sbFor) { sbFor = null; renderDial(); } }
 
+		function newMode() {
+			var name = prompt('Name this mode');
+			if (!name) return;
+			name = name.trim(); if (!name) return;
+			var base = name.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 8) || 'mode';
+			var id = 'c_' + base, n = 1;
+			while (state.modes[id]) { id = 'c_' + base + (++n); }
+			var src = state.modes[state.active] ? state.modes[state.active].panels : BUILTIN.desk.panels;
+			state.modes[id] = { label: name.toUpperCase().slice(0, 14), builtin: false, panels: Object.assign({}, src) };
+			state.order.push(id);
+			saveState(); renderDial(); openSwitchboard(id);
+		}
+		function deleteMode(mode) {
+			var md = state.modes[mode]; if (!md || md.builtin) return;
+			if (!confirm('Delete the "' + md.label + '" mode?')) return;
+			delete state.modes[mode];
+			state.order = state.order.filter(function (m) { return m !== mode; });
+			if (state.active === mode) state.active = state.order[0] || 'desk';
+			closeSwitchboard(); applyMode(state.active); saveState(); renderDial();
+		}
+
 		window.cockpitSetMode = setActive;
 		window.cockpitOpenSwitchboard = openSwitchboard;
+		window.cockpitNewMode = newMode;
 
 		document.addEventListener('keydown', function (e) {
-			if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key >= '1' && e.key <= '5' && document.getElementById('mode-dial')) {
+			if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key >= '1' && e.key <= '9' && document.getElementById('mode-dial')) {
 				var idx = parseInt(e.key, 10) - 1;
-				if (MODES[idx]) { e.preventDefault(); setActive(MODES[idx]); }
+				if (state.order[idx]) { e.preventDefault(); setActive(state.order[idx]); }
 			}
 			if (e.key === 'Escape') { var sb = document.getElementById('mode-switchboard'); if (sb && sb.classList.contains('is-open')) closeSwitchboard(); }
 		});

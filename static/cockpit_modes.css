@@ -302,32 +302,69 @@
 
 
 
-	/* ---- MODE DIAL + SWITCHBOARD (redesign §5) ---- */
+	/* ---- MODE DIAL + SPATIAL LAYOUT ENGINE (1g) ---- */
 	.cockpit__hdr-emoji { background: none; border: none; cursor: pointer; font-size: 1rem; line-height: 1; padding: 2px 4px; }
 	#ani-home-latch { border: 1px solid var(--border-hi); border-radius: 3px; }
+	#ani-home-latch.on { border-color: var(--amber); background: var(--amber-dim); }
 
-	.mode-dial { display: flex; align-items: center; gap: 12px; margin: 2px 0 10px; flex-wrap: wrap; }
-	.mode-dial-label { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.18em; color: var(--muted); }
-	.mode-dial-btns { display: flex; gap: 6px; flex-wrap: wrap; }
-	.mode-btn { background: var(--pill-bg); border: 1px solid var(--border); border-radius: 2px; color: var(--muted); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; letter-spacing: 0.14em; padding: 6px 12px; user-select: none; -webkit-user-select: none; }
-	.mode-btn:hover { border-color: var(--amber-lo); color: var(--amber); }
-	.mode-btn.is-active { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
-	.mode-btn.is-held { border-color: var(--amber); color: var(--amber-hi); }
-	.mode-dial-hint { font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; letter-spacing: 0.12em; color: var(--faint, var(--border-hi)); margin-left: auto; }
+	.mode-dial { display: flex; align-items: flex-start; gap: 12px; margin: 4px 0 12px; flex-wrap: wrap; }
+	.mode-dial-label { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.18em; color: var(--muted); padding-top: 26px; }
+	.mode-dial-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+	.mode-dial-hint { font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; letter-spacing: 0.12em; color: var(--faint, var(--border-hi)); margin-left: auto; padding-top: 26px; }
 
-	.mode-switchboard { display: none; border: 1px solid var(--amber-lo); border-radius: 4px; background: var(--bg2); padding: 16px; margin: 0 0 12px; box-shadow: var(--shadow-pop, 0 10px 30px rgba(0,0,0,.3)); }
+	/* dial button = layout thumbnail + label */
+	.mode-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--pill-bg); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; padding: 8px; width: 94px; user-select: none; -webkit-user-select: none; transition: border-color 0.15s; }
+	.mode-btn:hover { border-color: var(--amber-lo); }
+	.mode-btn.is-active { border-color: var(--amber); }
+	.mode-btn.is-held { border-color: var(--amber-hi); }
+	.mode-btn-label { font-family: 'Share Tech Mono', monospace; font-size: 0.56rem; letter-spacing: 0.12em; color: var(--muted); white-space: nowrap; }
+	.mode-btn.is-active .mode-btn-label { color: var(--amber); }
+
+	/* thumbnail diagram of the mode's layout */
+	.mode-thumb { display: flex; flex-direction: column; gap: 2px; width: 100%; height: 46px; padding: 4px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 2px; background: var(--input-bg); }
+	.mode-btn.is-active .mode-thumb { border-color: var(--amber-lo); }
+	.mt-row, .mt-cols { display: flex; gap: 2px; flex: 1; min-height: 0; }
+	.mt-col { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+	.mt-blk { flex: 1; min-height: 4px; border-radius: 1px; background: var(--border-hi); }
+	.mt-empty { flex: 1; }
+	.mt-new { align-items: center; justify-content: center; color: var(--muted); font-size: 1.3rem; }
+	.mode-btn.mode-new .mode-btn-label { color: var(--muted); }
+	.t-tx { background: var(--amber); }
+	.t-slip { background: var(--amber-lo); }
+	.t-yt { background: var(--text-dim); }
+	.t-music { background: var(--text-dim); }
+	.t-mlog { background: var(--border-hi); }
+	.t-ledger { background: var(--green-lo, var(--border-hi)); }
+
+	/* switchboard editor */
+	.mode-switchboard { display: none; border: 1px solid var(--amber-lo); border-radius: 4px; background: var(--bg2); padding: 16px; margin: 0 0 14px; box-shadow: var(--shadow-pop, 0 10px 30px rgba(0,0,0,.3)); }
 	.mode-switchboard.is-open { display: block; }
 	.mode-sb-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 10px; flex-wrap: wrap; }
 	#mode-sb-title { font-family: 'Share Tech Mono', monospace; font-size: 0.66rem; letter-spacing: 0.16em; color: var(--amber); }
 	.mode-sb-hint { font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; letter-spacing: 0.12em; color: var(--muted); }
-	.mode-sb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-	.mode-sw { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--pill-bg); border: 1px solid var(--border); border-radius: 3px; color: var(--muted); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.66rem; letter-spacing: 0.1em; padding: 12px 14px; }
-	.mode-sw.is-on { border-color: var(--amber-lo); color: var(--amber); background: var(--amber-dim); }
-	.mode-sw-knob { width: 30px; height: 16px; border-radius: 8px; background: var(--border-hi); position: relative; transition: background 0.2s; flex-shrink: 0; }
-	.mode-sw-knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg2); transition: left 0.2s; }
-	.mode-sw.is-on .mode-sw-knob { background: var(--amber); }
-	.mode-sw.is-on .mode-sw-knob::after { left: 16px; }
-	@media (max-width: 600px) { .mode-sb-grid { grid-template-columns: 1fr; } }
+	.mode-sb-name { width: 100%; box-sizing: border-box; background: var(--input-bg); border: 1px solid var(--border-hi); border-radius: 2px; color: var(--amber); font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; padding: 8px 10px; margin-bottom: 12px; outline: none; }
+	.mode-sb-name:disabled { color: var(--muted); opacity: 0.7; }
+	.mode-sb-name:focus { border-color: var(--amber-lo); }
+	.mode-sb-grid { display: flex; flex-direction: column; gap: 8px; }
+	.mode-sw-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+	.mode-sw-label { font-family: 'Share Tech Mono', monospace; font-size: 0.66rem; letter-spacing: 0.1em; color: var(--text-body); }
+	.mode-segs { display: inline-flex; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+	.mode-seg { background: var(--pill-bg); border: none; border-left: 1px solid var(--border); color: var(--muted); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.52rem; letter-spacing: 0.06em; padding: 6px 9px; }
+	.mode-seg:first-child { border-left: none; }
+	.mode-seg.is-on { background: var(--amber-dim); color: var(--amber); }
+	.mode-sb-foot { margin-top: 14px; display: flex; justify-content: flex-end; }
+	.mode-sb-note { font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; }
+	.mode-del-btn { background: none; border: 1px solid var(--red); border-radius: 2px; color: var(--red); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.56rem; letter-spacing: 0.12em; padding: 7px 12px; }
+	.mode-del-btn:hover { background: var(--red); color: var(--bg); }
 
-	/* panel visibility toggled by the active mode */
+	/* layout grid — panels are reparented into these zones by the mode engine */
+	.stack-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
+	.stack-zone { display: flex; flex-direction: column; gap: 12px; }
+	.stack-zone:empty { display: none; }
+	.stack-zone > * { margin: 0 !important; }
+	.stack-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+	.stack-cols.one-col { grid-template-columns: 1fr; }
+	@media (max-width: 640px) { .stack-cols { grid-template-columns: 1fr; } }
+
+	/* panel hidden by the active mode */
 	.mode-off { display: none !important; }

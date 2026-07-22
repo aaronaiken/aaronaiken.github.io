@@ -312,7 +312,19 @@
 				<span id="mode-sb-title">// SWITCHBOARD</span>
 				<span class="mode-sb-hint">ESC · CHANGES SAVE TO THIS MODE</span>
 			</div>
+			<input type="text" id="mode-sb-name" class="mode-sb-name" maxlength="14" placeholder="mode name" style="display:none;">
 			<div class="mode-sb-grid" id="mode-sb-grid"></div>
+			<div class="mode-sb-foot" id="mode-sb-foot"></div>
+		</div>
+
+		<!-- LAYOUT GRID — the active mode places each panel into a zone (full / left / right).
+		     The panels below are relocated into these zones by the mode engine on load. -->
+		<div class="stack-grid" id="stack-grid">
+			<div class="stack-zone" id="nb-zone-full"></div>
+			<div class="stack-cols" id="stack-cols">
+				<div class="stack-zone stack-col" id="nb-zone-left"></div>
+				<div class="stack-zone stack-col" id="nb-zone-right"></div>
+			</div>
 		</div>
 
 		<!-- Now-playing chip — surfaces the active media player with mini controls. Hidden until playback. -->
@@ -404,17 +416,15 @@
 			<div class="nb-slip-hint">ENTER ENTER → PAGE · CTRL+ENTER → BELOW DECK · ⤢ NOTEBOOK</div>
 		</div>
 
-		<!-- MEDIA RAILS — state-only lines that summon/hide the floating players.
-		     (The ▷ VIDEO player is intentionally not railed — reach it from Ctrl+K
-		     "Toggle Video Player" or Ctrl+Shift+V.) -->
-		<div class="media-rails focus-hide" id="media-rails">
-			<button type="button" class="media-rail" id="rail-yt" onclick="nbMediaRail('yt', this)">
-				<span class="rail-label">▶ YT</span><span class="rail-state" id="rail-yt-state">— HIDDEN</span>
-			</button>
-			<button type="button" class="media-rail" id="rail-music" onclick="nbMediaRail('music', this)">
-				<span class="rail-label">♪ MUSIC</span><span class="rail-state" id="rail-music-state">— HIDDEN</span>
-			</button>
-		</div>
+		<!-- MEDIA RAILS — state-only rows that summon/hide the floating players. Each rail
+		     is an independent panel the mode engine places into a layout zone. (▷ VIDEO is
+		     not railed — reach it from Ctrl+K "Toggle Video Player" or Ctrl+Shift+V.) -->
+		<button type="button" class="media-rail focus-hide" id="rail-yt" onclick="nbMediaRail('yt', this)">
+			<span class="rail-label">▶ YT</span><span class="rail-state" id="rail-yt-state">— HIDDEN</span>
+		</button>
+		<button type="button" class="media-rail focus-hide" id="rail-music" onclick="nbMediaRail('music', this)">
+			<span class="rail-label">♪ MUSIC</span><span class="rail-state" id="rail-music-state">— HIDDEN</span>
+		</button>
 
 		<!-- TASKS -->
 		<div class="tasks-section focus-hide" id="mission-log-panel">
