@@ -19,7 +19,7 @@ notebook_bp = Blueprint('notebook', __name__)
 
 # Cache-bust the notebook bundle off the max mtime of its own static files, so a
 # normal reload always fetches the latest (mirrors the cockpit's asset_v approach).
-_NB_ASSETS = ('notebook.css', 'notebook.js')
+_NB_ASSETS = ('notebook.css', 'notebook.js', 'notebook-editor.js')
 
 
 def _asset_v():

@@ -43,8 +43,10 @@
 					<button type="button" onclick="nbFileCurrent()" title="File to cabinet (Ctrl+Shift+F)">🗄 FILE</button>
 					<button type="button" onclick="nbTearCurrent()" title="Tear this scrap">⌦ TEAR</button>
 				</div>
-				<textarea id="nb-page-input" spellcheck="true"
-				          placeholder="the page — a blank line starts a new scrap">{{ page }}</textarea>
+				<!-- CodeMirror 6 iA-Writer editor (shared with 48pages) mounts here; the
+				     initial page rides in a hidden textarea so the exact text is preserved. -->
+				<textarea id="nb-page-initial" style="display:none">{{ page }}</textarea>
+				<div id="nb-page-editor" class="nb-page-editor"></div>
 				<div class="nb-fs-hints">CTRL+ENTER ROLL · ⌦ TEAR · ESC COCKPIT · A BLANK LINE STARTS A NEW SCRAP</div>
 			</div>
 
@@ -122,6 +124,7 @@
 		</div>
 	</div>
 
+	<script src="{{ url_for('static', filename='notebook-editor.js') }}?v={{ asset_v }}"></script>
 	<script src="{{ url_for('static', filename='notebook.js') }}?v={{ asset_v }}"></script>
 </body>
 </html>

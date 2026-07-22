@@ -274,3 +274,18 @@
 .nb-cab-card[draggable="true"] { cursor: grab; }
 .nb-cab-card[draggable="true"]:active { cursor: grabbing; }
 .nb-cab-drawer.drag-over { border-left-color: var(--amber); background: var(--amber-dim); color: var(--amber); }
+
+/* CodeMirror 6 iA editor host + map its --np-* vars to the cockpit's amber skin */
+.nb-fs {
+	--np-bg: var(--input-bg);
+	--np-grid: var(--nb-rule, var(--border));
+	--np-text: var(--ink, var(--text-body));
+	--np-text-strong: var(--amber-hi);
+	--np-muted: var(--muted);
+	--np-faint: var(--faint, var(--border-hi));
+	--np-accent: var(--amber);
+	--np-border-hi: var(--border-hi);
+	--np-accent-chip-bg: var(--amber-dim);
+}
+.nb-page-editor { flex: 1; min-height: 64vh; display: flex; overflow: hidden; background: var(--input-bg); }
+.nb-page-editor .cm-editor { height: 100%; width: 100%; }

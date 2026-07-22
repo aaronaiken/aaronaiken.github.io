@@ -123,8 +123,9 @@
 
 	// ---------- FULLSCREEN INKWELL (on /notebook) ----------
 	function initFullscreen() {
-		var page = document.getElementById('nb-page-input');
-		if (!page) return;
+		var host = document.getElementById('nb-page-editor');
+		var initialEl = document.getElementById('nb-page-initial');
+		if (!host) return;
 		var gaugeLabel = document.getElementById('nb-page-gauge');
 		var meter = document.getElementById('nb-meter');
 		var meterTicks = document.getElementById('nb-meter-ticks');
@@ -135,10 +136,17 @@
 		var pageWrap = document.getElementById('nb-fs-page');
 		var bdList = document.getElementById('nb-bd-list');
 		var bdInput = document.getElementById('nb-bd-input');
-		var saveTimer = null, lastBudget = null;
+		var saveTimer = null, lastBudget = null, ed = null;
 
 		var TICKS = buildTicks(meterTicks);
 
+		// Budget from the editor's real rendered line-units (matches 48pages exactly:
+		// 1 page = 20 line-units on the 30px grid, triage at 39, soft-block at 48).
+		function budgetFromUnits(units) {
+			var LPP = 20, PB = 48, TP = 39, pu = units / LPP;
+			return { units: units, pages_used: pu, page_budget: PB, triage_page: TP,
+				pages_left: Math.max(0, PB - pu), fill: Math.min(1, pu / PB), triage: pu >= TP, full: pu >= PB };
+		}
 		function paint(b) {
 			if (!b) return;
 			lastBudget = b;
@@ -147,6 +155,7 @@
 			if (meter) meter.classList.toggle('is-triage', !!b.triage);
 			if (pageWrap) pageWrap.classList.toggle('is-triage', !!b.triage);
 			if (banner) banner.classList.toggle('is-on', !!b.triage);
+			if (ed) ed.setFull(!!b.full);
 		}
 		var lastSaved = null, saving = false;
 		function agoStr(ms) {
@@ -166,35 +175,22 @@
 			saving = true; renderStatus();
 			fetch(PAGE_URL, {
 				method: 'POST', headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ content: page.value, force: true })
+				body: JSON.stringify({ content: ed ? ed.getValue() : '', force: true })
 			}).then(function (r) { return r.json(); })
-				.then(function (d) { paint(d.budget); saving = false; lastSaved = Date.now(); renderStatus(); })
+				.then(function () { saving = false; lastSaved = Date.now(); renderStatus(); })
 				.catch(function () { saving = false; if (status) status.textContent = 'OFFLINE'; });
 		}
 		function scheduleSave() { saving = true; renderStatus(); clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 1500); }
 		setInterval(renderStatus, 5000);
 
-		// The scrap the caret sits in = the block between the surrounding blank lines.
-		function currentBlock() {
-			var v = page.value, pos = page.selectionStart;
-			var start = v.lastIndexOf('\n\n', pos - 1);
-			start = start === -1 ? 0 : start + 2;
-			var endRel = v.indexOf('\n\n', pos);
-			var end = endRel === -1 ? v.length : endRel;
-			return { start: start, end: end, text: v.slice(start, end).replace(/^\s+|\s+$/g, '') };
-		}
+		// The scrap the caret sits in = the block between blank lines (from the editor).
+		function currentBlock() { return ed ? ed.currentBlock() : { start: 0, end: 0, text: '' }; }
 		function refreshScrapBar() {
 			var t = currentBlock().text;
 			if (scrapWhat) scrapWhat.textContent = t ? (t.split('\n')[0].slice(0, 42) + (t.length > 42 ? '…' : '')) : '—';
 			if (scrapBar) scrapBar.classList.toggle('is-on', !!t);
 		}
-		function removeBlock(blk) {
-			var v = page.value;
-			var before = v.slice(0, blk.start).replace(/\n+$/, '');
-			var after = v.slice(blk.end).replace(/^\n+/, '');
-			page.value = before && after ? before + '\n\n' + after : before + after;
-			page.selectionStart = page.selectionEnd = Math.min(before.length, page.value.length);
-		}
+		function removeBlock(blk) { if (ed) ed.removeBlock(blk); }
 
 		window.nbTearCurrent = function () {
 			var blk = currentBlock(); if (!blk.text) return;
@@ -210,17 +206,27 @@
 				.catch(function () { flash('offline'); });
 		};
 
-		page.addEventListener('input', function () { scheduleSave(); refreshScrapBar(); });
-		page.addEventListener('click', refreshScrapBar);
-		page.addEventListener('keyup', refreshScrapBar);
-		page.addEventListener('keydown', function (e) {
-			// Soft-block once the page is full: Enter/navigation/delete still work, new characters don't.
-			if (lastBudget && lastBudget.full && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-				e.preventDefault(); flash('PAGE FULL — file, roll, or tear'); return;
-			}
-			if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); window.nbRollCurrent(); }
-			if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'f' || e.key === 'F')) { e.preventDefault(); window.nbFileCurrent(); }
-		});
+		// mount the CodeMirror 6 iA-Writer editor (shared with 48pages)
+		if (window.NotebookEditor) {
+			ed = window.NotebookEditor.create(host, {
+				doc: initialEl ? initialEl.value : '',
+				placeholder: 'the page — a blank line starts a new scrap',
+				onUpdate: function (u) {
+					paint(budgetFromUnits(u.lineUnits));
+					refreshScrapBar();
+					if (u.docChanged) scheduleSave();
+				},
+				onKeydown: function (e) {
+					if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); window.nbRollCurrent(); }
+					if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'f' || e.key === 'F')) { e.preventDefault(); window.nbFileCurrent(); }
+				}
+			});
+			window._nbEditor = ed;
+			paint(budgetFromUnits(ed.lineUnits()));
+			refreshScrapBar();
+		} else if (initialEl) {
+			host.textContent = 'editor failed to load — reload the page';
+		}
 
 		// ---- right page: live Below Deck (same store as /below-deck) ----
 		function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
@@ -404,8 +410,8 @@
 				.then(function () { flash('re-tagged'); window.nbCabRender(); }).catch(function () {});
 		};
 		window.nbCabToPage = function (id) {
-			var c = cabItemById(id); if (!c) return;
-			page.value = (page.value.replace(/\n+$/, '') + (page.value.trim() ? '\n\n' : '') + c.body_md).replace(/^\n+/, '');
+			var c = cabItemById(id); if (!c || !ed) return;
+			ed.appendText(c.body_md || '');
 			saveNow(); refreshScrapBar();
 			fetch('/notebook/cabinet/' + id + '/delete', { method: 'POST' }).then(function () { updateCabCount(); window.nbCabRender(); }).catch(function () {});
 			flash('returned to page');
@@ -426,11 +432,10 @@
 				.then(function () { updateCabCount(); window.nbCabRender(); }).catch(function () {});
 		};
 
-		// initial paint
+		// initial paint (the editor already painted the budget from its real line-units on mount)
 		loadBelowDeck();
 		refreshScrapBar();
 		updateCabCount();
-		fetch(PAGE_URL).then(function (r) { return r.json(); }).then(function (d) { paint(d.budget); }).catch(function () {});
 	}
 
 	// ---------- MEDIA RAILS (home stack) ----------
@@ -486,7 +491,7 @@
 				e.preventDefault(); if (window.nbCabToggle) window.nbCabToggle();
 			}
 			// Esc closes the cabinet if open, otherwise returns to the cockpit.
-			if (e.key === 'Escape' && document.getElementById('nb-page-input')) {
+			if (e.key === 'Escape' && document.getElementById('nb-page-editor')) {
 				var cabEl = document.getElementById('nb-cabinet');
 				if (cabEl && cabEl.classList.contains('is-open')) { if (window.nbCabClose) window.nbCabClose(); return; }
 				window.location.href = '/publish';
