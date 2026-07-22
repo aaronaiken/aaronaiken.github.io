@@ -86,8 +86,8 @@
 
 	.container {
 		width: 100%;
-		max-width: 520px;
-		padding: 28px 24px 48px;
+		max-width: 820px;
+		padding: 28px 32px 48px;
 		position: relative;
 		align-self: flex-start;
 		z-index: 10;
@@ -724,10 +724,14 @@
 		flex-shrink: 0; white-space: nowrap;
 	}
 	#publish-btn.tx-send:hover { background: var(--amber-hi); border-color: var(--amber); color: var(--btn-solid-text); }
-	.tx-expand { display: none; margin-top: 8px; }
+	.tx-expand { display: none; margin-top: 10px; }
 	body.tx-open .tx-expand { display: block; }
-	body.tx-open .tx-compose textarea#status-input { height: 120px; overflow: auto; }
-	body.tx-open .tx-compose .tx-line { align-items: flex-start; }
+	/* expanded: // TX label on top, full-width box, count + SEND on the bottom-right */
+	body.tx-open .tx-compose .tx-line { flex-wrap: wrap; align-items: center; row-gap: 8px; }
+	body.tx-open .tx-tag { order: 1; flex: 1 1 auto; }
+	body.tx-open .tx-compose textarea#status-input { order: 2; flex: 1 1 100%; height: 120px; overflow: auto; }
+	body.tx-open .tx-count { order: 3; margin-left: auto; }
+	body.tx-open #publish-btn.tx-send { order: 4; }
 
 	/* now-playing chip retired from the home stack (players carry their own controls) */
 	#now-playing-chip { display: none !important; }
