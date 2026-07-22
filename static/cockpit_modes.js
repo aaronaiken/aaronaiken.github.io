@@ -102,14 +102,6 @@
 	document.addEventListener('keydown', function(e) {
 		if (e.key === 'Escape') {
 			// Close overlays first if any are open
-			if (document.getElementById('quick-tx-overlay').classList.contains('is-open')) {
-				quickTxClose();
-				return;
-			}
-			if (document.getElementById('brain-dump-overlay').classList.contains('is-open')) {
-				brainDumpClose();
-				return;
-			}
 			if (document.getElementById('cmd-palette-overlay').classList.contains('is-open')) {
 				cmdClose();
 				return;
@@ -2322,115 +2314,6 @@
 	})();
 
 	// ============================================================
-	// BRAIN DUMP — Ctrl+Space (anywhere)
-	// ============================================================
-
-	document.addEventListener('keydown', function(e) {
-		if (e.ctrlKey && e.code === 'Space') {
-			e.preventDefault();
-			brainDumpOpen();
-		}
-	});
-
-	function brainDumpOpen() {
-		const overlay = document.getElementById('brain-dump-overlay');
-		overlay.classList.add('is-open');
-		setTimeout(function() {
-			document.getElementById('brain-dump-textarea').focus();
-		}, 50);
-	}
-
-	function brainDumpClose() {
-		document.getElementById('brain-dump-overlay').classList.remove('is-open');
-		document.getElementById('brain-dump-textarea').value = '';
-		document.getElementById('brain-dump-tag').value = '';
-	}
-
-	document.getElementById('brain-dump-overlay').addEventListener('click', function(e) {
-		if (e.target === this) brainDumpClose();
-	});
-
-	document.getElementById('brain-dump-textarea').addEventListener('keydown', function(e) {
-		if (e.key === 'Enter' && !e.shiftKey) {
-			e.preventDefault();
-			brainDumpSave();
-		}
-	});
-
-	function brainDumpSave() {
-		const text = document.getElementById('brain-dump-textarea').value.trim();
-		const tag  = document.getElementById('brain-dump-tag').value;
-		if (!text) { brainDumpClose(); return; }
-
-		const fd = new FormData();
-		fd.append('title', text);
-		if (tag) fd.append('tag', tag);
-
-		fetch('/below-deck/add', { method: 'POST', body: fd })
-			.then(r => r.json())
-			.then(data => {
-				if (data.success) {
-					playChirp(880, 'sine');
-					brainDumpClose();
-				}
-			})
-			.catch(() => brainDumpClose());
-	}
-
-	// ============================================================
-	// QUICK TRANSMISSION — Ctrl+Shift+U (work + after-dark only)
-	// ============================================================
-
-	document.addEventListener('keydown', function(e) {
-		if (e.ctrlKey && e.shiftKey && (e.key === 'U' || e.key === 'u')) {
-			if (COCKPIT_MODE !== 'work' && COCKPIT_MODE !== 'after-dark') return;
-			e.preventDefault();
-			quickTxOpen();
-		}
-	});
-
-	function quickTxOpen() {
-		const overlay = document.getElementById('quick-tx-overlay');
-		overlay.classList.add('is-open');
-		setTimeout(function() {
-			document.getElementById('quick-tx-textarea').focus();
-		}, 50);
-	}
-
-	function quickTxClose() {
-		document.getElementById('quick-tx-overlay').classList.remove('is-open');
-		document.getElementById('quick-tx-textarea').value = '';
-	}
-
-	document.getElementById('quick-tx-overlay').addEventListener('click', function(e) {
-		if (e.target === this) quickTxClose();
-	});
-
-	document.getElementById('quick-tx-textarea').addEventListener('keydown', function(e) {
-		if (e.key === 'Enter' && !e.shiftKey) {
-			e.preventDefault();
-			quickTxSend();
-		}
-	});
-
-	function quickTxSend() {
-		const text = document.getElementById('quick-tx-textarea').value.trim();
-		if (!text) { quickTxClose(); return; }
-
-		const fd = new FormData();
-		fd.append('status', text);
-
-		fetch('/publish', { method: 'POST', body: fd })
-			.then(r => {
-				if (r.ok) {
-					playChirp(880, 'sine');
-					quickTxClose();
-				}
-			})
-			.catch(() => quickTxClose());
-	}
-
-	// ============================================================
 	// COMMAND PALETTE — Ctrl+K
 	// ============================================================
 
@@ -2445,7 +2328,6 @@
 		{ icon: '⌘', label: 'Command Deck',   hint: '/command-deck/', action: () => cmdGo('/command-deck/') },
 		{ icon: '▼', label: 'Below Deck',     hint: '/below-deck',    action: () => cmdGo('/below-deck') },
 		{ icon: '⌇', label: 'Publish Status', hint: '/publish',       action: () => window.location.href = '/publish' },
-		{ icon: '✦', label: 'Brain Dump',     hint: 'Ctrl+Space',     action: () => { cmdClose(); brainDumpOpen(); } },
 		{ icon: '▶', label: 'Toggle YouTube Player', hint: 'Ctrl+Shift+Y', action: () => { cmdClose(); ytPlayerToggle(); } },
 		{ icon: '▹', label: 'Toggle Video Player', hint: 'Ctrl+Shift+V', action: () => { cmdClose(); adPlayerToggleGated(); } },
 		{ icon: '♪', label: 'Toggle Music Player', hint: '', action: () => { cmdClose(); adMusicPlayerToggle(); } },
@@ -2459,20 +2341,13 @@
 		{ icon: '$', label: 'The Ledger',     hint: '/ledger/',       action: () => cmdGo('/ledger/') },
 		{ icon: '⚙', label: 'Settings',       hint: 'Ctrl+,',         action: () => { cmdClose(); if (typeof settingsOpen === 'function') settingsOpen(); } },
 		{ icon: '🙏', label: 'Insert Grateful Log', hint: '',         action: () => { cmdClose(); if (typeof insertGratefulLog === 'function') insertGratefulLog(); } },
-		{ icon: '▦', label: 'Toggle Quick Insert', hint: '',          action: () => { cmdClose(); if (typeof toggleQuickInsert === 'function') toggleQuickInsert(); } },
-		{ icon: '▦', label: 'Toggle Comms Log', hint: '',             action: () => { cmdClose(); if (typeof toggleComms === 'function') toggleComms(); } },
 		{ icon: '▦', label: 'Toggle Mission Log', hint: '',           action: () => { cmdClose(); if (typeof toggleTasks === 'function') toggleTasks(); } },
-		{ icon: '▦', label: 'Toggle Scratch Pad', hint: '',           action: () => { cmdClose(); if (typeof scratchToggle === 'function') scratchToggle(); } },
 		{ icon: '⏎', label: 'Refresh',        hint: '',               action: () => window.location.reload() },
 	];
 
 	function getAllCmdItems() {
 		const timerItems = (typeof window.getTimerCmdItems === 'function') ? window.getTimerCmdItems() : [];
-		var presetItems = (typeof getAllPresets === 'function' ? getAllPresets() : []).map(function (p) {
-			return { icon: '▦', label: 'Layout: ' + p.name, hint: 'preset',
-			         action: function () { cmdClose(); if (typeof applyPreset === 'function') applyPreset(p.config); } };
-		});
-		return CMD_ITEMS.concat(presetItems).concat(timerItems);
+		return CMD_ITEMS.concat(timerItems);
 	}
 
 	let cmdFiltered = [...CMD_ITEMS];

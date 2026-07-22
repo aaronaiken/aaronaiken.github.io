@@ -183,46 +183,6 @@
 	<!-- After Dark Status Line -->
 	<div id="ad-status-line" aria-live="polite"></div>
 
-	<!-- Brain Dump Popup (Ctrl+Space, all modes) -->
-	<div id="brain-dump-overlay" role="dialog" aria-label="Brain dump">
-		<div id="brain-dump-box">
-			<div id="brain-dump-label">// BRAIN DUMP · BELOW DECK</div>
-			<textarea
-				id="brain-dump-textarea"
-				placeholder="capture it fast..."
-				maxlength="500"
-			></textarea>
-			<div id="brain-dump-footer">
-				<select id="brain-dump-tag">
-					<option value="">no tag</option>
-					<option value="idea">idea</option>
-					<option value="work">work</option>
-					<option value="personal">personal</option>
-					<option value="errand">errand</option>
-					<option value="later">later</option>
-				</select>
-				<button id="brain-dump-save" onclick="brainDumpSave()">SEND TO BELOW DECK</button>
-				<span id="brain-dump-hint">ESC to cancel</span>
-			</div>
-		</div>
-	</div>
-
-	<!-- Quick Transmission Popup (Ctrl+Shift+U, work + after-dark) -->
-	<div id="quick-tx-overlay" role="dialog" aria-label="Quick transmission">
-		<div id="quick-tx-box">
-			<div id="quick-tx-label">// QUICK TRANSMISSION</div>
-			<textarea
-				id="quick-tx-textarea"
-				placeholder="status update..."
-				maxlength="280"
-			></textarea>
-			<div id="quick-tx-footer">
-				<button id="quick-tx-send" onclick="quickTxSend()">TRANSMIT</button>
-				<span id="quick-tx-hint">ESC to cancel · Enter to send</span>
-			</div>
-		</div>
-	</div>
-
 	<!-- Command Palette (Ctrl+K) -->
 	<div id="cmd-palette-overlay" role="dialog" aria-label="Command palette">
 		<div id="cmd-palette-box">
@@ -237,12 +197,6 @@
 			<div class="settings-head">
 				<span>// SETTINGS</span>
 				<button class="settings-close" onclick="settingsClose()" aria-label="Close">✕</button>
-			</div>
-			<div class="settings-section">
-				<div class="settings-label">// Layout Presets</div>
-				<div class="settings-hint">Apply a saved layout, or snapshot your current one. Also on Ctrl+K.</div>
-				<div id="settings-preset-list"></div>
-				<button class="settings-save-btn" onclick="settingsSaveCurrent()">+ SAVE CURRENT LAYOUT</button>
 			</div>
 			<div class="settings-section">
 				<div class="settings-label">// Navigation</div>

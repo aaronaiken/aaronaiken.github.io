@@ -80,7 +80,6 @@ from helpers.git import get_git_status, perform_git_ops
 from helpers.comms import get_active_tags, get_valid_comms, get_after_dark_comms
 
 
-from helpers.scratch import load_scratch_work, save_scratch_work
 
 
 from helpers.omg_lol import post_to_omg_lol
