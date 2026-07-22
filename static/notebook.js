@@ -285,10 +285,9 @@
 		function openDrawer(mode) {
 			if (!cab) return;
 			cab.classList.add('is-open');
-			if (cabFiling) cabFiling.style.display = mode === 'file' ? 'block' : 'none';
-			if (cabBrowse) cabBrowse.style.display = mode === 'browse' ? 'block' : 'none';
+			cab.classList.toggle('is-filing', mode === 'file');
 		}
-		window.nbCabClose = function () { if (cab) cab.classList.remove('is-open'); };
+		window.nbCabClose = function () { if (cab) cab.classList.remove('is-open', 'is-filing'); };
 
 		// filing
 		function renderFileTags() {
@@ -346,7 +345,7 @@
 			} catch (e) { return ''; }
 		}
 		window.nbCabToggle = function () {
-			if (cab && cab.classList.contains('is-open') && cabBrowse && cabBrowse.style.display !== 'none') { window.nbCabClose(); return; }
+			if (cab && cab.classList.contains('is-open') && !cab.classList.contains('is-filing')) { window.nbCabClose(); return; }
 			openDrawer('browse'); window.nbCabRender();
 		};
 		window.nbCabTag = function (t) { cabActiveTag = (cabActiveTag === t ? '' : t); window.nbCabRender(); };
@@ -362,23 +361,28 @@
 				else if (sort === 'az') items.sort(function (a, b) { return (a.title || '').localeCompare(b.title || ''); });
 				cabItems = items;
 				if (cabTagRail) {
-					var rail = '<button class="nb-cab-tagbtn' + (cabActiveTag === '' ? ' is-on' : '') + '" onclick="nbCabTag(\'\')">ALL</button>';
+					var allN = (cabCount && cabCount.textContent) || items.length;
+					var rail = '<button class="nb-cab-drawer' + (cabActiveTag === '' ? ' is-on' : '') + '" onclick="nbCabTag(\'\')"><span>ALL</span><span class="nb-cab-dn">' + allN + '</span></button>';
 					Object.keys(cabAllTags).sort().forEach(function (t) {
-						rail += '<button class="nb-cab-tagbtn' + (cabActiveTag === t ? ' is-on' : '') + '" onclick="nbCabTag(\'' + esc(t) + '\')">' + esc(t) + ' ' + cabAllTags[t] + '</button>';
+						rail += '<button class="nb-cab-drawer' + (cabActiveTag === t ? ' is-on' : '') + '" onclick="nbCabTag(\'' + esc(t) + '\')"><span>#' + esc(t) + '</span><span class="nb-cab-dn">' + cabAllTags[t] + '</span></button>';
 					});
 					cabTagRail.innerHTML = rail;
 				}
 				if (!items.length) { cabCards.innerHTML = '<div class="nb-cab-empty">nothing filed' + (search || cabActiveTag ? ' here' : ' yet') + '.</div>'; return; }
 				cabCards.innerHTML = items.map(function (c) {
-					var excerpt = (c.body_md || '').replace(/\n/g, ' ').slice(0, 90);
-					var tags = (c.tags || []).map(function (t) { return '<span class="nb-cab-ctag">' + esc(t) + '</span>'; }).join('');
-					return '<div class="nb-cab-card"><div class="nb-cab-card-top"><span class="nb-cab-ctitle">' + esc(c.title) + '</span><span class="nb-cab-cage">' + ageStr(c.filed) + '</span></div>'
+					var raw = (c.body_md || '').replace(/\n/g, ' ');
+					var excerpt = raw.slice(0, 120) + (raw.length > 120 ? '…' : '');
+					var tags = (c.tags || []).map(function (t) { return '<span class="nb-cab-ctag">#' + esc(t) + '</span>'; }).join('');
+					return '<div class="nb-cab-card">'
+						+ '<div class="nb-cab-card-top"><span class="nb-cab-ctitle">' + esc(c.title) + '</span><span class="nb-cab-cage">' + ageStr(c.filed).toUpperCase() + '</span></div>'
 						+ '<div class="nb-cab-cexc">' + esc(excerpt) + '</div>'
-						+ (tags ? '<div class="nb-cab-ctags">' + tags + '</div>' : '')
-						+ '<div class="nb-cab-cacts"><button onclick="nbCabToPage(' + c.id + ')" title="Return to page">↩</button>'
-						+ '<button onclick="nbCabRoll(' + c.id + ')" title="Roll to Below Deck">→</button>'
+						+ '<div class="nb-cab-cbottom"><div class="nb-cab-ctags">' + tags + '</div>'
+						+ '<div class="nb-cab-cacts">'
+						+ '<button onclick="nbCabToPage(' + c.id + ')" title="Return to page">↩ TO PAGE</button>'
+						+ '<button onclick="nbCabRoll(' + c.id + ')" title="Roll to Below Deck">→ ROLL</button>'
 						+ '<button onclick="nbCabCopy(' + c.id + ')" title="Copy text">⧉</button>'
-						+ '<button onclick="nbCabShred(' + c.id + ')" title="Shred">⌦</button></div></div>';
+						+ '<button onclick="nbCabShred(' + c.id + ')" title="Shred">⌦</button>'
+						+ '</div></div></div>';
 				}).join('');
 			}).catch(function () {});
 		};

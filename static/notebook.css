@@ -172,7 +172,7 @@
 	.nb-meter-cap { display: none; }
 }
 
-/* ---------- CABINET ---------- */
+/* ---------- CABINET (full-page drawer-rail + card grid) ---------- */
 .nb-cab-tab {
 	position: fixed; right: 0; top: 46%; z-index: 40;
 	writing-mode: vertical-rl; text-orientation: mixed;
@@ -180,32 +180,62 @@
 	border: 1px solid var(--border-hi); border-right: none; border-radius: 3px 0 0 3px;
 	font-family: 'Share Tech Mono', monospace; font-size: 0.58rem; letter-spacing: 0.18em;
 	text-transform: uppercase; padding: 12px 6px; cursor: pointer;
-	transition: color 0.15s, border-color 0.15s;
 }
 .nb-cab-tab:hover { color: var(--amber-hi); border-color: var(--amber-lo); }
 
-.nb-cabinet {
-	position: fixed; top: 0; right: 0; height: 100vh; width: min(440px, 92vw);
-	background: var(--cab-bg, var(--bg2)); border-left: 1px solid var(--border-hi);
-	box-shadow: var(--shadow-drawer, -8px 0 24px rgba(0,0,0,.3));
-	z-index: 60; transform: translateX(100%); transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-	display: flex; flex-direction: column; overflow: hidden;
-}
-.nb-cabinet.is-open { transform: translateX(0); }
-.nb-cab-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
-.nb-cab-htitle { font-family: 'VT323', monospace; font-size: 1.3rem; color: var(--amber); letter-spacing: 0.06em; }
-.nb-cab-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; }
-.nb-cab-close:hover { color: var(--amber); }
-.nb-cab-sub { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.nb-cabinet { position: fixed; inset: 0; z-index: 60; display: none; flex-direction: column; background: var(--bg2); }
+.nb-cabinet.is-open { display: flex; }
 
-/* filing panel */
-.nb-cab-filing { display: none; padding: 16px 18px; overflow-y: auto; }
-.nb-file-preview {
-	background: var(--input-bg); border: 1px solid var(--border); border-left: 3px solid var(--nb-scrap-accent, var(--amber-lo));
-	border-radius: 2px; padding: 10px 12px; margin-bottom: 14px;
-	font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--ink, var(--text-body));
-	white-space: pre-wrap; max-height: 180px; overflow-y: auto;
-}
+/* top bar */
+.nb-cab-top { display: flex; align-items: center; gap: 18px; padding: 14px 22px; border-bottom: 1px solid var(--border-hi); }
+.nb-cab-brand { display: flex; align-items: baseline; gap: 10px; flex-shrink: 0; }
+.nb-cab-icon { font-size: 1.1rem; }
+.nb-cab-htitle { font-family: 'VT323', monospace; font-size: 1.5rem; letter-spacing: 0.06em; color: var(--amber); }
+.nb-cab-count-lbl { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.nb-cab-search { flex: 1; max-width: 560px; margin: 0 auto; background: var(--input-bg); border: 1px solid var(--amber-lo); border-radius: 3px; color: var(--text-body); font-family: 'Crimson Pro', Georgia, serif; font-style: italic; font-size: 0.95rem; padding: 9px 14px; outline: none; }
+.nb-cab-search::placeholder { color: var(--muted); }
+.nb-cab-topright { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.nb-cab-sort { background: var(--input-bg); border: 1px solid var(--border-hi); border-radius: 3px; color: var(--muted); font-family: 'Share Tech Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; padding: 8px 10px; }
+.nb-cab-esc { background: none; border: 1px solid var(--border-hi); border-radius: 3px; color: var(--muted); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.58rem; letter-spacing: 0.16em; padding: 8px 12px; }
+.nb-cab-esc:hover { color: var(--amber); border-color: var(--amber-lo); }
+
+/* body: rail + cards */
+.nb-cab-body { flex: 1; display: grid; grid-template-columns: 240px 1fr; overflow: hidden; }
+.nb-cab-rail { border-right: 1px solid var(--border); padding: 20px 18px; overflow-y: auto; display: flex; flex-direction: column; }
+.nb-cab-rail-h { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+.nb-cab-tagrail { display: flex; flex-direction: column; gap: 2px; }
+.nb-cab-drawer { display: flex; align-items: center; justify-content: space-between; background: none; border: none; border-left: 2px solid transparent; color: var(--text-body); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 10px; }
+.nb-cab-drawer:hover { color: var(--amber); }
+.nb-cab-drawer.is-on { border-left-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+.nb-cab-dn { color: var(--muted); }
+.nb-cab-drawer.is-on .nb-cab-dn { color: var(--amber-lo); }
+.nb-cab-rail-foot { margin-top: auto; padding-top: 18px; font-family: 'Share Tech Mono', monospace; font-size: 0.52rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint, var(--border-hi)); line-height: 1.6; }
+
+.nb-cab-cards { padding: 20px 22px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-content: start; }
+.nb-cab-card { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 18px 20px; display: flex; flex-direction: column; }
+.nb-cab-card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.nb-cab-ctitle { font-family: 'Crimson Pro', Georgia, serif; font-weight: 400; font-size: 1.25rem; color: var(--ink, var(--text-body)); }
+.nb-cab-cage { font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; letter-spacing: 0.1em; color: var(--faint, var(--border-hi)); white-space: nowrap; }
+.nb-cab-cexc { font-family: 'Crimson Pro', Georgia, serif; font-size: 1rem; line-height: 1.5; color: var(--muted); margin: 8px 0 14px; }
+.nb-cab-cbottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; min-height: 22px; }
+.nb-cab-ctags { display: flex; flex-wrap: wrap; gap: 6px; }
+.nb-cab-ctag { font-family: 'Share Tech Mono', monospace; font-size: 0.54rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--amber-lo); border: 1px solid var(--amber-lo); border-radius: 2px; padding: 3px 7px; }
+.nb-cab-cacts { display: none; align-items: center; gap: 10px; }
+.nb-cab-card:hover .nb-cab-cacts { display: flex; }
+.nb-cab-card:hover .nb-cab-ctags { display: none; }
+.nb-cab-cacts button { background: none; border: none; color: var(--amber-lo); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px; white-space: nowrap; }
+.nb-cab-cacts button:hover { color: var(--amber-hi); }
+.nb-cab-empty { grid-column: 1 / -1; padding: 30px 4px; color: var(--muted); font-style: italic; font-family: 'Crimson Pro', Georgia, serif; }
+
+/* footer */
+.nb-cab-foot { display: flex; align-items: center; justify-content: space-between; padding: 12px 22px; border-top: 1px solid var(--border); font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint, var(--border-hi)); }
+
+/* filing — centered panel over the cabinet */
+.nb-cab-filing { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); z-index: 2; }
+.nb-cabinet.is-filing .nb-cab-filing { display: flex; }
+.nb-cab-filing-inner { background: var(--bg2); border: 1px solid var(--border-hi); border-radius: 5px; padding: 20px 22px; width: min(480px, 92vw); max-height: 86vh; overflow-y: auto; box-shadow: var(--shadow-pop, 0 12px 40px rgba(0,0,0,.4)); }
+.nb-cab-sub { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+.nb-file-preview { background: var(--input-bg); border: 1px solid var(--border); border-left: 3px solid var(--amber-lo); border-radius: 2px; padding: 10px 12px; margin-bottom: 14px; font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--ink, var(--text-body)); white-space: pre-wrap; max-height: 180px; overflow-y: auto; }
 .nb-file-l { display: block; font-family: 'Share Tech Mono', monospace; font-size: 0.54rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin: 10px 0 5px; }
 .nb-file-in { width: 100%; box-sizing: border-box; background: var(--input-bg); border: 1px solid var(--border); border-radius: 2px; color: var(--text-body); font-family: 'Share Tech Mono', monospace; font-size: 0.78rem; padding: 8px 10px; outline: none; }
 .nb-file-in:focus { border-color: var(--amber-lo); }
@@ -219,28 +249,12 @@
 .nb-file-keep { background: none; border: 1px dashed var(--border-hi); color: var(--muted); border-radius: 2px; cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.12em; padding: 9px; }
 .nb-file-keep:hover { color: var(--amber); border-color: var(--amber-lo); }
 
-/* browse panel */
-.nb-cab-browse { display: none; flex-direction: column; min-height: 0; flex: 1; padding: 14px 16px; overflow: hidden; }
-.nb-cab-search-row { display: flex; gap: 6px; margin-bottom: 10px; }
-.nb-cab-search { flex: 1; background: var(--input-bg); border: 1px solid var(--border); border-radius: 2px; color: var(--text-body); font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; padding: 7px 10px; outline: none; }
-.nb-cab-search:focus { border-color: var(--amber-lo); }
-.nb-cab-sort { background: var(--input-bg); border: 1px solid var(--border); border-radius: 2px; color: var(--muted); font-family: 'Share Tech Mono', monospace; font-size: 0.56rem; letter-spacing: 0.1em; padding: 0 6px; }
-.nb-cab-tagrail { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
-.nb-cab-tagbtn { background: var(--cab-rail-bg, var(--bg2)); border: 1px solid var(--border); border-radius: 2px; color: var(--muted); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.58rem; letter-spacing: 0.06em; padding: 3px 8px; }
-.nb-cab-tagbtn.is-on { color: var(--amber-hi); border-color: var(--amber-lo); background: var(--cab-active-bg, var(--amber-dim)); }
-.nb-cab-tagbtn:hover { border-color: var(--amber-lo); }
-.nb-cab-cards { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-.nb-cab-card { background: var(--cab-card-bg, var(--bg)); border: 1px solid var(--border); border-radius: 3px; padding: 10px 12px; }
-.nb-cab-card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.nb-cab-ctitle { font-family: 'Crimson Pro', Georgia, serif; font-size: 0.98rem; color: var(--ink, var(--text-body)); }
-.nb-cab-cage { font-family: 'Share Tech Mono', monospace; font-size: 0.52rem; letter-spacing: 0.1em; color: var(--faint, var(--border-hi)); white-space: nowrap; }
-.nb-cab-cexc { font-family: 'Crimson Pro', Georgia, serif; font-size: 0.82rem; color: var(--muted); margin: 4px 0 6px; }
-.nb-cab-ctags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
-.nb-cab-ctag { font-family: 'Share Tech Mono', monospace; font-size: 0.52rem; letter-spacing: 0.06em; color: var(--muted); border: 1px solid var(--border); border-radius: 2px; padding: 2px 6px; }
-.nb-cab-cacts { display: flex; gap: 6px; }
-.nb-cab-cacts button { flex: 1; background: none; border: 1px solid var(--border-hi); border-radius: 2px; color: var(--muted); cursor: pointer; font-size: 0.72rem; padding: 4px 0; }
-.nb-cab-cacts button:hover { color: var(--amber); border-color: var(--amber-lo); }
-.nb-cab-empty { padding: 20px 4px; color: var(--muted); font-style: italic; font-family: 'Crimson Pro', Georgia, serif; }
+@media (max-width: 720px) {
+	.nb-cab-body { grid-template-columns: 1fr; }
+	.nb-cab-rail { border-right: none; border-bottom: 1px solid var(--border); }
+	.nb-cab-top { flex-wrap: wrap; }
+	.nb-cab-search { order: 3; flex: 1 1 100%; max-width: none; }
+}
 
 /* notebook header right cluster (image 18): SAVED · Ns AGO · 🦇 · 🏠 · ESC·COCKPIT */
 .nb-fs-sub2 { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }

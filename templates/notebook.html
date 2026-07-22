@@ -65,45 +65,59 @@
 			</div>
 		</div>
 
-		<!-- CABINET — right-edge tab + a drawer that slides over the right page. -->
-		<button class="nb-cab-tab" id="nb-cab-tab" onclick="nbCabToggle()" title="Cabinet (Ctrl+Shift+C)">🗄 CABINET · <span id="nb-cab-count">0</span></button>
+		<!-- CABINET — right-edge tab opens a full-page drawer-rail + card-grid view. -->
+		<button class="nb-cab-tab" id="nb-cab-tab" onclick="nbCabToggle()" title="Cabinet (Ctrl+Shift+C)">🗄 CABINET</button>
 
 		<div class="nb-cabinet" id="nb-cabinet" aria-label="Cabinet">
-			<div class="nb-cab-head">
-				<span class="nb-cab-htitle">🗄 CABINET</span>
-				<button class="nb-cab-close" onclick="nbCabClose()" title="Close (Esc)">✕</button>
-			</div>
-
-			<!-- FILING — shown when a scrap is being filed -->
-			<div class="nb-cab-filing" id="nb-cab-filing">
-				<div class="nb-cab-sub">// Filing a scrap</div>
-				<div class="nb-file-preview" id="nb-file-preview"></div>
-				<label class="nb-file-l">Title</label>
-				<input type="text" id="nb-file-title" class="nb-file-in" placeholder="(defaults to the first line)"
-				       onkeydown="if(event.key==='Enter'){event.preventDefault();nbFileConfirm(false);}">
-				<label class="nb-file-l">Tags</label>
-				<div class="nb-file-tags" id="nb-file-tags"></div>
-				<input type="text" id="nb-file-newtag" class="nb-file-in" placeholder="+ tag, Enter to add"
-				       onkeydown="if(event.key==='Enter'){event.preventDefault();nbFileAddTag();}">
-				<div class="nb-file-frees" id="nb-file-frees"></div>
-				<div class="nb-file-actions">
-					<button class="nb-file-go" onclick="nbFileConfirm(false)">FILE IT ⏎</button>
-					<button class="nb-file-keep" onclick="nbFileConfirm(true)">FILE + KEEP ON PAGE</button>
+			<div class="nb-cab-top">
+				<div class="nb-cab-brand">
+					<span class="nb-cab-icon">🗄</span>
+					<span class="nb-cab-htitle">CABINET</span>
+					<span class="nb-cab-count-lbl">// <span id="nb-cab-count">0</span> FILED</span>
 				</div>
-			</div>
-
-			<!-- BROWSE — shown when the drawer is opened without a scrap -->
-			<div class="nb-cab-browse" id="nb-cab-browse">
-				<div class="nb-cab-search-row">
-					<input type="text" id="nb-cab-search" class="nb-cab-search" placeholder="search cabinet…" oninput="nbCabSearch()">
+				<input type="text" id="nb-cab-search" class="nb-cab-search" placeholder="search titles, text, tags…" oninput="nbCabSearch()">
+				<div class="nb-cab-topright">
 					<select id="nb-cab-sort" class="nb-cab-sort" onchange="nbCabRender()">
-						<option value="new">NEWEST</option>
-						<option value="old">OLDEST</option>
-						<option value="az">A–Z</option>
+						<option value="new">SORT: NEWEST</option>
+						<option value="old">SORT: OLDEST</option>
+						<option value="az">SORT: A–Z</option>
 					</select>
+					<button class="nb-cab-esc" onclick="nbCabClose()">ESC · NOTEBOOK</button>
 				</div>
-				<div class="nb-cab-tagrail" id="nb-cab-tagrail"></div>
+			</div>
+
+			<div class="nb-cab-body">
+				<div class="nb-cab-rail">
+					<div class="nb-cab-rail-h">// DRAWERS</div>
+					<div class="nb-cab-tagrail" id="nb-cab-tagrail"></div>
+					<div class="nb-cab-rail-foot">DRAG A CARD ONTO A DRAWER TO RE-TAG</div>
+				</div>
 				<div class="nb-cab-cards" id="nb-cab-cards"></div>
+			</div>
+
+			<div class="nb-cab-foot">
+				<span>CABINET IS UNBOUNDED — THE PAGE IS SCARCE, THE ARCHIVE ISN'T</span>
+				<span>⌘K FINDS FILED SCRAPS TOO</span>
+			</div>
+
+			<!-- FILING — centered panel shown over the cabinet when filing a scrap -->
+			<div class="nb-cab-filing" id="nb-cab-filing">
+				<div class="nb-cab-filing-inner">
+					<div class="nb-cab-sub">// Filing a scrap</div>
+					<div class="nb-file-preview" id="nb-file-preview"></div>
+					<label class="nb-file-l">Title</label>
+					<input type="text" id="nb-file-title" class="nb-file-in" placeholder="(defaults to the first line)"
+					       onkeydown="if(event.key==='Enter'){event.preventDefault();nbFileConfirm(false);}">
+					<label class="nb-file-l">Tags</label>
+					<div class="nb-file-tags" id="nb-file-tags"></div>
+					<input type="text" id="nb-file-newtag" class="nb-file-in" placeholder="+ tag, Enter to add"
+					       onkeydown="if(event.key==='Enter'){event.preventDefault();nbFileAddTag();}">
+					<div class="nb-file-frees" id="nb-file-frees"></div>
+					<div class="nb-file-actions">
+						<button class="nb-file-go" onclick="nbFileConfirm(false)">FILE IT ⏎</button>
+						<button class="nb-file-keep" onclick="nbFileConfirm(true)">FILE + KEEP ON PAGE</button>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
