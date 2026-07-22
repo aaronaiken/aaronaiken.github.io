@@ -153,6 +153,7 @@ from blueprints.tickets import tickets_bp
 from blueprints.lookups import lookups_bp
 from blueprints.ledger import ledger_bp
 from blueprints.meet import meet_bp
+from blueprints.notebook import notebook_bp
 app.register_blueprint(tasks_bp)
 app.register_blueprint(today_bp)
 app.register_blueprint(below_deck_bp)
@@ -170,6 +171,7 @@ app.register_blueprint(tickets_bp)
 app.register_blueprint(lookups_bp)
 app.register_blueprint(ledger_bp)
 app.register_blueprint(meet_bp)
+app.register_blueprint(notebook_bp)
 
 
 # Global recurrence-cycle trigger. Originally only /today/data fired the

@@ -15,6 +15,7 @@
 	<link rel="stylesheet" href="{{ url_for('static', filename='cockpit_modes.css') }}?v={{ asset_v }}">
 	<link rel="stylesheet" href="{{ url_for('static', filename='cockpit_after_dark.css') }}?v={{ asset_v }}">
 	<link rel="stylesheet" href="{{ url_for('static', filename='cockpit_ani.css') }}?v={{ asset_v }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='notebook.css') }}?v={{ asset_v }}">
 </head>
 <body class="{{ cockpit_mode or '' }}">
 
@@ -397,19 +398,41 @@
 			</form>
 		</div>
 
-		{% if history %}
-		<div class="history-section focus-hide">
-			<div class="log-header tasks-toggle" onclick="toggleComms()">
-				// Recent Comms Log
-				<span class="tasks-toggle-arrow" id="comms-arrow">▾</span>
+		<!-- NOTEBOOK SLIP — blank scrap paper. Enter-Enter files it to the bottom of the
+		     notebook page; Ctrl+Enter rolls it straight to Below Deck; ⤢ / Ctrl+Shift+N
+		     opens the notebook fullscreen. (Replaces the old HOME/DESK scratch pad — one
+		     notebook, one store; the old scratch content is migrated into the page.) -->
+		<div class="nb-slip focus-hide" id="nb-slip">
+			<div class="nb-slip-head">
+				<span class="section-label">// Notebook — fresh slip</span>
+				<div class="nb-slip-meta">
+					<span class="nb-slip-flash" id="nb-slip-flash" aria-live="polite"></span>
+					<span class="nb-slip-gauge" id="nb-slip-gauge" title="Page capacity">PG 0/48</span>
+					<button type="button" class="nb-slip-expand" onclick="nbOpenFullscreen()" title="Open the notebook (Ctrl+Shift+N)">⤢</button>
+				</div>
 			</div>
-			<div class="history-body" id="comms-body">
-				{% for post in history %}
-				<div class="history-item">{{ post }}</div>
-				{% endfor %}
+			<div class="nb-slip-paper">
+				<div class="nb-slip-spine" title="Page fill"><div class="nb-slip-spine-fill" id="nb-slip-spine-fill"></div></div>
+				<textarea id="nb-slip-input" class="nb-slip-input" spellcheck="true"
+				          placeholder="jot it — Enter Enter files it to the page · Ctrl+Enter rolls it to Below Deck"></textarea>
 			</div>
+			<div class="nb-slip-hint">ENTER ENTER → PAGE · CTRL+ENTER → BELOW DECK · ⤢ NOTEBOOK</div>
 		</div>
-		{% endif %}
+
+		<!-- MEDIA RAILS — state-only lines that summon/hide the floating players.
+		     ▷ VIDEO gets its inline After Dark PIN gate in a later phase; for now it
+		     toggles the same as the existing Ctrl+Shift+V. -->
+		<div class="media-rails focus-hide" id="media-rails">
+			<button type="button" class="media-rail" id="rail-yt" onclick="nbMediaRail('yt', this)">
+				<span class="rail-label">▶ YT</span><span class="rail-state" id="rail-yt-state">— HIDDEN</span>
+			</button>
+			<button type="button" class="media-rail" id="rail-music" onclick="nbMediaRail('music', this)">
+				<span class="rail-label">♪ MUSIC</span><span class="rail-state" id="rail-music-state">— HIDDEN</span>
+			</button>
+			<button type="button" class="media-rail" id="rail-video" onclick="nbMediaRail('video', this)">
+				<span class="rail-label">🔒 ▷ VIDEO</span><span class="rail-state" id="rail-video-state">— HIDDEN</span>
+			</button>
+		</div>
 
 		<!-- TASKS -->
 		<div class="tasks-section focus-hide">
@@ -465,12 +488,9 @@
 			</div><!-- end tasks-body -->
 		</div><!-- end tasks-section -->
 
-		<!-- SCRATCH PAD -->
-		{% set scratch_mode = 'inline' %}
-		{% include 'includes/scratch_pad.html' %}
-
 		<footer class="cockpit__footer">
 			<a href="https://aaronaiken.me">← Site</a>
+			<a href="/command-deck/">Command Deck</a>
 			<span class="cockpit__footer-quote">"She may not look like much..."</span>
 			<a href="https://aaronaiken.me/status">Status →</a>
 		</footer>
@@ -484,6 +504,7 @@
 	<script src="{{ url_for('static', filename='cockpit.js') }}?v={{ asset_v }}"></script>
 
 	<script src="{{ url_for('static', filename='cockpit_modes.js') }}?v={{ asset_v }}"></script>
+	<script src="{{ url_for('static', filename='notebook.js') }}?v={{ asset_v }}"></script>
 
 <!-- ============================================================ -->
 <!-- ANI PANEL                                                     -->

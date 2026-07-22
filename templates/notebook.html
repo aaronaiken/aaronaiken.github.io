@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+	<title>NOTEBOOK // 48 PAGES</title>
+	<link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+	<link rel="shortcut icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+	<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Crimson+Pro:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="{{ url_for('static', filename='cockpit.css') }}?v={{ asset_v }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='notebook.css') }}?v={{ asset_v }}">
+</head>
+<body>
+	<div class="nb-fs">
+		<div class="nb-fs-bar">
+			<div style="display:flex; align-items:baseline; gap:14px;">
+				<span class="nb-fs-title">NOTEBOOK</span>
+				<a href="/publish" title="Back to the cockpit (Esc)">← COCKPIT</a>
+			</div>
+			<div class="nb-fs-meta">
+				<span id="nb-page-status">saved</span>
+				<span id="nb-page-gauge">PG 0/48</span>
+			</div>
+		</div>
+
+		<div class="nb-fs-body">
+			<!-- LEFT PAGE — scrap paper. Skeleton editor this phase; the full INKWELL
+			     (iA inline render, scraps, ROLL/FILE/TEAR, drag-to-roll) lands next phase. -->
+			<div class="nb-fs-page">
+				<textarea id="nb-page-input" spellcheck="true"
+				          placeholder="the page — a blank line starts a new scrap">{{ page }}</textarea>
+			</div>
+
+			<!-- RIGHT PAGE — becomes the live Below Deck list next phase. -->
+			<div class="nb-fs-right">
+				<div class="nb-fs-sub">// Below Deck</div>
+				<a class="nb-fs-belowlink" href="/below-deck">Open Below Deck →</a>
+				<div class="nb-fs-note">
+					The right page becomes the live Below Deck list here next — rolled scraps
+					land at the top. The ink gauge (PG&nbsp;n/48, triage at 39) and the
+					ROLL&nbsp;/&nbsp;FILE&nbsp;/&nbsp;TEAR scrap actions come with it.
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="{{ url_for('static', filename='notebook.js') }}?v={{ asset_v }}"></script>
+</body>
+</html>

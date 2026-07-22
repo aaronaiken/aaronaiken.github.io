@@ -42,7 +42,7 @@ SCRATCH_FILE = 'assets/data/scratch.json'
 # recurring "did you hard-refresh?"). Cheap: a few stat() calls per page render.
 _COCKPIT_ASSETS = (
 	'cockpit.css', 'cockpit_modes.css', 'cockpit_after_dark.css', 'cockpit_ani.css',
-	'cockpit.js', 'cockpit_modes.js', 'cockpit_ani.js',
+	'notebook.css', 'cockpit.js', 'cockpit_modes.js', 'cockpit_ani.js', 'notebook.js',
 )
 
 def _asset_version():

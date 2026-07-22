@@ -1970,6 +1970,23 @@
             .catch(() => {});
     }
 
+	// Show/hide the floating Music player (base CSS hides it — it used to be revealed only
+	// by the removed After Dark mode). Lazy-loads the library on first reveal. Bound to the
+	// home MUSIC rail + the command palette so music is reachable in normal mode.
+	let adMusicLoaded = false;
+	function adMusicPlayerToggle() {
+		const p = document.getElementById('ad-music-player');
+		if (!p) return false;
+		const shown = getComputedStyle(p).display !== 'none';
+		if (shown) {
+			p.style.display = 'none';
+		} else {
+			p.style.display = 'flex';
+			if (!adMusicLoaded) { adMusicLoaded = true; adLoadMusic(); }
+		}
+		return !shown;
+	}
+
 	function adMusicSetTrack(idx, autoplay) {
 		if (adMusicItems.length === 0) return;
 		adMusicIndex = ((idx % adMusicItems.length) + adMusicItems.length) % adMusicItems.length;
@@ -2331,6 +2348,7 @@
 		{ icon: '✦', label: 'Brain Dump',     hint: 'Ctrl+Space',     action: () => { cmdClose(); brainDumpOpen(); } },
 		{ icon: '▶', label: 'Toggle YouTube Player', hint: 'Ctrl+Shift+Y', action: () => { cmdClose(); ytPlayerToggle(); } },
 		{ icon: '▹', label: 'Toggle Video Player', hint: 'Ctrl+Shift+V', action: () => { cmdClose(); adPlayerToggle(); } },
+		{ icon: '♪', label: 'Toggle Music Player', hint: '', action: () => { cmdClose(); adMusicPlayerToggle(); } },
 		{ icon: '◱', label: 'Toggle Focus Mode', hint: 'Ctrl+Shift+F', action: () => { cmdClose(); if (typeof toggleFocus === 'function') toggleFocus(); } },
 		{ icon: '🦇', label: 'Toggle Ani',    hint: 'Ctrl+Shift+A',   action: () => { cmdClose(); if (typeof aniToggle === 'function') aniToggle(); } },
 		{ icon: '$', label: 'The Ledger',     hint: '/ledger/',       action: () => cmdGo('/ledger/') },

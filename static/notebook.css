@@ -1,0 +1,154 @@
+/* ============================================================
+   48pages notebook — cockpit skin (slip on /publish + fullscreen skeleton).
+   Uses the cockpit's base tokens (--amber, --input-bg, --border, --ink…) so it
+   inherits light/dark automatically. Kept module-local for liftability.
+   Grid rule (§9 backport): ruled lines lock to the content line-height period.
+   ============================================================ */
+
+:root {
+	--nb-rule-period: 28px;   /* ruled-paper line height == repeating-gradient period */
+	--nb-slip-min: 92px;
+}
+
+/* ---------- SLIP (home stack) ---------- */
+.nb-slip { margin: 14px 0 4px; }
+
+.nb-slip-head {
+	display: flex; align-items: center; justify-content: space-between;
+	margin-bottom: 6px;
+}
+.nb-slip-meta { display: flex; align-items: center; gap: 10px; }
+
+.nb-slip-gauge {
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase;
+	color: var(--muted);
+}
+.nb-slip-flash {
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase;
+	color: var(--green); opacity: 0; transition: opacity 0.2s;
+}
+.nb-slip-flash.is-on { opacity: 1; }
+
+.nb-slip-expand {
+	background: none; border: 1px solid var(--border-hi); border-radius: 2px;
+	color: var(--muted); cursor: pointer; font-size: 0.8rem; line-height: 1;
+	padding: 3px 6px; transition: color 0.15s, border-color 0.15s;
+}
+.nb-slip-expand:hover { color: var(--amber); border-color: var(--amber-lo); }
+
+/* Paper card — ink spine on the left edge showing page fill, ruled writing surface. */
+.nb-slip-paper {
+	position: relative; display: flex;
+	background: var(--input-bg);
+	border: 1px solid var(--border); border-radius: 3px;
+	overflow: hidden;
+}
+.nb-slip-spine {
+	position: relative; flex: 0 0 5px; align-self: stretch;
+	background: var(--border); overflow: hidden;
+}
+.nb-slip-spine-fill {
+	position: absolute; left: 0; bottom: 0; width: 100%; height: 0%;
+	background: linear-gradient(to top, var(--amber-lo), var(--amber));
+	transition: height 0.4s ease, background 0.3s;
+}
+.nb-slip-spine-fill.is-triage { background: linear-gradient(to top, var(--red), var(--amber-lo)); }
+
+.nb-slip-input {
+	flex: 1; width: 100%; min-height: var(--nb-slip-min); resize: vertical;
+	border: none; outline: none; background: transparent;
+	color: var(--ink, var(--text-body));
+	font-family: 'Crimson Pro', Georgia, serif;
+	font-size: 1rem; line-height: var(--nb-rule-period);
+	padding: 6px 14px 10px;
+	/* ruled paper — the rule period MUST equal line-height so text sits on the lines */
+	background-image: repeating-linear-gradient(
+		to bottom,
+		transparent 0, transparent calc(var(--nb-rule-period) - 1px),
+		var(--nb-rule, var(--border)) calc(var(--nb-rule-period) - 1px), var(--nb-rule, var(--border)) var(--nb-rule-period)
+	);
+	background-position: 0 6px;
+	background-attachment: local;
+}
+.nb-slip-input::placeholder { color: var(--faint, var(--border-hi)); font-style: italic; }
+
+.nb-slip-hint {
+	margin-top: 5px;
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 0.5rem; letter-spacing: 0.14em; text-transform: uppercase;
+	color: var(--faint, var(--border-hi));
+}
+
+/* ---------- FULLSCREEN skeleton (/notebook) ---------- */
+.nb-fs {
+	min-height: 100vh; background: var(--bg); color: var(--text);
+	display: flex; flex-direction: column;
+	font-family: 'Share Tech Mono', 'Courier New', monospace;
+}
+.nb-fs-bar {
+	display: flex; align-items: center; justify-content: space-between;
+	padding: 12px 20px; border-bottom: 1px solid var(--border);
+	position: sticky; top: 0; background: var(--bg); z-index: 5;
+}
+.nb-fs-bar .nb-fs-title {
+	font-family: 'VT323', monospace; font-size: 1.5rem; letter-spacing: 0.06em;
+	color: var(--amber);
+}
+.nb-fs-bar a { color: var(--muted); text-decoration: none; font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; }
+.nb-fs-bar a:hover { color: var(--amber); }
+.nb-fs-meta { display: flex; align-items: center; gap: 16px; }
+#nb-page-gauge {
+	font-family: 'Share Tech Mono', monospace; font-size: 0.62rem;
+	letter-spacing: 0.14em; color: var(--muted);
+}
+#nb-page-gauge.is-triage { color: var(--red); }
+#nb-page-status { font-size: 0.55rem; letter-spacing: 0.12em; color: var(--faint, var(--border-hi)); text-transform: uppercase; }
+
+.nb-fs-body {
+	flex: 1; display: grid; grid-template-columns: 1.35fr 1fr; gap: 0;
+	max-width: 1100px; width: 100%; margin: 0 auto; padding: 0;
+}
+.nb-fs-page {
+	border-right: 1px solid var(--border);
+	padding: 0;
+}
+#nb-page-input {
+	width: 100%; min-height: 70vh; box-sizing: border-box;
+	border: none; outline: none; resize: none; background: var(--input-bg);
+	color: var(--ink, var(--text-body));
+	font-family: 'Crimson Pro', Georgia, serif;
+	font-size: 1.05rem; line-height: var(--nb-rule-period);
+	padding: 20px 26px;
+	background-image: repeating-linear-gradient(
+		to bottom,
+		transparent 0, transparent calc(var(--nb-rule-period) - 1px),
+		var(--nb-rule, var(--border)) calc(var(--nb-rule-period) - 1px), var(--nb-rule, var(--border)) var(--nb-rule-period)
+	);
+	background-position: 0 20px;
+	background-attachment: local;
+}
+.nb-fs-right {
+	padding: 20px 22px;
+}
+.nb-fs-right .nb-fs-sub {
+	font-family: 'Share Tech Mono', monospace; font-size: 0.6rem;
+	letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+	margin-bottom: 10px;
+}
+.nb-fs-right a.nb-fs-belowlink {
+	display: inline-block; color: var(--amber); text-decoration: none;
+	border: 1px solid var(--border-hi); border-radius: 2px; padding: 8px 12px;
+	font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase;
+}
+.nb-fs-right a.nb-fs-belowlink:hover { border-color: var(--amber-lo); }
+.nb-fs-note {
+	margin-top: 16px; font-size: 0.6rem; line-height: 1.6;
+	color: var(--faint, var(--muted)); letter-spacing: 0.04em;
+}
+
+@media (max-width: 760px) {
+	.nb-fs-body { grid-template-columns: 1fr; }
+	.nb-fs-page { border-right: none; border-bottom: 1px solid var(--border); }
+}
