@@ -252,7 +252,7 @@
 		var e = document.getElementById(id);
 		return !!e && getComputedStyle(e).display !== 'none';
 	}
-	var RAIL_MAP = { yt: 'yt-player', music: 'ad-music-player', video: 'ad-player' };
+	var RAIL_MAP = { yt: 'yt-player', music: 'ad-music-player' };
 	function nbReflectRails() {
 		Object.keys(RAIL_MAP).forEach(function (k) {
 			var st = document.getElementById('rail-' + k + '-state');
@@ -266,7 +266,6 @@
 	window.nbMediaRail = function (kind) {
 		if (kind === 'yt' && window.ytPlayerToggle) window.ytPlayerToggle();
 		else if (kind === 'music' && window.adMusicPlayerToggle) window.adMusicPlayerToggle();
-		else if (kind === 'video' && window.adPlayerToggle) window.adPlayerToggle();
 		nbReflectRails();
 	};
 

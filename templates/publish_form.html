@@ -423,17 +423,14 @@
 		</div>
 
 		<!-- MEDIA RAILS — state-only lines that summon/hide the floating players.
-		     ▷ VIDEO gets its inline After Dark PIN gate in a later phase; for now it
-		     toggles the same as the existing Ctrl+Shift+V. -->
+		     (The ▷ VIDEO player is intentionally not railed — reach it from Ctrl+K
+		     "Toggle Video Player" or Ctrl+Shift+V.) -->
 		<div class="media-rails focus-hide" id="media-rails">
 			<button type="button" class="media-rail" id="rail-yt" onclick="nbMediaRail('yt', this)">
 				<span class="rail-label">▶ YT</span><span class="rail-state" id="rail-yt-state">— HIDDEN</span>
 			</button>
 			<button type="button" class="media-rail" id="rail-music" onclick="nbMediaRail('music', this)">
 				<span class="rail-label">♪ MUSIC</span><span class="rail-state" id="rail-music-state">— HIDDEN</span>
-			</button>
-			<button type="button" class="media-rail" id="rail-video" onclick="nbMediaRail('video', this)">
-				<span class="rail-label">🔒 ▷ VIDEO</span><span class="rail-state" id="rail-video-state">— HIDDEN</span>
 			</button>
 		</div>
 
