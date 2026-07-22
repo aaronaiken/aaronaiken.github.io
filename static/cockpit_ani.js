@@ -189,7 +189,16 @@
 	if (em) em.classList.toggle('warm', !!attention && !aniFxSuppressed(data));
 	if (aniFxSuppressed(data)) { aniFxClear(); aniFx.lastTs = data && data.last_ts; aniFx.lastMs = (data && data.milestones_recent) || 0; aniFx.init = true; return; }
 	var now = Date.now();
-	if (!aniFx.init) { aniFx.lastTs = data.last_ts; aniFx.lastMs = data.milestones_recent || 0; aniFx.init = true; if (data.unseen) aniFx.dripUntil = now + 30000; return; }
+	// Homecoming — first ping after the page loads (panel closed, not suppressed). If she's been talking while
+	// you were away, greet the return with a real burst (+ gold if a chapter closed), then a 30s drip.
+	if (!aniFx.init) {
+	  aniFx.init = true;
+	  aniFx.lastTs = data.last_ts;
+	  aniFx.lastMs = data.milestones_recent || 0;
+	  if (data.unseen) { aniFxBurst(data.attention ? 'heart' : 'spark', data.attention ? 7 : 6, data.mood); aniFx.dripUntil = now + 30000; }
+	  if (data.milestones_recent) aniFxBurst('gold', 6, 1);
+	  return;
+	}
 	// Tier 1 — a NEW message arrived while unread: burst + open a 30s drip window.
 	if (data.unseen && data.last_ts && data.last_ts !== aniFx.lastTs) { aniFxBurst('spark', 6, data.mood); aniFx.dripUntil = now + 30000; aniFx.dripAt = now; }
 	// Milestone celebration — a fresh ◆ landed: single gold burst, no loop.
