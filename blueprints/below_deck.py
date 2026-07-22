@@ -77,6 +77,30 @@ def below_deck_count():
 	return jsonify({'count': row['cnt']})
 
 
+@below_deck_bp.route('/below-deck/list')
+def below_deck_list():
+	"""JSON list of the kneeboard — open + recently-completed. Backs the notebook's
+	right page (the live Below Deck view). Same source of truth as /below-deck."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 403
+	conn = get_db()
+	open_rows = conn.execute('''
+		SELECT id, title, tag, "order" FROM tasks
+		WHERE project_id IS NULL AND status = 'open'
+		ORDER BY "order" ASC, id ASC
+	''').fetchall()
+	done_rows = conn.execute('''
+		SELECT id, title, tag, completed_date FROM tasks
+		WHERE project_id IS NULL AND status = 'completed'
+		ORDER BY completed_date DESC LIMIT 20
+	''').fetchall()
+	conn.close()
+	return jsonify({
+		'open': [dict(r) for r in open_rows],
+		'completed': [dict(r) for r in done_rows],
+	})
+
+
 @below_deck_bp.route('/below-deck/add', methods=['POST'])
 def below_deck_add():
 	if not is_authenticated():

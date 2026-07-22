@@ -10,36 +10,55 @@
 	<link rel="stylesheet" href="{{ url_for('static', filename='cockpit.css') }}?v={{ asset_v }}">
 	<link rel="stylesheet" href="{{ url_for('static', filename='notebook.css') }}?v={{ asset_v }}">
 </head>
-<body>
+<body class="nb-body">
 	<div class="nb-fs">
 		<div class="nb-fs-bar">
-			<div style="display:flex; align-items:baseline; gap:14px;">
+			<div class="nb-fs-brand">
 				<span class="nb-fs-title">NOTEBOOK</span>
 				<a href="/publish" title="Back to the cockpit (Esc)">← COCKPIT</a>
 			</div>
 			<div class="nb-fs-meta">
 				<span id="nb-page-status">saved</span>
-				<span id="nb-page-gauge">PG 0/48</span>
 			</div>
 		</div>
 
 		<div class="nb-fs-body">
-			<!-- LEFT PAGE — scrap paper. Skeleton editor this phase; the full INKWELL
-			     (iA inline render, scraps, ROLL/FILE/TEAR, drag-to-roll) lands next phase. -->
-			<div class="nb-fs-page">
-				<textarea id="nb-page-input" spellcheck="true"
-				          placeholder="the page — a blank line starts a new scrap">{{ page }}</textarea>
+			<!-- INK GAUGE — vertical rail, fills bottom-up. Triage past PG 39 / 48. -->
+			<div class="nb-gauge" title="Page capacity">
+				<div class="nb-gauge-track">
+					<div class="nb-gauge-fill" id="nb-gauge-fill"></div>
+					<div class="nb-gauge-triage-line"></div>
+				</div>
+				<div class="nb-gauge-label" id="nb-page-gauge">PG 0/48</div>
 			</div>
 
-			<!-- RIGHT PAGE — becomes the live Below Deck list next phase. -->
-			<div class="nb-fs-right">
-				<div class="nb-fs-sub">// Below Deck</div>
-				<a class="nb-fs-belowlink" href="/below-deck">Open Below Deck →</a>
-				<div class="nb-fs-note">
-					The right page becomes the live Below Deck list here next — rolled scraps
-					land at the top. The ink gauge (PG&nbsp;n/48, triage at 39) and the
-					ROLL&nbsp;/&nbsp;FILE&nbsp;/&nbsp;TEAR scrap actions come with it.
+			<!-- LEFT PAGE — scrap paper. Scrap = block between blank lines. -->
+			<div class="nb-fs-page" id="nb-fs-page">
+				<div class="nb-triage-banner" id="nb-triage-banner">PAGE HEAVY — FILE, ROLL, OR TEAR TO KEEP WRITING</div>
+				<div class="nb-scrap-bar" id="nb-scrap-bar">
+					<span class="nb-scrap-what" id="nb-scrap-what">—</span>
+					<button type="button" onclick="nbRollCurrent()" title="Roll to Below Deck (Ctrl+Enter)">→ ROLL</button>
+					<button type="button" onclick="nbTearCurrent()" title="Tear this scrap (Del-hold)">⌦ TEAR</button>
 				</div>
+				<textarea id="nb-page-input" spellcheck="true"
+				          placeholder="the page — a blank line starts a new scrap">{{ page }}</textarea>
+				<div class="nb-fs-hints">CTRL+ENTER ROLL · ⌦ TEAR · ESC COCKPIT · A BLANK LINE STARTS A NEW SCRAP</div>
+			</div>
+
+			<div class="nb-spine"></div>
+
+			<!-- RIGHT PAGE — the live Below Deck kneeboard (same source of truth). -->
+			<div class="nb-fs-right">
+				<div class="nb-right-head">
+					<span class="nb-fs-sub">// Below Deck</span>
+					<a href="/below-deck" class="nb-right-open" title="Full Below Deck">↗</a>
+				</div>
+				<div class="nb-bd-add">
+					<input type="text" id="nb-bd-input" placeholder="new task…" maxlength="140"
+					       onkeydown="if(event.key==='Enter'){event.preventDefault();nbBdAdd();}">
+					<button type="button" onclick="nbBdAdd()">+ LOG</button>
+				</div>
+				<ul class="nb-bd-list" id="nb-bd-list"></ul>
 			</div>
 		</div>
 	</div>
