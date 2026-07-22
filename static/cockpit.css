@@ -706,21 +706,32 @@
 	}
 	.tx-tag { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.16em; color: var(--muted); flex-shrink: 0; }
 	.tx-compose textarea#status-input {
-		flex: 1; height: 1.7em; min-height: 1.7em; line-height: 1.7;
+		flex: 1 1 auto; width: auto; min-width: 0;
+		height: 1.7em; min-height: 1.7em; line-height: 1.7;
 		padding: 0; border: none; background: transparent; border-radius: 0;
 		font-family: 'Crimson Pro', Georgia, serif; font-size: 1rem; color: var(--text-body);
 		resize: none; outline: none; overflow: hidden; transition: height 0.15s ease;
 	}
 	.tx-compose textarea#status-input:focus { border: none; box-shadow: none; }
 	.tx-count { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: var(--muted); flex-shrink: 0; }
-	.tx-send {
+	/* id+class beats the old full-width `button#publish-btn` block styling */
+	#publish-btn.tx-send {
+		width: auto; margin: 0; padding: 7px 16px;
 		background: var(--btn-solid); color: var(--btn-solid-text);
 		border: 1px solid var(--btn-solid); border-radius: 2px; cursor: pointer;
-		font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; letter-spacing: 0.12em;
-		padding: 6px 14px; flex-shrink: 0; white-space: nowrap;
+		font-family: 'Share Tech Mono', monospace; font-size: 0.62rem;
+		font-weight: 400; letter-spacing: 0.14em; text-transform: uppercase;
+		flex-shrink: 0; white-space: nowrap;
 	}
-	.tx-send:hover { background: var(--amber-hi); }
+	#publish-btn.tx-send:hover { background: var(--amber-hi); border-color: var(--amber); color: var(--btn-solid-text); }
 	.tx-expand { display: none; margin-top: 8px; }
 	body.tx-open .tx-expand { display: block; }
 	body.tx-open .tx-compose textarea#status-input { height: 120px; overflow: auto; }
 	body.tx-open .tx-compose .tx-line { align-items: flex-start; }
+
+	/* now-playing chip retired from the home stack (players carry their own controls) */
+	#now-playing-chip { display: none !important; }
+
+	/* Header topline (2b): logo left · shields/weather/🦇/🏠 right, wraps on narrow. */
+	.cockpit__topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+	.cockpit__hdr-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
