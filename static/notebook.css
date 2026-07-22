@@ -269,3 +269,8 @@
 	letter-spacing: 0.16em; text-transform: uppercase; text-decoration: none;
 }
 .nb-fs-bar .nb-esc-btn:hover { color: var(--amber); border-color: var(--amber-lo); }
+
+/* drag a card onto a drawer to re-tag */
+.nb-cab-card[draggable="true"] { cursor: grab; }
+.nb-cab-card[draggable="true"]:active { cursor: grabbing; }
+.nb-cab-drawer.drag-over { border-left-color: var(--amber); background: var(--amber-dim); color: var(--amber); }

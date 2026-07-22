@@ -364,7 +364,9 @@
 					var allN = (cabCount && cabCount.textContent) || items.length;
 					var rail = '<button class="nb-cab-drawer' + (cabActiveTag === '' ? ' is-on' : '') + '" onclick="nbCabTag(\'\')"><span>ALL</span><span class="nb-cab-dn">' + allN + '</span></button>';
 					Object.keys(cabAllTags).sort().forEach(function (t) {
-						rail += '<button class="nb-cab-drawer' + (cabActiveTag === t ? ' is-on' : '') + '" onclick="nbCabTag(\'' + esc(t) + '\')"><span>#' + esc(t) + '</span><span class="nb-cab-dn">' + cabAllTags[t] + '</span></button>';
+						rail += '<button class="nb-cab-drawer' + (cabActiveTag === t ? ' is-on' : '') + '" onclick="nbCabTag(\'' + esc(t) + '\')"'
+							+ ' ondragover="event.preventDefault()" ondragenter="this.classList.add(\'drag-over\')" ondragleave="this.classList.remove(\'drag-over\')"'
+							+ ' ondrop="nbCabDrop(event,\'' + esc(t) + '\')"><span>#' + esc(t) + '</span><span class="nb-cab-dn">' + cabAllTags[t] + '</span></button>';
 					});
 					cabTagRail.innerHTML = rail;
 				}
@@ -373,7 +375,7 @@
 					var raw = (c.body_md || '').replace(/\n/g, ' ');
 					var excerpt = raw.slice(0, 120) + (raw.length > 120 ? '…' : '');
 					var tags = (c.tags || []).map(function (t) { return '<span class="nb-cab-ctag">#' + esc(t) + '</span>'; }).join('');
-					return '<div class="nb-cab-card">'
+					return '<div class="nb-cab-card" draggable="true" data-id="' + c.id + '" ondragstart="nbCabDragStart(event,' + c.id + ')">'
 						+ '<div class="nb-cab-card-top"><span class="nb-cab-ctitle">' + esc(c.title) + '</span><span class="nb-cab-cage">' + ageStr(c.filed).toUpperCase() + '</span></div>'
 						+ '<div class="nb-cab-cexc">' + esc(excerpt) + '</div>'
 						+ '<div class="nb-cab-cbottom"><div class="nb-cab-ctags">' + tags + '</div>'
@@ -387,6 +389,20 @@
 			}).catch(function () {});
 		};
 		function cabItemById(id) { return cabItems.filter(function (c) { return c.id === id; })[0]; }
+		// drag a card onto a drawer to add that tag (re-tag / re-file)
+		window.nbCabDragStart = function (e, id) {
+			try { e.dataTransfer.setData('text/plain', String(id)); e.dataTransfer.effectAllowed = 'copy'; } catch (x) {}
+		};
+		window.nbCabDrop = function (e, tag) {
+			e.preventDefault();
+			var el = e.currentTarget; if (el) el.classList.remove('drag-over');
+			var id = parseInt(e.dataTransfer.getData('text/plain'), 10);
+			var c = cabItemById(id); if (!c || !tag) return;
+			var tags = (c.tags || []).slice();
+			if (tags.indexOf(tag) < 0) tags.push(tag); else return;   // already in that drawer
+			fetch('/notebook/cabinet/' + id + '/retag', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tags: tags }) })
+				.then(function () { flash('re-tagged'); window.nbCabRender(); }).catch(function () {});
+		};
 		window.nbCabToPage = function (id) {
 			var c = cabItemById(id); if (!c) return;
 			page.value = (page.value.replace(/\n+$/, '') + (page.value.trim() ? '\n\n' : '') + c.body_md).replace(/^\n+/, '');
