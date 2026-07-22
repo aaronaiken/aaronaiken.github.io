@@ -714,16 +714,13 @@
 	}
 	.tx-compose textarea#status-input:focus { border: none; box-shadow: none; }
 	.tx-count { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: var(--muted); flex-shrink: 0; }
-	/* id+class beats the old full-width `button#publish-btn` block styling */
+	/* id+class beats the old full-width `button#publish-btn` block sizing — geometry only,
+	   so the button KEEPS the proven EXECUTE colors + hover (which work in light + dark). */
 	#publish-btn.tx-send {
 		width: auto; margin: 0; padding: 7px 16px;
-		background: var(--btn-solid); color: var(--btn-solid-text);
-		border: 1px solid var(--btn-solid); border-radius: 2px; cursor: pointer;
-		font-family: 'Share Tech Mono', monospace; font-size: 0.62rem;
-		font-weight: 400; letter-spacing: 0.14em; text-transform: uppercase;
+		font-size: 0.62rem; letter-spacing: 0.14em;
 		flex-shrink: 0; white-space: nowrap;
 	}
-	#publish-btn.tx-send:hover { background: var(--amber-hi); border-color: var(--amber); color: var(--btn-solid-text); }
 	.tx-expand { display: none; margin-top: 10px; }
 	body.tx-open .tx-expand { display: block; }
 	/* expanded: // TX label on top, full-width box, count + SEND on the bottom-right */
