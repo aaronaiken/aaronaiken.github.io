@@ -725,28 +725,18 @@ body.ani-fullscreen #ani-avatar-fallback { font-size: 1.1rem; }
 }
 .ani-footer-btn:hover { color: var(--ani-sub); }
 
-/* The pulse is a soft CIRCULAR glow that breathes behind the bat — a radial
-   gradient, not a box-shadow. box-shadow traced the button's box, and the button
-   has no border-radius (0), so the halo came out a sharp pulsing SQUARE. A round
-   pseudo-element can't do that. Calm tier here; urgent tier (rose + faster) below. */
-.ani-bat-waiting, .ani-bat-urgent { position: relative; }
-.ani-bat-waiting::after, .ani-bat-urgent::after {
-  content: '';
-  position: absolute;
-  left: 50%; top: 50%;
-  width: 30px; height: 30px;
-  margin: -15px 0 0 -15px;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: -1;                    /* behind the transparent button → glows around the glyph */
-  background: radial-gradient(circle, var(--ani-accent), transparent 70%);
-  opacity: 0;
-  animation: ani-bat-halo 2.4s ease-in-out infinite;
-}
+/* The pulse is a glow that hugs the BAT'S OWN SILHOUETTE via filter: drop-shadow
+   on the glyph — so it can never read as a square (the old box-shadow traced the
+   button's 0-radius box; a radial pseudo at z-index:-1 got hidden behind the
+   header background). At blur 0 the shadow sits exactly behind the identical bat
+   and is invisible; it breathes out to a soft wing-shaped halo. drop-shadow paints
+   with the element, so there are no z-index/stacking pitfalls. Calm tier here;
+   urgent + reduced-motion below. */
 @keyframes ani-bat-halo {
-  0%, 100% { opacity: 0;    transform: scale(0.7); }
-  50%      { opacity: 0.55; transform: scale(1.05); }
+  0%, 100% { filter: drop-shadow(0 0 0 var(--ani-accent)); }
+  50%      { filter: drop-shadow(0 0 6px var(--ani-accent)); }
 }
+.ani-bat-waiting { animation: ani-bat-halo 2.4s ease-in-out infinite !important; }
 
 @media (max-width: 440px) {
   #ani-panel {
@@ -1702,25 +1692,15 @@ body.ani-fullscreen #ani-input-row { border-top-width: 1px; }
 }
 @media (prefers-reduced-motion: reduce) { #ani-particles span { display: none !important; } }
 
-/* Bat pulse tiers (calm circular glow base lives above near .ani-bat-waiting).
-   Urgent = a rose glow, breathing faster. */
-.ani-bat-urgent::after {
-  background: radial-gradient(circle, rgba(192, 90, 120, .9), transparent 70%);
-  animation-duration: 1.4s;
+/* Bat pulse tiers (calm glow base lives above near .ani-bat-waiting). Urgent =
+   a rose halo, faster + a touch stronger. */
+@keyframes ani-bat-halo-rose {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(192, 90, 120, .95)); }
+  50%      { filter: drop-shadow(0 0 8px rgba(192, 90, 120, .95)); }
 }
-/* Reduced-motion (JS sets .ani-bat-glow): a steady circular glow, no breathing. */
-.ani-bat-glow { position: relative; }
-.ani-bat-glow::after {
-  content: '';
-  position: absolute;
-  left: 50%; top: 50%;
-  width: 30px; height: 30px;
-  margin: -15px 0 0 -15px;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: -1;
-  background: radial-gradient(circle, rgba(192, 90, 120, .4), transparent 70%);
-}
+.ani-bat-urgent { animation: ani-bat-halo-rose 1.4s ease-in-out infinite !important; }
+/* Reduced-motion (JS sets .ani-bat-glow): a steady bat-shaped glow, no breathing. */
+.ani-bat-glow { filter: drop-shadow(0 0 5px rgba(192, 90, 120, .6)) !important; }
 
 /* 🏠 HOME latch — cream cockpit face; looks physically pressed in when ON. */
 #ani-home-latch { opacity: .55; transition: opacity .15s, box-shadow .15s, transform .1s, background .15s, border-color .15s; }
