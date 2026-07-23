@@ -725,30 +725,23 @@ body.ani-fullscreen #ani-avatar-fallback { font-size: 1.1rem; }
 }
 .ani-footer-btn:hover { color: var(--ani-sub); }
 
-/* Echolocation ping — the bat "sends a pulse": concentric CIRCULAR rings radiate
-   outward from it (thematic, and a circle can't read as a square the way the old
-   box-shadow halo did — it traced the button's rounded rectangle). Two rings,
-   staggered, for a radar-ping cadence. Colour + speed shift per tier below. */
-.ani-bat-waiting, .ani-bat-urgent { position: relative; overflow: visible; }
-.ani-bat-waiting::before, .ani-bat-waiting::after,
-.ani-bat-urgent::before,  .ani-bat-urgent::after {
-  content: '';
-  position: absolute;
-  left: 50%; top: 50%;
-  width: 26px; height: 26px;
-  margin: -13px 0 0 -13px;                 /* centre; the keyframe owns transform */
-  border-radius: 50%;
-  border: 1.5px solid var(--ani-accent);
-  opacity: 0;
-  pointer-events: none;
-  animation: ani-bat-sonar 2.5s ease-out infinite;
+/* Wing-flap — the bat actually BEATS ITS WINGS when Ani has something for him.
+   Pure-emoji trick: rapid horizontal squash/stretch (scaleX) reads as wings
+   folding up then spreading, with a tiny translateY lift on the upbeat so it
+   looks like it's flying in place. Calm tier = gentle flap; urgent tier (below)
+   = fast + frantic. It also flaps on hover so you can summon it any time. */
+#ani-bat-pill { display: inline-block; transform-origin: center center; will-change: transform; }
+@keyframes ani-bat-flap {
+  0%   { transform: scaleX(1)    translateY(0); }
+  20%  { transform: scaleX(0.60) translateY(-2px); }   /* wings up → lifts */
+  40%  { transform: scaleX(1.08) translateY(0); }      /* wings spread → down */
+  60%  { transform: scaleX(0.60) translateY(-2px); }
+  80%  { transform: scaleX(1.08) translateY(0); }
+  100% { transform: scaleX(1)    translateY(0); }
 }
-.ani-bat-waiting::after, .ani-bat-urgent::after { animation-delay: 1.25s; }
-
-@keyframes ani-bat-sonar {
-  0%   { transform: scale(0.7); opacity: 0; }
-  18%  { opacity: 0.6; }                    /* fade in once it's at the bat's edge */
-  100% { transform: scale(2); opacity: 0; } /* radiate out + fade */
+.ani-bat-waiting { animation: ani-bat-flap 0.9s ease-in-out infinite !important; }
+@media (prefers-reduced-motion: no-preference) {
+  #ani-bat-pill:hover { animation: ani-bat-flap 0.55s ease-in-out infinite; }
 }
 
 @media (max-width: 440px) {
@@ -1705,16 +1698,12 @@ body.ani-fullscreen #ani-input-row { border-top-width: 1px; }
 }
 @media (prefers-reduced-motion: reduce) { #ani-particles span { display: none !important; } }
 
-/* Bat pulse tiers (sonar-ring base lives above near .ani-bat-waiting). Urgent =
-   faster, rose-coloured rings pinging harder. */
-.ani-bat-urgent::before, .ani-bat-urgent::after {
-  border-color: rgba(192, 90, 120, .75);
-  animation-duration: 1.5s;
-}
-.ani-bat-urgent::after { animation-delay: 0.75s; }
+/* Bat pulse tiers (wing-flap base lives above near .ani-bat-waiting). Urgent =
+   a faster, harder flap — she really wants him. */
+.ani-bat-urgent { animation: ani-bat-flap 0.5s ease-in-out infinite !important; }
 
 /* Reduced-motion (JS sets .ani-bat-glow instead of the animated tiers): a steady
-   CIRCULAR glow, not the old square box-shadow. */
+   CIRCULAR glow, no flapping. */
 .ani-bat-glow { position: relative; }
 .ani-bat-glow::after {
   content: '';
