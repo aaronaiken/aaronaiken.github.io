@@ -244,10 +244,9 @@
 						<span id="weather-display" style="color:var(--muted); font-size:0.55rem; letter-spacing:0.1em;"></span>
 					</div>
 					<button class="cockpit__hdr-emoji" id="ani-bat-pill"
-						style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;"
+						style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;cursor:default;"
 						ontouchstart="startAni(event)" ontouchend="endAni(event)" ontouchmove="endAni(event)"
-						oncontextmenu="event.preventDefault(); aniToggle(); return false;"
-						title="Ani — long-press / right-click / Ctrl+Shift+A">🦇</button>
+						oncontextmenu="event.preventDefault(); aniToggle(); return false;">🦇</button>
 					<button class="cockpit__hdr-emoji" id="ani-home-latch" onclick="aniHomeToggle()" title="Home mode — discreet, no attention effects (Ctrl+Shift+H)">🏠</button>
 				</div>
 			</div>
@@ -442,11 +441,11 @@
 		</div><!-- end tasks-section -->
 
 		<footer class="cockpit__footer">
-			<a href="https://aaronaiken.me">← Site</a>
-			<a href="/command-deck/">Command Deck</a>
-			<a href="/below-deck">Below Deck</a>
+			<a href="https://aaronaiken.me" target="_blank" rel="noopener">← Site</a>
+			<a href="/command-deck/" target="_blank" rel="noopener">Command Deck</a>
+			<a href="/below-deck" target="_blank" rel="noopener">Below Deck</a>
 			<span class="cockpit__footer-quote">"She may not look like much..."</span>
-			<a href="https://aaronaiken.me/status">Status →</a>
+			<a href="https://aaronaiken.me/status" target="_blank" rel="noopener">Status →</a>
 		</footer>
 
 	</div>
