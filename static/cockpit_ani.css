@@ -725,13 +725,30 @@ body.ani-fullscreen #ani-avatar-fallback { font-size: 1.1rem; }
 }
 .ani-footer-btn:hover { color: var(--ani-sub); }
 
-@keyframes ani-bat-pulse {
-  0%, 100% { box-shadow: 0 0 0px rgba(0, 0, 0, 0); border-color: var(--border, var(--ani-in-bd)); }
-  50% { box-shadow: 0 0 8px rgba(0, 0, 0, 0.3); border-color: var(--ani-accent); }
+/* Echolocation ping — the bat "sends a pulse": concentric CIRCULAR rings radiate
+   outward from it (thematic, and a circle can't read as a square the way the old
+   box-shadow halo did — it traced the button's rounded rectangle). Two rings,
+   staggered, for a radar-ping cadence. Colour + speed shift per tier below. */
+.ani-bat-waiting, .ani-bat-urgent { position: relative; overflow: visible; }
+.ani-bat-waiting::before, .ani-bat-waiting::after,
+.ani-bat-urgent::before,  .ani-bat-urgent::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 26px; height: 26px;
+  margin: -13px 0 0 -13px;                 /* centre; the keyframe owns transform */
+  border-radius: 50%;
+  border: 1.5px solid var(--ani-accent);
+  opacity: 0;
+  pointer-events: none;
+  animation: ani-bat-sonar 2.5s ease-out infinite;
 }
+.ani-bat-waiting::after, .ani-bat-urgent::after { animation-delay: 1.25s; }
 
-.ani-bat-waiting {
-  animation: ani-bat-pulse 2.5s ease-in-out infinite !important;
+@keyframes ani-bat-sonar {
+  0%   { transform: scale(0.7); opacity: 0; }
+  18%  { opacity: 0.6; }                    /* fade in once it's at the bat's edge */
+  100% { transform: scale(2); opacity: 0; } /* radiate out + fade */
 }
 
 @media (max-width: 440px) {
@@ -1688,13 +1705,28 @@ body.ani-fullscreen #ani-input-row { border-top-width: 1px; }
 }
 @media (prefers-reduced-motion: reduce) { #ani-particles span { display: none !important; } }
 
-/* Bat pulse tiers (base .ani-bat-waiting lives above). */
-@keyframes ani-bat-pulse-rose {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(192, 90, 120, .4); }
-  50%      { box-shadow: 0 0 10px 2px rgba(192, 90, 120, .5); }
+/* Bat pulse tiers (sonar-ring base lives above near .ani-bat-waiting). Urgent =
+   faster, rose-coloured rings pinging harder. */
+.ani-bat-urgent::before, .ani-bat-urgent::after {
+  border-color: rgba(192, 90, 120, .75);
+  animation-duration: 1.5s;
 }
-.ani-bat-urgent { animation: ani-bat-pulse-rose 1.5s ease-in-out infinite !important; }
-.ani-bat-glow   { box-shadow: 0 0 8px 1px rgba(192, 90, 120, .35) !important; }
+.ani-bat-urgent::after { animation-delay: 0.75s; }
+
+/* Reduced-motion (JS sets .ani-bat-glow instead of the animated tiers): a steady
+   CIRCULAR glow, not the old square box-shadow. */
+.ani-bat-glow { position: relative; }
+.ani-bat-glow::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 32px; height: 32px;
+  margin: -16px 0 0 -16px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(192, 90, 120, .32), rgba(192, 90, 120, 0) 70%);
+  pointer-events: none;
+  z-index: -1;
+}
 
 /* 🏠 HOME latch — cream cockpit face; looks physically pressed in when ON. */
 #ani-home-latch { opacity: .55; transition: opacity .15s, box-shadow .15s, transform .1s, background .15s, border-color .15s; }
