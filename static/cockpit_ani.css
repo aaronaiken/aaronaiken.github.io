@@ -733,8 +733,8 @@ body.ani-fullscreen #ani-avatar-fallback { font-size: 1.1rem; }
    with the element, so there are no z-index/stacking pitfalls. Calm tier here;
    urgent + reduced-motion below. */
 @keyframes ani-bat-halo {
-  0%, 100% { filter: drop-shadow(0 0 0 var(--ani-accent)); }
-  50%      { filter: drop-shadow(0 0 6px var(--ani-accent)); }
+  0%, 100% { filter: drop-shadow(0 0 0 var(--amber)); }
+  50%      { filter: drop-shadow(0 0 6px var(--amber)); }
 }
 .ani-bat-waiting { animation: ani-bat-halo 2.4s ease-in-out infinite !important; }
 
