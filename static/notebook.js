@@ -48,11 +48,24 @@
 		var gauge = document.getElementById('nb-slip-gauge');
 		var meterTicks = document.getElementById('nb-slip-meter-ticks');
 		var flash = document.getElementById('nb-slip-flash');
+		var statusEl = document.getElementById('nb-slip-status');
+		var fileBtn = document.getElementById('nb-slip-file');
+		var rollBtn = document.getElementById('nb-slip-roll');
 		var DRAFT_KEY = 'cockpit-nb-slip-draft';
 		var slipTicks = buildTicks(meterTicks);
 
 		// Restore any unflushed draft so a refresh never loses keystrokes.
 		try { var d = localStorage.getItem(DRAFT_KEY); if (d) slip.value = d; } catch (e) {}
+
+		// Held indicator + action-button state. The slip auto-persists to
+		// localStorage on every keystroke (saveDraft), so "✎ HELD" tells the
+		// user their jot survives a refresh; it clears once filed/rolled.
+		function renderHeld() {
+			var has = !!slip.value.trim();
+			if (statusEl) statusEl.textContent = has ? '✎ HELD' : '';
+			if (fileBtn) fileBtn.classList.toggle('is-off', !has);
+			if (rollBtn) rollBtn.classList.toggle('is-off', !has);
+		}
 
 		function paintBudget(b) {
 			if (!b) return;
@@ -65,7 +78,7 @@
 		}
 		loadBudget();
 
-		function saveDraft() { try { localStorage.setItem(DRAFT_KEY, slip.value); } catch (e) {} }
+		function saveDraft() { try { localStorage.setItem(DRAFT_KEY, slip.value); } catch (e) {} renderHeld(); }
 		function clearDraft() { try { localStorage.removeItem(DRAFT_KEY); } catch (e) {} }
 
 		function showFlash(msg) {
@@ -77,13 +90,13 @@
 
 		function fileToPage() {
 			var text = slip.value.replace(/\n+$/, '').trim();
-			if (!text) { slip.value = ''; clearDraft(); return; }
+			if (!text) { slip.value = ''; clearDraft(); renderHeld(); return; }
 			fetch(SLIP_URL, {
 				method: 'POST', headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ text: text })
 			}).then(function (r) { return r.json(); })
 				.then(function (d) {
-					slip.value = ''; clearDraft();
+					slip.value = ''; clearDraft(); renderHeld();
 					paintBudget(d.budget);
 					showFlash('FILED TO PAGE ✓');
 				}).catch(function () { showFlash('offline — kept on the slip'); });
@@ -99,9 +112,14 @@
 				method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 				body: body.toString()
 			}).then(function (r) { return r.json(); })
-				.then(function () { slip.value = ''; clearDraft(); showFlash('ROLLED TO BELOW DECK ↩'); })
+				.then(function () { slip.value = ''; clearDraft(); renderHeld(); showFlash('ROLLED TO BELOW DECK ↩'); })
 				.catch(function () { showFlash('offline — kept on the slip'); });
 		}
+
+		// Buttons (mobile has no Enter-Enter / Ctrl+Enter gesture).
+		window.nbSlipFile = fileToPage;
+		window.nbSlipRoll = rollToBelowDeck;
+		renderHeld();
 
 		slip.addEventListener('input', saveDraft);
 		slip.addEventListener('keydown', function (e) {

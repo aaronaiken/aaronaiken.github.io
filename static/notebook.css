@@ -31,6 +31,13 @@
 }
 .nb-slip-flash.is-on { opacity: 1; }
 
+/* persistent held/save indicator — "✎ HELD" while there's an unfiled draft */
+.nb-slip-status {
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase;
+	color: var(--muted);
+}
+
 .nb-slip-expand {
 	background: none; border: 1px solid var(--border-hi); border-radius: 2px;
 	color: var(--muted); cursor: pointer; font-size: 0.8rem; line-height: 1;
@@ -73,6 +80,27 @@
 	font-size: 0.5rem; letter-spacing: 0.14em; text-transform: uppercase;
 	color: var(--faint, var(--border-hi));
 }
+
+/* footer: on-screen action buttons + the keyboard hint. Wraps on narrow
+   screens (buttons on top, hint underneath). */
+.nb-slip-foot {
+	display: flex; align-items: center; justify-content: space-between;
+	gap: 10px 14px; margin-top: 7px; flex-wrap: wrap;
+}
+.nb-slip-foot .nb-slip-hint { margin-top: 0; }
+.nb-slip-actions { display: flex; gap: 8px; }
+.nb-slip-btn {
+	background: var(--pill-bg, var(--input-bg));
+	border: 1px solid var(--border-hi); border-radius: 2px;
+	color: var(--text-body); cursor: pointer;
+	font-family: 'Share Tech Mono', monospace;
+	font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
+	padding: 6px 12px;
+	transition: color 0.15s, border-color 0.15s, background 0.15s, opacity 0.15s;
+}
+.nb-slip-btn:hover { color: var(--amber); border-color: var(--amber-lo); }
+/* empty slip → dim + inert, so the buttons read as "nothing to file yet" */
+.nb-slip-btn.is-off { opacity: 0.4; pointer-events: none; }
 
 /* ---------- FULLSCREEN skeleton (/notebook) ---------- */
 .nb-fs {

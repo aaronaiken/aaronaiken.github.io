@@ -352,20 +352,29 @@
 			<div class="nb-slip-head">
 				<span class="section-label">// Notebook — fresh slip</span>
 				<div class="nb-slip-meta">
+					<span class="nb-slip-status" id="nb-slip-status" aria-live="polite"></span>
 					<span class="nb-slip-flash" id="nb-slip-flash" aria-live="polite"></span>
 					<button type="button" class="nb-slip-expand" onclick="nbOpenFullscreen()" title="Open the notebook (Ctrl+Shift+N)">⤢</button>
 				</div>
 			</div>
 			<div class="nb-slip-paper">
 				<textarea id="nb-slip-input" class="nb-slip-input" spellcheck="true"
-				          placeholder="jot it — Enter Enter files it to the page · Ctrl+Enter rolls it to Below Deck"></textarea>
+				          placeholder="jot it — file it to the page or roll it to Below Deck"></textarea>
 			</div>
 			<!-- same 48-tick page meter as the notebook fullscreen -->
 			<div class="nb-slip-meter">
 				<div class="nb-meter-ticks" id="nb-slip-meter-ticks"></div>
 				<span class="nb-meter-read" id="nb-slip-gauge">PG 0/48 · 48 LEFT</span>
 			</div>
-			<div class="nb-slip-hint">ENTER ENTER → PAGE · CTRL+ENTER → BELOW DECK · ⤢ NOTEBOOK</div>
+			<!-- action buttons work everywhere (mobile has no Enter-Enter / Ctrl+Enter);
+			     the keyboard hint stays for desktop muscle memory. -->
+			<div class="nb-slip-foot">
+				<div class="nb-slip-actions">
+					<button type="button" class="nb-slip-btn is-off" id="nb-slip-file" onclick="nbSlipFile()" title="File this slip to the notebook page (Enter Enter)">↴ PAGE</button>
+					<button type="button" class="nb-slip-btn is-off" id="nb-slip-roll" onclick="nbSlipRoll()" title="Roll this slip to Below Deck (Ctrl+Enter)">→ DECK</button>
+				</div>
+				<div class="nb-slip-hint">ENTER ENTER → PAGE · CTRL+ENTER → DECK · ⤢ NOTEBOOK</div>
+			</div>
 		</div>
 
 		<!-- MEDIA RAILS — state-only rows that summon/hide the floating players. Each rail

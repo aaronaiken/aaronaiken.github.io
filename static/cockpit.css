@@ -727,6 +727,10 @@
 	}
 	.tx-expand { display: none; margin-top: 10px; }
 	body.tx-open .tx-expand { display: block; }
+	/* Formatting pills wrap instead of scrolling off-screen. The .scroller's
+	   hidden scrollbar meant the rightmost pill (🙏 GRATEFUL) sat clipped past
+	   the edge on narrow phones with no affordance to reach it — wrap it. */
+	.tx-expand .scroller { flex-wrap: wrap; overflow-x: visible; }
 	/* expanded: // TX label on top, full-width box, count + SEND on the bottom-right */
 	body.tx-open .tx-compose .tx-line { flex-wrap: wrap; align-items: center; row-gap: 8px; }
 	body.tx-open .tx-tag { order: 1; flex: 1 1 auto; }
