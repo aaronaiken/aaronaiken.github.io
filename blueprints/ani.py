@@ -971,6 +971,11 @@ def _ani_arc_to_book_id(arc):
 			bid = (b.get('id') or '')
 			if title and (title in a or a in title):
 				return bid
+			# a distinctive cast name appearing in the arc is a strong link (e.g. "...with claire" → claire-open)
+			for c in (b.get('cast') or []):
+				cl = (c or '').strip().lower()
+				if len(cl) >= 3 and cl in at:
+					return bid
 			bt = _ani_tokens(title + ' ' + bid.replace('-', ' '))
 			shared = len(at & bt)
 			if shared:
@@ -979,7 +984,7 @@ def _ani_arc_to_book_id(arc):
 					best, best_score = bid, score
 	except Exception:
 		return None
-	return best if best_score >= 0.34 else None
+	return best if best_score >= 0.3 else None
 
 
 def ani_prune_notes_for(topic, keep_after_iso=None):
