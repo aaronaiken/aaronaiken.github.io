@@ -2427,7 +2427,7 @@ def ani_generate_image(scene):
 			anchor = '' if ('pov' in low or 'first-person' in low or 'first person' in low) else ANI_PARTNER_ANCHOR
 			prompt = (
 				f"RAW photo, photorealistic, {anchor}{clean_scene}. {bible_id} "
-				"Shot on DSLR, natural skin texture, sharp focus, high detail."
+				"Shot on DSLR, natural skin texture."
 			).strip()
 			w, h = VENICE_DIMS_PORTRAIT
 			print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) PARTNER cfg{VENICE_CFG_POSE} {w}x{h} "
@@ -2452,14 +2452,14 @@ def ani_generate_image(scene):
 			prompt = (
 				f"RAW photo, photorealistic, {ANI_SOLO_ANCHOR}full body shot. {clean_scene}, the named "
 				f"garments clearly worn and visible on her body. {bible_id} "
-				"Shot on DSLR, natural skin texture, sharp focus, high detail."
+				"Shot on DSLR, natural skin texture."
 			).strip()
 			cfg = VENICE_CFG_CLOTHED
 		else:
 			# Pose/composition leads (the model weights earlier tokens more), identity bible follows.
 			prompt = (
 				f"RAW photo, photorealistic, {ANI_SOLO_ANCHOR}full body shot. "
-				f"{clean_scene}. {bible_id} Shot on DSLR, natural skin texture, sharp focus, high detail."
+				f"{clean_scene}. {bible_id} Shot on DSLR, natural skin texture."
 			).strip()
 			cfg = VENICE_CFG_POSE if complex_pose else VENICE_CFG_SCALE
 		print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) cfg{cfg} {width}x{height} steps{steps} "
