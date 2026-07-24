@@ -50,7 +50,10 @@ ANI_SETTINGS_DEFAULT = {
 }
 # The granular per-image photo-composer fields — the variable part layered on the character + house bibles.
 ANI_PHOTO_FIELD_KEYS = ('setting', 'outfit', 'hair', 'makeup', 'nails', 'jewelry', 'body', 'pose',
-                        'expression', 'demeanor', 'camera')
+                        'expression', 'demeanor', 'camera',
+                        # photographic-control fields (manual/preset-driven — not auto-populated from chat;
+                        # they're the operator's per-image knobs) + a freeform text field appended last.
+                        'shot', 'lens', 'lighting', 'composition', 'look', 'freeform')
 
 # Calendar add tag: she emits [[CAL: YYYY-MM-DD[ HH:MM] | what it is]] when aaron asks her to add a
 # plan; the server parses it out (like the photo tag), saves the entry, and strips it from her reply.

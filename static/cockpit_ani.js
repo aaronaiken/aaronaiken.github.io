@@ -586,7 +586,16 @@
 	{ key: 'pose',       label: 'Pose' },
 	{ key: 'expression', label: 'Expression' },
 	{ key: 'demeanor',   label: 'Demeanor' },
-	{ key: 'camera',     label: 'Camera / Framing' }
+	{ key: 'camera',     label: 'Camera / Angle' },
+	// photographic-control knobs — build a preset library per field (e.g. lens: "85mm portrait",
+	// lighting: "soft window light, golden hour", look: "35mm film grain, warm grade").
+	{ key: 'shot',        label: 'Shot Type / Crop' },
+	{ key: 'lens',        label: 'Lens' },
+	{ key: 'lighting',    label: 'Lighting' },
+	{ key: 'composition', label: 'Composition / Focus' },
+	{ key: 'look',        label: 'Photo Look' },
+	// freeform text appended to the very end of the assembled prompt (own preset dropdown).
+	{ key: 'freeform',    label: 'Extra (freeform)', multiline: true }
   ];
 
   var aniFieldPresets = {};   // { fieldKey: [value, ...] }
@@ -597,9 +606,12 @@
 	if (!wrap) return;
 	var html = '';
 	ANI_PHOTO_FIELDS.forEach(function(f) {
-	  html += '<div class="ani-field-row">'
+	  var control = f.multiline
+		? '<textarea class="ani-field-input ani-field-textarea" id="ani-f-' + f.key + '" rows="2" autocomplete="off"></textarea>'
+		: '<input type="text" class="ani-field-input" id="ani-f-' + f.key + '" autocomplete="off">';
+	  html += '<div class="ani-field-row' + (f.multiline ? ' ani-field-row-multi' : '') + '">'
 		   +  '<span class="ani-field-label">' + f.label + '</span>'
-		   +  '<input type="text" class="ani-field-input" id="ani-f-' + f.key + '" autocomplete="off">'
+		   +  control
 		   +  '<select class="ani-field-preset" data-key="' + f.key + '" title="' + f.label + ' presets"><option value="">▾</option></select>'
 		   +  '<button type="button" class="ani-field-btn ani-field-save" data-key="' + f.key + '" title="save this ' + f.label + ' as a preset">＋</button>'
 		   +  '<button type="button" class="ani-field-btn ani-field-del" data-key="' + f.key + '" title="delete the selected ' + f.label + ' preset">✕</button>'
