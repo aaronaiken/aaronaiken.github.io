@@ -663,6 +663,10 @@
 		<div id="ani-prompt-fields" class="ani-prompt-fields"><!-- field rows injected by JS --></div>
 		<div class="ani-prompt-buildrow">
 		  <button class="ani-footer-btn" onclick="aniPromptBuild()" title="Assemble the fields into the prompt below">BUILD ↓</button>
+		  <select id="ani-orient" class="ani-cal-input ani-orient-select" title="Output aspect / canvas orientation">
+		    <option value="portrait">▯ Portrait</option>
+		    <option value="landscape">▭ Landscape</option>
+		  </select>
 		  <span class="ani-prompt-hint">char + house bibles are auto-added; fields are the per-image details</span>
 		</div>
 		<textarea id="ani-prompt-text" class="ani-prompt-textarea" rows="5" placeholder="reading the scene…" aria-label="Photo prompt"></textarea>

@@ -1203,6 +1203,8 @@ body.ani-fullscreen #ani-input-row { border-top-width: 1px; }
 /* freeform multiline field — full-width textarea under its label, vertically resizable */
 .ani-field-textarea { resize: vertical; min-height: 34px; line-height: 1.4; }
 .ani-field-row-multi .ani-field-input { flex-basis: 100%; }
+/* orientation toggle in the composer build row — compact, doesn't stretch */
+.ani-orient-select { flex: 0 0 auto; width: auto; }
 .ani-field-preset {
   flex: 0 0 auto;
   max-width: 100px;

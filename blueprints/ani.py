@@ -2372,10 +2372,13 @@ def _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear
 	return url
 
 
-def ani_generate_image(scene):
+def ani_generate_image(scene, orientation='portrait'):
 	"""Generate a photo of Ani from a scene prompt, anchored to her character bible, and re-host
 	on Bunny. Routes to the configured backend: 'venice' (uncensored, faithful) or 'xai'
-	(grok-imagine, output-moderated → covered-chest top-guard). Returns a CDN URL or None."""
+	(grok-imagine, output-moderated → covered-chest top-guard). orientation 'portrait' (default)
+	or 'landscape' selects the output canvas dims. Returns a CDN URL or None."""
+	# Portrait by default; landscape (wider canvas) only when the operator picks it in the composer.
+	_dims = VENICE_DIMS_LANDSCAPE if str(orientation or '').lower().startswith('land') else VENICE_DIMS_PORTRAIT
 	clean_scene = re.sub(r'\s{2,}', ' ', scene).strip(' ,;.')
 	# Rear scenes lead with a 'camera behind her' note, but the normalizer reliably ALSO tacks on a
 	# 'foot of the bed / looking along her body' clause (it won't stop, however the rule is worded) and
@@ -2429,7 +2432,7 @@ def ani_generate_image(scene):
 				f"RAW photo, photorealistic, {anchor}{clean_scene}. {bible_id} "
 				"Shot on DSLR, natural skin texture."
 			).strip()
-			w, h = VENICE_DIMS_PORTRAIT
+			w, h = _dims
 			print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) PARTNER cfg{VENICE_CFG_POSE} {w}x{h} "
 			      f"feet_fix={feet_fix} rear={rear} qa={ANI_IMAGE_QA} — scene: {clean_scene!r}")
 			return _ani_render_venice(prompt, negative, VENICE_CFG_POSE, w, h, VENICE_STEPS_POSE,
@@ -2446,7 +2449,7 @@ def ani_generate_image(scene):
 		# Base realism + always-on dup/anatomy guards + scene-specific garment/pose/writing negatives.
 		negative = ', '.join(p for p in (
 			VENICE_NEGATIVE_PROMPT, VENICE_DUP_NEGATIVE, VENICE_ANATOMY_NEGATIVE, extra_neg, pose_neg, writing_neg) if p)
-		width, height = VENICE_DIMS_PORTRAIT
+		width, height = _dims
 		steps = VENICE_STEPS_POSE if complex_pose else VENICE_STEPS
 		if extra_neg:
 			prompt = (
@@ -5543,12 +5546,14 @@ def ani_photo():
 
 	messages, meta = ani_load_conversation()
 	# An edited prompt from the preview modal wins; otherwise normalize the recent scene as before.
-	override = ((request.get_json(silent=True) or {}).get('scene') or '').strip()
+	_body = request.get_json(silent=True) or {}
+	override = (_body.get('scene') or '').strip()
+	orientation = _body.get('orientation') or 'portrait'
 	scene = override or ani_normalize_scene(messages)
 	if not scene:
 		return jsonify({'image_url': None, 'error': 'prompt'}), 200
 
-	image_url = ani_generate_image(scene)
+	image_url = ani_generate_image(scene, orientation)
 	if not image_url:
 		return jsonify({'image_url': None, 'error': 'blocked', 'scene': scene}), 200
 
@@ -5598,7 +5603,7 @@ def ani_photo_retry():
 	override = (body.get('scene') or '').strip()
 	render_scene = override or ani_simplify_pose(scene)
 
-	new_url = ani_generate_image(render_scene)
+	new_url = ani_generate_image(render_scene, body.get('orientation') or 'portrait')
 	if not new_url:
 		return jsonify({'image_url': None, 'error': 'blocked', 'scene': render_scene}), 200
 

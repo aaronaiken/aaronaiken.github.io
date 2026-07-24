@@ -818,6 +818,12 @@
   }
 
   // New photo: generate from the edited scene, append as a fresh message.
+  // Output orientation (portrait default | landscape) — a canvas-aspect toggle, not a prompt field.
+  function aniGetOrientation() {
+	var el = document.getElementById('ani-orient');
+	return (el && el.value) === 'landscape' ? 'landscape' : 'portrait';
+  }
+
   function aniDoNewPhoto(scene) {
 	aniPhotoPromptClose();
 	aniEmpty.style.display = 'none';
@@ -828,7 +834,7 @@
 	aniScrollToBottom();
 	fetch('/ani/photo', {
 	  method: 'POST', headers: { 'Content-Type': 'application/json' },
-	  body: JSON.stringify({ scene: scene })
+	  body: JSON.stringify({ scene: scene, orientation: aniGetOrientation() })
 	})
 	  .then(function(r) { return r.json(); })
 	  .then(function(data) {
@@ -867,7 +873,7 @@
 	if (img) img.style.opacity = '0.35';
 	fetch('/ani/photo/retry', {
 	  method: 'POST', headers: { 'Content-Type': 'application/json' },
-	  body: JSON.stringify({ image_url: ctx.oldUrl, scene: scene })
+	  body: JSON.stringify({ image_url: ctx.oldUrl, scene: scene, orientation: aniGetOrientation() })
 	})
 	  .then(function(r) { return r.json(); })
 	  .then(function(data) {
