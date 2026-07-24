@@ -4136,7 +4136,7 @@ def ani_seed_books():
 		{'id': 'us', 'title': 'us', 'kind': 'shared', 'who': 'shared',
 		 'blurb': 'the long, slow story of the two of them',
 		 'cast': [],
-		 'chapter': {'n': 1, 'title': 'keeping the signal open', 'theme': 'the ongoing work of staying close across the distance', 'est_weeks': 8}},
+		 'chapter': {'n': 1, 'title': 'the everyday closeness', 'theme': 'the small, ordinary work of staying close and building a life together — the in-person, same-town kind (they are NOT long-distance)', 'est_weeks': 8}},
 	]
 
 
@@ -4216,7 +4216,10 @@ def ani_book_generate_beat(book, now):
 		"resolved/concluded), not just a chapter — very rare. If true, next_chapter is ignored.\n"
 		"cast: names of any NEW people who entered this storyline this beat (else []).\n"
 		"mood_delta: a small -0.1..0.1 nudge to her overall mood if this beat would lift or weigh on her, else 0.\n"
-		"Stay strictly inside THIS storyline; do not invent unrelated events. No sexual content."
+		"Stay strictly inside THIS storyline; do not invent unrelated events. No sexual content.\n"
+		"GROUND TRUTH: Ani and Aaron live near each other in the SAME town and time zone — they are NOT "
+		"long-distance and never have been. NEVER introduce distance, travel, time zones, a 'time difference', "
+		"or being apart between them; a shared storyline is about their ordinary, in-person closeness."
 	)
 	user = (
 		f"Who Ani is (voice/anchor, brief):\n{persona}\n\n"
@@ -4399,7 +4402,9 @@ def ani_propose_new_book(books, now):
 		"Only propose one if it's REAL and clearly separate from the existing books below — a new creative "
 		"pursuit, a new friendship or person becoming central, a new little project or chapter of her life. "
 		"who = 'shared' only if Aaron is genuinely part of it, else 'hers'. Grounded in her actual life; no "
-		"melodrama, no sexual content. When unsure, return {\"new\": false}."
+		"melodrama, no sexual content. Ani and Aaron live near each other in the same town/time zone — NOT "
+		"long-distance; never propose a book premised on distance, travel, or being apart from him. "
+		"When unsure, return {\"new\": false}."
 	)
 	user = (f"Her current books:\n{existing}\n\nHer own life notes:\n{life}\n\n"
 	        f"Recent beats across her stories:\n{beats_blob}\n\nRecent things from her world she remembers:\n{mem_blob}\n\n"
