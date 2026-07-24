@@ -74,7 +74,8 @@ TARGETS = [
 	(os.path.join(REPO_ROOT, 'ani_calendar.json'),           'json'),
 	(os.path.join(REPO_ROOT, 'ani_remember.json'),           'json'),
 	(os.path.join(REPO_ROOT, 'ani_books.json'),              'json'),  # story-engine books/beats
-	(os.path.join(REPO_ROOT, 'ani_threads.json'),            'json'),  # storylines
+	(os.path.join(REPO_ROOT, 'ani_threads.json'),            'json'),  # storylines + decision forks
+	(os.path.join(REPO_ROOT, 'ani_reflection.json'),         'json'),  # daily reflection (feelings/wants/crossroads) + history
 	(os.path.join(REPO_ROOT, 'ani_state.json'),              'json'),  # right-now state
 	(os.path.join(REPO_ROOT, 'ani_settings.json'),           'json'),
 	(os.path.join(REPO_ROOT, 'ani_pending_milestones.json'), 'json'),
