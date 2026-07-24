@@ -920,10 +920,12 @@ def ani_threads_context():
 
 # ---- DECISION FORKS (a storyline at a crossroads that must be RESOLVED, not circled) ----
 
-def ani_open_fork(name, options_raw, now_dt):
+def ani_open_fork(name, options_raw, now_dt, book_id=None, question=None):
 	"""Open (or convert) a DECISION thread — a fork in her world that needs a choice. `options_raw` is the
 	pipe-joined branches after the name. Upserts by key so an arc that reaches a turning point becomes a
-	decision in place, preserving its existing status/opened time. No-op if fewer than two real options."""
+	decision in place, preserving its existing status/opened time. No-op if fewer than two real options.
+	`book_id` links the fork back to the story book it arose from, so resolving it advances that book
+	(Phase 3). `question` (the crossroads in her own words) becomes the thread's status/panel line."""
 	name = (name or '').strip()
 	opts = [o.strip()[:80] for o in (options_raw or '').split('|') if o.strip()][:4]
 	if not name or len(opts) < 2:
@@ -936,16 +938,48 @@ def ani_open_fork(name, options_raw, now_dt):
 		return existing
 	threads[key] = {
 		'name': name[:60],
-		'status': existing.get('status') or 'at a crossroads — needs a decision',
+		'status': ((question or '').strip()[:200] or existing.get('status')
+		           or 'at a crossroads — needs a decision'),
 		'kind': 'decision', 'state': 'open', 'options': opts, 'resolution': None,
 		'opened': existing.get('opened') or now_dt.isoformat(),
 		'updated': now_dt.isoformat(),
 	}
+	bid = book_id or existing.get('book_id')
+	if bid:
+		threads[key]['book_id'] = bid
 	if len(threads) > ANI_THREADS_MAX:
 		keep = sorted(threads.items(), key=lambda kv: kv[1].get('updated', ''), reverse=True)[:ANI_THREADS_MAX]
 		threads = dict(keep)
 	ani_save_threads(threads)
 	return threads[key]
+
+
+def _ani_arc_to_book_id(arc):
+	"""Best-effort map a reflection crossroads' free-text `arc` back to one of her active story books, so a
+	fork opened from it can advance that book when resolved. Title substring or shared significant tokens;
+	returns the best-matching active book id, or None."""
+	a = (arc or '').strip().lower()
+	if not a:
+		return None
+	at = _ani_tokens(a)
+	best, best_score = None, 0.0
+	try:
+		for b in ani_load_books():
+			if b.get('status') != 'active':
+				continue
+			title = (b.get('title') or '').lower()
+			bid = (b.get('id') or '')
+			if title and (title in a or a in title):
+				return bid
+			bt = _ani_tokens(title + ' ' + bid.replace('-', ' '))
+			shared = len(at & bt)
+			if shared:
+				score = shared / max(1, len(at))
+				if score > best_score:
+					best, best_score = bid, score
+	except Exception:
+		return None
+	return best if best_score >= 0.34 else None
 
 
 def ani_prune_notes_for(topic, keep_after_iso=None):
@@ -994,6 +1028,7 @@ def ani_resolve_fork(name, choice, now_dt):
 		key = next((k for k, t in threads.items() if t.get('name', '').lower() == name.lower()), key)
 	t = threads.get(key) or {'name': name[:60], 'opened': now_dt.isoformat()}
 	disp = t.get('name', name)
+	book_id = t.get('book_id')   # capture before the thread is overwritten with the living arc
 	settled = ani_add_memory_note({
 		'text': ('Settled: %s — %s.' % (disp, choice))[:220],
 		'category': 'her_world', 'importance': 3,
@@ -1009,8 +1044,17 @@ def ani_resolve_fork(name, choice, now_dt):
 		'opened': now_dt.isoformat(), 'updated': now_dt.isoformat(),
 		'from_decision': choice[:120],
 	}
+	if book_id:
+		living['book_id'] = book_id
 	threads[key] = living
 	ani_save_threads(threads)
+	# Phase 3: land the decision IN its story book as a real beat so the arc actually MOVES — the daily story
+	# tick then generates the rich aftermath beats from here. Deterministic + guarded (never breaks a resolve).
+	if book_id:
+		try:
+			ani_book_apply_decision(book_id, disp, choice, now_dt)
+		except Exception as e:
+			print(f"Ani decision→book error: {e}")
 	return living, pruned
 
 
@@ -4772,6 +4816,15 @@ def ani_reflect(now):
 		ani_save_reflection(reflection)
 	except Exception as e:
 		print(f"Ani reflect save error: {e}")
+	# Phase 3: a real crossroads becomes a DECISION FORK — the reliable source the fork surface has been
+	# starved of (inline [[FORK]] tags are dead on grok-4.3). Upserts by name so a crossroads that persists
+	# across days updates in place rather than duplicating; links back to its book so resolving advances it.
+	for c in crossroads:
+		try:
+			bid = _ani_arc_to_book_id(c.get('arc'))
+			ani_open_fork(c['arc'], '|'.join(c['options']), now, book_id=bid, question=c.get('question'))
+		except Exception as e:
+			print(f"Ani reflect fork error: {e}")
 	return reflection
 
 
@@ -4825,6 +4878,33 @@ def ani_maybe_reflect_on_event(now):
 		return {}
 	print(f"Ani reflect (event: {event})")
 	return ani_reflect(now)
+
+
+def ani_book_apply_decision(book_id, name, choice, now):
+	"""Land a resolved decision INSIDE its story book (Phase 3) so the arc actually moves: append a real beat
+	recording the choice, push the current chapter meaningfully forward, invalidate the cached recap, and add
+	a small positive mood nudge (a resolved crossroads is a relief). The next daily story tick generates the
+	rich aftermath beats continuing from this. Best-effort; returns True if a book was advanced."""
+	books = ani_load_books()
+	for b in books:
+		if b.get('id') != book_id:
+			continue
+		ch = b.get('chapter') or {}
+		beat_text = ('Decided: %s — %s.' % (name, choice))[:400]
+		b.setdefault('beats', []).append({
+			'ts': now.isoformat(), 'kind': b.get('who') or 'hers', 'text': beat_text,
+			'chapter': ch.get('n', 1), 'from_decision': True})
+		b['last_beat_day'] = now.strftime('%Y-%m-%d')
+		ch['progress'] = round(min(1.0, (ch.get('progress') or 0.0) + ANI_STORY_ADVANCE_MAX), 3)
+		b['chapter'] = ch
+		b['recap'] = None
+		b['mood_delta'] = 0.06
+		b['mood_delta_ts'] = now.isoformat()
+		if len(b['beats']) > ANI_STORY_BEATS_MAX:
+			b['beats'] = b['beats'][-ANI_STORY_BEATS_MAX:]
+		ani_save_books(books)
+		return True
+	return False
 
 
 def ani_book_add_cast(book_id, name):
