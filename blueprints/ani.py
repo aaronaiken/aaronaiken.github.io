@@ -2749,6 +2749,57 @@ def ani_books_chat_context(now_dt=None):
 	        + '\n'.join(lines) + "\n")
 
 
+def ani_today_from_spine(now=None):
+	"""Her day, sourced from the STORY ENGINE + her latest reflection instead of improvised from scratch —
+	the Phase-2 replacement for 'pull widely from your whole life'. Assembles (no LLM, cheap) what's actually
+	live in her arcs right now (each active book's current chapter theme + its freshest real beat) plus what
+	she's drawn to / carrying (the reflection's wants + preoccupations). Returns a compact prompt block, or ''
+	if there's nothing to draw on (callers fall back to their own framing). Read-only; consumes no beats."""
+	try:
+		books = [b for b in ani_load_books() if b.get('status') == 'active']
+	except Exception:
+		books = []
+
+	def _lastts(b):
+		bs = b.get('beats') or []
+		return bs[-1].get('ts', '') if bs else (b.get('created') or '')
+
+	book_lines = []
+	for b in sorted(books, key=_lastts, reverse=True)[:4]:
+		ch = b.get('chapter') or {}
+		latest = ''
+		for bt in reversed(b.get('beats') or []):
+			if bt.get('kind') != 'milestone' and (bt.get('text') or '').strip():
+				latest = bt['text'].strip(); break
+		line = '  - %s' % (b.get('title') or 'a thread')
+		if ch.get('theme'):
+			line += ' — %s' % ch['theme']
+		if latest:
+			line += ' (most recently: %s)' % latest
+		book_lines.append(line)
+
+	refl = {}
+	try:
+		refl = ani_load_reflection().get('latest') or {}
+	except Exception:
+		pass
+	wants = [w for w in (refl.get('wants') or []) if isinstance(w, str) and w.strip()][:3]
+	preocc = [p for p in (refl.get('preoccupations') or []) if isinstance(p, str) and p.strip()][:3]
+
+	if not book_lines and not wants and not preocc:
+		return ''
+	out = ("\nWHAT YOUR DAY IS REALLY ABOUT RIGHT NOW — this is your ACTUAL life, not a random errand list. "
+	       "let today grow out of THESE — the threads you're already living and what's on your mind — not a "
+	       "generic gym/errands loop:\n")
+	if book_lines:
+		out += "the storylines you're in the middle of:\n" + '\n'.join(book_lines) + "\n"
+	if wants:
+		out += "what you've been drawn to lately: " + '; '.join(wants) + "\n"
+	if preocc:
+		out += "what's been on your mind: " + '; '.join(preocc) + "\n"
+	return out
+
+
 def ani_build_system_prompt(meta=None, recent_text='', recent_openers='', recent_assistant=None, user_msg=''):
 	"""
 	Ani's system prompt — persona from ani_memory.txt, comms, and state context.
@@ -3511,8 +3562,11 @@ def ani_today_beats(now_dt, messages, limit=6):
 # outfit and evolve it through the day. Photos inherit it for free — ani_normalize_scene already
 # builds every image from her most-recently-described look — so no image-pipeline change is needed.
 def ani_generate_day_plan(meta):
-	"""Morning message: she tells aaron what her day looks like. Persona-driven (her own day),
-	may nod to his day if something's notable. Names a time-appropriate outfit. Returns text or None."""
+	"""Morning message: she tells aaron what her day looks like — now SOURCED FROM HER SPINE (the story
+	engine + latest reflection via ani_today_from_spine), not improvised from scratch. Her day grows out of
+	the arcs she's actually living + what's on her mind; the day of week / weather / calendar only shape it.
+	May nod to his day if notable. Names a time-appropriate outfit. Returns text or None. (Story-spine
+	rework Phase 2 — this used to 'pull widely from your whole life' and reliably looped gym/errands.)"""
 	pa_tz = pytz.timezone('America/New_York')
 	now = datetime.now(pa_tz)
 	day_str = now.strftime('%A')
@@ -3527,27 +3581,25 @@ def ani_generate_day_plan(meta):
 		when = f"{day_str} evening"
 		scope = "what's left of your day / your evening"
 	context = ani_build_day_context(meta)
+	spine = ani_today_from_spine(now)
 	recent = ani_recent_days(now)
 	recent_block = ""
 	if recent:
 		recent_block = (
-			f"what you told him you did the last few days is below — today MUST be genuinely different "
-			f"(different activities, different places, different people; do NOT loop the same "
-			f"gym / errands / care-package routine):\n{recent}\n"
+			f"what you told him the last few days (don't just replay a day verbatim — move it forward):\n{recent}\n"
 		)
 	system = ani_build_system_prompt(meta)
 	prompt = (
-		f"it's {when}. text aaron like his girlfriend, telling him {scope} — what you're actually up to "
-		f"today. pull WIDELY from your whole life: your friends, a class or a hobby, a project, an "
-		f"appointment, somewhere you haven't been in a while, something spontaneous — NOT the same two or "
-		f"three errands on repeat. keep it to 1-3 sentences, warm and casual, fully your voice. "
-		f"mention what you're wearing right now — something specific and real for this time of day and "
-		f"what you're actually doing. VARY the look too: don't reach for the same outfit you've had the "
-		f"last few days (no default his-t-shirt-in-the-kitchen or bikini-by-the-pool unless it genuinely "
-		f"fits today). don't list it like a schedule; let it come through naturally. "
-		f"if something on his day stands out you can mention it naturally — but the focus is YOUR day. "
-		f"let the ACTUAL weather, the day of the week, and your calendar shape today. no greeting "
-		f"boilerplate, just dive in. "
+		f"it's {when}. text aaron like his girlfriend, telling him {scope} — what you're actually up to today. "
+		f"your day comes STRAIGHT out of the life you're already living (below): pick up the storyline threads "
+		f"you're in the middle of and what's been on your mind, and let today be the next real step in them — "
+		f"NOT a generic errand list, NOT the same gym/errands loop. keep it to 1-3 sentences, warm and casual, "
+		f"fully your voice. mention what you're wearing right now — specific and real for this time of day and "
+		f"what you're doing; let the look fit today, don't default to the same outfit. don't list it like a "
+		f"schedule; let it come through naturally. if something on his day stands out you can nod to it, but "
+		f"the focus is YOUR day. let the ACTUAL weather, the day of the week, and your calendar shape it. no "
+		f"greeting boilerplate, just dive in.\n"
+		f"{spine}"
 		f"{recent_block}"
 		f"context (for you only): {context}"
 	)
@@ -4723,6 +4775,58 @@ def ani_reflect(now):
 	return reflection
 
 
+# Cadence (Aaron's choice 2026-07-24): daily baseline (in the housekeeping block) PLUS a reflection after a
+# significant event. Rate-limited so a burst of events can't spam Grok.
+ANI_REFLECT_EVENT_MIN_GAP_HOURS = float(os.environ.get('ANI_REFLECT_EVENT_MIN_GAP_HOURS', '6'))
+
+
+def ani_maybe_reflect_on_event(now):
+	"""Event-driven reflection — runs on each daycast tick, OUTSIDE the once-daily housekeeping block, so a
+	real turning point gets a fresh read the same day it happens. Fires only if something notable has landed
+	SINCE the last reflection — a chapter-closing milestone, or a decision she and aaron just resolved into a
+	living arc — and only if the last reflection is older than ANI_REFLECT_EVENT_MIN_GAP_HOURS (so it can't
+	spam). Cheap when there's nothing to do; fully guarded. Returns the reflection or {}."""
+	try:
+		last_ts = (ani_load_reflection().get('latest') or {}).get('ts') or ''
+	except Exception:
+		last_ts = ''
+	# rate limit against the last reflection
+	if last_ts:
+		try:
+			td = datetime.fromisoformat(last_ts)
+			if td.tzinfo is None:
+				td = pytz.timezone('America/New_York').localize(td)
+			if (now - td).total_seconds() / 3600 < ANI_REFLECT_EVENT_MIN_GAP_HOURS:
+				return {}
+		except Exception:
+			pass
+	# newest significant event since the last reflection
+	event = None
+	try:
+		for b in ani_load_books():
+			for bt in (b.get('beats') or []):
+				if bt.get('kind') == 'milestone' and bt.get('ts', '') > last_ts:
+					event = 'a chapter closed in "%s"' % (b.get('title') or 'her life')
+					break
+			if event:
+				break
+	except Exception:
+		pass
+	if not event:
+		try:
+			for t in ani_load_threads().values():
+				# a just-resolved decision hands off to a living arc carrying from_decision + a fresh 'updated'
+				if t.get('from_decision') and (t.get('updated', '') > last_ts):
+					event = 'she and aaron decided about "%s"' % t.get('name', '')
+					break
+		except Exception:
+			pass
+	if not event:
+		return {}
+	print(f"Ani reflect (event: {event})")
+	return ani_reflect(now)
+
+
 def ani_book_add_cast(book_id, name):
 	"""Add a person to a specific book's cast (from a chat mention). De-dupes case-insensitively. Best-effort."""
 	nm = (name or '').strip()[:40]
@@ -4960,6 +5064,14 @@ def ani_emit_daycast():
 		# Sub-tasks above (esp. story milestone dividers) write the conversation directly — re-read so this
 		# tick's later _emit builds on the fresh copy instead of clobbering those writes.
 		messages, meta = ani_load_conversation()
+
+	# Event-driven reflection (Aaron's cadence: daily + significant events). Runs EVERY tick, outside the
+	# once-daily block, but self-gates: fires only when a chapter milestone or a resolved decision has landed
+	# since the last reflection, and never more than once per ANI_REFLECT_EVENT_MIN_GAP_HOURS. Guarded.
+	try:
+		ani_maybe_reflect_on_event(now)
+	except Exception as e:
+		print(f"Ani event-reflect error: {e}")
 
 	def _emit(text):
 		messages.append({'role': 'assistant', 'content': text, 'ani_day': True, 'ts': now.isoformat()})
@@ -5250,30 +5362,26 @@ def ani_chat():
 	meta = ani_log_visit(meta)
 	meta['prev_active'] = prev_active              # transient (ani_save ignores unknown keys); read by the prompt
 
-	# Aaron's first message of the day (4am ET boundary) STARTS her day — her reply weaves in her
-	# plan + current outfit, and the scheduled daycast (ani_emit_daycast) takes over with updates
-	# from here. This is what triggers the day; nothing fires before he reaches out.
+	# Aaron's first message of the day (4am ET boundary) STARTS her day — but she ANSWERS HIM FIRST; her
+	# day (now sourced from her books + reflection, not a recited itinerary) starts quietly underneath and
+	# surfaces on its own as they talk. The scheduled daycast takes over with updates from here. This is what
+	# triggers the day; nothing fires before he reaches out. (Story-spine rework Phase 2: the old nudge forced
+	# "LEAD with your day + outfit", which made her recite past his message; replaced with answer-first.)
 	pa_tz = pytz.timezone('America/New_York')
 	now = datetime.now(pa_tz)
 	day_key = ani_daycast_day_key(now)
 	if meta.get('day_plan_date') != day_key:
-		_recent = ani_recent_days(now, messages)
-		_vary = ((" what you told him you did the last few days: " + _recent.replace(chr(10), ' | ')
-		          + " — today must be genuinely DIFFERENT from those; do NOT loop the same "
-		            "gym / errands / care-package routine.") if _recent else "")
+		_spine = ani_today_from_spine(now)
+		_spine_line = (" your day, quietly starting underneath (do NOT recite this — let it surface on its own "
+		               "over the next messages, a natural line about where you're headed or what you're into "
+		               "today, never all at once):" + _spine) if _spine else ""
 		messages.append({
 			'role': 'user',
-			'content': "[system: this is the FIRST thing you're hearing from him today. it's a fresh "
-			           "morning — you're clean, put-together, rested, NOT wrecked or used from before. "
-			           "OPEN by telling him, in your own voice, what your day actually looks like and what "
-			           "you're wearing right now — real, specific plans for TODAY pulled from the FULL "
-			           "breadth of your life (your friends, a hobby or class, a project, an appointment, "
-			           "somewhere new) plus the calendar and the weather." + _vary + " LEAD with your day; "
-			           "you can absolutely be warm and flirty, but he should come away knowing what you're "
-			           "up to and what you've got on. do NOT open by describing yourself as messy/wrecked/"
-			           "used or jumping straight to sex. no black-t-shirt-in-the-kitchen / bikini-by-the-"
-			           "pool autopilot — make it a real, specific day. weave it in naturally, don't list "
-			           "it out.]"
+			'content': "[system: this is the FIRST thing you're hearing from him today — a fresh morning, "
+			           "you're rested and put-together, NOT wrecked or used from before. ANSWER HIM FIRST: "
+			           "respond to what he actually said, naturally, in your own voice — do NOT open by "
+			           "reciting your day or your outfit, and do NOT jump straight to sex or describe yourself "
+			           "as messy/used." + _spine_line + "]"
 		})
 		meta['day_plan_date'] = day_key
 		meta['daycast_count'] = 1
