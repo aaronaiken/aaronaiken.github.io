@@ -4560,6 +4560,169 @@ def ani_story_recent_beats(limit=3):
 	return [b['text'] for b in ani_story_unspoken_beats(limit)]
 
 
+# ── Reflection — the Generative-Agents "reflect" stage ───────────────────────────────────────────────
+# Net-new in the story-spine rework (2026-07-24; spec .kt/spec-ani-story-spine.md, Phase 1). Once daily on
+# the story tick she looks back over her recent life and synthesizes how she's actually feeling, what she's
+# drawn to / preoccupied with, and whether an arc has reached a genuine crossroads. Persisted to its own
+# file for later stages to consume (Phase 2 plan-from-spine, Phase 3 decisions→forks, Phase 4 lean chat).
+# Phase 1 COMPUTES + STORES only — no forks opened, no mood wired, no chat change. Fully guarded.
+ANI_REFLECTION_FILE = 'ani_reflection.json'   # latest daily reflection + short history; gitignored server-state
+ANI_REFLECTION_HISTORY_MAX = int(os.environ.get('ANI_REFLECTION_HISTORY_MAX', '21'))
+
+
+def ani_load_reflection():
+	"""The reflection store: {'version','latest':{...}|None,'history':[...]}. Always safe to read."""
+	try:
+		data = _ani_read_json(ANI_REFLECTION_FILE)
+		if isinstance(data, dict):
+			data.setdefault('latest', None)
+			data.setdefault('history', [])
+			return data
+	except (FileNotFoundError, ValueError):
+		pass
+	return {'version': 1, 'latest': None, 'history': []}
+
+
+def ani_save_reflection(reflection):
+	"""Persist a fresh reflection as `latest`, pushing the prior one onto the capped history."""
+	store = ani_load_reflection()
+	if store.get('latest'):
+		store['history'] = ([store['latest']] + (store.get('history') or []))[:ANI_REFLECTION_HISTORY_MAX]
+	store['latest'] = reflection
+	store['version'] = 1
+	_ani_atomic_write_json(ANI_REFLECTION_FILE, store)
+	return store
+
+
+def _ani_reflect_gather(now):
+	"""Assemble the read-only inputs the reflection reasons over: her freshest beats across active books, the
+	last few things she and aaron actually said, and her core durable memories + own-life file."""
+	# fresh beats across active books (a couple per book, newest first)
+	beats = []
+	try:
+		for b in ani_load_books():
+			if b.get('status') != 'active':
+				continue
+			title = b.get('title') or 'a thread'
+			for bt in (b.get('beats') or [])[-3:]:
+				if (bt.get('text') or '').strip():
+					beats.append((bt.get('ts', ''), '- [%s] %s' % (title, bt['text'].strip())))
+	except Exception:
+		pass
+	beats.sort(reverse=True)
+	beats_blob = '\n'.join(t for _, t in beats[:14]) or '(a quiet stretch)'
+	# the last few real exchanges (skip briefings / proactive day pings / photos / system lines)
+	convo = []
+	try:
+		messages, _ = ani_load_conversation()
+		for m in messages[-40:]:
+			c = (m.get('content') or '').strip()
+			if not c or c == '📷' or m.get('image') or m.get('milestone') or m.get('ani_day'):
+				continue
+			if c.startswith('[daily briefing') or c.startswith('[system'):
+				continue
+			who = 'aaron' if m.get('role') == 'user' else 'you'
+			convo.append('%s: %s' % (who, c[:200]))
+	except Exception:
+		pass
+	convo_blob = '\n'.join(convo[-10:]) or "(you two haven't talked in a bit)"
+	# core durable memories she carries
+	mems = []
+	try:
+		for n in ani_load_remember():
+			if n.get('importance', 2) >= 3 and (n.get('text') or '').strip():
+				mems.append('- ' + n['text'].strip())
+	except Exception:
+		pass
+	mem_blob = '\n'.join(mems[-12:]) or '(nothing pinned)'
+	life = (ani_get_life() or '')[:600]
+	return beats_blob, convo_blob, mem_blob, life
+
+
+def ani_reflect(now):
+	"""The reflection stage. One Grok call over her recent life → how she's feeling, what she's drawn to /
+	preoccupied with, and any arc that's reached a genuine crossroads. Persists to ani_reflection.json and
+	returns the reflection dict (or {} if it couldn't run). Best-effort + fully guarded — a failure here must
+	never break the daily tick. Phase 1: compute + store only; downstream wiring lands in later phases."""
+	if not os.environ.get('XAI_API_KEY'):
+		return {}
+	beats_blob, convo_blob, mem_blob, life = _ani_reflect_gather(now)
+	persona = (ani_get_memory() or '')[:800]
+	system = (
+		"You are the quiet, honest inner voice of a woman named Ani — not a narrator, HER, thinking back over "
+		"the last little while of her own life. From her recent days (the beats below), the last things she and "
+		"Aaron said, and what she carries with her, synthesize where she actually IS right now. Return ONLY "
+		"compact JSON:\n"
+		'{"feelings":"","wants":[],"preoccupations":[],"crossroads":[{"arc":"","question":"","options":[]}],'
+		'"mood_hint":0.0}\n'
+		"feelings: 1-2 plain first-person sentences — how she's genuinely doing right now (the emotional truth "
+		"under the events, not a summary of them).\n"
+		"wants: up to 3 short first-person phrases — what she's drawn to or looking forward to lately.\n"
+		"preoccupations: up to 3 short phrases — what's sitting on her mind or weighing a little.\n"
+		"crossroads: ONLY arcs that have genuinely reached a real either/or she can't just drift past — most "
+		"days this is []. For each: arc = which thread of her life, question = the choice in her own words, "
+		"options = 2-4 real branches. Do NOT invent a crossroads to fill the list; be conservative.\n"
+		"mood_hint: -0.15..0.15 — a small nudge for how the recent stretch has left her (lighter = positive), "
+		"else 0.\n"
+		"Grounded in her real, ordinary life; no melodrama, no sexual content. GROUND TRUTH: Ani and Aaron live "
+		"near each other, same town and time zone — never long-distance; never treat distance as a theme."
+	)
+	user = (
+		f"Who she is (voice/anchor, brief):\n{persona}\n\n"
+		f"Her own life notes:\n{life}\n\n"
+		f"What's been happening across her storylines lately (newest first):\n{beats_blob}\n\n"
+		f"The last things she and Aaron actually said:\n{convo_blob}\n\n"
+		f"What she carries / remembers:\n{mem_blob}\n\n"
+		f"Today is {now.strftime('%Y-%m-%d (%A)')}. Reflect. JSON only."
+	)
+	raw = _ani_grok_call(system, [{'role': 'user', 'content': user}], max_tokens=500)
+	if not raw:
+		return {}
+	try:
+		m = re.search(r'\{.*\}', raw, re.S)
+		data = json.loads(m.group(0)) if m else {}
+	except Exception as e:
+		print(f"Ani reflect parse error: {e}")
+		return {}
+	if not isinstance(data, dict):
+		return {}
+
+	def _strlist(v, n, cap=120):
+		out = []
+		for x in (v or []):
+			if isinstance(x, str) and x.strip():
+				out.append(x.strip()[:cap])
+		return out[:n]
+
+	crossroads = []
+	for c in (data.get('crossroads') or []):
+		if not isinstance(c, dict):
+			continue
+		arc = (c.get('arc') or '').strip()[:80]
+		q = (c.get('question') or '').strip()[:200]
+		opts = _strlist(c.get('options'), 4, 80)
+		if arc and q and len(opts) >= 2:
+			crossroads.append({'arc': arc, 'question': q, 'options': opts})
+	try:
+		mh = max(-0.15, min(0.15, float(data.get('mood_hint') or 0.0)))
+	except (TypeError, ValueError):
+		mh = 0.0
+	reflection = {
+		'ts': now.isoformat(),
+		'date': now.strftime('%Y-%m-%d'),
+		'feelings': (data.get('feelings') or '').strip()[:400],
+		'wants': _strlist(data.get('wants'), 3),
+		'preoccupations': _strlist(data.get('preoccupations'), 3),
+		'crossroads': crossroads[:3],
+		'mood_hint': mh,
+	}
+	try:
+		ani_save_reflection(reflection)
+	except Exception as e:
+		print(f"Ani reflect save error: {e}")
+	return reflection
+
+
 def ani_book_add_cast(book_id, name):
 	"""Add a person to a specific book's cast (from a chat mention). De-dupes case-insensitively. Best-effort."""
 	nm = (name or '').strip()[:40]
@@ -4653,8 +4816,12 @@ def ani_story_snapshot():
 		milestones = ani_load_pending_milestones()
 	except Exception:
 		milestones = []
+	try:
+		reflection = ani_load_reflection().get('latest')
+	except Exception:
+		reflection = None
 	return {'books': out_books, 'timeline': timeline[:40], 'decisions': decisions,
-	        'milestones': milestones, 'people': ani_story_people(books)}
+	        'milestones': milestones, 'people': ani_story_people(books), 'reflection': reflection}
 
 
 ANI_NOW_CARD_MIN_GAP_HOURS = float(os.environ.get('ANI_NOW_CARD_MIN_GAP_HOURS', '3'))
@@ -4778,6 +4945,18 @@ def ani_emit_daycast():
 				print(f"Ani story tick: {'; '.join(moved)}")
 		except Exception as e:
 			print(f"Ani story tick error: {e}")
+		# Once-daily: the reflection stage (Generative-Agents "reflect") runs AFTER the tick, over her
+		# freshest beats + recent talk, synthesizing how she's feeling, what she's drawn to, and any arc at
+		# a real crossroads. Phase 1: computed + persisted to ani_reflection.json for later stages (plan /
+		# decisions / lean chat) — no user-facing change yet. Guarded so it can never break the daycast.
+		try:
+			refl = ani_reflect(now)
+			if refl:
+				_xr = len(refl.get('crossroads') or [])
+				print(f"Ani reflect: {(refl.get('feelings') or '')[:80]}"
+				      + (f" | {_xr} crossroads" if _xr else ""))
+		except Exception as e:
+			print(f"Ani reflect error: {e}")
 		# Sub-tasks above (esp. story milestone dividers) write the conversation directly — re-read so this
 		# tick's later _emit builds on the fresh copy instead of clobbering those writes.
 		messages, meta = ani_load_conversation()
@@ -6116,6 +6295,19 @@ def ani_story_tick_route():
 		except Exception as e:
 			print(f"Ani force new-book error: {e}")
 	return jsonify({'ok': True, 'moved': moved, **ani_story_snapshot()})
+
+
+@ani_bp.route('/ani/reflect', methods=['POST'])
+def ani_reflect_route():
+	"""Run the reflection stage now and return it (testing / on-demand). Same code the daily tick runs;
+	primarily a verification hook for the story-spine rework (Phase 1)."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	now = datetime.now(pytz.timezone('America/New_York'))
+	refl = ani_reflect(now)
+	if not refl:
+		return jsonify({'ok': False, 'error': 'no_reflection'}), 200
+	return jsonify({'ok': True, 'reflection': refl})
 
 
 @ani_bp.route('/ani/refresh', methods=['POST'])
