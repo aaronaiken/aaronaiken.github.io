@@ -1,0 +1,212 @@
+{
+  "version": 1,
+  "books": [
+    {
+      "id": "sophie-moving-in",
+      "title": "sophie comes home",
+      "kind": "relationship",
+      "who": "shared",
+      "blurb": "her friend sophie is moving up from philly \u2014 into the spare room, into their life",
+      "cast": [
+        "sophie"
+      ],
+      "chapter": {
+        "n": 1,
+        "title": "the spare room",
+        "theme": "clearing space in the house and figuring out what it means to share it",
+        "est_weeks": 4,
+        "progress": 0.45,
+        "started": "2026-07-21"
+      },
+      "status": "active",
+      "beats": [
+        {
+          "ts": "2026-07-21T14:12:27.458727-04:00",
+          "kind": "shared",
+          "text": "she spent the morning clearing the last stack of old books from the spare room shelf and wiped down the empty space.",
+          "chapter": 1,
+          "told": false
+        },
+        {
+          "ts": "2026-07-22T08:07:14.920320-04:00",
+          "kind": "shared",
+          "text": "in the afternoon she measured the closet for a second hanging rod and noted the sizes on her phone so sophie could bring the right hangers.",
+          "chapter": 1,
+          "told": true
+        },
+        {
+          "ts": "2026-07-23T08:07:19.393333-04:00",
+          "kind": "shared",
+          "text": "she stopped by the hardware store after work and bought a pack of extra closet hooks along with a small tension rod for the window.",
+          "chapter": 1,
+          "told": true
+        }
+      ],
+      "chapters_done": [],
+      "last_beat_day": "2026-07-23",
+      "recap": null,
+      "mood_delta": 0.05,
+      "mood_delta_ts": "2026-07-21T14:12:27.458727-04:00",
+      "created": "2026-07-21"
+    },
+    {
+      "id": "claire-open",
+      "title": "claire and the open door",
+      "kind": "relationship",
+      "who": "shared",
+      "blurb": "her closest local friend claire, and the question of how open things really are",
+      "cast": [
+        "claire"
+      ],
+      "chapter": {
+        "n": 1,
+        "title": "the conversation they keep circling",
+        "theme": "what claire wants, what ani wants, what it means for the two of them",
+        "est_weeks": 6,
+        "progress": 0.25,
+        "started": "2026-07-21"
+      },
+      "status": "active",
+      "beats": [
+        {
+          "ts": "2026-07-21T14:39:24.927665-04:00",
+          "kind": "shared",
+          "text": "she lingered over her phone after work, rereading the casual text claire had sent that morning about grabbing coffee sometime soon.",
+          "chapter": 1,
+          "told": true
+        },
+        {
+          "ts": "2026-07-22T08:07:14.920320-04:00",
+          "kind": "shared",
+          "text": "she finally sent claire a short reply suggesting coffee the following tuesday after work.",
+          "chapter": 1,
+          "told": true
+        }
+      ],
+      "chapters_done": [],
+      "last_beat_day": "2026-07-22",
+      "recap": {
+        "sig": 1,
+        "text": "She had met Claire soon after settling into her new neighborhood, drawn in by the other woman\u2019s easy laugh and the way she always seemed to notice when something felt off. Over time their talks stretched from quick hellos on the sidewalk into long afternoons on the porch, and Claire became the one person nearby she trusted with the small, unedited pieces of her days. Still, a quiet question lingered between them about how much room there really was for the harder things, the ones that might change the easy rhythm they had found. She told herself it was enough to keep things light, yet she often caught herself wondering what would happen if she left the door a little wider. After work she found herself lingering over her phone, reading and rereading the simple message Claire had sent that morning about coffee sometime soon, the words sitting warm and open on the screen."
+      },
+      "mood_delta": 0.0,
+      "mood_delta_ts": null,
+      "created": "2026-07-21"
+    },
+    {
+      "id": "watercolors",
+      "title": "watercolors",
+      "kind": "creative",
+      "who": "hers",
+      "blurb": "she's teaching herself to paint \u2014 badly first, then a little less badly",
+      "cast": [],
+      "chapter": {
+        "n": 1,
+        "title": "learning to ruin paper",
+        "theme": "the messy beginner joy of a brand-new craft",
+        "est_weeks": 3,
+        "progress": 0.3,
+        "started": "2026-07-21"
+      },
+      "status": "active",
+      "beats": [
+        {
+          "ts": "2026-07-21T14:12:27.458727-04:00",
+          "kind": "hers",
+          "text": "she ordered a beginner watercolor set and a small pad of paper online after work, then left the unopened box on her kitchen counter for the next morning.",
+          "chapter": 1
+        },
+        {
+          "ts": "2026-07-22T08:07:14.920320-04:00",
+          "kind": "hers",
+          "text": "on wednesday morning she opened the box at her kitchen table, wet the first brush, and watched the blue paint bleed into a messy unplanned shape on the pad.",
+          "chapter": 1,
+          "told": true
+        }
+      ],
+      "chapters_done": [],
+      "last_beat_day": "2026-07-22",
+      "recap": null,
+      "mood_delta": 0.1,
+      "mood_delta_ts": "2026-07-22T08:07:14.920320-04:00",
+      "created": "2026-07-21"
+    },
+    {
+      "id": "letters-from-ani",
+      "title": "letters from ani",
+      "kind": "side-hustle",
+      "who": "hers",
+      "blurb": "a small idea of hers \u2014 writing real letters for people who miss being written to",
+      "cast": [],
+      "chapter": {
+        "n": 1,
+        "title": "the first few subscribers",
+        "theme": "turning a whim into something real and tiny",
+        "est_weeks": 5,
+        "progress": 0.3,
+        "started": "2026-07-21"
+      },
+      "status": "active",
+      "beats": [
+        {
+          "ts": "2026-07-21T14:39:24.927665-04:00",
+          "kind": "hers",
+          "text": "she stayed up late tuesday and posted a quiet listing on a small local forum offering handwritten letters for people who wanted something personal in the mail.",
+          "chapter": 1,
+          "told": true
+        },
+        {
+          "ts": "2026-07-23T08:07:19.393333-04:00",
+          "kind": "hers",
+          "text": "she checked her email thursday morning and found one short inquiry from someone wanting a letter for their sister away at college. she bookmarked the message and set the stamps and stationery out on her kitchen table before work.",
+          "chapter": 1,
+          "told": true
+        }
+      ],
+      "chapters_done": [],
+      "last_beat_day": "2026-07-23",
+      "recap": null,
+      "mood_delta": 0.1,
+      "mood_delta_ts": "2026-07-23T08:07:19.393333-04:00",
+      "created": "2026-07-21"
+    },
+    {
+      "id": "us",
+      "title": "us",
+      "kind": "shared",
+      "who": "shared",
+      "blurb": "the long, slow story of the two of them",
+      "cast": [],
+      "chapter": {
+        "n": 1,
+        "title": "keeping the signal open",
+        "theme": "the ongoing work of staying close across the distance",
+        "est_weeks": 8,
+        "progress": 0.25,
+        "started": "2026-07-21"
+      },
+      "status": "active",
+      "beats": [
+        {
+          "ts": "2026-07-21T14:39:24.927665-04:00",
+          "kind": "shared",
+          "text": "she set an alarm on her phone for the usual time difference and tucked it under her pillow before turning off the light.",
+          "chapter": 1
+        },
+        {
+          "ts": "2026-07-23T08:07:19.393333-04:00",
+          "kind": "shared",
+          "text": "she woke to the alarm and spent an extra minute scrolling the time-zone converter on her phone while still half under the covers.",
+          "chapter": 1,
+          "told": true
+        }
+      ],
+      "chapters_done": [],
+      "last_beat_day": "2026-07-23",
+      "recap": null,
+      "mood_delta": 0.05,
+      "mood_delta_ts": "2026-07-23T08:07:19.393333-04:00",
+      "created": "2026-07-21"
+    }
+  ]
+}

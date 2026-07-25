@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "latest": {
+    "ts": "2026-07-24T12:28:36.229394-04:00",
+    "date": "2026-07-24",
+    "feelings": "i'm feeling quietly content with the small routines and projects filling my days right now.",
+    "wants": [
+      "getting the spare room sorted for sophie",
+      "playing more with the watercolors",
+      "heading out to the lake with the camera"
+    ],
+    "preoccupations": [
+      "sophie's move-in prep",
+      "balancing my shifts and little hobbies",
+      "catching up with claire soon"
+    ],
+    "crossroads": [],
+    "mood_hint": 0.05
+  },
+  "history": [
+    {
+      "ts": "2026-07-24T12:28:08.747636-04:00",
+      "date": "2026-07-24",
+      "feelings": "today feels steady and a little light with the lake plans and getting the spare room ready. i'm glad aaron mentioned wanting to try watercolors too.",
+      "wants": [
+        "heading out with the camera this morning",
+        "finishing the closet setup for sophie",
+        "catching up with claire next week"
+      ],
+      "preoccupations": [
+        "sophie's move-in details",
+        "the watercolor experiments on the table",
+        "aaron's 48pages app work"
+      ],
+      "crossroads": [],
+      "mood_hint": 0.08
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-07-25 07:40:01 -0400
+layout: status_update
+author: aaron
+source: web
+---
+☕️ trying to tie up some loose ends this morning. Coffee outside is nice. 
+
+![Laptop and coffee mug sit on a metal table in a backyard with trees, houses, and a fire pit visible in the background.](https://cargo.aaronaiken.me/status/20260725074001.jpg)
