@@ -1070,9 +1070,14 @@
 	btn.disabled = true;
 	btn.textContent = '↻ developing…';
 	if (img) img.style.opacity = '0.35';
+	var reBody = { image_url: ctx.oldUrl, scene: scene, orientation: aniGetOrientation() };
+	var reBible = (document.getElementById('ani-bible-pick') || {}).value || '';
+	var reHouse = (document.getElementById('ani-house-pick') || {}).value || '';
+	if (reBible) reBody.bible_id = reBible;
+	if (reHouse) reBody.house_id = reHouse;   // pickers apply on re-roll too, same as a fresh photo
 	fetch('/ani/photo/retry', {
 	  method: 'POST', headers: { 'Content-Type': 'application/json' },
-	  body: JSON.stringify({ image_url: ctx.oldUrl, scene: scene, orientation: aniGetOrientation() })
+	  body: JSON.stringify(reBody)
 	})
 	  .then(function(r) { return r.json(); })
 	  .then(function(data) {

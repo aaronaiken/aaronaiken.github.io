@@ -6443,7 +6443,24 @@ def ani_photo_retry():
 	override = (body.get('scene') or '').strip()
 	render_scene = override or ani_simplify_pose(scene)
 
-	new_url = ani_generate_image(render_scene, body.get('orientation') or 'portrait')
+	# Honor the composer's bible-variant pickers on a re-roll too (same as a fresh photo), so re-rolling with a
+	# House/Character variant selected actually applies it.
+	bible_id, house_id = body.get('bible_id'), body.get('house_id')
+	bible_override = ani_bible_entry_text('character', bible_id)
+	house_override = ani_bible_entry_text('house', house_id)
+	_variants = {}
+	if bible_override or house_override:
+		_lib = ani_load_bible_library()
+		def _vname(kind, eid):
+			return next((e.get('name') for e in _lib.get(kind, []) if e.get('id') == eid), None) if eid else None
+		if bible_override:
+			_variants['bible_variant'] = _vname('character', bible_id)
+		if house_override:
+			_variants['house_variant'] = _vname('house', house_id)
+
+	new_url = ani_generate_image(render_scene, body.get('orientation') or 'portrait',
+	                             bible_override=bible_override, house_override=house_override,
+	                             log_extra=(_variants or None))
 	if not new_url:
 		return jsonify({'image_url': None, 'error': 'blocked', 'scene': render_scene}), 200
 
