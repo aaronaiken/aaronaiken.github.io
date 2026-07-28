@@ -1763,21 +1763,57 @@
 			  + aniEscapeHtml(a.reason || (a.ok ? 'ok' : 'rejected')) + '</div>';
 		  }).join('')
 		: '<div class="plog-try">no QA run</div>';
-	  var meta = 'cfg ' + (e.cfg != null ? e.cfg : '?') + ' · ' + (e.dims || '?');
+	  var steps = e.steps != null ? (e.steps + ' steps · ') : '';
+	  var meta = 'cfg ' + (e.cfg != null ? e.cfg : '?') + ' · ' + steps + (e.dims || '?');
 	  var link = e.url ? '<a href="' + aniEscapeHtml(e.url) + '" target="_blank" rel="noopener">open image ↗</a>' : '';
+	  // A labelled, copyable block for a long field (the exact prompt / negative sent to the model).
+	  function plogBlock(label, text) {
+		if (!text) return '';
+		return '<div class="plog-block"><div class="plog-blabel">' + label
+		  + '<button type="button" class="plog-copy" data-copy="' + aniEscapeHtml(text)
+		  + '" onclick="event.stopPropagation();aniPlogCopy(this)">copy</button></div>'
+		  + '<div class="plog-full">' + aniEscapeHtml(text) + '</div></div>';
+	  }
+	  // v2 extraction context — pipeline, the flags the extractor set (why it rendered covered/etc.),
+	  // the profiles that fired, and the granular fields.
+	  var info = e.info || {};
+	  var infoHtml = '';
+	  if (info.pipeline) {
+		var bits = ['<b>' + aniEscapeHtml(info.pipeline) + (info.branch ? ' · ' + aniEscapeHtml(info.branch) : '') + '</b>'];
+		if (info.flags) bits.push('flags: ' + aniEscapeHtml(Object.keys(info.flags).join(', ')));
+		if (info.profiles && info.profiles.length) bits.push('profiles: ' + aniEscapeHtml(info.profiles.join(', ')));
+		infoHtml = '<div class="plog-info">' + bits.join(' &nbsp;·&nbsp; ') + '</div>';
+		if (info.fields && Object.keys(info.fields).length) {
+		  infoHtml += '<div class="plog-fields">' + Object.keys(info.fields).map(function (k) {
+			return '<span class="plog-field"><i>' + aniEscapeHtml(k) + '</i> ' + aniEscapeHtml(info.fields[k]) + '</span>';
+		  }).join('') + '</div>';
+		}
+	  }
 	  return '<div class="plog-entry" onclick="this.classList.toggle(\'open\')" title="tap for detail">'
 		+ '<div class="plog-row1"><span class="plog-ts">' + aniEscapeHtml(e.ts || '') + '</span>' + badge
 		  + '<span class="plog-tags">' + aniEscapeHtml(tags.join(' · ')) + '</span></div>'
 		+ '<div class="plog-scene">' + sceneTxt + '</div>'
 		+ '<div class="plog-qa">QA ' + ticks + ' <span class="plog-reason">' + aniEscapeHtml(reason) + '</span></div>'
-		+ '<div class="plog-detail">'
-		  + '<div class="plog-full">' + aniEscapeHtml(sc) + '</div>'
+		+ '<div class="plog-detail" onclick="event.stopPropagation()">'
+		  + infoHtml
+		  + plogBlock('PROMPT SENT', e.prompt || sc)
+		  + plogBlock('NEGATIVE', e.negative)
 		  + '<div class="plog-tries">' + tries + '</div>'
 		  + '<div class="plog-meta">' + aniEscapeHtml(meta) + (link ? ' · ' + link : '') + '</div>'
 		+ '</div>'
 		+ '</div>';
 	}).join('');
   }
+
+  // Copy a LOG field (the exact prompt / negative) to the clipboard.
+  window.aniPlogCopy = function (btn) {
+	var t = btn.getAttribute('data-copy') || '';
+	try {
+	  navigator.clipboard.writeText(t);
+	  var was = btn.textContent; btn.textContent = 'copied ✓';
+	  setTimeout(function () { btn.textContent = was; }, 1200);
+	} catch (e) {}
+  };
 
   // ---- Calendar (her shared plans) ----
   function aniCalendar() {

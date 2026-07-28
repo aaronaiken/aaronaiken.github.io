@@ -1115,7 +1115,24 @@ body.ani-fullscreen #ani-input-row { border-top-width: 1px; }
 .plog-entry:hover { background: var(--ani-tx-bg); }
 .plog-detail { display: none; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--ani-hairline); }
 .plog-entry.open .plog-detail { display: block; }
-.plog-full { color: var(--ani-sub); word-break: break-word; margin-bottom: 5px; }
+.plog-full { color: var(--ani-sub); word-break: break-word; margin-bottom: 5px;
+  white-space: pre-wrap; max-height: 168px; overflow-y: auto;
+  background: var(--ani-inset, rgba(0,0,0,0.15)); border: 1px solid var(--ani-hairline);
+  border-radius: 4px; padding: 5px 7px; font-size: 11px; line-height: 1.45;
+  font-family: 'Share Tech Mono', ui-monospace, monospace; }
+.plog-block { margin-bottom: 7px; }
+.plog-blabel { display: flex; align-items: center; gap: 8px; color: var(--ani-foot);
+  font-size: 9px; letter-spacing: 0.09em; margin-bottom: 3px; }
+.plog-copy { margin-left: auto; cursor: pointer; font-size: 9px; letter-spacing: 0.06em;
+  color: var(--ani-accent-dim); background: none; border: 1px solid var(--ani-hairline);
+  border-radius: 3px; padding: 1px 6px; }
+.plog-copy:hover { color: var(--ani-accent); border-color: var(--ani-accent-dim); }
+.plog-info { color: var(--ani-sub); font-size: 10px; margin-bottom: 6px; line-height: 1.5; }
+.plog-info b { color: var(--ani-accent-dim); }
+.plog-fields { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-bottom: 7px; }
+.plog-field { font-size: 10px; color: var(--ani-sub); background: var(--ani-inset, rgba(0,0,0,0.12));
+  border: 1px solid var(--ani-hairline); border-radius: 3px; padding: 1px 6px; }
+.plog-field i { color: var(--ani-foot); font-style: normal; margin-right: 3px; }
 .plog-try { color: var(--ani-sub); word-break: break-word; line-height: 1.5; }
 .plog-meta { margin-top: 5px; color: var(--ani-foot); font-size: 10px; }
 .plog-meta a { color: var(--ani-accent-dim); }

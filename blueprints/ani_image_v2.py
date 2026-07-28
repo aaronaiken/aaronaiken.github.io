@@ -106,9 +106,21 @@ def generate_photo_v2(messages, orientation="portrait"):
     print(f"Ani PIC v2 profiles={applied} cfg{req.cfg} {req.width}x{req.height} "
           f"steps{req.steps} rear={req.require_rear_qa} partner={req.partner_qa}")
 
+    # Flags the extractor set — so the LOG shows *why* a scene rendered as it did (e.g. clothed=true
+    # keeping her covered), not just the final prompt. INTENT_FLAGS live on the SceneSpec.
+    from image_prompt_builder.scene_spec import INTENT_FLAGS
+    flags = {k: getattr(spec, k) for k in INTENT_FLAGS if getattr(spec, k)}
+    info = {
+        "pipeline": "v2",
+        "profiles": applied,
+        "flags": flags or {"(none set)": True},
+        "fields": {k: getattr(spec, k) for k in
+                   ("hair", "outfit", "pose", "setting", "lighting", "camera", "expression")
+                   if getattr(spec, k)},
+    }
     url = _ani_render_venice(
         req.positive, req.negative, req.cfg, req.width, req.height, req.steps,
         require_rear=req.require_rear_qa, scene=req.positive,
         pose=("complex_pose" in applied), clothed=("clothed" in applied),
-        partner=req.partner_qa)
+        partner=req.partner_qa, info=info)
     return url, req.positive

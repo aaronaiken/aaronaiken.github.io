@@ -2369,15 +2369,19 @@ def _ani_image_qa(image_bytes, require_rear=False, partner=False):
 ANI_PHOTO_LOG_FILE = 'ani_photo_log.json'   # structured photo-gen events for the panel LOG viewer (gitignored)
 ANI_PHOTO_LOG_MAX = 40
 
-def ani_log_photo_event(scene, cfg, width, height, pose, rear, clothed, qa, outcome, url):
+def ani_log_photo_event(scene, cfg, width, height, pose, rear, clothed, qa, outcome, url,
+                        prompt='', negative='', steps=None, info=None):
 	"""Append a structured photo-gen event to the rotating log (newest first, capped). Never raises —
-	logging must never block a photo."""
+	logging must never block a photo. `prompt`/`negative` are the EXACT strings sent to Venice (so the
+	LOG viewer can show precisely what was generated); `info` carries pipeline/flag/profile context (v2)."""
 	try:
 		event = {
 			'ts': datetime.now(pytz.timezone('America/New_York')).strftime('%m/%d %H:%M'),
-			'model': VENICE_IMAGE_MODEL, 'cfg': cfg, 'dims': f'{width}x{height}',
+			'model': VENICE_IMAGE_MODEL, 'cfg': cfg, 'steps': steps, 'dims': f'{width}x{height}',
 			'pose': bool(pose), 'rear': bool(rear), 'clothed': bool(clothed),
-			'qa': qa, 'outcome': outcome, 'scene': (scene or '')[:500], 'url': url,
+			'qa': qa, 'outcome': outcome, 'scene': (scene or '')[:500],
+			'prompt': (prompt or '')[:6000], 'negative': (negative or '')[:4000],
+			'info': info or {}, 'url': url,
 		}
 		try:
 			with open(ANI_PHOTO_LOG_FILE) as f:
@@ -2395,7 +2399,7 @@ def ani_log_photo_event(scene, cfg, width, height, pose, rear, clothed, qa, outc
 
 
 def _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear=False,
-                       scene='', pose=False, clothed=False, partner=False):
+                       scene='', pose=False, clothed=False, partner=False, info=None):
 	"""Render via Venice with the vision-QA retry loop, then re-host the accepted image on Bunny.
 	Re-rolls QA failures up to ANI_IMAGE_QA_RETRIES (each Venice call is a fresh seed); after the
 	budget is spent it sends the last attempt rather than failing the photo. require_rear also re-rolls
@@ -2408,7 +2412,8 @@ def _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear
 	for attempt in range(1, max_attempts + 1):
 		img = _ani_venice_bytes(prompt, negative, cfg, width, height, steps)
 		if not img:
-			ani_log_photo_event(scene, cfg, width, height, pose, require_rear, clothed, qa, 'failed', None)
+			ani_log_photo_event(scene, cfg, width, height, pose, require_rear, clothed, qa, 'failed', None,
+			                    prompt=prompt, negative=negative, steps=steps, info=info)
 			return None  # HTTP/TOS failure — an identical retry won't help
 		if not ANI_IMAGE_QA:
 			break
@@ -2422,7 +2427,8 @@ def _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear
 	from helpers.bunny import upload_ani_image_to_bunny
 	url = upload_ani_image_to_bunny(img, f"ani-{int(time.time())}.jpg", 'image/jpeg')
 	outcome = 'sent' if (not qa or qa[-1]['ok']) else 'best-effort'
-	ani_log_photo_event(scene, cfg, width, height, pose, require_rear, clothed, qa, outcome, url)
+	ani_log_photo_event(scene, cfg, width, height, pose, require_rear, clothed, qa, outcome, url,
+	                    prompt=prompt, negative=negative, steps=steps, info=info)
 	return url
 
 
@@ -2490,7 +2496,8 @@ def ani_generate_image(scene, orientation='portrait'):
 			print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) PARTNER cfg{VENICE_CFG_POSE} {w}x{h} "
 			      f"feet_fix={feet_fix} rear={rear} qa={ANI_IMAGE_QA} — scene: {clean_scene!r}")
 			return _ani_render_venice(prompt, negative, VENICE_CFG_POSE, w, h, VENICE_STEPS_POSE,
-			                          require_rear=False, scene=clean_scene, pose=True, clothed=False, partner=True)
+			                          require_rear=False, scene=clean_scene, pose=True, clothed=False, partner=True,
+			                          info={'pipeline': 'v1', 'branch': 'partner'})
 
 		extra_neg = _ani_garment_negative(clean_scene)
 		complex_pose = bool(_ANI_POSE_RE.search(clean_scene))
@@ -2522,7 +2529,8 @@ def ani_generate_image(scene, orientation='portrait'):
 		print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) cfg{cfg} {width}x{height} steps{steps} "
 		      f"pose={complex_pose} rear={require_rear} qa={ANI_IMAGE_QA} — scene: {clean_scene!r}")
 		return _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear,
-		                          clean_scene, complex_pose, bool(extra_neg))
+		                          clean_scene, complex_pose, bool(extra_neg),
+		                          info={'pipeline': 'v1', 'branch': 'clothed' if extra_neg else 'main'})
 
 	# --- xAI grok-imagine (default) ---
 	api_key = os.environ.get('XAI_API_KEY')
