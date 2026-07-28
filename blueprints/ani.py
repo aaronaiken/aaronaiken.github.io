@@ -2545,6 +2545,23 @@ def _ani_room_clause(text, maxlen=360):
 	return (m.group(1) if m else cut).strip(' ,;.-')
 
 
+_ANI_SOFT_SMILE_RE = re.compile(
+	r'\bno(?:t)? (?:big |broad |wide )?smil\w*|\bclosed[- ]?lips?\b|\bsoft smile\b|\bsubtle smile\b|'
+	r'\bslight smile\b|\bgentle smile\b|\bsmirk\w*|\bno teeth\b|\bwithout teeth\b|\bneutral expression\b|'
+	r'\bserious expression\b|\bnot smiling\b', re.IGNORECASE)
+
+
+def _ani_smile_negative(scene):
+	"""Anti-BIG-smile negative terms, added when the scene asks for a restrained expression. 'no big smile' in
+	the POSITIVE prompt backfires (the model can't process the negation — it just renders 'big smile' + 'teeth'),
+	so we push the suppression into the NEGATIVE where it actually works. Targets the grin's BIGNESS, not teeth
+	outright, so a soft natural smile with subtle teeth still survives."""
+	if _ANI_SOFT_SMILE_RE.search(scene or ''):
+		return ('big smile, broad smile, toothy grin, wide grin, big grin, grinning, open-mouth smile, '
+		        'laughing, cheesy smile, exaggerated smile')
+	return ''
+
+
 def ani_generate_image(scene, orientation='portrait', bible_override=None, house_override=None, log_extra=None):
 	"""Generate a photo of Ani from a scene prompt, anchored to her character bible, and re-host
 	on Bunny. Routes to the configured backend: 'venice' (uncensored, faithful) or 'xai'
@@ -2589,6 +2606,11 @@ def ani_generate_image(scene, orientation='portrait', bible_override=None, house
 	# operator's room doc (e.g. a kitchen "backsplash") must never be able to flip the pose/rear logic and make
 	# QA reject every front-facing render. All detectors below key off intent_scene, not the house-augmented one.
 	intent_scene = clean_scene
+	# 'no big smile' / 'not smiling' backfire in the POSITIVE prompt (the model renders 'big smile'). Detect them
+	# on intent_scene (drives the negative below) and STRIP the bare negation from the visible prompt.
+	if _ANI_SOFT_SMILE_RE.search(intent_scene):
+		clean_scene = re.sub(r'\bno(?:t)? (?:big |broad |wide )?smil\w*\b,?\s*', '', clean_scene, flags=re.IGNORECASE)
+		clean_scene = re.sub(r'\s{2,}', ' ', clean_scene).strip(' ,;.')
 	# Per-shot HOUSE override (operator picked a House Bible): fold a CLEANED, concise room clause into the
 	# VISUAL prompt only. A long markdown design doc is distilled to its leading descriptive sentences so the
 	# image prompt stays a scene, not a spec sheet. No pick → clean_scene untouched (her normal behavior).
@@ -2638,9 +2660,12 @@ def ani_generate_image(scene, orientation='portrait', bible_override=None, house
 		writing_neg = ('pen, pencil, stylus, fountain pen, holding a pen, holding a stylus, pen in hand, '
 		               'writing implement, hand on trackpad, finger on touchpad, paper, notebook, stationery, '
 		               'handwriting, handwritten, writing by hand, ink') if writing_scene else ''
-		# Base realism + always-on dup/anatomy guards + scene-specific garment/pose/writing negatives.
+		# 'no big smile' in the positive backfires → suppress the BIG grin from the negative when asked.
+		smile_neg = _ani_smile_negative(intent_scene)
+		# Base realism + always-on dup/anatomy guards + scene-specific garment/pose/writing/smile negatives.
 		negative = ', '.join(p for p in (
-			VENICE_NEGATIVE_PROMPT, VENICE_DUP_NEGATIVE, VENICE_ANATOMY_NEGATIVE, extra_neg, pose_neg, writing_neg) if p)
+			VENICE_NEGATIVE_PROMPT, VENICE_DUP_NEGATIVE, VENICE_ANATOMY_NEGATIVE, extra_neg, pose_neg,
+			writing_neg, smile_neg) if p)
 		width, height = _dims
 		steps = VENICE_STEPS_POSE if complex_pose else VENICE_STEPS
 		if extra_neg:
