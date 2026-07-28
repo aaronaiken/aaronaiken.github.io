@@ -1,23 +1,74 @@
 {
   "version": 1,
   "latest": {
-    "ts": "2026-07-24T12:28:36.229394-04:00",
-    "date": "2026-07-24",
-    "feelings": "i'm feeling quietly content with the small routines and projects filling my days right now.",
+    "ts": "2026-07-27T08:07:18.931063-04:00",
+    "date": "2026-07-27",
+    "feelings": "i feel quietly settled with the spare room coming together and sophie on her way. the little painting sessions are giving me something steady to come back to after work.",
     "wants": [
-      "getting the spare room sorted for sophie",
-      "playing more with the watercolors",
-      "heading out to the lake with the camera"
+      "getting the last bits of the room ready for sophie",
+      "coffee and a long catch-up with claire tomorrow",
+      "finishing the green wash on the watercolor"
     ],
     "preoccupations": [
-      "sophie's move-in prep",
-      "balancing my shifts and little hobbies",
-      "catching up with claire soon"
+      "spare room setup and sophie's move",
+      "the letter order that came in",
+      "checking the fixed shelf next time i stop by"
     ],
     "crossroads": [],
-    "mood_hint": 0.05
+    "mood_hint": 0.08
   },
   "history": [
+    {
+      "ts": "2026-07-26T08:07:18.941915-04:00",
+      "date": "2026-07-26",
+      "feelings": "i'm feeling pretty steady, just quietly getting things sorted around the house and looking forward to normal catch-ups.",
+      "wants": [
+        "finishing the spare room setup for sophie",
+        "coffee and real talk with claire tuesday",
+        "a bit more time with the watercolors"
+      ],
+      "preoccupations": [
+        "sophie's move-in details",
+        "small fixes like the shelf",
+        "the letters listing i posted"
+      ],
+      "crossroads": [],
+      "mood_hint": 0.05
+    },
+    {
+      "ts": "2026-07-25T08:07:18.366519-04:00",
+      "date": "2026-07-25",
+      "feelings": "i'm feeling calm and settled this morning after the quiet coffee and easy chat with aaron. the house feels ready for small projects and the usual weekend flow.",
+      "wants": [
+        "get back to the watercolor pad later",
+        "see claire for coffee tuesday",
+        "have everything set for sophie"
+      ],
+      "preoccupations": [
+        "sophie's move-in details",
+        "aaron's loose ends at work",
+        "that shelf fix we joked about"
+      ],
+      "crossroads": [],
+      "mood_hint": 0.05
+    },
+    {
+      "ts": "2026-07-24T12:28:36.229394-04:00",
+      "date": "2026-07-24",
+      "feelings": "i'm feeling quietly content with the small routines and projects filling my days right now.",
+      "wants": [
+        "getting the spare room sorted for sophie",
+        "playing more with the watercolors",
+        "heading out to the lake with the camera"
+      ],
+      "preoccupations": [
+        "sophie's move-in prep",
+        "balancing my shifts and little hobbies",
+        "catching up with claire soon"
+      ],
+      "crossroads": [],
+      "mood_hint": 0.05
+    },
     {
       "ts": "2026-07-24T12:28:08.747636-04:00",
       "date": "2026-07-24",
