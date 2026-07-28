@@ -430,6 +430,25 @@ body.ani-fullscreen #ani-avatar-fallback { font-size: 1.1rem; }
 .ani-fork-opt:disabled { opacity: 0.4; cursor: not-allowed; }
 .ani-fork-deciding { opacity: 0.5; pointer-events: none; }
 
+/* On-demand "anything you're turning over?" nudge — understated so it never competes with a live fork. */
+.ani-turning-btn {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  text-align: left;
+  color: var(--ani-foot);
+  background: transparent;
+  border: 1px dashed var(--ani-hairline);
+  border-radius: 3px;
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+.ani-turning-btn:hover { color: var(--ani-sub); border-color: var(--ani-sub); }
+.ani-turning-btn:disabled { opacity: 0.6; cursor: default; }
+
 .ani-mem-cat {
   display: inline-block;
   font-size: 0.5rem;

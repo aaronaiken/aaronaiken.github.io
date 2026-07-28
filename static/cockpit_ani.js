@@ -400,7 +400,12 @@
   function aniRenderDecisions(decisions) {
 	var el = document.getElementById('ani-decisions');
 	if (!el) return;
-	if (!decisions.length) { el.hidden = true; el.innerHTML = ''; return; }
+	if (!decisions.length) {
+	  // No open decision — offer the on-demand nudge instead of hiding the slot entirely.
+	  el.innerHTML = '<button class="ani-turning-btn" onclick="aniTurningOver(this)">⁂ anything you\'re turning over?</button>';
+	  el.hidden = false;
+	  return;
+	}
 	el.innerHTML = decisions.map(function(d) {
 	  var opts = (d.options || []).map(function(o) {
 		return '<button class="ani-fork-opt" onclick="aniDecide(' + aniAttr(d.name) + ',' + aniAttr(o) + ',this)">'
@@ -413,6 +418,25 @@
 		+ '<div class="ani-fork-opts">' + opts + '</div></div>';
 	}).join('');
 	el.hidden = false;
+  }
+
+  // On-demand: ask her what she's turning over → surfaces a decision fork (or a gentle "nothing" note).
+  function aniTurningOver(btn) {
+	if (btn) { btn.disabled = true; btn.textContent = '⁂ thinking…'; }
+	fetch('/ani/turning-over', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		if (data && data.ok && data.fork) {
+		  aniLoadDecisions();   // re-renders the slot with the new fork card in place of the button
+		} else if (btn) {
+		  btn.disabled = false;
+		  btn.textContent = '⁂ nothing pressing right now';
+		  setTimeout(function() { btn.textContent = "⁂ anything you're turning over?"; }, 3200);
+		}
+	  })
+	  .catch(function() {
+		if (btn) { btn.disabled = false; btn.textContent = "⁂ anything you're turning over?"; }
+	  });
   }
 
   // single-quote-safe inline JS string arg

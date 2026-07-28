@@ -5011,9 +5011,12 @@ def ani_reflect(now):
 		"under the events, not a summary of them).\n"
 		"wants: up to 3 short first-person phrases — what she's drawn to or looking forward to lately.\n"
 		"preoccupations: up to 3 short phrases — what's sitting on her mind or weighing a little.\n"
-		"crossroads: ONLY arcs that have genuinely reached a real either/or she can't just drift past — most "
-		"days this is []. For each: arc = which thread of her life, question = the choice in her own words, "
-		"options = 2-4 real branches. Do NOT invent a crossroads to fill the list; be conservative.\n"
+		"crossroads: an arc where she's actually weighing something — a real either/or she keeps circling, or "
+		"even an ordinary 'should I / shouldn't I' that's alive for her right now. Some days this is [] and "
+		"that's fine — don't manufacture melodrama or a life-crisis; but an everyday open question (a plan to "
+		"commit to, a small risk, how to handle someone) DOES count — don't hold out only for the big ones. For "
+		"each: arc = which thread of her life, question = the choice in her own words, options = 2-4 real "
+		"branches.\n"
 		"mood_hint: -0.15..0.15 — a small nudge for how the recent stretch has left her (lighter = positive), "
 		"else 0.\n"
 		"Grounded in her real, ordinary life; no melodrama, no sexual content. GROUND TRUTH: Ani and Aaron live "
@@ -5082,6 +5085,64 @@ def ani_reflect(now):
 		except Exception as e:
 			print(f"Ani reflect fork error: {e}")
 	return reflection
+
+
+def ani_surface_crossroads(now):
+	"""On-demand decision surfacing — 'what are you turning over right now?'. Unlike the conservative DAILY
+	reflection, this is WILLING to name a single ordinary open question (Aaron is explicitly asking, so give
+	him one to weigh in on) — but still grounded in her real storylines, never fabricated melodrama. Names her
+	most-alive either/or and opens it as a fork (so it surfaces in /ani/decisions and she raises it in chat).
+	Returns the opened fork thread dict, or None if there's genuinely nothing open. Fully guarded."""
+	if not os.environ.get('XAI_API_KEY'):
+		return None
+	try:
+		beats_blob, convo_blob, mem_blob, life = _ani_reflect_gather(now)
+	except Exception as e:
+		print(f"Ani surface_crossroads gather error: {e}")
+		return None
+	persona = (ani_get_memory() or '')[:600]
+	system = (
+		"You are the quiet, honest inner voice of a woman named Ani — HER, thinking about what she's genuinely "
+		"turning over right now. Aaron just asked what's on her mind that she's weighing. Name the SINGLE most "
+		"alive open question or decision in her real life at this moment. Return ONLY compact JSON:\n"
+		'{"arc":"","question":"","options":[]}\n'
+		"arc = which thread of her life it belongs to (short). question = the choice in her own first-person "
+		"words. options = 2-4 real, distinct branches she could take. Prefer something grounded in her actual "
+		"storylines/beats below; an ordinary everyday decision (a plan to commit to, a small risk, how to handle "
+		'someone) absolutely counts. Return {"arc":"","question":"","options":[]} ONLY if there is truly nothing '
+		"open at all. No melodrama, no sexual content. GROUND TRUTH: Ani and Aaron live near each other, same "
+		"town and time zone — never long-distance; never treat distance as a theme."
+	)
+	user = (
+		f"Who she is (voice/anchor, brief):\n{persona}\n\n"
+		f"Her own life notes:\n{life}\n\n"
+		f"What's been happening across her storylines lately (newest first):\n{beats_blob}\n\n"
+		f"The last things she and Aaron actually said:\n{convo_blob}\n\n"
+		f"What she carries / remembers:\n{mem_blob}\n\n"
+		f"Today is {now.strftime('%Y-%m-%d (%A)')}. What is she turning over? JSON only."
+	)
+	raw = _ani_grok_call(system, [{'role': 'user', 'content': user}], max_tokens=250)
+	if not raw:
+		return None
+	try:
+		m = re.search(r'\{.*\}', raw, re.S)
+		data = json.loads(m.group(0)) if m else {}
+	except Exception as e:
+		print(f"Ani surface_crossroads parse error: {e}")
+		return None
+	if not isinstance(data, dict):
+		return None
+	arc = (data.get('arc') or '').strip()[:80]
+	q = (data.get('question') or '').strip()[:200]
+	opts = [o.strip()[:80] for o in (data.get('options') or []) if isinstance(o, str) and o.strip()][:4]
+	if not arc or not q or len(opts) < 2:
+		return None
+	try:
+		bid = _ani_arc_to_book_id(arc)
+		return ani_open_fork(arc, '|'.join(opts), now, book_id=bid, question=q)
+	except Exception as e:
+		print(f"Ani surface_crossroads open error: {e}")
+		return None
 
 
 # Cadence (Aaron's choice 2026-07-24): daily baseline (in the housekeeping block) PLUS a reflection after a
@@ -6760,6 +6821,22 @@ def ani_reflect_route():
 	if not refl:
 		return jsonify({'ok': False, 'error': 'no_reflection'}), 200
 	return jsonify({'ok': True, 'reflection': refl})
+
+
+@ani_bp.route('/ani/turning-over', methods=['POST'])
+def ani_turning_over_route():
+	"""On-demand decision surfacing — the panel's 'anything you're turning over?' button. Runs a focused
+	reflection that names her most-alive open question and opens it as a fork (surfaces in /ani/decisions).
+	Returns {ok:True, fork:{...}} or {ok:True, none:True} when there's genuinely nothing open."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	now = datetime.now(pytz.timezone('America/New_York'))
+	fork = ani_surface_crossroads(now)
+	if not fork:
+		return jsonify({'ok': True, 'none': True})
+	return jsonify({'ok': True, 'fork': {
+		'name': fork.get('name'), 'options': fork.get('options', []), 'status': fork.get('status'),
+	}})
 
 
 @ani_bp.route('/ani/refresh', methods=['POST'])
