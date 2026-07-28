@@ -667,6 +667,10 @@
 		    <option value="portrait">▯ Portrait</option>
 		    <option value="landscape">▭ Landscape</option>
 		  </select>
+		  <select id="ani-pipeline" class="ani-cal-input ani-orient-select" onchange="aniPipelineChanged()" title="Prompt pipeline for A/B testing — V2 builds the prompt from the conversation and ignores the box below">
+		    <option value="v1">⚙ V1</option>
+		    <option value="v2">✦ V2</option>
+		  </select>
 		  <span class="ani-prompt-hint">char + house bibles are auto-added; fields are the per-image details</span>
 		</div>
 		<textarea id="ani-prompt-text" class="ani-prompt-textarea" rows="5" placeholder="reading the scene…" aria-label="Photo prompt"></textarea>

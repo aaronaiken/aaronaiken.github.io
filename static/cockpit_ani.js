@@ -800,6 +800,8 @@
 	box.placeholder = 'reading the scene…';
 	sendBtn.disabled = true;
 	sendBtn.textContent = aniPromptMode === 'retry' ? 'RE-ROLL 📷' : 'SEND 📷';
+	aniPipelineRestore();
+	aniPipelineReflect();
 	overlay.hidden = false;
 	populate(box, sendBtn);
   }
@@ -809,12 +811,37 @@
 	if (o) o.hidden = true;
   }
 
+  // A/B pipeline toggle (V1 = legacy normalize path; V2 = the image-prompt-builder). Persisted
+  // in localStorage. V2 builds from the conversation, so it ignores the edited box on a NEW photo.
+  function aniPipelineV2() {
+	var el = document.getElementById('ani-pipeline');
+	return !!(el && el.value === 'v2');
+  }
+  function aniPipelineChanged() {
+	var el = document.getElementById('ani-pipeline');
+	if (el) { try { localStorage.setItem('aniPipeline', el.value); } catch (e) {} }
+	aniPipelineReflect();
+  }
+  function aniPipelineRestore() {
+	var el = document.getElementById('ani-pipeline');
+	if (!el) return;
+	try { var v = localStorage.getItem('aniPipeline'); if (v) el.value = v; } catch (e) {}
+	el.disabled = (aniPromptMode === 'retry');   // retry re-rolls a stored scene → v1 only
+  }
+  // In V2 + new-photo, the box is ignored (the builder reads the conversation) — dim it as a cue.
+  function aniPipelineReflect() {
+	var box = document.getElementById('ani-prompt-text');
+	if (!box) return;
+	var ignore = aniPipelineV2() && aniPromptMode === 'new';
+	box.style.opacity = ignore ? '0.45' : '';
+  }
+
   function aniPhotoSend() {
 	var box = document.getElementById('ani-prompt-text');
 	var scene = (box && box.value || '').trim();
-	if (!scene) return;
-	if (aniPromptMode === 'retry' && aniRetryCtx) { aniDoRetry(scene); }
-	else { aniDoNewPhoto(scene); }
+	if (aniPromptMode === 'retry' && aniRetryCtx) { if (scene) aniDoRetry(scene); return; }
+	if (!aniPipelineV2() && !scene) return;   // v1 needs a scene; v2 reads the conversation itself
+	aniDoNewPhoto(scene);
   }
 
   // New photo: generate from the edited scene, append as a fresh message.
@@ -829,12 +856,16 @@
 	aniEmpty.style.display = 'none';
 	aniPhotoBtn.disabled = true;
 	aniSendBtn.disabled = true;
-	aniRenderNotify('developing a photo…');
+	var v2 = aniPipelineV2();
+	// V2 reads the conversation (no scene override); V1 sends the edited scene line.
+	var body = v2 ? { pipeline: 'v2', orientation: aniGetOrientation() }
+	              : { scene: scene, orientation: aniGetOrientation() };
+	aniRenderNotify(v2 ? 'developing a photo (V2 builder)…' : 'developing a photo…');
 	aniShowTyping(true);
 	aniScrollToBottom();
 	fetch('/ani/photo', {
 	  method: 'POST', headers: { 'Content-Type': 'application/json' },
-	  body: JSON.stringify({ scene: scene, orientation: aniGetOrientation() })
+	  body: JSON.stringify(body)
 	})
 	  .then(function(r) { return r.json(); })
 	  .then(function(data) {

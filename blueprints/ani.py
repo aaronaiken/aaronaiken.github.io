@@ -188,6 +188,11 @@ _ANI_WRITING_RE = re.compile(
 # or 'venice' (uncensored Lustify, no coverage rule → renders her scene faithfully). Flag-gated
 # so xAI stays default until VENICE_API_KEY is set and ANI_IMAGE_BACKEND=venice is flipped.
 ANI_IMAGE_BACKEND = os.environ.get('ANI_IMAGE_BACKEND', 'xai').strip().lower()
+# Prompt-construction pipeline: 'v1' (this file's ani_normalize_scene + regex path) or 'v2'
+# (the tools/image-prompt-builder package — extractor → SceneSpec → compile_scene). A/B via
+# the ANI_IMAGE_PIPELINE env or a per-request {"pipeline":"v2"} field on /ani/photo. Both share
+# the same Venice render + QA + Bunny loop, so only the prompt differs. See blueprints/ani_image_v2.py.
+ANI_IMAGE_PIPELINE = os.environ.get('ANI_IMAGE_PIPELINE', 'v1').strip().lower()
 # Scene normalizer (chat → image prompt). grok-4.3 follows the "render ONLY her latest scene"
 # instruction more reliably than the older non-reasoning model (which let a prior photo's scene leak).
 ANI_NORMALIZE_MODEL = os.environ.get('ANI_NORMALIZE_MODEL', 'grok-4.3')
@@ -5921,11 +5926,19 @@ def ani_photo():
 	_body = request.get_json(silent=True) or {}
 	override = (_body.get('scene') or '').strip()
 	orientation = _body.get('orientation') or 'portrait'
-	scene = override or ani_normalize_scene(messages)
-	if not scene:
-		return jsonify({'image_url': None, 'error': 'prompt'}), 200
-
-	image_url = ani_generate_image(scene, orientation)
+	# A/B: the v2 builder pipeline (extractor → compile_scene) vs the legacy normalize path.
+	# An operator-edited `override` prompt always uses v1 (it's already a finished scene line).
+	use_v2 = str(_body.get('pipeline') or ANI_IMAGE_PIPELINE).lower() == 'v2'
+	if use_v2 and not override:
+		from blueprints.ani_image_v2 import generate_photo_v2
+		image_url, scene = generate_photo_v2(messages, orientation)
+		if not scene:
+			return jsonify({'image_url': None, 'error': 'prompt'}), 200
+	else:
+		scene = override or ani_normalize_scene(messages)
+		if not scene:
+			return jsonify({'image_url': None, 'error': 'prompt'}), 200
+		image_url = ani_generate_image(scene, orientation)
 	if not image_url:
 		return jsonify({'image_url': None, 'error': 'blocked', 'scene': scene}), 200
 
