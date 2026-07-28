@@ -1,8 +1,10 @@
-/* 48pages notebook — cockpit "side-door" client (slip + fullscreen skeleton).
-   Self-contained module: talks to /notebook/page, /notebook/slip, and /below-deck/add.
-   Kept liftable — when 48pages ships, swap these fetch targets for its /v1/* API and
-   nothing else changes. Full INKWELL UI (iA render, scraps, ROLL/FILE/TEAR, cabinet,
-   live Below Deck on the right page) lands in the next phase. */
+/* 48pages notebook — cockpit front-end for the LIVE zero-knowledge side-door notebook.
+   Talks to /notebook/{page,slip,cabinet,tasks,roll,file,tear,usage} (which delegate to the
+   real 48pages API via helpers/slip_client.py). The CodeMirror editor's contentHeight/30 is
+   the authoritative budget (sent on save → write_usage). ROLL/FILE/TEAR run server-side and
+   return the new stubbed page (fed back via ed.setValue). Right page = the 48pages rolled
+   task list (mutable: check-done / delete). The home-slip on /publish still rolls to Below
+   Deck — a deliberate consistency follow-up. */
 (function () {
 	'use strict';
 

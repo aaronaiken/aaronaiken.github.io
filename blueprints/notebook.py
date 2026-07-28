@@ -1,13 +1,16 @@
-"""Notebook blueprint — the cockpit's 48pages "side-door" client.
+"""Notebook blueprint — a LIVE window into the real zero-knowledge 48pages notebook.
 
-Owns the page store endpoints (mirroring the 48pages `/v1/*` contract) and the
-`/notebook` fullscreen. This phase ships the page store + home-slip capture + a
-minimal working fullscreen editor; the full INKWELL UI (iA-style inline render,
-scraps, ROLL/FILE/TEAR, cabinet, live Below Deck on the right page) lands next phase.
+Owns the `/notebook` fullscreen + the full side-door surface (spec §7), delegating
+through `helpers/notebook.py` → `helpers/slip_client.py` (which unwraps the master key
+locally; the server only ever sees ciphertext). Routes: `/notebook/page` (GET/POST),
+`/notebook/slip` (home-stack slip → page), `/notebook/cabinet` (list/file + `<id>/delete|retag`),
+`/notebook/tasks` (list/create + `<id>/update|delete` — the mutable rolled list),
+`/notebook/{roll,file,tear}` (the scrap verbs, each returns the new stubbed page), and
+`/notebook/usage` (the authoritative PG n/48 the editor measures as `contentHeight/30`).
 
-Keep this module self-contained (its own template + static/notebook.{css,js}) so the
-notebook can be lifted out later as the standalone 48pages product — the local
-`helpers/notebook.py` store is a swappable placeholder, not a fork to maintain.
+Self-contained (own template + static/notebook.{css,js}); shelve + the review queue stay
+app-only by design. This surface is dogfooding the API ahead of a native Mac/iOS client —
+runbook: `~/projects/48pages-app/clients/COCKPIT_INTEGRATION.md`.
 """
 import os
 from flask import Blueprint, request, jsonify, render_template
