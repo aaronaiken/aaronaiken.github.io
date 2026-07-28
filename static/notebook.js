@@ -191,9 +191,12 @@
 		function flash(msg) { if (status) status.textContent = msg; }
 		function saveNow() {
 			saving = true; renderStatus();
+			// Send the editor's measured line-units (contentHeight/30) so the server persists the
+			// authoritative PG n/48 (write_usage) — one number shared with 48pages + every surface.
 			fetch(PAGE_URL, {
 				method: 'POST', headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ content: ed ? ed.getValue() : '', force: true })
+				body: JSON.stringify({ content: ed ? ed.getValue() : '', force: true,
+					line_units: ed ? ed.lineUnits() : undefined })
 			}).then(function (r) { return r.json(); })
 				.then(function () { saving = false; lastSaved = Date.now(); renderStatus(); })
 				.catch(function () { saving = false; if (status) status.textContent = 'OFFLINE'; });
@@ -210,18 +213,29 @@
 		}
 		function removeBlock(blk) { if (ed) ed.removeBlock(blk); }
 
+		// Run a scrap verb server-side. roll/file/tear each move the scrap AND collapse it to
+		// its stub (↑ rolled · / → filed · / ✂ torn ·) — the server returns the new page buffer,
+		// which we feed straight back into the editor (don't reimplement the stub logic here).
+		function runVerb(url, blk, extra, done) {
+			if (!blk || !blk.text) return;
+			var body = { page: ed ? ed.getValue() : '', scrap: blk.text };
+			if (extra) { for (var k in extra) body[k] = extra[k]; }
+			fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+				.then(function (r) { return r.json(); })
+				.then(function (d) {
+					if (d && d.ok && typeof d.page === 'string' && ed) { ed.setValue(d.page); refreshScrapBar(); }
+					else { flash('offline'); }
+					if (done) done(d);
+				}).catch(function () { flash('offline'); });
+		}
+
 		window.nbTearCurrent = function () {
 			var blk = currentBlock(); if (!blk.text) return;
-			removeBlock(blk); saveNow(); refreshScrapBar(); flash('torn');
+			runVerb('/notebook/tear', blk, null, function (d) { if (d && d.ok) flash('torn ✂'); });
 		};
 		window.nbRollCurrent = function () {
 			var blk = currentBlock(); if (!blk.text) return;
-			var title = blk.text.split('\n').map(function (s) { return s.trim(); }).filter(Boolean).join(' / ');
-			var body = new URLSearchParams(); body.set('title', title);
-			fetch(BELOW_ADD_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() })
-				.then(function (r) { return r.json(); })
-				.then(function () { removeBlock(blk); saveNow(); refreshScrapBar(); loadBelowDeck(); flash('rolled ↩'); })
-				.catch(function () { flash('offline'); });
+			runVerb('/notebook/roll', blk, null, function (d) { if (d && d.ok) { loadTasks(); flash('rolled ↑'); } });
 		};
 
 		// mount the CodeMirror 6 iA-Writer editor (shared with 48pages)
@@ -246,40 +260,36 @@
 			host.textContent = 'editor failed to load — reload the page';
 		}
 
-		// ---- right page: live Below Deck (same store as /below-deck) ----
+		// ---- right page: the 48pages rolled task list (ROLL lands here + leaves a page stub) ----
 		function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
-		function loadBelowDeck() {
+		function loadTasks() {
 			if (!bdList) return;
-			fetch('/below-deck/list').then(function (r) { return r.json(); }).then(function (d) {
+			fetch('/notebook/tasks').then(function (r) { return r.json(); }).then(function (d) {
+				var tasks = (d && d.tasks) || [];
+				var pending = tasks.filter(function (t) { return !t.done; });
+				var done = tasks.filter(function (t) { return t.done; });
 				var html = '';
-				(d.open || []).forEach(function (t) {
-					html += '<li class="nb-bd-item" data-id="' + t.id + '">'
-						+ '<button class="nb-bd-check" onclick="nbBdComplete(' + t.id + ')" title="Complete"></button>'
-						+ '<span class="nb-bd-title">' + esc(t.title) + '</span>'
-						+ '<button class="nb-bd-del" onclick="nbBdDelete(' + t.id + ')" title="Delete">✕</button></li>';
+				pending.forEach(function (t) {
+					html += '<li class="nb-bd-item" data-id="' + esc(t.id) + '">'
+						+ '<span class="nb-bd-check" aria-hidden="true"></span>'
+						+ '<span class="nb-bd-title">' + esc(t.text) + '</span></li>';
 				});
-				if (!(d.open || []).length) html += '<li class="nb-bd-empty">clear deck.</li>';
-				(d.completed || []).slice(0, 6).forEach(function (t) {
+				if (!pending.length) html += '<li class="nb-bd-empty">nothing rolled.</li>';
+				// Done tasks show struck-through; toggle/delete are app-side until the client
+				// exposes update/delete task methods (server has PUT/DELETE /v1/tasks).
+				done.slice(0, 8).forEach(function (t) {
 					html += '<li class="nb-bd-item is-done"><span class="nb-bd-check done">✓</span>'
-						+ '<span class="nb-bd-title">' + esc(t.title) + '</span></li>';
+						+ '<span class="nb-bd-title">' + esc(t.text) + '</span></li>';
 				});
 				bdList.innerHTML = html;
 			}).catch(function () {});
 		}
-		function bdPost(url, id, cb) {
-			var body = new URLSearchParams(); body.set('id', id);
-			fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() })
-				.then(function () { if (cb) cb(); }).catch(function () {});
-		}
-		window.nbBdAdd = function () {
+		window.nbTaskAdd = function () {
 			if (!bdInput) return;
-			var title = bdInput.value.trim(); if (!title) return;
-			var body = new URLSearchParams(); body.set('title', title);
-			fetch(BELOW_ADD_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() })
-				.then(function (r) { return r.json(); }).then(function () { bdInput.value = ''; loadBelowDeck(); }).catch(function () {});
+			var text = bdInput.value.trim(); if (!text) return;
+			fetch('/notebook/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text }) })
+				.then(function (r) { return r.json(); }).then(function () { bdInput.value = ''; loadTasks(); }).catch(function () {});
 		};
-		window.nbBdComplete = function (id) { bdPost('/below-deck/complete', id, loadBelowDeck); };
-		window.nbBdDelete = function (id) { bdPost('/below-deck/delete', id, loadBelowDeck); };
 
 		// ---- cabinet (file / browse) ----
 		var cab = document.getElementById('nb-cabinet');
@@ -347,13 +357,24 @@
 		};
 		window.nbFileConfirm = function (keep) {
 			if (!fileBlock) return;
-			var body = { title: fileTitle ? fileTitle.value : '', body_md: fileBlock.text, tags: fileTags };
-			fetch('/notebook/cabinet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+			if (keep) {
+				// FILE + KEEP — copy to the cabinet with the chosen title + tags; page untouched (no stub).
+				var body = { title: fileTitle ? fileTitle.value : '', body_md: fileBlock.text, tags: fileTags };
+				fetch('/notebook/cabinet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+					.then(function (r) { return r.json(); }).then(function (d) {
+						if (d && d.ok) { fileBlock = null; window.nbCabClose(); updateCabCount(); flash('filed (kept)'); }
+					}).catch(function () { flash('offline'); });
+				return;
+			}
+			// FILE IT — the verb: cabinet + `→ filed ·` stub. Title is the scrap's first line (server-derived);
+			// the chosen tags are passed through. Returns the new page — feed it back to the editor.
+			fetch('/notebook/file', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ page: ed ? ed.getValue() : '', scrap: fileBlock.text, tags: fileTags }) })
 				.then(function (r) { return r.json(); }).then(function (d) {
 					if (d && d.ok) {
-						if (!keep) { removeBlock(fileBlock); saveNow(); refreshScrapBar(); }
-						fileBlock = null; window.nbCabClose(); updateCabCount(); flash(keep ? 'filed (kept)' : 'filed');
-					}
+						if (typeof d.page === 'string' && ed) { ed.setValue(d.page); refreshScrapBar(); }
+						fileBlock = null; window.nbCabClose(); updateCabCount(); flash('filed →');
+					} else { flash('offline'); }
 				}).catch(function () { flash('offline'); });
 		};
 
@@ -405,7 +426,7 @@
 						+ '<div class="nb-cab-cbottom"><div class="nb-cab-ctags">' + tags + '</div>'
 						+ '<div class="nb-cab-cacts">'
 						+ '<button onclick="nbCabToPage(' + c.id + ')" title="Return to page">↩ TO PAGE</button>'
-						+ '<button onclick="nbCabRoll(' + c.id + ')" title="Roll to Below Deck">→ ROLL</button>'
+						+ '<button onclick="nbCabRoll(' + c.id + ')" title="Roll to the task list">→ ROLL</button>'
 						+ '<button onclick="nbCabCopy(' + c.id + ')" title="Copy text">⧉</button>'
 						+ '<button onclick="nbCabShred(' + c.id + ')" title="Shred">⌦</button>'
 						+ '</div></div></div>';
@@ -436,9 +457,9 @@
 		};
 		window.nbCabRoll = function (id) {
 			var c = cabItemById(id); if (!c) return;
-			var b = new URLSearchParams(); b.set('title', c.title || (c.body_md || '').split('\n')[0]);
-			fetch(BELOW_ADD_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: b.toString() })
-				.then(function () { loadBelowDeck(); flash('rolled ↩'); }).catch(function () {});
+			var text = c.title || (c.body_md || '').split('\n')[0];
+			fetch('/notebook/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text }) })
+				.then(function () { loadTasks(); flash('rolled ↑'); }).catch(function () {});
 		};
 		window.nbCabCopy = function (id) {
 			var c = cabItemById(id); if (!c) return;
@@ -451,7 +472,7 @@
 		};
 
 		// initial paint (the editor already painted the budget from its real line-units on mount)
-		loadBelowDeck();
+		loadTasks();
 		refreshScrapBar();
 		updateCabCount();
 	}

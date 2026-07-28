@@ -39,9 +39,9 @@
 				<div class="nb-triage-banner" id="nb-triage-banner">PAGE HEAVY — FILE, ROLL, OR TEAR TO KEEP WRITING</div>
 				<div class="nb-scrap-bar" id="nb-scrap-bar">
 					<span class="nb-scrap-what" id="nb-scrap-what">—</span>
-					<button type="button" onclick="nbRollCurrent()" title="Roll to Below Deck (Ctrl+Enter)">→ ROLL</button>
-					<button type="button" onclick="nbFileCurrent()" title="File to cabinet (Ctrl+Shift+F)">🗄 FILE</button>
-					<button type="button" onclick="nbTearCurrent()" title="Tear this scrap">⌦ TEAR</button>
+					<button type="button" onclick="nbRollCurrent()" title="Roll to the task list (Ctrl+Enter) — leaves a ↑ rolled stub">→ ROLL</button>
+					<button type="button" onclick="nbFileCurrent()" title="File to cabinet (Ctrl+Shift+F) — leaves a → filed stub">🗄 FILE</button>
+					<button type="button" onclick="nbTearCurrent()" title="Tear this scrap — leaves a ✂ torn stub">⌦ TEAR</button>
 				</div>
 				<!-- CodeMirror 6 iA-Writer editor (shared with 48pages) mounts here; the
 				     initial page rides in a hidden textarea so the exact text is preserved. -->
@@ -52,16 +52,15 @@
 
 			<div class="nb-spine"></div>
 
-			<!-- RIGHT PAGE — the live Below Deck kneeboard (same source of truth). -->
+			<!-- RIGHT PAGE — the 48pages rolled task list (ROLL lands here + leaves a stub). -->
 			<div class="nb-fs-right">
 				<div class="nb-right-head">
-					<span class="nb-fs-sub">// Below Deck</span>
-					<a href="/below-deck" class="nb-right-open" title="Full Below Deck">↗</a>
+					<span class="nb-fs-sub">// Rolled</span>
 				</div>
 				<div class="nb-bd-add">
 					<input type="text" id="nb-bd-input" placeholder="new task…" maxlength="140"
-					       onkeydown="if(event.key==='Enter'){event.preventDefault();nbBdAdd();}">
-					<button type="button" onclick="nbBdAdd()">+ LOG</button>
+					       onkeydown="if(event.key==='Enter'){event.preventDefault();nbTaskAdd();}">
+					<button type="button" onclick="nbTaskAdd()">+ LOG</button>
 				</div>
 				<ul class="nb-bd-list" id="nb-bd-list"></ul>
 			</div>

@@ -93,23 +93,95 @@ def _entry_out(e):
 # ---- page -------------------------------------------------------------------
 
 def load_notebook():
-	"""Return {page, last_modified, cabinet} from the real notebook. (last_modified is
-	None: the zero-knowledge server exposes no per-page mtime — the buffer is the truth.)"""
+	"""Return {page, last_modified, cabinet, tasks, usage} from the real notebook — the full
+	surface for the fullscreen render. (last_modified is None: the zero-knowledge server
+	exposes no per-page mtime — the buffer is the truth. usage is None until first measured
+	by an editor-bearing surface — see the budget note.)"""
 	client = _nb()
 	if not client:
-		return {'page': '', 'last_modified': None, 'cabinet': []}
-	page = client.read_page() or ''
-	return {'page': page, 'last_modified': None,
-	        'cabinet': [_entry_out(e) for e in client.list_cabinet()]}
+		return {'page': '', 'last_modified': None, 'cabinet': [], 'tasks': [], 'usage': None}
+	return {
+		'page': client.read_page() or '',
+		'last_modified': None,
+		'cabinet': [_entry_out(e) for e in client.list_cabinet()],
+		'tasks': client.list_tasks(),          # [{id, text, done, rolledAt}]
+		'usage': client.read_usage(),           # authoritative PG n/48, or None
+	}
 
 
-def save_page(content, force=False):
+def save_page(content, force=False, line_units=None):
 	"""Encrypt + upload the whole page (last-writer-wins, same as the app's multi-device
-	behaviour). Returns a timestamp for the autosave UI."""
+	behaviour). If the editor sent its measured line_units (contentHeight/30), persist that
+	as the authoritative budget too, so every surface reads one number. Returns a timestamp."""
 	client = _nb()
 	if client:
 		client.write_page(content or '')
+		if line_units is not None:
+			try:
+				client.write_usage(int(line_units))
+			except (TypeError, ValueError):
+				pass
 	return _now_iso()
+
+
+# ---- budget (authoritative, from the editor measurement; server can't compute it) -------
+
+def usage():
+	"""The authoritative PG n/48 the last editor-bearing surface measured + wrote, or None
+	if never measured. Shape: {line_units, page, pages_left, page_budget, fill, triage, full}."""
+	client = _nb()
+	return client.read_usage() if client else None
+
+
+def save_usage(line_units):
+	"""Persist a measured line-unit count (editor contentHeight/30) as the source of truth."""
+	client = _nb()
+	if client and line_units is not None:
+		try:
+			client.write_usage(int(line_units))
+		except (TypeError, ValueError):
+			pass
+
+
+# ---- scrap verbs (roll / file / tear) — each returns the NEW page (with its stub) -------
+
+def roll_scrap(page_text, scrap_text):
+	"""ROLL a scrap to the task list + collapse it to a `↑ rolled ·` stub on the page.
+	Returns {'tasks': [...], 'page': '<new page>'} or None if unavailable."""
+	client = _nb()
+	return client.roll(page_text or '', scrap_text or '') if client else None
+
+
+def file_scrap(page_text, scrap_text, tags=None):
+	"""FILE a scrap to the cabinet + leave a `→ filed ·` stub. Title from the first line,
+	tags seeded from inline #tags (+ any extra passed). Returns {'entry': {...}, 'page': ...}."""
+	client = _nb()
+	if not client:
+		return None
+	res = client.file(page_text or '', scrap_text or '', _clean_tags(tags))
+	if isinstance(res, dict) and res.get('entry'):
+		res = {**res, 'entry': _entry_out(res['entry'])}
+	return res
+
+
+def tear_scrap(page_text, scrap_text):
+	"""TEAR a scrap — strike it to a `✂ torn ·` stub (no copy anywhere). Returns {'page': ...}."""
+	client = _nb()
+	return client.tear(page_text or '', scrap_text or '') if client else None
+
+
+# ---- tasks (the rolled list) ------------------------------------------------------------
+
+def tasks_all():
+	"""The rolled task list: [{id, text, done, rolledAt}]."""
+	client = _nb()
+	return client.list_tasks() if client else []
+
+
+def task_create(text, done=False):
+	"""Raw task add (no page stub — use roll_scrap for the verb). Returns the new task."""
+	client = _nb()
+	return client.create_task((text or '').strip(), bool(done)) if client else None
 
 
 # ---- cabinet (the unbounded archive; page is scarce, this isn't) ------------
@@ -188,7 +260,8 @@ def append_slip(text):
 	is deliberately NOT the default: reserve it for BLIND producers that can't show the
 	page — Shortcuts, cron, the menu-bar bar — where the review banner is the only way in."""
 	text = (text or '').strip()
-	page = load_notebook()['page']
+	client = _nb()
+	page = (client.read_page() or '') if client else ''
 	if not text:
 		return {'page': page, 'last_modified': None, 'budget': budget(page)}
 	new_page = (page.rstrip() + '\n\n' + text) if page.strip() else text

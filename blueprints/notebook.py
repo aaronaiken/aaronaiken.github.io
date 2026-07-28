@@ -63,12 +63,88 @@ def notebook_page():
 
 @notebook_bp.route('/notebook/page', methods=['POST'])
 def notebook_page_save():
-	"""Persist the whole page buffer (autosave from the fullscreen editor)."""
+	"""Persist the whole page buffer (autosave from the fullscreen editor). If the editor
+	sends its measured line_units (contentHeight/30), persist that as the authoritative
+	budget too, so the app + every surface read one PG n/48 number."""
 	if not is_authenticated():
 		return jsonify({'error': 'unauthorized'}), 401
 	d = request.get_json(silent=True) or {}
-	lm = nb.save_page(d.get('content', ''), force=bool(d.get('force')))
+	lm = nb.save_page(d.get('content', ''), force=bool(d.get('force')), line_units=d.get('line_units'))
 	return jsonify({'ok': True, 'last_modified': lm, 'budget': nb.budget(d.get('content', ''))})
+
+
+@notebook_bp.route('/notebook/usage')
+def notebook_usage():
+	"""GET the authoritative PG n/48 (last measured + written by an editor). Mirrors GET
+	/v1/usage. None until first measured."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	return jsonify({'usage': nb.usage()})
+
+
+@notebook_bp.route('/notebook/usage', methods=['POST'])
+def notebook_usage_save():
+	"""Persist a measured line-unit count (editor contentHeight/30). Mirrors PUT /v1/usage."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	d = request.get_json(silent=True) or {}
+	nb.save_usage(d.get('line_units'))
+	return jsonify({'ok': True, 'usage': nb.usage()})
+
+
+@notebook_bp.route('/notebook/tasks')
+def notebook_tasks():
+	"""GET the rolled task list: [{id, text, done, rolledAt}]. Mirrors GET /v1/tasks."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	return jsonify({'tasks': nb.tasks_all()})
+
+
+@notebook_bp.route('/notebook/tasks', methods=['POST'])
+def notebook_task_create():
+	"""Add a task directly (no page stub — that's the ROLL verb). Mirrors POST /v1/tasks."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	d = request.get_json(silent=True) or {}
+	task = nb.task_create(d.get('text', ''), bool(d.get('done')))
+	return jsonify({'ok': task is not None, 'task': task})
+
+
+def _verb_args():
+	"""Shared: the current page + the exact scrap text from the editor, for a verb call."""
+	d = request.get_json(silent=True) or {}
+	return d, (d.get('page') or ''), (d.get('scrap') or '')
+
+
+@notebook_bp.route('/notebook/roll', methods=['POST'])
+def notebook_roll():
+	"""ROLL a scrap → task list + `↑ rolled ·` stub. Returns {tasks, page} (feed page back)."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	_d, page, scrap = _verb_args()
+	res = nb.roll_scrap(page, scrap)
+	return jsonify({'ok': res is not None, **(res or {})})
+
+
+@notebook_bp.route('/notebook/file', methods=['POST'])
+def notebook_file_verb():
+	"""FILE a scrap → cabinet + `→ filed ·` stub. Returns {entry, page}. (FILE+KEEP with no
+	stub is the separate /notebook/cabinet POST.)"""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	d, page, scrap = _verb_args()
+	res = nb.file_scrap(page, scrap, d.get('tags', []))
+	return jsonify({'ok': res is not None, **(res or {})})
+
+
+@notebook_bp.route('/notebook/tear', methods=['POST'])
+def notebook_tear():
+	"""TEAR a scrap → `✂ torn ·` stub (no copy). Returns {page} (feed it back to the editor)."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	_d, page, scrap = _verb_args()
+	res = nb.tear_scrap(page, scrap)
+	return jsonify({'ok': res is not None, **(res or {})})
 
 
 @notebook_bp.route('/notebook/slip', methods=['POST'])
