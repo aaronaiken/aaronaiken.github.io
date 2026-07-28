@@ -262,28 +262,45 @@
 
 		// ---- right page: the 48pages rolled task list (ROLL lands here + leaves a page stub) ----
 		function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+		var tasksById = {};   // id → task, so mutations can send the current text back
 		function loadTasks() {
 			if (!bdList) return;
 			fetch('/notebook/tasks').then(function (r) { return r.json(); }).then(function (d) {
 				var tasks = (d && d.tasks) || [];
+				tasksById = {};
+				tasks.forEach(function (t) { tasksById[t.id] = t; });
 				var pending = tasks.filter(function (t) { return !t.done; });
 				var done = tasks.filter(function (t) { return t.done; });
 				var html = '';
 				pending.forEach(function (t) {
 					html += '<li class="nb-bd-item" data-id="' + esc(t.id) + '">'
-						+ '<span class="nb-bd-check" aria-hidden="true"></span>'
-						+ '<span class="nb-bd-title">' + esc(t.text) + '</span></li>';
+						+ '<button class="nb-bd-check" onclick="nbTaskDone(\'' + esc(t.id) + '\')" title="Check done"></button>'
+						+ '<span class="nb-bd-title">' + esc(t.text) + '</span>'
+						+ '<button class="nb-bd-del" onclick="nbTaskDel(\'' + esc(t.id) + '\')" title="Delete">✕</button></li>';
 				});
 				if (!pending.length) html += '<li class="nb-bd-empty">nothing rolled.</li>';
-				// Done tasks show struck-through; toggle/delete are app-side until the client
-				// exposes update/delete task methods (server has PUT/DELETE /v1/tasks).
 				done.slice(0, 8).forEach(function (t) {
-					html += '<li class="nb-bd-item is-done"><span class="nb-bd-check done">✓</span>'
-						+ '<span class="nb-bd-title">' + esc(t.text) + '</span></li>';
+					html += '<li class="nb-bd-item is-done" data-id="' + esc(t.id) + '">'
+						+ '<button class="nb-bd-check done" onclick="nbTaskUndone(\'' + esc(t.id) + '\')" title="Un-check">✓</button>'
+						+ '<span class="nb-bd-title">' + esc(t.text) + '</span>'
+						+ '<button class="nb-bd-del" onclick="nbTaskDel(\'' + esc(t.id) + '\')" title="Delete">✕</button></li>';
 				});
 				bdList.innerHTML = html;
 			}).catch(function () {});
 		}
+		function taskSetDone(id, done) {
+			var t = tasksById[id]; if (!t) return;
+			fetch('/notebook/tasks/' + encodeURIComponent(id) + '/update', {
+				method: 'POST', headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ text: t.text, done: done })
+			}).then(function (r) { return r.json(); }).then(function () { loadTasks(); }).catch(function () {});
+		}
+		window.nbTaskDone = function (id) { taskSetDone(id, true); };
+		window.nbTaskUndone = function (id) { taskSetDone(id, false); };
+		window.nbTaskDel = function (id) {
+			fetch('/notebook/tasks/' + encodeURIComponent(id) + '/delete', { method: 'POST' })
+				.then(function (r) { return r.json(); }).then(function () { loadTasks(); }).catch(function () {});
+		};
 		window.nbTaskAdd = function () {
 			if (!bdInput) return;
 			var text = bdInput.value.trim(); if (!text) return;
@@ -366,10 +383,11 @@
 					}).catch(function () { flash('offline'); });
 				return;
 			}
-			// FILE IT — the verb: cabinet + `→ filed ·` stub. Title is the scrap's first line (server-derived);
-			// the chosen tags are passed through. Returns the new page — feed it back to the editor.
+			// FILE IT — the verb: cabinet + `→ filed ·` stub. Pass the chosen title (defaults to the
+			// scrap's first line if blank) + tags. Returns the new page — feed it back to the editor.
 			fetch('/notebook/file', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ page: ed ? ed.getValue() : '', scrap: fileBlock.text, tags: fileTags }) })
+				body: JSON.stringify({ page: ed ? ed.getValue() : '', scrap: fileBlock.text, tags: fileTags,
+					title: fileTitle ? fileTitle.value : '' }) })
 				.then(function (r) { return r.json(); }).then(function (d) {
 					if (d && d.ok) {
 						if (typeof d.page === 'string' && ed) { ed.setValue(d.page); refreshScrapBar(); }

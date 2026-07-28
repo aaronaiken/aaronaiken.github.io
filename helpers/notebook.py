@@ -152,13 +152,15 @@ def roll_scrap(page_text, scrap_text):
 	return client.roll(page_text or '', scrap_text or '') if client else None
 
 
-def file_scrap(page_text, scrap_text, tags=None):
-	"""FILE a scrap to the cabinet + leave a `→ filed ·` stub. Title from the first line,
-	tags seeded from inline #tags (+ any extra passed). Returns {'entry': {...}, 'page': ...}."""
+def file_scrap(page_text, scrap_text, tags=None, title=None):
+	"""FILE a scrap to the cabinet + leave a `→ filed ·` stub. Title defaults to the first
+	line (pass `title` to override); tags seeded from inline #tags (+ any extra passed).
+	Returns {'entry': {...}, 'page': ...}."""
 	client = _nb()
 	if not client:
 		return None
-	res = client.file(page_text or '', scrap_text or '', _clean_tags(tags))
+	title = (title or '').strip() or None
+	res = client.file(page_text or '', scrap_text or '', _clean_tags(tags), title)
 	if isinstance(res, dict) and res.get('entry'):
 		res = {**res, 'entry': _entry_out(res['entry'])}
 	return res
@@ -182,6 +184,22 @@ def task_create(text, done=False):
 	"""Raw task add (no page stub — use roll_scrap for the verb). Returns the new task."""
 	client = _nb()
 	return client.create_task((text or '').strip(), bool(done)) if client else None
+
+
+def task_update(task_id, text, done=False):
+	"""Edit a task — check it done (flip done), rename, etc. Pass the current text back.
+	Returns the updated task or None if unavailable."""
+	client = _nb()
+	return client.update_task(task_id, (text or '').strip(), bool(done)) if client else None
+
+
+def task_delete(task_id):
+	"""Remove a task. Returns True if the delete was issued."""
+	client = _nb()
+	if not client:
+		return False
+	client.delete_task(task_id)
+	return True
 
 
 # ---- cabinet (the unbounded archive; page is scarce, this isn't) ------------

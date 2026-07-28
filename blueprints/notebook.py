@@ -110,6 +110,25 @@ def notebook_task_create():
 	return jsonify({'ok': task is not None, 'task': task})
 
 
+@notebook_bp.route('/notebook/tasks/<task_id>/update', methods=['POST'])
+def notebook_task_update(task_id):
+	"""Edit a task — check done (send done=true) or rename. Mirrors PUT /v1/tasks/<id>.
+	Pass the current text back (from the list)."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	d = request.get_json(silent=True) or {}
+	task = nb.task_update(task_id, d.get('text', ''), bool(d.get('done')))
+	return jsonify({'ok': task is not None, 'task': task})
+
+
+@notebook_bp.route('/notebook/tasks/<task_id>/delete', methods=['POST'])
+def notebook_task_delete(task_id):
+	"""Remove a task. Mirrors DELETE /v1/tasks/<id>."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	return jsonify({'ok': nb.task_delete(task_id)})
+
+
 def _verb_args():
 	"""Shared: the current page + the exact scrap text from the editor, for a verb call."""
 	d = request.get_json(silent=True) or {}
@@ -133,7 +152,7 @@ def notebook_file_verb():
 	if not is_authenticated():
 		return jsonify({'error': 'unauthorized'}), 401
 	d, page, scrap = _verb_args()
-	res = nb.file_scrap(page, scrap, d.get('tags', []))
+	res = nb.file_scrap(page, scrap, d.get('tags', []), d.get('title'))
 	return jsonify({'ok': res is not None, **(res or {})})
 
 

@@ -340,6 +340,19 @@ class Slip:
         row = self._post("/v1/tasks", self._seal(json.dumps(payload)))
         return {"id": row["id"], **payload}
 
+    def update_task(
+        self, task_id: str, text: str, done: bool = False, rolled_at: str | None = None
+    ) -> dict:
+        """Edit a task — check it done (flip `done`), rename it, etc. Re-seals the
+        whole payload like the app; pass the current text back (from list_tasks)."""
+        payload = {"text": text, "done": done, "rolledAt": rolled_at or _now_iso()}
+        self._put(f"/v1/tasks/{task_id}", self._seal(json.dumps(payload)))
+        return {"id": task_id, **payload}
+
+    def delete_task(self, task_id: str) -> None:
+        """Remove a task from the list."""
+        self._delete(f"/v1/tasks/{task_id}")
+
     # -- usage / ink budget (scopes: read / write) -----------------------------
 
     def read_usage(self) -> dict | None:
@@ -374,15 +387,20 @@ class Slip:
         self.write_page(new_page)
         return {"tasks": tasks, "page": new_page}
 
-    def file(self, page_text: str, scrap_text: str, tags: list | None = None) -> dict:
+    def file(
+        self, page_text: str, scrap_text: str, tags: list | None = None,
+        title: str | None = None,
+    ) -> dict:
         """The FILE verb: copy a scrap into the cabinet, then collapse it to a
-        `→ filed ·` stub on the page. Title = first line (heading sans #); inline
-        #tags seed the entry's tags (plus any passed). Returns {entry, page}.
-        (Use file_cabinet() for FILE+KEEP — copy without stubbing the page.)"""
+        `→ filed ·` stub on the page. Title defaults to the first line (heading sans
+        #) — pass `title` to override (a native filing UI). Inline #tags seed the
+        entry's tags (plus any passed). Returns {entry, page}. (Use file_cabinet()
+        for FILE+KEEP — copy without stubbing the page.)"""
         start = page_text.find(scrap_text)
         if start < 0:
             raise ValueError("scrap not found in page")
-        title, body = _suggest_title_body(scrap_text)
+        derived_title, body = _suggest_title_body(scrap_text)
+        title = derived_title if title is None else title
         all_tags = _extract_tags(scrap_text) + list(tags or [])
         entry = self.file_cabinet(title, body, all_tags)
         stub = _make_stub("filed", title or (body.split("\n")[0] if body else ""))
