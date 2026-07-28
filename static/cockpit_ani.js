@@ -826,6 +826,7 @@
 	sendBtn.textContent = aniPromptMode === 'retry' ? 'RE-ROLL 📷' : 'SEND 📷';
 	aniPipelineRestore();
 	aniPipelineReflect();
+	aniBibleLibLoad();   // refresh the Character/House pickers with the latest saved variants
 	overlay.hidden = false;
 	populate(box, sendBtn);
   }
@@ -881,9 +882,19 @@
 	aniPhotoBtn.disabled = true;
 	aniSendBtn.disabled = true;
 	var v2 = aniPipelineV2();
-	// V2 reads the conversation (no scene override); V1 sends the edited scene line.
-	var body = v2 ? { pipeline: 'v2', orientation: aniGetOrientation() }
-	              : { scene: scene, orientation: aniGetOrientation() };
+	var bibleId = (document.getElementById('ani-bible-pick') || {}).value || '';
+	var houseId = (document.getElementById('ani-house-pick') || {}).value || '';
+	var picked = !!(bibleId || houseId);
+	// V2 reads the conversation (no scene override); V1 sends the edited scene line. A bible-variant pick
+	// forces the V1 override path (the picks live there) — send the composed scene + the picked ids.
+	var body;
+	if (v2 && !picked) {
+	  body = { pipeline: 'v2', orientation: aniGetOrientation() };
+	} else {
+	  body = { scene: scene, orientation: aniGetOrientation() };
+	  if (bibleId) body.bible_id = bibleId;
+	  if (houseId) body.house_id = houseId;
+	}
 	aniRenderNotify(v2 ? 'developing a photo (V2 builder)…' : 'developing a photo…');
 	aniShowTyping(true);
 	aniScrollToBottom();
@@ -912,6 +923,118 @@
 		aniRenderNotify('photo request failed — try again');
 		aniScrollToBottom();
 	  });
+  }
+
+  // ---- Bible variants (operator-created Character/House bibles, picked per-shot in the composer) ----
+  var aniBibleLib = { character: [], house: [] };
+  var aniBibleKindCur = 'character';
+  var aniBibleEditId = '';
+
+  function aniBibleLibLoad(cb) {
+	fetch('/ani/bible-library')
+	  .then(function(r) { return r.json(); })
+	  .then(function(data) {
+		aniBibleLib = { character: (data && data.character) || [], house: (data && data.house) || [] };
+		aniBiblePopulateSelects();
+		if (cb) cb();
+	  })
+	  .catch(function() {});
+  }
+
+  // Fill the composer's Character/House pickers (Default + each saved variant), preserving the current pick.
+  function aniBiblePopulateSelects() {
+	[['ani-bible-pick', 'character', '◈ Character: Default'],
+	 ['ani-house-pick', 'house', '⌂ House: Default']].forEach(function(spec) {
+	  var sel = document.getElementById(spec[0]);
+	  if (!sel) return;
+	  var cur = sel.value;
+	  var html = '<option value="">' + spec[2] + '</option>';
+	  aniBibleLib[spec[1]].forEach(function(e) {
+		html += '<option value="' + aniEscapeHtml(e.id) + '">' + aniEscapeHtml(e.name) + '</option>';
+	  });
+	  sel.innerHTML = html;
+	  // keep the prior pick if it still exists
+	  if (cur && aniBibleLib[spec[1]].some(function(e) { return e.id === cur; })) sel.value = cur;
+	});
+  }
+
+  function aniBibleMgrOpen() {
+	var o = document.getElementById('ani-bible-overlay');
+	if (!o) return;
+	aniBibleLibLoad(function() { aniBibleKind(aniBibleKindCur); });
+	o.hidden = false;
+  }
+  function aniBibleMgrClose() { var o = document.getElementById('ani-bible-overlay'); if (o) o.hidden = true; }
+
+  function aniBibleKind(kind) {
+	aniBibleKindCur = (kind === 'house') ? 'house' : 'character';
+	['character', 'house'].forEach(function(k) {
+	  var b = document.getElementById('ani-bible-kind-' + k);
+	  if (b) b.classList.toggle('ani-on', k === aniBibleKindCur);
+	});
+	aniBibleNew();
+	aniBibleRenderList();
+  }
+
+  function aniBibleRenderList() {
+	var el = document.getElementById('ani-bible-list');
+	if (!el) return;
+	var items = aniBibleLib[aniBibleKindCur] || [];
+	if (!items.length) { el.innerHTML = '<div class="ani-bible-empty">no variants yet — name one and paste its bible below.</div>'; return; }
+	el.innerHTML = items.map(function(e) {
+	  return '<div class="ani-bible-item">'
+		+ '<button type="button" class="ani-bible-item-name" onclick="aniBibleEdit(' + aniAttr(e.id) + ')">' + aniEscapeHtml(e.name) + '</button>'
+		+ '<button type="button" class="ani-bible-item-del" title="Delete this variant" onclick="aniBibleDelete(' + aniAttr(e.id) + ')">✕</button>'
+		+ '</div>';
+	}).join('');
+  }
+
+  function aniBibleEdit(id) {
+	var e = (aniBibleLib[aniBibleKindCur] || []).find(function(x) { return x.id === id; });
+	if (!e) return;
+	aniBibleEditId = id;
+	var n = document.getElementById('ani-bible-name'); if (n) n.value = e.name || '';
+	var t = document.getElementById('ani-bible-textarea'); if (t) t.value = e.text || '';
+	var s = document.getElementById('ani-bible-status'); if (s) s.textContent = 'editing "' + (e.name || '') + '"';
+  }
+
+  function aniBibleNew() {
+	aniBibleEditId = '';
+	var n = document.getElementById('ani-bible-name'); if (n) n.value = '';
+	var t = document.getElementById('ani-bible-textarea'); if (t) t.value = '';
+	var s = document.getElementById('ani-bible-status'); if (s) s.textContent = '';
+  }
+
+  function aniBibleSave() {
+	var name = (document.getElementById('ani-bible-name') || {}).value || '';
+	var text = (document.getElementById('ani-bible-textarea') || {}).value || '';
+	var status = document.getElementById('ani-bible-status');
+	if (!name.trim() || !text.trim()) { if (status) status.textContent = 'name and text are both required'; return; }
+	if (status) status.textContent = 'saving…';
+	fetch('/ani/bible-library/save', {
+	  method: 'POST', headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ kind: aniBibleKindCur, id: aniBibleEditId, name: name, text: text })
+	}).then(function(r) { return r.json(); })
+	  .then(function(data) {
+		if (data && data.ok) {
+		  if (status) status.textContent = 'saved · ' + data.name;
+		  aniBibleLibLoad(function() { aniBibleRenderList(); });
+		  aniBibleEditId = data.id || aniBibleEditId;
+		} else if (status) { status.textContent = (data && data.error) || 'save failed'; }
+	  })
+	  .catch(function() { if (status) status.textContent = 'save failed'; });
+  }
+
+  function aniBibleDelete(id) {
+	fetch('/ani/bible-library/delete', {
+	  method: 'POST', headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ kind: aniBibleKindCur, id: id })
+	}).then(function(r) { return r.json(); })
+	  .then(function() {
+		if (aniBibleEditId === id) aniBibleNew();
+		aniBibleLibLoad(function() { aniBibleRenderList(); });
+	  })
+	  .catch(function() {});
   }
 
   // Retry: re-roll the edited scene for a specific photo and swap it in place.

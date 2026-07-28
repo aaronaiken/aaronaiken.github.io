@@ -449,6 +449,34 @@ body.ani-fullscreen #ani-avatar-fallback { font-size: 1.1rem; }
 .ani-turning-btn:hover { color: var(--ani-sub); border-color: var(--ani-sub); }
 .ani-turning-btn:disabled { opacity: 0.6; cursor: default; }
 
+/* Bible variants — composer pickers + the manager overlay. */
+.ani-bible-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 2px; }
+.ani-bible-row select { flex: 1 1 auto; min-width: 40%; }
+.ani-bible-mgr { display: flex; flex-direction: column; gap: 8px; padding: 4px 2px; }
+.ani-bible-kindrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ani-bible-kind-btn.ani-on { color: var(--ani-accent); border-color: var(--ani-sub); background: var(--ani-tx-bg); }
+.ani-bible-list { display: flex; flex-direction: column; gap: 4px; max-height: 150px; overflow-y: auto; }
+.ani-bible-empty { color: var(--ani-foot); font-size: 0.62rem; padding: 4px 2px; }
+.ani-bible-item { display: flex; gap: 6px; align-items: center; }
+.ani-bible-item-name {
+  flex: 1 1 auto; text-align: left; font: inherit; font-size: 0.64rem;
+  color: var(--ani-accent-dim); background: var(--ani-bg-c);
+  border: 1px solid var(--ani-in-bd); border-radius: 3px; padding: 5px 8px; cursor: pointer;
+}
+.ani-bible-item-name:hover { color: var(--ani-accent); border-color: var(--ani-sub); }
+.ani-bible-item-del {
+  font: inherit; font-size: 0.6rem; color: var(--ani-foot); background: transparent;
+  border: 1px solid var(--ani-in-bd); border-radius: 3px; padding: 5px 8px; cursor: pointer;
+}
+.ani-bible-item-del:hover { color: var(--ani-accent-hot); border-color: var(--ani-sub); }
+#ani-bible-textarea {
+  width: 100%; min-height: 150px; resize: vertical; font: inherit; font-size: 0.66rem; line-height: 1.5;
+  color: var(--ani-bub-her-tx); background: var(--ani-in-bg);
+  border: 1px solid var(--ani-in-bd); border-radius: 4px; padding: 8px; box-sizing: border-box;
+}
+#ani-bible-controls { display: flex; gap: 6px; align-items: center; }
+#ani-bible-status { font-size: 0.6rem; color: var(--ani-sub); }
+
 .ani-mem-cat {
   display: inline-block;
   font-size: 0.5rem;

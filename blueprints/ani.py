@@ -26,6 +26,8 @@ ANI_CONVERSATION_FILE = 'ani_conversation.json'
 ANI_MEMORY_FILE = 'static/ani_memory.txt'
 ANI_BIBLE_FILE = 'static/ani_character_bible.txt'   # visual/character bible (image-consistency anchor)
 ANI_HOUSE_FILE = 'static/ani_house.txt'             # room/house details for scene-setting
+ANI_BIBLE_LIBRARY_FILE = 'ani_bible_library.json'   # operator's named Character/House bible variants (picked
+                                                    # per-shot in the composer; empty pick = her defaults above)
 ANI_CALENDAR_FILE = 'ani_calendar.json'             # her calendar / shared plans (durable, off the rolling window)
 ANI_PENDING_MILESTONES_FILE = 'ani_pending_milestones.json'  # milestone life-changes awaiting Aaron's approval (Phase 3)
 ANI_PHOTO_PRESETS_FILE = 'ani_photo_presets.json'   # saved photo-composer field-sets ("bookmarks"); gitignored server-state
@@ -1459,6 +1461,40 @@ def ani_get_house():
 	return _ani_read_file(ANI_HOUSE_FILE)
 
 
+def ani_load_bible_library():
+	"""The operator's named Character/House bible variants — a library he picks from per-shot in the composer.
+	`{'character': [{id,name,text,created}], 'house': [...]}`. These OVERRIDE her default bibles for a single
+	generation only; leaving a picker on 'default' (or her autonomous photos) always uses the base files."""
+	try:
+		with open(ANI_BIBLE_LIBRARY_FILE) as f:
+			d = json.load(f)
+		if not isinstance(d, dict):
+			return {'character': [], 'house': []}
+		return {'character': d.get('character') or [], 'house': d.get('house') or []}
+	except Exception:
+		return {'character': [], 'house': []}
+
+
+def ani_save_bible_library(lib):
+	_ani_atomic_write_json(ANI_BIBLE_LIBRARY_FILE,
+	                       {'character': lib.get('character') or [], 'house': lib.get('house') or []})
+
+
+def ani_bible_entry_text(kind, entry_id):
+	"""Resolve a picked library entry's text, or None. `kind` in {'character','house'}. Guarded — a bad id or
+	missing library just means 'use the default' (None), never an error on the photo path."""
+	if not entry_id or kind not in ('character', 'house'):
+		return None
+	try:
+		for e in ani_load_bible_library().get(kind, []):
+			if e.get('id') == entry_id:
+				t = (e.get('text') or '').strip()
+				return t or None
+	except Exception:
+		pass
+	return None
+
+
 def ani_get_life():
 	"""Her OWN life — friends, hobbies, standing commitments, places she goes. Injected into the chat +
 	day-plan prompts so she self-directs her days instead of defaulting to a lazy one. Strips '#' comment
@@ -2435,11 +2471,15 @@ def _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear
 	return url
 
 
-def ani_generate_image(scene, orientation='portrait'):
+def ani_generate_image(scene, orientation='portrait', bible_override=None, house_override=None):
 	"""Generate a photo of Ani from a scene prompt, anchored to her character bible, and re-host
 	on Bunny. Routes to the configured backend: 'venice' (uncensored, faithful) or 'xai'
 	(grok-imagine, output-moderated → covered-chest top-guard). orientation 'portrait' (default)
-	or 'landscape' selects the output canvas dims. Returns a CDN URL or None."""
+	or 'landscape' selects the output canvas dims. Returns a CDN URL or None.
+
+	bible_override / house_override (optional, from an operator-picked composer library entry) REPLACE her
+	default character bible / add that room context for THIS shot only. Both None (her autonomous photos, or a
+	'default' pick) → identical behavior to before: default bible, house via the normalizer only."""
 	# Portrait by default; landscape (wider canvas) only when the operator picks it in the composer.
 	_dims = VENICE_DIMS_LANDSCAPE if str(orientation or '').lower().startswith('land') else VENICE_DIMS_PORTRAIT
 	clean_scene = re.sub(r'\s{2,}', ' ', scene).strip(' ,;.')
@@ -2469,7 +2509,14 @@ def ani_generate_image(scene, orientation='portrait'):
 		if not re.search(r'\b(macbook|laptop|keyboard)\b', clean_scene, re.IGNORECASE):
 			clean_scene += (', hands on the keyboard typing on her open silver MacBook laptop, '
 			                'fingers resting on the keys, no pen or paper')
-	bible = ani_get_bible() or ''
+	# Per-shot HOUSE override (operator picked a House Bible in the composer): fold its room context into the
+	# scene so this shot uses that setting. No pick → clean_scene untouched (her normal behavior).
+	if house_override:
+		room = re.sub(r'\s+', ' ', str(house_override)).strip()[:500]
+		if room:
+			clean_scene = (clean_scene.rstrip(' ,.;') + ', ' + room).strip(' ,')
+	# Per-shot CHARACTER override (operator picked a Character Bible) REPLACES her default appearance anchor.
+	bible = (bible_override or ani_get_bible()) or ''
 
 	if ANI_IMAGE_BACKEND == 'venice':
 		# Adapt to the scene: if a garment must stay on, lead with the outfit, push the missing state
@@ -6233,9 +6280,14 @@ def ani_photo():
 	_body = request.get_json(silent=True) or {}
 	override = (_body.get('scene') or '').strip()
 	orientation = _body.get('orientation') or 'portrait'
+	# Per-shot bible-library picks (empty pick = her defaults). Resolved server-side from the id.
+	bible_override = ani_bible_entry_text('character', _body.get('bible_id'))
+	house_override = ani_bible_entry_text('house', _body.get('house_id'))
 	# A/B: the v2 builder pipeline (extractor → compile_scene) vs the legacy normalize path.
-	# An operator-edited `override` prompt always uses v1 (it's already a finished scene line).
-	use_v2 = str(_body.get('pipeline') or ANI_IMAGE_PIPELINE).lower() == 'v2'
+	# An operator-edited `override` prompt — or a bible-library pick — always uses v1 (the override plumbing
+	# lives on the v1 path; v2 builds its own prompt and would ignore the picks).
+	use_v2 = (str(_body.get('pipeline') or ANI_IMAGE_PIPELINE).lower() == 'v2'
+	          and not bible_override and not house_override)
 	if use_v2 and not override:
 		from blueprints.ani_image_v2 import generate_photo_v2
 		image_url, scene = generate_photo_v2(messages, orientation)
@@ -6245,7 +6297,10 @@ def ani_photo():
 		scene = override or ani_normalize_scene(messages)
 		if not scene:
 			return jsonify({'image_url': None, 'error': 'prompt'}), 200
-		image_url = ani_generate_image(scene, orientation)
+		# House override applies to an operator-built scene (the composer's normal flow); on the rare
+		# pure-normalize path the room is already grounded from the default house, so don't double-inject.
+		image_url = ani_generate_image(scene, orientation, bible_override=bible_override,
+		                               house_override=(house_override if override else None))
 	if not image_url:
 		return jsonify({'image_url': None, 'error': 'blocked', 'scene': scene}), 200
 
@@ -6603,6 +6658,62 @@ def ani_memory_file_save():
 		pass
 	_ani_atomic_write_text(ANI_MEMORY_FILE, content)
 	return jsonify({'ok': True, 'chars': len(content)})
+
+
+@ani_bp.route('/ani/bible-library', methods=['GET'])
+def ani_bible_library_route():
+	"""List the operator's named Character/House bible variants for the composer pickers + manager."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	return jsonify(ani_load_bible_library())
+
+
+@ani_bp.route('/ani/bible-library/save', methods=['POST'])
+def ani_bible_library_save():
+	"""Create or update one named bible variant. Body: {kind:'character'|'house', id?, name, text}. Upserts
+	by id (new id minted when absent). Refuses an empty name or text."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	b = request.get_json(silent=True) or {}
+	kind = b.get('kind')
+	name = (b.get('name') or '').strip()[:80]
+	text = (b.get('text') or '').strip()
+	if kind not in ('character', 'house'):
+		return jsonify({'error': 'bad kind'}), 400
+	if not name or not text:
+		return jsonify({'error': 'name and text are required'}), 400
+	now_iso = datetime.now(pytz.timezone('America/New_York')).isoformat()
+	lib = ani_load_bible_library()
+	entries = lib.get(kind) or []
+	eid = (b.get('id') or '').strip()
+	updated = False
+	if eid:
+		for e in entries:
+			if e.get('id') == eid:
+				e['name'], e['text'], e['updated'] = name, text, now_iso
+				updated = True
+				break
+	if not updated:
+		eid = uuid.uuid4().hex[:8]
+		entries.append({'id': eid, 'name': name, 'text': text, 'created': now_iso, 'updated': now_iso})
+	lib[kind] = entries
+	ani_save_bible_library(lib)
+	return jsonify({'ok': True, 'id': eid, 'kind': kind, 'name': name})
+
+
+@ani_bp.route('/ani/bible-library/delete', methods=['POST'])
+def ani_bible_library_delete():
+	"""Delete one named bible variant. Body: {kind, id}. Her default bibles are separate files and untouched."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	b = request.get_json(silent=True) or {}
+	kind, eid = b.get('kind'), (b.get('id') or '').strip()
+	if kind not in ('character', 'house') or not eid:
+		return jsonify({'error': 'bad request'}), 400
+	lib = ani_load_bible_library()
+	lib[kind] = [e for e in (lib.get(kind) or []) if e.get('id') != eid]
+	ani_save_bible_library(lib)
+	return jsonify({'ok': True})
 
 
 @ani_bp.route('/ani/state', methods=['GET'])

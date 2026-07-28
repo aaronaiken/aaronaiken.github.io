@@ -671,7 +671,12 @@
 		    <option value="v1">⚙ V1</option>
 		    <option value="v2">✦ V2</option>
 		  </select>
-		  <span class="ani-prompt-hint">char + house bibles are auto-added; fields are the per-image details</span>
+		  <span class="ani-prompt-hint">fields are the per-image details</span>
+		</div>
+		<div class="ani-bible-row">
+		  <select id="ani-bible-pick" class="ani-cal-input ani-orient-select" title="Character bible for this shot — Default = her normal look"><option value="">◈ Character: Default</option></select>
+		  <select id="ani-house-pick" class="ani-cal-input ani-orient-select" title="House bible for this shot — Default = her normal rooms"><option value="">⌂ House: Default</option></select>
+		  <button type="button" class="ani-footer-btn" onclick="aniBibleMgrOpen()" title="Create / edit your Character &amp; House bible variants">✎ BIBLES</button>
 		</div>
 		<textarea id="ani-prompt-text" class="ani-prompt-textarea" rows="5" placeholder="reading the scene…" aria-label="Photo prompt"></textarea>
 		<div class="ani-prompt-actions">
@@ -723,6 +728,30 @@
 	  <div id="ani-core-controls">
 		<button class="ani-footer-btn ani-cal-addbtn" onclick="aniCoreSave()">SAVE</button>
 		<span id="ani-core-status"></span>
+	  </div>
+	</div>
+  </div>
+
+  <div id="ani-bible-overlay" class="ani-photolog-overlay" hidden onclick="if(event.target===this)aniBibleMgrClose()">
+	<div class="ani-photolog-panel ani-cal-panel" role="dialog" aria-label="Bible variants">
+	  <div class="ani-photolog-head">
+		<span>ANI · BIBLE VARIANTS</span>
+		<button class="ani-photolog-close" onclick="aniBibleMgrClose()" aria-label="Close">✕</button>
+	  </div>
+	  <div class="ani-bible-mgr">
+		<div class="ani-bible-kindrow">
+		  <button type="button" class="ani-footer-btn ani-bible-kind-btn ani-on" id="ani-bible-kind-character" onclick="aniBibleKind('character')">◈ Character</button>
+		  <button type="button" class="ani-footer-btn ani-bible-kind-btn" id="ani-bible-kind-house" onclick="aniBibleKind('house')">⌂ House</button>
+		  <span class="ani-prompt-hint">variants override her defaults per-shot; she always uses the defaults herself</span>
+		</div>
+		<div id="ani-bible-list" class="ani-bible-list"><!-- entries injected --></div>
+		<input type="text" id="ani-bible-name" class="ani-cal-input" placeholder="variant name (e.g. sun-kissed summer look)" maxlength="80" aria-label="Variant name">
+		<textarea id="ani-bible-textarea" spellcheck="false" placeholder="paste the full bible text for this variant…" aria-label="Variant text"></textarea>
+		<div id="ani-bible-controls">
+		  <button class="ani-footer-btn ani-cal-addbtn" onclick="aniBibleSave()">SAVE VARIANT</button>
+		  <button class="ani-footer-btn" onclick="aniBibleNew()" title="Clear the form for a new variant">NEW</button>
+		  <span id="ani-bible-status"></span>
+		</div>
 	  </div>
 	</div>
   </div>
