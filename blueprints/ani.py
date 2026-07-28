@@ -2284,6 +2284,33 @@ _ANI_REAR_INTENT_RE = re.compile(
 _ANI_REAR_NEG = ('facing camera, front view, frontal nudity, breasts toward camera, looking at the camera, '
 	'face toward camera, face visible, head raised looking up, front-facing, turned toward viewer')
 
+# Hair-color LEAD for the image prompt — pulled from the ACTIVE character bible (default or picked variant) so
+# the earliest, highest-weighted tokens always match her REAL hair, never a hardcoded color a variant has since
+# changed. Whitelisted descriptor words only (so "with"/"has"/"no hair" can't leak in). Env ANI_HAIR_LEAD forces
+# a specific lead if the extraction ever misfires.
+_ANI_HAIR_WORDS = (r'long|short|medium|shoulder-length|waist-length|wavy|straight|curly|coily|loose|sleek|soft|'
+	r'silky|tousled|voluminous|thick|fine|platinum|caramel|honey|ash|golden|strawberry|dirty|dark|light|jet|'
+	r'blonde|blond|brunette|brown|black|red|auburn|ginger|chestnut|silver|gray|grey')
+_ANI_HAIR_PHRASE_RE = re.compile(r'\b((?:(?:' + _ANI_HAIR_WORDS + r')[,\s-]+){1,6}hair)\b', re.IGNORECASE)
+_ANI_HAIR_COLOR_RE = re.compile(r'\b((?:platinum|caramel|honey|ash|golden|strawberry|dirty|dark|light|jet)[- ]?)?'
+	r'(blonde|blond|brunette|brown|black|red|auburn|ginger|chestnut|silver)\b', re.IGNORECASE)
+
+
+def _ani_hair_lead(bible):
+	"""Lead token for the image prompt: her real hair, from the active bible/variant. Env ANI_HAIR_LEAD overrides.
+	Returns '' when the bible names no parseable hair — the appended bible identity still carries the full look."""
+	env = os.environ.get('ANI_HAIR_LEAD')
+	if env:
+		return env.strip().rstrip(',') + ', '
+	b = bible or ''
+	m = _ANI_HAIR_PHRASE_RE.search(b)
+	if m:
+		return re.sub(r'\s+', ' ', m.group(1)).strip(' ,-') + ', '
+	c = _ANI_HAIR_COLOR_RE.search(b)
+	if c:
+		return re.sub(r'\s+', ' ', c.group(0)).strip() + ' hair, '
+	return ''
+
 def _ani_pose_negative(scene):
 	"""Scene-specific pose negatives. Rear/from-behind scenes get FRONT-view negatives (push to a true
 	from-behind shot). Supine/spread scenes get the prone-attractor negative; lying scenes also get the
@@ -2538,9 +2565,11 @@ def ani_generate_image(scene, orientation='portrait', bible_override=None, house
 		clean_scene = re.sub(r',[^,]*\b(?:foot of the bed|along her body|looking along)\b[^,]*', '',
 		                     clean_scene, flags=re.IGNORECASE)
 		clean_scene = re.sub(r'\s{2,}', ' ', clean_scene).strip(' ,;.')
-	# Lead with hair color so it lands among the earliest, highest-weighted tokens — otherwise the bible's
-	# hair clause sits after the scene and the model drifts to its default brunette.
-	clean_scene = 'caramel-blonde hair, long soft waves, ' + clean_scene
+	# Lead with her ACTUAL hair (from the active bible / picked variant) so it lands among the earliest,
+	# highest-weighted tokens and the model doesn't drift to its default brunette — without hardcoding a color a
+	# variant may have changed. Resolve the active bible here so the lead + the appended identity always agree.
+	_active_bible = (bible_override or ani_get_bible()) or ''
+	clean_scene = _ani_hair_lead(_active_bible) + clean_scene
 	# She composes on her MacBook, never by hand — a writing/letter/journal scene must render a laptop, not
 	# pen-and-paper. Anchor the laptop in the scene and (below) negate the handwriting attractor.
 	writing_scene = bool(_ANI_WRITING_RE.search(clean_scene))
@@ -2567,8 +2596,8 @@ def ani_generate_image(scene, orientation='portrait', bible_override=None, house
 		room = _ani_room_clause(house_override)
 		if room:
 			clean_scene = (clean_scene.rstrip(' ,.;') + ', ' + room).strip(' ,')
-	# Per-shot CHARACTER override (operator picked a Character Bible) REPLACES her default appearance anchor.
-	bible = (bible_override or ani_get_bible()) or ''
+	# Character bible resolved above as _active_bible (her default, or the operator's picked variant).
+	bible = _active_bible
 
 	if ANI_IMAGE_BACKEND == 'venice':
 		# Adapt to the scene: if a garment must stay on, lead with the outfit, push the missing state
