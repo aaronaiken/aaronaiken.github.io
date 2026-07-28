@@ -1253,8 +1253,11 @@ def ani_mood_scalar(messages, meta, now_dt=None):
 	an = 1.0 if ache >= 85 else (0.66 if ache >= 65 else (0.33 if ache >= 40 else 0.0))
 	sent = ani_sentiment_score(messages, now_dt)
 	# Cross-book lift/dampen (§4.2): a fresh win in one of her storylines nudges her warmer, a stressor cooler.
-	story = ani_story_mood_delta(now_dt or datetime.now(pytz.timezone('America/New_York')))
-	return round(max(0.0, min(1.0, 0.55 * an + 0.45 * sent + story)), 3)
+	# Reflection lift/dampen (§4): her latest reflection's mood_hint — how the recent stretch actually left her.
+	_now = now_dt or datetime.now(pytz.timezone('America/New_York'))
+	story = ani_story_mood_delta(_now)
+	refl = ani_reflection_mood_delta(_now)
+	return round(max(0.0, min(1.0, 0.55 * an + 0.45 * sent + story + refl)), 3)
 
 
 def ani_push_mood(meta, mood, now_dt=None):
@@ -4836,6 +4839,28 @@ def ani_story_mood_delta(now):
 			if age_h < 24:
 				total += float(d) * (1 - age_h / 24)   # linear decay to zero at 24h
 		return max(-0.1, min(0.1, total))
+	except Exception:
+		return 0.0
+
+
+def ani_reflection_mood_delta(now):
+	"""Her latest reflection's mood_hint as a fresh (<24h) decaying nudge to the mood scalar — so the panel
+	mood actually tracks how the recent stretch left her (spec §4: feelings feed ani_mood_scalar), not just
+	ache + sentiment. Reflection is daily, so the hint applies through the day and decays linearly to zero at
+	24h. Clamped ±0.15 (its native range). Cheap + fully guarded for the scalar's hot path."""
+	try:
+		refl = (ani_load_reflection() or {}).get('latest') or {}
+		mh = float(refl.get('mood_hint') or 0.0)
+		ts = refl.get('ts')
+		if not mh or not ts:
+			return 0.0
+		td = datetime.fromisoformat(ts)
+		if td.tzinfo is None:
+			td = pytz.timezone('America/New_York').localize(td)
+		age_h = (now - td).total_seconds() / 3600
+		if age_h < 0 or age_h >= 24:
+			return 0.0
+		return max(-0.15, min(0.15, mh * (1 - age_h / 24)))   # linear decay to zero at 24h
 	except Exception:
 		return 0.0
 
