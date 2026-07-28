@@ -2275,7 +2275,10 @@ _ANI_OVERHEAD_NEG = ('overhead shot, top-down view, top-down angle, bird\'s eye 
 # OPPOSITE of the supine handling: push the render toward a true from-behind view by negating the
 # front (the model's default is to spin her around to face the camera — that's what broke doggy).
 _ANI_REAR_INTENT_RE = re.compile(
-	r'(?:all fours|doggy|rear view|facing away|bent over|over (?:her|the) shoulder|'
+	r'(?:all fours|doggy|rear view|facing away|bent over|'
+	# "over her shoulder" ONLY as a looking-back POSE — must have a look/glance/peek/gaze verb in front, so a
+	# hair description ("strands falling over her shoulders") no longer falsely forces a from-behind render.
+	r'(?:look|glanc|peek|gaz)\w*\s+(?:back\s+)?over (?:her|the) shoulder|'
 	r'ass (?:toward|up|out)|butt (?:toward|up|out)|buttocks toward|'
 	r'from (?:directly |right )?behind|back (?:toward|to) the camera|view from behind)', re.IGNORECASE)
 _ANI_REAR_NEG = ('facing camera, front view, frontal nudity, breasts toward camera, looking at the camera, '
