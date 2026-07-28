@@ -16,6 +16,10 @@ requests
 emoji
 Pillow
 
+# 48pages side-door client (helpers/slip_client.py) — unwraps the notebook master
+# key locally so /notebook is a live zero-knowledge window into the real 48pages.
+cryptography
+
 # Anthropic API — Huyang + Cockpit assistant flows.
 anthropic>=0.97
 

@@ -104,7 +104,7 @@ def notebook_cabinet_file():
 	return jsonify({'ok': True, 'item': item})
 
 
-@notebook_bp.route('/notebook/cabinet/<int:item_id>/delete', methods=['POST'])
+@notebook_bp.route('/notebook/cabinet/<item_id>/delete', methods=['POST'])
 def notebook_cabinet_delete(item_id):
 	"""Shred a filed scrap. (The cockpit's local placeholder allows delete; the 48pages
 	/v1 contract deliberately has no DELETE — tearing needs the notebook in hand.)"""
@@ -113,7 +113,7 @@ def notebook_cabinet_delete(item_id):
 	return jsonify({'ok': nb.cabinet_delete(item_id)})
 
 
-@notebook_bp.route('/notebook/cabinet/<int:item_id>/retag', methods=['POST'])
+@notebook_bp.route('/notebook/cabinet/<item_id>/retag', methods=['POST'])
 def notebook_cabinet_retag(item_id):
 	if not is_authenticated():
 		return jsonify({'error': 'unauthorized'}), 401

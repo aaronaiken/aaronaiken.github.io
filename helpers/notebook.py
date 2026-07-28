@@ -1,25 +1,24 @@
-"""48pages notebook — local placeholder store (the cockpit's "side-door" client).
+"""48pages notebook — thin client against the live side-door API (spec §7).
 
-This is the swappable LOCAL implementation of the 48pages page/slip model. Keep the
-module boundary clean: when 48pages ships as its own product, this file is replaced by
-a thin client against its `/v1/*` API (GET /v1/page, POST /v1/slip, ...) and nothing
-else in the cockpit should reach past these functions. Treat it as an adapter, not a fork.
+The local placeholder store is retired: page + cabinet now live in the real
+zero-knowledge notebook. This module is the adapter its old docstring promised —
+budget math is local (pure; it drives the PG n/48 gauge and the slip fill %),
+and everything else delegates to helpers/slip_client.py, which unwraps the master
+key on THIS box and encrypts/decrypts every record. The 48pages server only ever
+stores ciphertext; this Flask process is the "device".
 
-Budget math is ported from the 48pages spec (NOTEBOOK_APP_SPEC §2 / notebook_tokens.css):
-1 page = 20 line-units, 48 pages total, triage at page 39. A "line-unit" approximates one
-rendered line on ruled paper — blank lines cost ink too (paper, not thoughts). The exact
-rendered-height measurement lands with the real editor in the notebook fullscreen; this is
-the placeholder estimate that drives the home-slip fill % and the PG n/48 gauge.
+Public function signatures the blueprint calls are unchanged, and the cockpit's
+entry shape ({id, title, body_md, tags, filed}) is mapped at the boundary, so the
+templates and blueprint don't change (beyond cabinet ids now being UUID strings).
+
+No NOTEBOOK_SLIP_TOKEN configured → the notebook is *unavailable* (empty), not
+silently local: a true window shouldn't fork into a shadow copy.
 """
+import logging
 import os
-import json
 from datetime import datetime
+
 import pytz
-
-
-NOTEBOOK_FILE = 'assets/data/notebook.json'
-SCRATCH_FILE = 'assets/data/scratch.json'          # legacy HOME tab
-SCRATCH_WORK_FILE = 'assets/data/scratch_work.json'  # legacy DESK tab
 
 # ---- budget constants (ported — see notebook_tokens.css --np-* geometry) ----
 LINES_PER_PAGE = 20
@@ -41,8 +40,7 @@ def line_units(text):
 		return 0
 	units = 0
 	for line in text.split('\n'):
-		n = len(line)
-		units += max(1, -(-n // _CHARS_PER_LINE))  # ceil(n / width), min 1
+		units += max(1, -(-len(line) // _CHARS_PER_LINE))  # ceil(n / width), min 1
 	return units
 
 
@@ -63,72 +61,58 @@ def budget(text):
 	}
 
 
-def _read_scratch(path):
-	try:
-		with open(path) as f:
-			return (json.load(f).get('content') or '').strip()
-	except (FileNotFoundError, ValueError):
-		return ''
+# ---- the 48pages client (unwraps M once, then caches it) --------------------
+
+_client = None
+_client_ready = False
 
 
-def _migrate_from_scratch():
-	"""One-time seed: fold the old HOME + DESK scratch pads into the single page with a
-	visible divider (redesign §2 migration note). One-way; the scratch files are left in
-	place as a backup and are simply no longer read by the cockpit after this."""
-	home = _read_scratch(SCRATCH_FILE)
-	desk = _read_scratch(SCRATCH_WORK_FILE)
-	parts = []
-	if home:
-		parts.append(home)
-	if desk:
-		parts.append('— migrated from desk —\n\n' + desk)
-	return '\n\n'.join(parts)
+def _nb():
+	"""The side-door client, or None if no token is configured (then the notebook is
+	unavailable rather than silently local — set NOTEBOOK_SLIP_TOKEN). The client
+	unwraps the master key once and caches it on the instance."""
+	global _client, _client_ready
+	if not _client_ready:
+		_client_ready = True
+		token = os.environ.get('NOTEBOOK_SLIP_TOKEN')
+		if token:
+			try:
+				from helpers.slip_client import Slip
+				_client = Slip(token, os.environ.get('NOTEBOOK_API_BASE') or None)
+			except Exception:
+				logging.exception('48pages client failed to init')
+	return _client
 
 
-def _read_store():
-	try:
-		with open(NOTEBOOK_FILE) as f:
-			return json.load(f)
-	except (FileNotFoundError, ValueError):
-		return None
+def _entry_out(e):
+	"""48pages {id,title,body,tags,filedAt} → cockpit {id,title,body_md,tags,filed}."""
+	return {'id': e['id'], 'title': e.get('title', ''), 'body_md': e.get('body', ''),
+	        'tags': e.get('tags', []), 'filed': e.get('filedAt')}
 
 
-def _write_store(data):
-	os.makedirs(os.path.dirname(NOTEBOOK_FILE), exist_ok=True)
-	tmp = NOTEBOOK_FILE + '.tmp'
-	with open(tmp, 'w') as f:
-		json.dump(data, f)
-	os.replace(tmp, NOTEBOOK_FILE)
-
+# ---- page -------------------------------------------------------------------
 
 def load_notebook():
-	"""Return {page, last_modified, cabinet}. On the first ever load, migrate scratch in."""
-	data = _read_store()
-	if data is None:
-		page = _migrate_from_scratch()
-		data = {'page': page, 'last_modified': _now_iso() if page else None, 'cabinet': []}
-		if page:
-			_write_store(data)
-	return {
-		'page': data.get('page', ''),
-		'last_modified': data.get('last_modified'),
-		'cabinet': data.get('cabinet', []),
-	}
+	"""Return {page, last_modified, cabinet} from the real notebook. (last_modified is
+	None: the zero-knowledge server exposes no per-page mtime — the buffer is the truth.)"""
+	client = _nb()
+	if not client:
+		return {'page': '', 'last_modified': None, 'cabinet': []}
+	page = client.read_page() or ''
+	return {'page': page, 'last_modified': None,
+	        'cabinet': [_entry_out(e) for e in client.list_cabinet()]}
 
 
 def save_page(content, force=False):
-	"""Persist the page buffer (autosave). Preserves the cabinet in the same store file."""
-	if content is None:
-		content = ''
-	data = _read_store() or {}
-	data['page'] = content
-	data['last_modified'] = _now_iso()
-	data.setdefault('cabinet', [])
-	_write_store(data)
-	return data['last_modified']
+	"""Encrypt + upload the whole page (last-writer-wins, same as the app's multi-device
+	behaviour). Returns a timestamp for the autosave UI."""
+	client = _nb()
+	if client:
+		client.write_page(content or '')
+	return _now_iso()
 
 
-# ---- cabinet (the unbounded archive; page is scarce, this isn't) ----
+# ---- cabinet (the unbounded archive; page is scarce, this isn't) ------------
 
 def _clean_tags(tags):
 	out = []
@@ -140,7 +124,8 @@ def _clean_tags(tags):
 
 
 def cabinet_all():
-	return (_read_store() or {}).get('cabinet', [])
+	client = _nb()
+	return [_entry_out(e) for e in client.list_cabinet()] if client else []
 
 
 def cabinet_tag_counts():
@@ -158,59 +143,54 @@ def cabinet_list(search='', tag=''):
 	if search:
 		s = search.lower()
 		items = [c for c in items if s in (
-			(c.get('title', '') + ' ' + c.get('body_md', '') + ' ' + ' '.join(c.get('tags', []))).lower()
-		)]
+			(c.get('title', '') + ' ' + c.get('body_md', '') + ' ' + ' '.join(c.get('tags', []))).lower())]
 	return items
 
 
 def cabinet_file(title, body_md, tags):
-	"""Copy a scrap into the cabinet. Mirrors the 48pages FILE verb (copy-then-tear;
-	the tear from the page happens client-side). Returns the new item."""
-	data = _read_store() or {'page': '', 'last_modified': None, 'cabinet': []}
-	cab = data.setdefault('cabinet', [])
-	body = (body_md or '').strip()
-	item = {
-		'id': (max([c.get('id', 0) for c in cab], default=0) + 1),
-		'title': (title or '').strip() or (body.split('\n')[0][:80] if body else 'untitled'),
-		'body_md': body,
-		'tags': _clean_tags(tags),
-		'filed': _now_iso(),
-	}
-	cab.insert(0, item)   # newest first
-	_write_store(data)
-	return item
+	"""File a scrap into the cabinet (copy; the page-side tear is client-side)."""
+	client = _nb()
+	if not client:
+		return None
+	e = client.file_cabinet((title or '').strip() or (body_md or '').split('\n')[0][:80] or 'untitled',
+	                        (body_md or '').strip(), _clean_tags(tags))
+	return _entry_out(e)
 
 
 def cabinet_delete(item_id):
-	data = _read_store()
-	if not data:
+	client = _nb()
+	if not client:
 		return False
-	cab = data.get('cabinet', [])
-	kept = [c for c in cab if c.get('id') != item_id]
-	data['cabinet'] = kept
-	_write_store(data)
-	return len(kept) < len(cab)
+	client.delete_cabinet(item_id)
+	return True
 
 
 def cabinet_retag(item_id, tags):
-	data = _read_store()
-	if not data:
+	"""Re-tag needs the entry's title + body to re-seal — fetch, then update."""
+	client = _nb()
+	if not client:
 		return None
-	for c in data.get('cabinet', []):
-		if c.get('id') == item_id:
-			c['tags'] = _clean_tags(tags)
-			_write_store(data)
-			return c
+	for e in client.list_cabinet():
+		if e['id'] == item_id:
+			updated = client.update_cabinet(item_id, e['title'], e['body'],
+			                                _clean_tags(tags), e.get('filedAt'))
+			return _entry_out(updated)
 	return None
 
 
 def append_slip(text):
-	"""Append a captured slip to the BOTTOM of the page (the home-stack slip → page).
-	Mirrors 48pages POST /v1/slip. Returns the new page + budget."""
+	"""Append a slip to the BOTTOM of the page. The cockpit is a full-access true window
+	that DISPLAYS the real page, so a slip authored here should show up immediately —
+	page-append is the correct "app behavior" for a display-capable client (per the
+	48pages API author). Returns the new page + budget for the UI.
+
+	`client.capture(text)` (POST /v1/slip → the app-only review queue) stays available but
+	is deliberately NOT the default: reserve it for BLIND producers that can't show the
+	page — Shortcuts, cron, the menu-bar bar — where the review banner is the only way in."""
 	text = (text or '').strip()
-	current = load_notebook()['page']
+	page = load_notebook()['page']
 	if not text:
-		return {'page': current, 'last_modified': None, 'budget': budget(current)}
-	page = (current.rstrip() + '\n\n' + text) if current.strip() else text
-	lm = save_page(page, force=True)
-	return {'page': page, 'last_modified': lm, 'budget': budget(page)}
+		return {'page': page, 'last_modified': None, 'budget': budget(page)}
+	new_page = (page.rstrip() + '\n\n' + text) if page.strip() else text
+	lm = save_page(new_page)
+	return {'page': new_page, 'last_modified': lm, 'budget': budget(new_page)}
