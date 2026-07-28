@@ -2471,7 +2471,25 @@ def _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear
 	return url
 
 
-def ani_generate_image(scene, orientation='portrait', bible_override=None, house_override=None):
+def _ani_room_clause(text, maxlen=360):
+	"""Distill an operator's House Bible variant (which may be a long markdown design doc) into a short,
+	image-usable room clause: strip markdown/headers/bullets, collapse whitespace, and keep the LEADING
+	descriptive sentence(s) up to ~maxlen chars. Keeps the room's visual feel (materials, colors, light, mood)
+	without dumping an itemized spec sheet into the image prompt — so a detailed room doc doesn't 'kill' the
+	scene. Front-load the visual essence in your variant and this keeps exactly that."""
+	t = re.sub(r'[*_#>`]+', ' ', str(text or ''))          # markdown emphasis / headers / quotes / code
+	t = re.sub(r'(?m)^\s*[-•]\s*', ' ', t)                 # bullet markers
+	t = re.sub(r'\s+', ' ', t).strip(' ,;.-')
+	if not t:
+		return ''
+	if len(t) <= maxlen:
+		return t
+	cut = t[:maxlen]
+	m = re.search(r'^(.*[.!?])\s', cut)                    # prefer a clean sentence boundary
+	return (m.group(1) if m else cut).strip(' ,;.-')
+
+
+def ani_generate_image(scene, orientation='portrait', bible_override=None, house_override=None, log_extra=None):
 	"""Generate a photo of Ani from a scene prompt, anchored to her character bible, and re-host
 	on Bunny. Routes to the configured backend: 'venice' (uncensored, faithful) or 'xai'
 	(grok-imagine, output-moderated → covered-chest top-guard). orientation 'portrait' (default)
@@ -2509,10 +2527,15 @@ def ani_generate_image(scene, orientation='portrait', bible_override=None, house
 		if not re.search(r'\b(macbook|laptop|keyboard)\b', clean_scene, re.IGNORECASE):
 			clean_scene += (', hands on the keyboard typing on her open silver MacBook laptop, '
 			                'fingers resting on the keys, no pen or paper')
-	# Per-shot HOUSE override (operator picked a House Bible in the composer): fold its room context into the
-	# scene so this shot uses that setting. No pick → clean_scene untouched (her normal behavior).
+	# Freeze the scene for INTENT DETECTION (rear/pose/garment/partner) BEFORE any house text is folded in — an
+	# operator's room doc (e.g. a kitchen "backsplash") must never be able to flip the pose/rear logic and make
+	# QA reject every front-facing render. All detectors below key off intent_scene, not the house-augmented one.
+	intent_scene = clean_scene
+	# Per-shot HOUSE override (operator picked a House Bible): fold a CLEANED, concise room clause into the
+	# VISUAL prompt only. A long markdown design doc is distilled to its leading descriptive sentences so the
+	# image prompt stays a scene, not a spec sheet. No pick → clean_scene untouched (her normal behavior).
 	if house_override:
-		room = re.sub(r'\s+', ' ', str(house_override)).strip()[:500]
+		room = _ani_room_clause(house_override)
 		if room:
 			clean_scene = (clean_scene.rstrip(' ,.;') + ', ' + room).strip(' ,')
 	# Per-shot CHARACTER override (operator picked a Character Bible) REPLACES her default appearance anchor.
@@ -2528,10 +2551,10 @@ def ani_generate_image(scene, orientation='portrait', bible_override=None, house
 
 		# --- PARTNER / POV branch: a sex act WITH the viewer. Inverts the solo guards (we want a partial
 		# male partner), keeps anti-HER-duplication, pose-gates the feet-fix, uses POV-aware QA. ---
-		if _ANI_PARTNER_RE.search(clean_scene):
-			low = clean_scene.lower()
-			rear = bool(_ANI_REAR_INTENT_RE.search(clean_scene))
-			legs_up = (bool(_ANI_LYING_RE.search(clean_scene)) or 'on her back' in low
+		if _ANI_PARTNER_RE.search(intent_scene):
+			low = intent_scene.lower()
+			rear = bool(_ANI_REAR_INTENT_RE.search(intent_scene))
+			legs_up = (bool(_ANI_LYING_RE.search(intent_scene)) or 'on her back' in low
 			           or 'legs raised' in low or 'legs back' in low or 'knees toward' in low)
 			feet_fix = not rear and not legs_up   # upright facing poses foreshorten feet up by the head
 			negative = ', '.join(p for p in (
@@ -2546,13 +2569,13 @@ def ani_generate_image(scene, orientation='portrait', bible_override=None, house
 			print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) PARTNER cfg{VENICE_CFG_POSE} {w}x{h} "
 			      f"feet_fix={feet_fix} rear={rear} qa={ANI_IMAGE_QA} — scene: {clean_scene!r}")
 			return _ani_render_venice(prompt, negative, VENICE_CFG_POSE, w, h, VENICE_STEPS_POSE,
-			                          require_rear=False, scene=clean_scene, pose=True, clothed=False, partner=True,
-			                          info={'pipeline': 'v1', 'branch': 'partner'})
+			                          require_rear=False, scene=intent_scene, pose=True, clothed=False, partner=True,
+			                          info={'pipeline': 'v1', 'branch': 'partner', **(log_extra or {})})
 
-		extra_neg = _ani_garment_negative(clean_scene)
-		complex_pose = bool(_ANI_POSE_RE.search(clean_scene))
-		pose_neg = _ani_pose_negative(clean_scene)
-		require_rear = bool(_ANI_REAR_INTENT_RE.search(clean_scene))
+		extra_neg = _ani_garment_negative(intent_scene)
+		complex_pose = bool(_ANI_POSE_RE.search(intent_scene))
+		pose_neg = _ani_pose_negative(intent_scene)
+		require_rear = bool(_ANI_REAR_INTENT_RE.search(intent_scene))
 		# Keep a writing scene on the laptop — negate the pen-and-paper attractor so it doesn't render by hand.
 		writing_neg = ('pen, pencil, stylus, fountain pen, holding a pen, holding a stylus, pen in hand, '
 		               'writing implement, hand on trackpad, finger on touchpad, paper, notebook, stationery, '
@@ -2579,8 +2602,8 @@ def ani_generate_image(scene, orientation='portrait', bible_override=None, house
 		print(f"Ani PIC (venice/{VENICE_IMAGE_MODEL}) cfg{cfg} {width}x{height} steps{steps} "
 		      f"pose={complex_pose} rear={require_rear} qa={ANI_IMAGE_QA} — scene: {clean_scene!r}")
 		return _ani_render_venice(prompt, negative, cfg, width, height, steps, require_rear,
-		                          clean_scene, complex_pose, bool(extra_neg),
-		                          info={'pipeline': 'v1', 'branch': 'clothed' if extra_neg else 'main'})
+		                          intent_scene, complex_pose, bool(extra_neg),
+		                          info={'pipeline': 'v1', 'branch': 'clothed' if extra_neg else 'main', **(log_extra or {})})
 
 	# --- xAI grok-imagine (default) ---
 	api_key = os.environ.get('XAI_API_KEY')
@@ -6281,8 +6304,19 @@ def ani_photo():
 	override = (_body.get('scene') or '').strip()
 	orientation = _body.get('orientation') or 'portrait'
 	# Per-shot bible-library picks (empty pick = her defaults). Resolved server-side from the id.
-	bible_override = ani_bible_entry_text('character', _body.get('bible_id'))
-	house_override = ani_bible_entry_text('house', _body.get('house_id'))
+	bible_id, house_id = _body.get('bible_id'), _body.get('house_id')
+	bible_override = ani_bible_entry_text('character', bible_id)
+	house_override = ani_bible_entry_text('house', house_id)
+	# Record which named variant(s) produced the shot, so the photo LOG shows it (info.bible_variant/house_variant).
+	_variants = {}
+	if bible_override or house_override:
+		_lib = ani_load_bible_library()
+		def _vname(kind, eid):
+			return next((e.get('name') for e in _lib.get(kind, []) if e.get('id') == eid), None) if eid else None
+		if bible_override:
+			_variants['bible_variant'] = _vname('character', bible_id)
+		if house_override:
+			_variants['house_variant'] = _vname('house', house_id)
 	# A/B: the v2 builder pipeline (extractor → compile_scene) vs the legacy normalize path.
 	# An operator-edited `override` prompt — or a bible-library pick — always uses v1 (the override plumbing
 	# lives on the v1 path; v2 builds its own prompt and would ignore the picks).
@@ -6300,7 +6334,8 @@ def ani_photo():
 		# House override applies to an operator-built scene (the composer's normal flow); on the rare
 		# pure-normalize path the room is already grounded from the default house, so don't double-inject.
 		image_url = ani_generate_image(scene, orientation, bible_override=bible_override,
-		                               house_override=(house_override if override else None))
+		                               house_override=(house_override if override else None),
+		                               log_extra=(_variants or None))
 	if not image_url:
 		return jsonify({'image_url': None, 'error': 'blocked', 'scene': scene}), 200
 

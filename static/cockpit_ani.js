@@ -895,7 +895,7 @@
 	  if (bibleId) body.bible_id = bibleId;
 	  if (houseId) body.house_id = houseId;
 	}
-	aniRenderNotify(v2 ? 'developing a photo (V2 builder)…' : 'developing a photo…');
+	aniRenderNotify((v2 && !picked) ? 'developing a photo (V2 builder)…' : 'developing a photo…');
 	aniShowTyping(true);
 	aniScrollToBottom();
 	fetch('/ani/photo', {
