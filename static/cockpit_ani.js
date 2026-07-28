@@ -1025,6 +1025,27 @@
 	  .catch(function() { if (status) status.textContent = 'save failed'; });
   }
 
+  // ✨ Distill: rewrite the verbose textarea content into an image-useful clause (Grok), in place for review.
+  function aniBibleDistill(btn) {
+	var t = document.getElementById('ani-bible-textarea');
+	var status = document.getElementById('ani-bible-status');
+	if (!t || !t.value.trim()) { if (status) status.textContent = 'paste your verbose bible first'; return; }
+	if (btn) btn.disabled = true;
+	if (status) status.textContent = 'distilling on grok…';
+	fetch('/ani/bible-library/distill', {
+	  method: 'POST', headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ kind: aniBibleKindCur, text: t.value })
+	}).then(function(r) { return r.json(); })
+	  .then(function(data) {
+		if (btn) btn.disabled = false;
+		if (data && data.ok && data.distilled) {
+		  t.value = data.distilled;
+		  if (status) status.textContent = 'distilled ✨ — review, then Save Variant';
+		} else if (status) { status.textContent = 'could not distill (grok unavailable?)'; }
+	  })
+	  .catch(function() { if (btn) btn.disabled = false; if (status) status.textContent = 'distill failed'; });
+  }
+
   function aniBibleDelete(id) {
 	fetch('/ani/bible-library/delete', {
 	  method: 'POST', headers: { 'Content-Type': 'application/json' },

@@ -1495,6 +1495,32 @@ def ani_bible_entry_text(kind, entry_id):
 	return None
 
 
+def ani_distill_bible(kind, text):
+	"""'Distill my verbose bible → the image-useful clause', on GROK. The source text is forwarded to Grok and
+	never touches Claude; the instructions are neutral extraction (visual room features / stable physical
+	identity). kind in {'character','house'}. Returns the distilled clause, or None (bad kind / empty / no key
+	/ Grok unavailable)."""
+	text = (text or '').strip()
+	if kind not in ('character', 'house') or not text:
+		return None
+	if kind == 'house':
+		system = ("You convert a verbose interior-design description into a SHORT prompt clause for a "
+		          "text-to-image model. Output ONE or TWO sentences of only what a CAMERA SEES: room type, "
+		          "materials, colors, the key surfaces and furniture, and the light (source + quality) plus a "
+		          "word or two of mood. Use concrete visual nouns. DROP abstract design-speak (e.g. 'elegance', "
+		          "'the heart of our home'), backstory, brand names, and itemized feature/spec lists. No "
+		          "markdown, no preamble — output only the clause.")
+	else:
+		system = ("You convert a verbose character description into a SHORT identity clause for a text-to-image "
+		          "model, so her look stays CONSISTENT across photos. Output ONE or TWO sentences of only her "
+		          "stable PHYSICAL identity: hair (color, length, style), eyes, face and complexion, build, and "
+		          "any distinguishing features or signature styling. Concrete visual nouns only. DROP backstory, "
+		          "personality, mood, the current scene, and the outfit-of-the-day. No markdown, no preamble — "
+		          "output only the clause.")
+	out = _ani_grok_call(system, [{'role': 'user', 'content': text[:4000]}], max_tokens=220)
+	return (out or '').strip() or None
+
+
 def ani_get_life():
 	"""Her OWN life — friends, hobbies, standing commitments, places she goes. Injected into the chat +
 	day-plan prompts so she self-directs her days instead of defaulting to a lazy one. Strips '#' comment
@@ -6749,6 +6775,27 @@ def ani_bible_library_delete():
 	lib[kind] = [e for e in (lib.get(kind) or []) if e.get('id') != eid]
 	ani_save_bible_library(lib)
 	return jsonify({'ok': True})
+
+
+@ani_bp.route('/ani/bible-library/distill', methods=['POST'])
+def ani_bible_library_distill():
+	"""Distill a verbose bible into an image-useful clause (Grok, neutral extraction). Body {kind, text} →
+	{ok, distilled}. The operator reviews the result before saving it as a variant."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	b = request.get_json(silent=True) or {}
+	if b.get('kind') not in ('character', 'house'):
+		return jsonify({'error': 'bad kind'}), 400
+	if not (b.get('text') or '').strip():
+		return jsonify({'error': 'nothing to distill'}), 400
+	try:
+		out = ani_distill_bible(b['kind'], b['text'])
+	except Exception as e:
+		print(f"Ani bible distill error: {e}")
+		out = None
+	if not out:
+		return jsonify({'ok': False, 'error': 'distill_failed'}), 200
+	return jsonify({'ok': True, 'distilled': out})
 
 
 @ani_bp.route('/ani/state', methods=['GET'])
