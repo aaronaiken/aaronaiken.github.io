@@ -908,6 +908,9 @@
 				id = d.video_id || null; label = d.title || '';
 			}
 		} catch (e) {}
+		// Was this playing FROM the queue? If so, we pull it out of the queue once it's safely in the library.
+		var fromQueue = ytQueueActive;
+		var qIdx = ytQueueIdx;
 		if (!id) {
 			var cur = ytQueueActive ? ytQueue[ytQueueIdx] : ytLibraryItems[ytCurrentIdx];
 			if (cur) { id = cur.id || ytVideoId(cur.url); label = cur.label || cur.name || ''; }
@@ -918,6 +921,8 @@
 			body: JSON.stringify({ id: id, label: label })
 		}).then(function (r) { return r.json(); }).then(function (res) {
 			ytFlashBtn(btn, res.ok ? 'SAVED ✓' : 'ERR');
+			// Now that it's in the library (title resolved server-side), take it out of the queue.
+			if (res.ok && fromQueue && qIdx >= 0 && qIdx < ytQueue.length) ytQueueRemove(qIdx);
 			if (ytLibraryVisible) ytLoadLibrary();
 		}).catch(function () { ytFlashBtn(btn, 'ERR'); });
 	}
@@ -1705,6 +1710,9 @@
 
 	// Save the current video (queue or library) to the persistent library.
 	function adAddCurrentToLib(btn) {
+		// Was this playing FROM the queue? If so, we pull it out of the queue once it's safely in the library.
+		var fromQueue = adQueueActive;
+		var qIdx = adQueueIdx;
 		var cur = adQueueActive ? adQueue[adQueueIdx] : adLibraryItems[adCurrentIdx];
 		if (!cur || !cur.url) { adFlashBtn(btn, 'NOTHING'); return; }
 		var m = cur.url.match(/(?:viewkey=|\/embed\/)([A-Za-z0-9]+)/);
@@ -1715,6 +1723,8 @@
 			body: JSON.stringify({ id: vk, label: cur.label || cur.name || '' })
 		}).then(function(r) { return r.json(); }).then(function(res) {
 			adFlashBtn(btn, res.ok ? 'SAVED ✓' : 'ERR');
+			// Now that it's in the library (title resolved server-side), take it out of the queue.
+			if (res.ok && fromQueue && qIdx >= 0 && qIdx < adQueue.length) adQueueRemove(qIdx);
 			if (adLibraryVisible) adLoadLibrary();
 		}).catch(function() { adFlashBtn(btn, 'ERR'); });
 	}
