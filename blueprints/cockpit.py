@@ -39,8 +39,11 @@ SCRATCH_FILE = 'assets/data/scratch.json'
 # keep only the latest page-level state, and the header shows a pill when there's an active incident.
 CLAUDE_STATUS_FILE = 'claude_status.json'
 CLAUDE_STATUS_WEBHOOK_SECRET = os.environ.get('CLAUDE_STATUS_WEBHOOK_SECRET', '')
+CLAUDE_STATUS_API = os.environ.get('CLAUDE_STATUS_API', 'https://status.claude.com/api/v2/summary.json')
 _COMPONENT_LEVEL = {'operational': None, 'under_maintenance': 'maintenance',
                     'degraded_performance': 'minor', 'partial_outage': 'major', 'major_outage': 'critical'}
+_INCIDENT_RESOLVED = ('resolved', 'completed', 'postmortem')  # statuses that mean "no longer active"
+_claude_status_api_cache = {'ts': 0.0, 'data': None}
 
 
 # Cache-busting token for the cockpit static bundle — max mtime of the files,
@@ -779,11 +782,49 @@ def _claude_status_save(d):
 	os.replace(tmp, CLAUDE_STATUS_FILE)
 
 
+def _claude_status_from_api():
+	"""Ground-truth status from Anthropic's public Statuspage summary API — catches an incident that predates
+	the webhook subscription (or a missed event), and treats an UNRESOLVED incident as active even when the
+	overall page indicator has recovered to 'none' (that's the red banner still showing on the status page).
+	Cached ~60s. Returns a normalized dict, or None on failure (caller falls back to the webhook file)."""
+	import time
+	now = time.time()
+	c = _claude_status_api_cache
+	if c['data'] is not None and (now - c['ts']) < 60:
+		return c['data']
+	try:
+		d = req_lib.get(CLAUDE_STATUS_API, timeout=6).json()
+		st = d.get('status') or {}
+		indicator = (st.get('indicator') or '').lower()
+		incidents = [i for i in (d.get('incidents') or [])
+		             if isinstance(i, dict) and (i.get('status') or '').lower() not in _INCIDENT_RESOLVED]
+		active = bool(incidents) or indicator not in ('', 'none')
+		if incidents:
+			inc = incidents[0]
+			level = (inc.get('impact') or indicator or 'minor').lower()
+			level = 'minor' if level in ('', 'none') else level
+			title = inc.get('name') or 'Claude incident'
+			ups = inc.get('incident_updates') or []
+			detail = (ups[0].get('body') or '').strip()[:280] if ups and isinstance(ups[0], dict) else ''
+			url = inc.get('shortlink') or 'https://status.claude.com'
+		else:
+			level, title, detail = (indicator or 'minor'), (st.get('description') or 'Claude status'), ''
+			url = 'https://status.claude.com'
+		out = {'active': active, 'level': level, 'title': title[:140], 'detail': detail, 'url': url,
+		       'updated': st.get('updated_at') or ''}
+		c['data'], c['ts'] = out, now
+		return out
+	except Exception as e:
+		logger.warning('claude-status API fetch error: %s', e)
+		return None
+
+
 @cockpit_bp.route('/cockpit/webhook/claude-status/<secret>', methods=['POST'])
 def claude_status_webhook(secret):
 	"""Receive Anthropic Statuspage incident/component webhooks. Public (a webhook can't send an auth header),
-	so it's gated by the secret in the URL path (CLAUDE_STATUS_WEBHOOK_SECRET). Stores only the latest
-	page-level state; clears on resolve (status_indicator → 'none'). Always 200s fast so Statuspage won't retry."""
+	so it's gated by the secret in the URL path (CLAUDE_STATUS_WEBHOOK_SECRET). Stores the latest incident/
+	component state (active until the incident resolves) as the instant-push fallback to the API poll in
+	claude_status_get. Always 200s fast so Statuspage won't retry."""
 	if not CLAUDE_STATUS_WEBHOOK_SECRET or secret != CLAUDE_STATUS_WEBHOOK_SECRET:
 		return ('', 404)
 	try:
@@ -792,15 +833,21 @@ def claude_status_webhook(secret):
 		page = body.get('page') if isinstance(body.get('page'), dict) else {}
 		inc = body.get('incident') if isinstance(body.get('incident'), dict) else {}
 		comp = body.get('component') if isinstance(body.get('component'), dict) else {}
-		# page.status_indicator is the authoritative overall state on every webhook: none|minor|major|critical.
+		# An UNRESOLVED incident is active even after the overall page indicator recovers to 'none' (the red
+		# banner still shows). Prefer the incident's own status/impact; then component; then the page indicator.
 		indicator = (page.get('status_indicator') or '').lower()
 		desc = (page.get('status_description') or '').strip()
-		active = indicator not in ('', 'none')
-		# component-only webhooks may not carry a page indicator — fall back to the component's own status.
-		if not active and comp:
+		inc_status = (inc.get('status') or '').lower()
+		if inc:
+			active = bool(inc_status) and inc_status not in _INCIDENT_RESOLVED
+			level = (inc.get('impact') or indicator or 'minor').lower()
+		elif comp:
 			clvl = _COMPONENT_LEVEL.get((comp.get('status') or '').lower())
-			if clvl:
-				active, indicator = True, clvl
+			active, level = bool(clvl), (clvl or 'minor')
+		else:
+			active, level = indicator not in ('', 'none'), (indicator or 'minor')
+		if level in ('', 'none'):
+			level = 'minor'
 		title = (inc.get('name')
 		         or (comp.get('name') and '%s — %s' % (comp.get('name'), (comp.get('status') or '').replace('_', ' ')))
 		         or desc or 'Claude status')
@@ -809,7 +856,7 @@ def claude_status_webhook(secret):
 		if ups and isinstance(ups[0], dict):
 			detail = (ups[0].get('body') or '').strip()[:280]
 		_claude_status_save({
-			'active': active, 'level': indicator or 'minor', 'title': title[:140],
+			'active': active, 'level': level, 'title': title[:140],
 			'detail': detail, 'status_description': desc,
 			'url': inc.get('shortlink') or 'https://status.claude.com', 'updated': now,
 		})
@@ -820,10 +867,11 @@ def claude_status_webhook(secret):
 
 @cockpit_bp.route('/cockpit/claude-status', methods=['GET'])
 def claude_status_get():
-	"""Current Claude status for the header pill. {active:false} when all-operational / never-set."""
+	"""Current Claude status for the header pill. {active:false} when all-operational. Prefers the live status
+	API (ground truth — catches incidents that predate/missed the webhook); the webhook file is the fallback."""
 	if not is_authenticated():
 		return jsonify({'error': 'unauthorized'}), 401
-	d = _claude_status_load()
+	d = _claude_status_from_api() or _claude_status_load()
 	if not d.get('active'):
 		return jsonify({'active': False})
 	return jsonify({'active': True, 'level': d.get('level', 'minor'), 'title': d.get('title', ''),
