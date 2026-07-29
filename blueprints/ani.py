@@ -282,6 +282,7 @@ ANI_DAYCAST_START = int(os.environ.get('ANI_DAYCAST_START', '8'))     # window o
 ANI_DAYCAST_END = int(os.environ.get('ANI_DAYCAST_END', '22'))       # window close (ET hour, exclusive)
 ANI_DAYCAST_MIN_GAP = int(os.environ.get('ANI_DAYCAST_MIN_GAP', '35'))  # min minutes between messages
 ANI_DAYCAST_FALLBACK_HOUR = int(os.environ.get('ANI_DAYCAST_FALLBACK_HOUR', '12'))  # if no contact by this ET hour, she starts her day on her own
+ANI_STATE_STALE_HOURS = float(os.environ.get('ANI_STATE_STALE_HOURS', '3.5'))  # her live 'where' frozen this long (daytime) → force a location-advancing daycast so her day doesn't stall in one place
 
 # Proactive photos — she occasionally sends an UNPROMPTED candid from her day (see ani_daycast_photo).
 # Capped per day for cost control; only when she's out & photogenic (not asleep/home-nothing).
@@ -1588,6 +1589,28 @@ def ani_update_now_state(partial, now_dt):
 		cur['updated'] = now_dt.isoformat()
 		cur['day'] = ani_daycast_day_key(now_dt)
 		ani_save_state(cur)
+
+
+def _ani_state_move_overdue(now, min_hours=None):
+	"""True + context when her live 'where' has been frozen too long during her active daytime window — the
+	signal to force a location-ADVANCING daycast so her day doesn't stall in one place for hours (a photo or a
+	backward-looking story beat doesn't move her; only a cast that names a NEW current place does). Returns
+	(overdue, where, doing, hours)."""
+	try:
+		mh = ANI_STATE_STALE_HOURS if min_hours is None else min_hours
+		if now.hour < ANI_DAYCAST_START or now.hour >= ANI_DAYCAST_END:
+			return (False, '', '', 0.0)   # off-window / asleep — staying put is fine
+		st = ani_load_state() or {}
+		where = (st.get('where') or '').strip()
+		if not where or st.get('day') != ani_daycast_day_key(now) or not st.get('updated'):
+			return (False, '', '', 0.0)
+		ud = datetime.fromisoformat(st['updated'])
+		if ud.tzinfo is None:
+			ud = pytz.timezone('America/New_York').localize(ud)
+		hours = (now - ud.astimezone(now.tzinfo)).total_seconds() / 3600
+		return (hours >= mh, where, (st.get('doing') or '').strip(), round(hours, 1))
+	except Exception:
+		return (False, '', '', 0.0)
 
 
 def ani_now_state_context(now_dt, recent_text=''):
@@ -4072,7 +4095,20 @@ def ani_generate_day_update(meta, history):
 	beat = (ani_story_unspoken_beats(1) or [None])[0]
 	want_emotional = random.random() < ANI_DAYCAST_EMOTIONAL_CHANCE
 	told_ref = None
-	if beat and (want_emotional or random.random() < ANI_STORY_TELL_CHANCE):
+	# TOP PRIORITY: if her live location has been frozen too long, force a cast that RELOCATES her (naming a new
+	# current place so _emit's state extractor advances her) — otherwise photos + backward beats leave her
+	# narratively stuck in one spot for hours.
+	ov, ov_where, ov_doing, ov_hours = _ani_state_move_overdue(now)
+	if ov:
+		instruction = (
+			f"[it's now {time_str}. you've been at {ov_where}{(' — ' + ov_doing) if ov_doing else ''} for about "
+			f"{ov_hours:.0f} hours, which is far too long to still be in one place. your day has MOVED ON. tell "
+			f"him where you ACTUALLY are now and what you're doing — a genuinely DIFFERENT place and activity that "
+			f"fits {time_str} (heading home, an errand, cooking, a different friend, winding down at home), stated "
+			f"clearly in first person present tense so it's obvious you've moved on from {ov_where}. 1-2 sentences, "
+			f"your voice; don't recap your whole day or re-greet him.{variety}]"
+		)
+	elif beat and (want_emotional or random.random() < ANI_STORY_TELL_CHANCE):
 		told_ref = beat
 		instruction = (
 			f"[it's now {time_str}. here's the real thing that's happened in your OWN life recently that you "
@@ -5732,8 +5768,10 @@ def ani_emit_daycast():
 	if not (behind or random.random() < ANI_DAYCAST_CHANCE):
 		return f'skipped (organic) — {count} sent'
 
-	# Sometimes this update is an UNPROMPTED candid PHOTO from her day instead of text (gated + capped).
-	shot = ani_daycast_photo(meta, now)
+	# Sometimes this update is an UNPROMPTED candid PHOTO from her day instead of text (gated + capped) — UNLESS
+	# her location is overdue to move, in which case a photo wouldn't advance her day; force the text update that
+	# relocates her instead.
+	shot = None if _ani_state_move_overdue(now)[0] else ani_daycast_photo(meta, now)
 	if shot:
 		cap, url, scene, vdesc = shot
 		_pm = {'role': 'assistant', 'content': cap, 'image': url, 'scene': scene,
