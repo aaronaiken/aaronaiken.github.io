@@ -745,16 +745,25 @@
 	.cockpit__topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 	.cockpit__hdr-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
-	/* Claude status pill — hidden until an incident; shown by cockpit.js, colored by severity. */
-	.cockpit__claude-status {
-		font-family: inherit; font-size: 0.5rem; letter-spacing: 0.12em; text-transform: uppercase;
-		text-decoration: none; color: #1a1205; background: #f0a020; border-radius: 3px; padding: 3px 7px;
-		max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: center;
+	/* Claude status — a thin "// CLAUDE" console line under the header (hidden until an incident): a gently
+	   pulsing severity dot + warm console text, matching the cockpit's readout style. Never a solid block. */
+	.cockpit__claude-status-line {
+		display: inline-flex; align-items: center; gap: 8px; margin-top: 8px;
+		font-family: inherit; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase;
+		text-decoration: none; color: #c23b2f;   /* major / critical — warm desaturated red (default) */
+		max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 	}
-	.cockpit__claude-status[data-level="major"]       { background: #e8720c; }
-	.cockpit__claude-status[data-level="critical"]    { background: #d43a2f; color: #fff; }
-	.cockpit__claude-status[data-level="maintenance"] { background: #3d7fb0; color: #fff; }
-	.cockpit__claude-status[hidden]                   { display: none; }
+	.cockpit__claude-status-line::before {
+		content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%;
+		background: currentColor; box-shadow: 0 0 6px currentColor;
+		animation: claude-status-pulse 2.2s ease-in-out infinite;
+	}
+	@keyframes claude-status-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+	.cockpit__claude-status-line[data-level="minor"]       { color: #c98a2b; }  /* amber */
+	.cockpit__claude-status-line[data-level="maintenance"] { color: #3d7fb0; }  /* blue */
+	.cockpit__claude-status-line:hover { text-decoration: underline; }
+	.cockpit__claude-status-line[hidden]                   { display: none; }
+	@media (prefers-reduced-motion: reduce) { .cockpit__claude-status-line::before { animation: none; } }
 
 	/* Emoji picker popover (TX composer) */
 	.tx-expand { position: relative; }

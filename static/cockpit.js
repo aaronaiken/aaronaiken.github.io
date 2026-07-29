@@ -831,18 +831,18 @@
 })();
 
 
-// Claude status pill — operational awareness. Polls the webhook-fed endpoint; the header pill appears ONLY
-// during an active incident (hidden when all-operational), colored by severity.
+// Claude status — operational awareness. A thin console-style status line under the header appears ONLY during
+// an active incident (hidden when all-operational), colored + pulsing by severity. Matches the "// LABEL" readout style.
 (function () {
-	var pill = document.getElementById('claude-status-pill');
-	if (!pill) return;
+	var line = document.getElementById('claude-status-line');
+	if (!line) return;
 	function apply(d) {
-		if (!d || !d.active) { pill.hidden = true; return; }
-		pill.textContent = 'CLAUDE: ' + (d.title || 'incident');
-		pill.setAttribute('data-level', (d.level || 'minor').toLowerCase());
-		if (d.url) pill.href = d.url;
-		pill.title = (d.title || '') + (d.detail ? '\n\n' + d.detail : '') + '\n\nclick for status.claude.com';
-		pill.hidden = false;
+		if (!d || !d.active) { line.hidden = true; return; }
+		line.textContent = '// CLAUDE · ' + (d.title || 'incident');
+		line.setAttribute('data-level', (d.level || 'minor').toLowerCase());
+		if (d.url) line.href = d.url;
+		line.title = (d.title || '') + (d.detail ? '\n\n' + d.detail : '') + '\n\nclick for status.claude.com';
+		line.hidden = false;
 	}
 	function poll() {
 		fetch('/cockpit/claude-status').then(function (r) { return r.json(); }).then(apply).catch(function () {});
