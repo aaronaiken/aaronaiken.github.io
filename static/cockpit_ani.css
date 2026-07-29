@@ -411,6 +411,12 @@ body.ani-fullscreen #ani-avatar-fallback { font-size: 1.1rem; }
   border-radius: 3px;
   padding: 1px 4px;
 }
+.ani-fork-q {
+  font-size: 0.66rem;
+  line-height: 1.4;
+  color: var(--ani-bub-her-tx);
+  margin: 5px 0 7px;
+}
 .ani-fork-opts { display: flex; flex-wrap: wrap; gap: 6px; }
 .ani-fork-opt {
   flex: 1 1 auto;

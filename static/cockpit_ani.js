@@ -411,10 +411,16 @@
 		return '<button class="ani-fork-opt" onclick="aniDecide(' + aniAttr(d.name) + ',' + aniAttr(o) + ',this)">'
 		  + aniEscapeHtml(o) + '</button>';
 	  }).join('');
+	  // The question she's actually turning over (stored as the fork's status) — show it above the branches so
+	  // the options make sense. Hidden when it's just the generic placeholder.
+	  var q = (d.status || '').trim();
+	  var qHtml = (q && q !== 'at a crossroads — needs a decision')
+		? '<div class="ani-fork-q">' + aniEscapeHtml(q) + '</div>' : '';
 	  return '<div class="ani-fork" data-name="' + aniEscapeHtml(d.name) + '">'
 		+ '<div class="ani-fork-head"><span class="ani-fork-glyph">⑂</span> '
 		+ '<span class="ani-fork-name">' + aniEscapeHtml(d.name) + '</span>'
 		+ '<span class="ani-fork-tag">decision</span></div>'
+		+ qHtml
 		+ '<div class="ani-fork-opts">' + opts + '</div></div>';
 	}).join('');
 	el.hidden = false;
