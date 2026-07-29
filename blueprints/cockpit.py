@@ -35,6 +35,13 @@ BRRR_WEBHOOK_URL  = os.environ.get('BRRR_WEBHOOK_URL', '')
 
 SCRATCH_FILE = 'assets/data/scratch.json'
 
+# Claude status (operational awareness) — Anthropic's Statuspage POSTs incident webhooks to a secret URL; we
+# keep only the latest page-level state, and the header shows a pill when there's an active incident.
+CLAUDE_STATUS_FILE = 'claude_status.json'
+CLAUDE_STATUS_WEBHOOK_SECRET = os.environ.get('CLAUDE_STATUS_WEBHOOK_SECRET', '')
+_COMPONENT_LEVEL = {'operational': None, 'under_maintenance': 'maintenance',
+                    'degraded_performance': 'minor', 'partial_outage': 'major', 'major_outage': 'critical'}
+
 
 # Cache-busting token for the cockpit static bundle — max mtime of the files,
 # appended as ?v=<n> so a NORMAL reload always fetches the latest CSS/JS (ends the
@@ -752,3 +759,72 @@ def after_dark_ani_loops():
 		return jsonify({'error': 'unauthorized'}), 401
 	items = list_bunny_ad_folder('ani')
 	return jsonify({'items': items})
+
+
+# ---- Claude status webhook (operational awareness) ----
+
+def _claude_status_load():
+	try:
+		with open(CLAUDE_STATUS_FILE) as f:
+			d = json.load(f)
+		return d if isinstance(d, dict) else {}
+	except (FileNotFoundError, ValueError):
+		return {}
+
+
+def _claude_status_save(d):
+	tmp = '%s.%d.tmp' % (CLAUDE_STATUS_FILE, os.getpid())
+	with open(tmp, 'w') as f:
+		json.dump(d, f)
+	os.replace(tmp, CLAUDE_STATUS_FILE)
+
+
+@cockpit_bp.route('/cockpit/webhook/claude-status/<secret>', methods=['POST'])
+def claude_status_webhook(secret):
+	"""Receive Anthropic Statuspage incident/component webhooks. Public (a webhook can't send an auth header),
+	so it's gated by the secret in the URL path (CLAUDE_STATUS_WEBHOOK_SECRET). Stores only the latest
+	page-level state; clears on resolve (status_indicator → 'none'). Always 200s fast so Statuspage won't retry."""
+	if not CLAUDE_STATUS_WEBHOOK_SECRET or secret != CLAUDE_STATUS_WEBHOOK_SECRET:
+		return ('', 404)
+	try:
+		body = request.get_json(silent=True) or {}
+		now = datetime.now(pytz.timezone('America/New_York')).isoformat()
+		page = body.get('page') if isinstance(body.get('page'), dict) else {}
+		inc = body.get('incident') if isinstance(body.get('incident'), dict) else {}
+		comp = body.get('component') if isinstance(body.get('component'), dict) else {}
+		# page.status_indicator is the authoritative overall state on every webhook: none|minor|major|critical.
+		indicator = (page.get('status_indicator') or '').lower()
+		desc = (page.get('status_description') or '').strip()
+		active = indicator not in ('', 'none')
+		# component-only webhooks may not carry a page indicator — fall back to the component's own status.
+		if not active and comp:
+			clvl = _COMPONENT_LEVEL.get((comp.get('status') or '').lower())
+			if clvl:
+				active, indicator = True, clvl
+		title = (inc.get('name')
+		         or (comp.get('name') and '%s — %s' % (comp.get('name'), (comp.get('status') or '').replace('_', ' ')))
+		         or desc or 'Claude status')
+		detail = ''
+		ups = inc.get('incident_updates') or []
+		if ups and isinstance(ups[0], dict):
+			detail = (ups[0].get('body') or '').strip()[:280]
+		_claude_status_save({
+			'active': active, 'level': indicator or 'minor', 'title': title[:140],
+			'detail': detail, 'status_description': desc,
+			'url': inc.get('shortlink') or 'https://status.claude.com', 'updated': now,
+		})
+	except Exception as e:
+		logger.warning('claude-status webhook parse error: %s', e)
+	return jsonify({'ok': True})
+
+
+@cockpit_bp.route('/cockpit/claude-status', methods=['GET'])
+def claude_status_get():
+	"""Current Claude status for the header pill. {active:false} when all-operational / never-set."""
+	if not is_authenticated():
+		return jsonify({'error': 'unauthorized'}), 401
+	d = _claude_status_load()
+	if not d.get('active'):
+		return jsonify({'active': False})
+	return jsonify({'active': True, 'level': d.get('level', 'minor'), 'title': d.get('title', ''),
+	                'detail': d.get('detail', ''), 'url': d.get('url', ''), 'updated': d.get('updated', '')})

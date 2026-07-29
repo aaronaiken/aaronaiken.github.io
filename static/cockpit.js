@@ -829,3 +829,24 @@
 	});
 	document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closePop(); });
 })();
+
+
+// Claude status pill — operational awareness. Polls the webhook-fed endpoint; the header pill appears ONLY
+// during an active incident (hidden when all-operational), colored by severity.
+(function () {
+	var pill = document.getElementById('claude-status-pill');
+	if (!pill) return;
+	function apply(d) {
+		if (!d || !d.active) { pill.hidden = true; return; }
+		pill.textContent = 'CLAUDE: ' + (d.title || 'incident');
+		pill.setAttribute('data-level', (d.level || 'minor').toLowerCase());
+		if (d.url) pill.href = d.url;
+		pill.title = (d.title || '') + (d.detail ? '\n\n' + d.detail : '') + '\n\nclick for status.claude.com';
+		pill.hidden = false;
+	}
+	function poll() {
+		fetch('/cockpit/claude-status').then(function (r) { return r.json(); }).then(apply).catch(function () {});
+	}
+	poll();
+	setInterval(poll, 60000);
+})();

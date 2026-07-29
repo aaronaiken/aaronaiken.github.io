@@ -31,6 +31,7 @@ static/ani_memory.txt
 static/ani_character_bible.txt
 static/ani_house.txt
 static/ani_life.txt
+claude_status.json
 assets/data/scratch.json
 assets/data/notebook.json
 assets/data/cockpit_layout.json

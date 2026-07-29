@@ -745,6 +745,17 @@
 	.cockpit__topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 	.cockpit__hdr-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
+	/* Claude status pill — hidden until an incident; shown by cockpit.js, colored by severity. */
+	.cockpit__claude-status {
+		font-family: inherit; font-size: 0.5rem; letter-spacing: 0.12em; text-transform: uppercase;
+		text-decoration: none; color: #1a1205; background: #f0a020; border-radius: 3px; padding: 3px 7px;
+		max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: center;
+	}
+	.cockpit__claude-status[data-level="major"]       { background: #e8720c; }
+	.cockpit__claude-status[data-level="critical"]    { background: #d43a2f; color: #fff; }
+	.cockpit__claude-status[data-level="maintenance"] { background: #3d7fb0; color: #fff; }
+	.cockpit__claude-status[hidden]                   { display: none; }
+
 	/* Emoji picker popover (TX composer) */
 	.tx-expand { position: relative; }
 	.tx-emoji-pop {
