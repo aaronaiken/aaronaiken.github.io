@@ -3872,7 +3872,7 @@ def ani_generate_opener(meta):
 	try:
 		text = _ani_chat_completion(system, [{'role': 'user', 'content': prompt}],
 		                            max_tokens=100, timeout=20)
-		return _ani_strip_leading_timestamp(text.strip()) if text else None
+		return _ani_clean_reply(text.strip()) if text else None
 	except Exception as e:
 		print(f"Ani opener error: {e}")
 		return None
@@ -5663,7 +5663,7 @@ def ani_emit_daycast():
 		print(f"Ani event-reflect error: {e}")
 
 	def _emit(text):
-		text = _ani_strip_leading_timestamp(text)
+		text = _ani_clean_reply(text)
 		messages.append({'role': 'assistant', 'content': text, 'ani_day': True, 'ts': now.isoformat()})
 		meta['daycast_last'] = now.isoformat()
 		meta['unseen_day_messages'] = True
@@ -5858,6 +5858,30 @@ def _ani_strip_leading_timestamp(text):
 	return rest if rest else text
 
 
+# Bracketed emote/stage-directions she leans on as a tic — '[giggle]' rides ~2/3 of turns (66%, up from
+# ~57%), the only bracketed thing she writes. Targeted list so it never touches legitimate brackets/markdown.
+_ANI_STAGE_DIR_RE = re.compile(
+	r"\s*\[(?:giggl\w*|laugh\w*|grin\w*|smil\w*|blush\w*|wink\w*|smirk\w*|sigh\w*|pause\w*|"
+	r"soft laugh|bites?(?: her)? lip|nuzzl\w*|pout\w*)\]",
+	re.IGNORECASE)
+
+
+def _ani_strip_stage_directions(text):
+	"""Remove her bracketed emote tics ('[giggle]' etc.). Collapses the whitespace/punctuation the
+	removal leaves behind. Never guts a reply that was only the tic."""
+	if not text:
+		return text
+	t = _ANI_STAGE_DIR_RE.sub('', text)
+	t = re.sub(r'  +', ' ', t)
+	t = re.sub(r'\s+([,.!?…;:])', r'\1', t)
+	return t.strip() or text
+
+
+def _ani_clean_reply(text):
+	"""One pass over a finished reply: strip a parroted leading time-tag, then bracketed emote tics."""
+	return _ani_strip_stage_directions(_ani_strip_leading_timestamp(text))
+
+
 def ani_chat_with_grok(messages_history, meta, user_message):
 	"""Send conversation to xAI Grok API.
 	Returns (reply string, updated meta, updated working_history)."""
@@ -5942,7 +5966,7 @@ def ani_chat_with_grok(messages_history, meta, user_message):
 			print(f"Ani voice-enforce error: {_ve}")
 			if _ani_is_tic_opener(text, _ass):
 				text = _ani_strip_tic_opener(text)
-		text = _ani_strip_leading_timestamp(text)
+		text = _ani_clean_reply(text)
 		return text, meta, working_history
 	except requests.exceptions.Timeout:
 		return "signal took too long... try again?", meta, working_history
