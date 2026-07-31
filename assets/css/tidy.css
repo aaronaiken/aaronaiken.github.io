@@ -75,8 +75,8 @@ body.tidy{margin:0;background:var(--canvas);color:var(--ink-1);
 }
 
 /* ---- Top bar ---- */
-.tdy-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;
-  padding:18px 36px;border-bottom:1px solid var(--line);position:relative;z-index:2}
+.tdy-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px 22px;
+  flex-wrap:wrap;padding:18px 36px;border-bottom:1px solid var(--line);position:relative;z-index:2}
 /* App pages carry the switcher in the header; the divider line stays so the
    hero glow reads as flowing out from under it. */
 .tdy-topbar img{height:22px;display:block}
@@ -312,6 +312,15 @@ body.tidy{margin:0;background:var(--canvas);color:var(--ink-1);
   color:var(--tint-deep,var(--ink-2))}
 .tdy-morelinks a:hover{color:var(--tint,var(--ink-1))}
 
+@media (max-width:640px){
+  /* On phones the app switcher drops to its own centered row so the header
+     (wordmark + site nav) isn't crammed with the four app links. */
+  .tdy-topbar .tdy-wm{order:1}
+  .tdy-topbar .tdy-nav{order:2}
+  .tdy-topbar.has-switcher .tdy-switcher{order:3;width:100%;flex-basis:100%;min-width:0;box-sizing:border-box;
+    justify-content:center;flex-wrap:wrap;gap:6px;margin-top:2px}
+  .tdy-topbar.has-switcher .tdy-switcher a{font-size:12px;padding:5px 11px}
+}
 @media (max-width:560px){
   .tdy-hero h1{font-size:44px}
   .tdy-topbar{padding:16px 20px}
