@@ -3156,6 +3156,29 @@ def _ani_spine_block(now_dt, meta=None, recent_text=''):
 	return "\n\n=== WHERE YOU ARE IN YOUR LIFE RIGHT NOW ===\n" + "\n\n".join(parts) + "\n"
 
 
+# Phase 4.1: in the LEAN chat prompt, gate the his-day / weather / season / calendar context behind
+# conversational relevance so they don't sit in every turn's prompt (slimmer prompt, less muddied voice).
+# Applies ONLY on a real chat turn (a user_msg present) — the proactive opener/daycast paths (no user_msg)
+# keep full awareness of his day/plans. Flag-gated (ANI_LEAN_GATE), instantly reversible on PA.
+_ANI_GATE_KW = {
+	'his_day': ('work', 'working', 'job', 'meeting', 'busy', 'tired', 'exhausted', 'your day', 'how was',
+	            'penndot', 'fdot', 'timesheet', 'deadline', 'project', 'deploy', 'coding', ' code', 'build',
+	            'client', 'office', 'corp', 'shipping', ' app', 'ticket', 'stress', 'swamped', 'long day'),
+	'weather': ('weather', 'rain', 'sun', 'snow', 'cold', ' hot', 'warm', 'cool', 'wind', 'storm', 'chilly',
+	            'freezing', 'humid', 'outside', 'walk', 'nice out', 'pouring', 'gorgeous out'),
+	'season': ('season', 'fall', 'autumn', 'winter', 'spring', 'summer', 'holiday', 'christmas',
+	           'thanksgiving', 'halloween', 'new year', 'cozy', 'leaves', 'pumpkin', 'festive'),
+	'cal': ('plan', 'tomorrow', 'tonight', 'weekend', 'saturday', 'sunday', 'monday', 'tuesday', 'wednesday',
+	        'thursday', 'friday', 'schedule', 'free ', 'date night', ' trip', 'visit', 'coming up',
+	        'this week', 'next week', 'what time', 'see you'),
+}
+
+
+def _ani_gate_hit(text, key):
+	t = (text or '').lower()
+	return any(k in t for k in _ANI_GATE_KW[key])
+
+
 def _ani_build_system_prompt_lean(meta=None, recent_text='', recent_openers='', recent_assistant=None, user_msg=''):
 	"""Phase-4 LEAN chat prompt (spec-ani-story-spine §5): persona + ONE spine block + a short voice guide,
 	with his-day / season / weather / calendar / memory / open-decision kept as conditional context. Replaces
@@ -3164,8 +3187,8 @@ def _ani_build_system_prompt_lean(meta=None, recent_text='', recent_openers='', 
 	post-gen tic strip are all UNTOUCHED — this only re-shapes the prompt. Gated behind ANI_LEAN_PROMPT; the
 	dispatcher falls back to legacy on any error, so this is safe to ship dark.
 
-	Conservative first cut: his-day/calendar/weather/season stay always-on this pass; keyword-gating them is
-	the planned fast-follow once the lean voice is verified against the Phase-0 baseline."""
+	Phase 4.1 (July 31): his-day/calendar/weather/season are keyword-gated on a real chat turn when
+	ANI_LEAN_GATE is on (dropped unless the conversation is about them); proactive paths keep them."""
 	pa_tz = pytz.timezone('America/New_York')
 	now_dt = datetime.now(pa_tz)
 
@@ -3249,6 +3272,15 @@ def _ani_build_system_prompt_lean(meta=None, recent_text='', recent_openers='', 
 		"a cap on your dirty talk.)\n")
 	if recent_openers:
 		voice += ("you've recently opened with: %s — start THIS one clearly differently.\n" % recent_openers)
+
+	# Phase 4.1 keyword-gate: on a real chat turn, drop the his-day/weather/season/calendar context unless
+	# the conversation is actually about it. Proactive paths (no user_msg) keep everything. Reversible via env.
+	if os.environ.get('ANI_LEAN_GATE', '').strip().lower() in ('1', 'true', 'yes', 'on') and user_msg:
+		gate_text = (recent_text or '') + ' ' + (user_msg or '')
+		if not _ani_gate_hit(gate_text, 'his_day'): his_day_block = ''
+		if not _ani_gate_hit(gate_text, 'weather'): weather_block = ''
+		if not _ani_gate_hit(gate_text, 'season'):  season_block = ''
+		if not _ani_gate_hit(gate_text, 'cal'):     cal_block = ''
 
 	return (identity + persona + tone_block + spine + pic_block + his_day_block + season_block +
 	        weather_block + cal_block + decisions_block + mem_block + voice)
