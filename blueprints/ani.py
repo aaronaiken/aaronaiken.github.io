@@ -1561,9 +1561,18 @@ def ani_save_state(d):
 	_ani_atomic_write_json(ANI_STATE_FILE, d)
 
 
-def ani_reset_now_state():
-	"""Fresh start — she's put-together with nothing in progress yet (new day / clear)."""
-	ani_save_state({})
+def ani_reset_now_state(now_dt=None):
+	"""Fresh start for a new day / clear: she wakes at home, put-together, nothing in progress yet. SEEDS a
+	minimal live state (home + a time-appropriate beat) rather than a blank {} — so her 'right now' is never
+	empty; the day-driver advances her off this baseline as the clock moves, instead of leaving her
+	'nowhere' until a message happens to name a place."""
+	now_dt = now_dt or datetime.now(pytz.timezone('America/New_York'))
+	h = now_dt.hour
+	doing = ('slow morning, just waking up' if h < 9
+	         else 'winding down at home' if (h >= ANI_DAYCAST_END or h < ANI_DAYCAST_START)
+	         else 'home, easing into the day')
+	ani_save_state({'where': 'home', 'doing': doing,
+	                'updated': now_dt.isoformat(), 'day': ani_daycast_day_key(now_dt)})
 
 
 def ani_update_now_state(partial, now_dt):
@@ -1602,8 +1611,10 @@ def _ani_state_move_overdue(now, min_hours=None):
 			return (False, '', '', 0.0)   # off-window / asleep — staying put is fine
 		st = ani_load_state() or {}
 		where = (st.get('where') or '').strip()
+		# No valid live location for today (blank, or left over from a prior day) → she needs to ESTABLISH
+		# one. Treat as overdue so the next daytime cast places her, instead of leaving her 'nowhere' all day.
 		if not where or st.get('day') != ani_daycast_day_key(now) or not st.get('updated'):
-			return (False, '', '', 0.0)
+			return (True, '', '', 0.0)
 		ud = datetime.fromisoformat(st['updated'])
 		if ud.tzinfo is None:
 			ud = pytz.timezone('America/New_York').localize(ud)
@@ -4102,7 +4113,15 @@ def ani_generate_day_update(meta, history):
 	# current place so _emit's state extractor advances her) — otherwise photos + backward beats leave her
 	# narratively stuck in one spot for hours.
 	ov, ov_where, ov_doing, ov_hours = _ani_state_move_overdue(now)
-	if ov:
+	if ov and not ov_where:
+		# She has no placed location for today yet (fresh day / just cleared) — establish where she is.
+		instruction = (
+			f"[it's now {time_str}. you haven't placed yourself in your day yet. tell him where you ACTUALLY are "
+			f"right now and what you're doing — a real place + activity that fits {time_str} (home, an errand, a "
+			f"friend, a walk, wherever your day has you), first person present tense, so your day has somewhere to "
+			f"be. 1-2 sentences, your voice; don't recap or re-greet him.{variety}]"
+		)
+	elif ov:
 		instruction = (
 			f"[it's now {time_str}. you've been at {ov_where}{(' — ' + ov_doing) if ov_doing else ''} for about "
 			f"{ov_hours:.0f} hours, which is far too long to still be in one place. your day has MOVED ON. tell "
