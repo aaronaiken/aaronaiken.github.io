@@ -53,14 +53,9 @@ body.tools-page::after { content: ''; position: fixed; inset: 0; background: rad
 
 .tools__card-header { display: flex; justify-content: space-between; align-items: center; }
 .tools__card-icon { font-size: 1.4rem; line-height: 1; }
-/* Tidy family mark: a 2x2 of the four app accent colors (Bar / Stage /
-   Calendar / Away) — the family, encoded as its own palette. */
-.tools__famico { display: inline-grid; grid-template-columns: repeat(2, 9px); gap: 3px; }
-.tools__famico span { width: 9px; height: 9px; border-radius: 50%; }
-.tools__famico .m1 { background: #5fd3e0; box-shadow: 0 0 6px rgba(95,211,224,0.55); }
-.tools__famico .m2 { background: #e8b24a; box-shadow: 0 0 6px rgba(232,178,74,0.55); }
-.tools__famico .m3 { background: #e8594c; box-shadow: 0 0 6px rgba(232,89,76,0.55); }
-.tools__famico .m4 { background: #b8c6f0; box-shadow: 0 0 6px rgba(184,198,240,0.55); }
+/* Tidy family mark: the real family icon (the squircle with the four app
+   tiles), matching the app icons across the site. */
+.tools__famico-mark { width: 30px; height: 30px; display: block; border-radius: 7px; }
 .tools__card-status { display: flex; align-items: center; gap: 5px; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--tp-green-lo); }
 .tools__card-status--offline { color: var(--tp-text-dim); }
 .tools__card-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--tp-green); box-shadow: 0 0 5px var(--tp-green); animation: tp-pulse 2s ease-in-out infinite; }

@@ -1,0 +1,172 @@
+# Tidy — showroom + app landing content.
+# Single source of truth for the hub (/tidyapps/) and the four app pages.
+# Native port of the Claude Design handoff; no runtime, all data-driven.
+
+config:
+  mode: notify              # "notify" (email capture) | "live" (buy buttons)
+  notify_endpoint: "https://email.aaronaiken.me/subscribe"  # Dispatch (segmented, Resend-backed). Empty = preview-only.
+  bundle_price: "$18"
+  bundle_meta: "$18 · one-time · Lemon Squeezy"
+  hub_url: /tidyapps/
+
+# In-design top-nav links (wired to real site URLs)
+nav:
+  - { label: apps, url: /tidyapps/ }
+  - { label: workbench, url: /tools/ }
+  - { label: about, url: /about/aaronaiken }
+
+# Hub copy
+hub:
+  headline: "Small apps that do one thing."
+  sub: "Focused apps for Mac and iPhone, each one built for a single job and finished — then they stay out of your way."
+  bundle_title: "the tidy bundle"
+  bundle_desc: "Every app, packed neatly — one download, one license."
+  who_lead: "I'm Aaron. I build these at a kitchen table in Harrisburg, Pennsylvania — one at a time, usually because I wanted the thing myself and couldn't find a version that stayed out of the way."
+  who_sub: "No investors, no roadmap, no growth team. If something breaks, you're emailing the person who wrote it."
+  signup_eyebrow: "the occasional note"
+  signup_title: "New apps, when they're ready."
+  signup_desc: "No schedule, no newsletter, no marketing. A note when something ships, and that's the whole arrangement."
+  signup_done_title: "Everything in its place."
+  signup_done_desc: "You're on the list — one note when something ships, and nothing in between."
+  signup_fineprint: "one note per launch · no tracking · leave any time"
+
+# Ordered list drives the hub cards + family strip + switcher
+order: [bar, away, cal, stage]
+
+apps:
+  bar:
+    id: bar
+    slug: tidybar
+    name: TidyBar
+    url: /tools/tidy-bar/
+    tint: cyan
+    sig: "var(--tidy-cyan)"
+    deep: "var(--tidy-cyan-deep)"
+    deep_hex: "#3fb8c8"
+    glow: "var(--glow-cyan)"
+    favicon: /assets/tidy/app/tidybar/favicon.svg
+    icon: /assets/tidy/app/tidybar/icon.svg
+    price_line: "$3 · one-time"
+    tagline: "Hide the menu-bar icons you rarely use — behind one tidy toggle."
+    meta: "macOS 14+ · one-time purchase, no subscription"
+    soon: "Coming soon — $3, one-time · macOS 14+"
+    note: ""
+    ctas:
+      - { label: "Buy on the App Store — $3", variant: primary }
+      - { label: "Buy direct — $3", variant: secondary }
+    benefits:
+      - "⌘-drag icons to either side of the divider — left hides, right stays."
+      - "One click on the chevron collapses the clutter."
+      - "Sandboxed, launches at login, then gets out of your way."
+    why: "My menu bar had fourteen icons and I used three of them. TidyBar started as a weekend fix for my own bar — a divider, a chevron, and some peace. It's been running on my Mac ever since."
+    # Screencast (cropped to just the menu-bar strip). Optional loop_poster.
+    loop: /assets/tidy/loops/tidybar.mp4
+    # loop_poster: /assets/tidy/loops/tidybar.jpg
+    hero: { src: tidybar-after.jpeg, bg: 356.94, px: 100.00, py: 0.00, h: 56 }
+    extras:
+      - caption: "the settings — all of them"
+        shot: { src: tidybar-settings-1.jpeg, bg: 342.64, px: 51.17, py: 49.94, h: 499 }
+
+  away:
+    id: away
+    slug: tidyaway
+    name: TidyAway
+    url: /tools/tidy-away/
+    tint: periwinkle
+    sig: "var(--tidy-periwinkle)"
+    deep: "var(--tidy-periwinkle-deep)"
+    deep_hex: "#5566b8"
+    glow: "var(--glow-periwinkle)"
+    favicon: /assets/tidy/app/tidyaway/favicon.svg
+    icon: /assets/tidy/app/tidyaway/icon.svg
+    privacy: /tools/tidy-away/privacy/
+    price_line: "$9 launch · then $12"
+    tagline: "A quiet away note for iMessage — texts get answered, and stay unread."
+    meta: "macOS 14+ · $9 for the launch month, then $12 · free 15-day trial"
+    soon: "Coming soon — $9 at launch, free 15-day trial"
+    note: "Direct download only — reading the Messages database needs Full Disk Access, which the App Store forbids."
+    ctas:
+      - { label: "Buy — $9 · Lemon Squeezy", variant: primary }
+      - { label: "Download the 15-day trial", variant: secondary }
+    benefits:
+      - "Replies only to people in your Contacts — never group threads, never twice."
+      - "Leaves every message unread, so your pile is intact when you surface."
+      - "Notices that a text arrived — never what it says. Everything stays on your Mac."
+    why: "I kept coming out of deep-work stretches to a stack of \"you there?\" texts. TidyAway answers for me, politely, and then leaves the pile exactly where it was. It only sends while your Mac is awake — that's by design."
+    hero: { src: pasted-1785104317850-0.png, bg: 257.92, px: 100.00, py: 0.00, h: 354 }
+    extras:
+      - caption: "the away note, in your words"
+        shot: { src: pasted-1785105110738-0.png, bg: 119.03, px: 48.91, py: 37.95, h: 632 }
+      - caption: "three permissions, each explained"
+        shot: { src: pasted-1785105368742-0.png, bg: 134.72, px: 50.00, py: 38.83, h: 626 }
+      - caption: "the reply that goes out on its own"
+        shot: { src: mock-away-messages.png, bg: 100.00, px: 0.00, py: 0.00, h: 441 }
+
+  cal:
+    id: cal
+    slug: tidyglance
+    name: TidyGlance
+    url: /tools/tidy-cal/
+    tint: coral
+    sig: "var(--tidy-coral)"
+    deep: "var(--tidy-coral-deep)"
+    deep_hex: "#d84436"
+    glow: "var(--glow-coral)"
+    favicon: /assets/tidy/app/tidyglance/favicon.svg
+    icon: /assets/tidy/app/tidyglance/icon.svg
+    free: true
+    price_line: "Free"
+    tagline: "The date in your menu bar, a month at a glance."
+    meta: "macOS 14+ · free forever"
+    soon: "Coming soon — free forever · macOS 14+"
+    note: ""
+    ctas:
+      - { label: "Get it on the App Store — free", variant: primary }
+      - { label: "Download", variant: secondary }
+    benefits:
+      - "Today's date, always in the corner of your eye — in the format you pick."
+      - "Click for a tidy month — arrows to wander, Today to snap back."
+      - "Start the week where you start it, with ISO week numbers if you need them."
+      - "No permissions. Nothing to grant, nothing to worry about."
+    why: "I just wanted to see the date without opening anything. That's the whole app. It asks for no permissions because it needs none."
+    hero: { src: pasted-1785105637230-0.png, bg: 237.08, px: 100.00, py: 0.00, h: 372 }
+    extras:
+      - caption: "wander ahead, then snap back to today"
+        shot: { src: pasted-1785105710589-0.png, bg: 377.22, px: 99.30, py: 0.00, h: 599 }
+      - caption: "the settings — a format, a first day, week numbers"
+        shot: { src: pasted-1785208374076-0.png, bg: 127.64, px: 49.25, py: 37.61, h: 541 }
+
+  stage:
+    id: stage
+    slug: tidystage
+    name: TidyStage
+    url: /tools/tidy-stage/
+    tint: gold
+    sig: "var(--tidy-gold)"
+    deep: "var(--tidy-gold-deep)"
+    deep_hex: "#d89a2e"
+    glow: "var(--glow-gold)"
+    favicon: /assets/tidy/app/tidystage/favicon.svg
+    icon: /assets/tidy/app/tidystage/icon.svg
+    price_line: "$8 · one-time"
+    tagline: "A clean stage for screen sharing, in one click."
+    meta: "macOS 14+ · one-time purchase, no subscription"
+    soon: "Coming soon — $8, one-time · macOS 14+"
+    note: ""
+    ctas:
+      - { label: "Buy on the App Store — $8", variant: primary }
+      - { label: "Buy direct — $8", variant: secondary }
+    benefits:
+      - "One click hides your desktop icons and swaps in a calm backdrop."
+      - "Five neutral stages built in — Slate, Mist, Dusk, Forest, Sand."
+      - "⌥⌘H from anywhere. Toggle back when the meeting ends."
+    why: "Every screen share started with thirty seconds of apologizing for my desktop. TidyStage is the apology, automated — one click and the stage is clean."
+    # Screencast (full-frame desktop demo). Optional loop_poster.
+    loop: /assets/tidy/loops/tidystage.mp4
+    # loop_poster: /assets/tidy/loops/tidystage.jpg
+    hero: { src: pasted-1785106925519-0.png, bg: 100.00, px: 0.00, py: 0.00, h: 300 }
+    extras:
+      - caption: "five neutral stages, plus your own"
+        shot: { src: pasted-1785107075163-0.png, bg: 126.67, px: 50.00, py: 42.42, h: 495 }
+      - caption: "the desktop you'd rather not share"
+        shot: { src: mock-stage-before.png, bg: 100.00, px: 0.00, py: 0.00, h: 423 }

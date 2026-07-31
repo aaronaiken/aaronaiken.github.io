@@ -1,7 +1,8 @@
 ---
-layout: tidyapps
-title: Tidy — Mac Utilities
+layout: tidy-hub
+title: Tidy — Small apps that do one thing
 permalink: /tidyapps/
-page_ident: "TIDY · MAC UTILITIES"
-description: Small, polished, single-job Mac utilities. Native, private, no telemetry. Made by hand in Harrisburg.
+description: Focused, single-job apps for Mac and iPhone — native, private, no telemetry. Made by hand in Harrisburg, Pennsylvania.
+favicon: /assets/tidy/tidy-favicon.svg
+theme_color: "#14140f"
 ---

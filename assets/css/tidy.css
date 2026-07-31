@@ -1,0 +1,321 @@
+/* ============================================================
+   Tidy — showroom + app landing pages
+   Native port of the Tidy Design System (Claude Design handoff).
+   No React / no runtime — plain CSS. Light + dark automatic.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&family=Share+Tech+Mono&display=swap');
+
+:root{
+  /* Signature app colors — LOCKED */
+  --tidy-cyan:#5fd3e0;        /* TidyBar */
+  --tidy-gold:#e8b24a;        /* TidyStage */
+  --tidy-coral:#e8594c;       /* TidyGlance */
+  --tidy-periwinkle:#b8c6f0;  /* TidyAway */
+  /* Deep companions (buttons / text-on-tint) */
+  --tidy-cyan-deep:#3fb8c8;
+  --tidy-gold-deep:#d89a2e;
+  --tidy-coral-deep:#d84436;
+  --tidy-periwinkle-deep:#5566b8;
+  /* Canvas & ink — warm-light showroom */
+  --canvas:#faf8f3;
+  --surface-card:#ffffff;
+  --surface-raised:#fffdf9;
+  --ink-1:#232019;
+  --ink-2:#6b6558;
+  --ink-3:#a29a86;
+  --line:#e9e3d5;
+  /* Type */
+  --font-round:'Nunito',-apple-system,'SF Pro Rounded',sans-serif;
+  --font-body:'Crimson Pro',Georgia,serif;
+  --font-mono:'Share Tech Mono',ui-monospace,monospace;
+  --text-sm:15px; --text-md:17px; --text-lg:20px; --text-xl:26px;
+  --text-3xl:46px; --text-hero:62px;
+  --leading-tight:1.15; --leading-snug:1.35; --leading-body:1.6;
+  --track-wide:0.08em;
+  /* Space & radius */
+  --radius-sm:8px; --radius-btn:12px; --radius-card:18px;
+  /* Effects */
+  --shadow-shelf:0 18px 40px -18px rgb(20 20 15 / 0.28), 0 2px 6px rgb(20 20 15 / 0.06);
+  --shadow-card:0 8px 24px -12px rgb(20 20 15 / 0.18), 0 1px 3px rgb(20 20 15 / 0.05);
+  --shadow-pop:0 1px 2px rgb(20 20 15 / 0.08);
+  --glow-cyan:0 18px 44px -14px rgb(95 211 224 / 0.55);
+  --glow-gold:0 18px 44px -14px rgb(232 178 74 / 0.55);
+  --glow-coral:0 18px 44px -14px rgb(232 89 76 / 0.5);
+  --glow-periwinkle:0 18px 44px -14px rgb(133 149 216 / 0.55);
+  --ease-tidy:cubic-bezier(.32,.72,.28,1);
+  --dur-quick:150ms; --dur-move:280ms;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --canvas:#14140f;
+    --surface-card:#1e1d16;
+    --surface-raised:#242318;
+    --ink-1:#f0ece0;
+    --ink-2:#a8a190;
+    --ink-3:#6f6a5c;
+    --line:#2d2b20;
+  }
+}
+
+/* ---- Reset / shell ---- */
+*,*::before,*::after{box-sizing:border-box}
+body.tidy{margin:0;background:var(--canvas);color:var(--ink-1);
+  font-family:var(--font-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.tidy a{color:var(--ink-2);text-decoration:none}
+.tidy a:hover{color:var(--ink-1)}
+
+/* Wordmark light/dark swap.
+   Scoped to .tdy-topbar so these beat the `.tdy-topbar img{display:block}`
+   rule below on specificity (two classes > class+element). */
+.tdy-topbar .wm-dark{display:none}
+@media (prefers-color-scheme:dark){
+  .tdy-topbar .wm-light{display:none}
+  .tdy-topbar .wm-dark{display:block}
+}
+
+/* ---- Top bar ---- */
+.tdy-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:18px 36px;border-bottom:1px solid var(--line);position:relative;z-index:2}
+/* App pages carry the switcher in the header; the divider line stays so the
+   hero glow reads as flowing out from under it. */
+.tdy-topbar img{height:22px;display:block}
+.tdy-nav{display:flex;gap:22px;font-family:var(--font-round);font-weight:600;font-size:13px}
+.tdy-nav a{color:var(--ink-2)}
+.tdy-nav a:hover{color:var(--ink-1)}
+
+/* ---- App icon tile ---- */
+.tdy-icon{display:block}
+.tdy-icon.shelf{filter:drop-shadow(0 14px 22px rgb(20 20 15 / 0.28))}
+
+/* ---- Buttons ---- */
+.tdy-btn{display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:none;
+  font-family:var(--font-round);font-weight:700;font-size:15px;padding:10px 22px;
+  border-radius:var(--radius-btn);text-decoration:none;line-height:1.2;
+  transition:all var(--dur-quick) var(--ease-tidy)}
+.tdy-btn:hover{transform:translateY(-1px)}
+.tdy-btn:active{transform:scale(0.98)}
+.tdy-btn.lg{padding:14px 30px;font-size:17px}
+.tdy-btn.sm{padding:7px 16px;font-size:13px}
+.tdy-btn.primary{color:#fff;background:var(--tint-deep,var(--tidy-cyan-deep));box-shadow:var(--shadow-pop)}
+.tdy-btn.primary:hover{box-shadow:0 8px 20px -8px var(--tint-deep,var(--tidy-cyan-deep));filter:brightness(1.06)}
+.tdy-btn.secondary{background:var(--surface-card);color:var(--ink-1);
+  border:1px solid var(--line);box-shadow:var(--shadow-pop)}
+.tdy-btn.secondary:hover{box-shadow:var(--shadow-card)}
+
+/* ---- Badge ---- */
+.tdy-badge{display:inline-flex;align-items:center;padding:4px 11px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--surface-card);font-family:var(--font-round);
+  font-weight:700;font-size:13px;color:var(--ink-2);box-shadow:var(--shadow-pop);line-height:1.3}
+.tdy-badge.mono{font-family:var(--font-mono);font-weight:400}
+.tdy-badge.tint{color:var(--tint-deep,var(--ink-2))}
+
+/* ======================= HUB ======================= */
+.tdy-hero{text-align:center;padding:54px 24px 46px}
+.tdy-hero h1{margin:0;font-family:var(--font-round);font-weight:800;font-size:var(--text-hero);
+  letter-spacing:-0.02em;color:var(--ink-1);line-height:var(--leading-tight)}
+.tdy-hero p{margin:18px auto 0;font-family:var(--font-body);font-size:var(--text-lg);
+  color:var(--ink-2);max-width:46ch;line-height:var(--leading-body)}
+
+.tdy-main{display:flex;flex-direction:column;align-items:center;gap:28px;padding:0 24px}
+.tdy-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,340px));gap:24px;
+  justify-content:center;width:100%;max-width:704px}
+
+.tdy-card{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;
+  background:var(--surface-card);border:1px solid var(--line);border-radius:var(--radius-card);
+  padding:36px 28px 28px;text-decoration:none;color:var(--ink-1);box-shadow:var(--shadow-card);
+  transition:all var(--dur-move) var(--ease-tidy)}
+.tdy-card:hover{transform:translateY(-4px);box-shadow:var(--card-glow,var(--glow-cyan));color:var(--ink-1)}
+.tdy-card .name{font-family:var(--font-round);font-weight:700;font-size:20px}
+.tdy-card .tagline{font-family:var(--font-body);font-size:16px;color:var(--ink-2);
+  line-height:1.45;max-width:24ch}
+
+.tdy-panel{width:704px;max-width:100%;box-sizing:border-box;background:var(--surface-card);
+  border:1px solid var(--line);border-radius:var(--radius-card);box-shadow:var(--shadow-card)}
+.tdy-bundle{display:flex;align-items:center;gap:24px;padding:28px 32px}
+.tdy-bundle .body{display:flex;flex-direction:column;gap:6px;flex:1}
+.tdy-bundle .body .t{font-family:var(--font-round);font-weight:800;font-size:17px;color:var(--ink-1)}
+.tdy-bundle .body .d{font-family:var(--font-body);font-size:15px;color:var(--ink-2);line-height:var(--leading-body)}
+.tdy-bundle .body .m{font-family:var(--font-mono);font-size:12px;color:var(--ink-3)}
+
+.tdy-who{width:704px;max-width:100%;box-sizing:border-box;display:flex;flex-direction:column;
+  gap:10px;padding:10px 0 2px}
+.tdy-eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:var(--track-wide);
+  text-transform:uppercase;color:var(--ink-3)}
+.tdy-who p{margin:0;font-family:var(--font-body);line-height:var(--leading-body)}
+.tdy-who p.lead{font-size:var(--text-lg);color:var(--ink-1)}
+.tdy-who p.sub{max-width:62ch;font-size:15px;color:var(--ink-2)}
+
+/* ---- Signup ---- */
+.tdy-signup{width:704px;max-width:100%;box-sizing:border-box;display:flex;flex-direction:column;
+  gap:20px;background:var(--surface-raised);border:1px solid var(--line);
+  border-radius:var(--radius-card);padding:30px 34px 32px}
+.tdy-signup .head{display:flex;align-items:flex-start;justify-content:space-between;gap:28px}
+.tdy-signup .head .col{display:flex;flex-direction:column;gap:7px}
+.tdy-signup .head .title{font-family:var(--font-round);font-weight:800;font-size:21px;
+  letter-spacing:-0.01em;color:var(--ink-1)}
+.tdy-signup .head .desc{font-family:var(--font-body);font-size:15px;color:var(--ink-2);
+  line-height:var(--leading-body);max-width:42ch}
+.tdy-tiles{display:flex;gap:6px;align-items:center;flex-shrink:0;padding-top:22px}
+.tdy-tiles span{width:28px;height:28px;border-radius:9px;
+  transition:transform 460ms var(--ease-tidy)}
+.tdy-tiles span:nth-child(1){background:var(--tidy-cyan);transform:rotate(-9deg) translateY(4px)}
+.tdy-tiles span:nth-child(2){background:var(--tidy-gold);transform:rotate(7deg) translateY(-3px)}
+.tdy-tiles span:nth-child(3){background:var(--tidy-coral);transform:rotate(-5deg) translateY(5px)}
+.tdy-tiles span:nth-child(4){background:var(--tidy-periwinkle);transform:rotate(12deg) translateY(-2px)}
+.tdy-signup:focus-within .tdy-tiles span,
+.tdy-signup.done .tdy-tiles span{transform:rotate(0) translateY(0)}
+
+.tdy-form{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tdy-form input[type=email]{flex:1;min-width:220px;font-family:var(--font-body);font-size:15px;
+  color:var(--ink-1);background:var(--surface-card);border:1px solid var(--line);
+  border-radius:12px;padding:12px 16px;outline:none;
+  transition:border-color 150ms var(--ease-tidy)}
+.tdy-form input[type=email]:focus{border-color:var(--tint,var(--tidy-cyan))}
+.tdy-fineprint{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-3)}
+.tdy-form .btn-cyan{background:var(--tidy-cyan-deep)}
+
+.tdy-done-msg{font-family:var(--font-round);font-weight:700;font-size:15px;color:var(--ink-1);
+  background:var(--surface-card);border:1px solid var(--line);border-radius:12px;padding:12px 20px}
+
+.tdy-footer{text-align:center;padding:48px 24px 30px;font-family:var(--font-body);
+  font-style:italic;font-size:14px;color:var(--ink-3)}
+.tdy-footer a{color:var(--ink-2)}
+
+/* ======================= APP LANDING ======================= */
+.tdy-switcher{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tdy-switcher a{cursor:pointer;border:1px solid var(--line);background:var(--surface-card);
+  color:var(--ink-2);font-family:var(--font-round);font-weight:700;font-size:13px;
+  padding:6px 14px;border-radius:12px;transition:all var(--dur-quick) var(--ease-tidy)}
+.tdy-switcher a:hover{color:var(--ink-1)}
+.tdy-switcher a.current{color:#fff}
+
+.tdy-appheader{position:relative;text-align:center;padding:52px 32px 16px;overflow:hidden}
+.tdy-glow{position:absolute;left:50%;top:-150px;transform:translateX(-50%);width:680px;height:400px;
+  background:radial-gradient(closest-side,var(--tint),transparent);opacity:0.26;pointer-events:none}
+.tdy-appheader .inner{position:relative;display:flex;flex-direction:column;align-items:center;gap:22px}
+.tdy-titlerow{display:flex;align-items:center;gap:12px}
+.tdy-titlerow h1{margin:0;font-family:var(--font-round);font-weight:800;font-size:var(--text-3xl);
+  letter-spacing:-0.02em;color:var(--ink-1)}
+.tdy-appheader .tagline{margin:0;font-family:var(--font-body);font-size:var(--text-xl);
+  color:var(--ink-2);max-width:34ch;line-height:var(--leading-snug)}
+.tdy-metaline{font-family:var(--font-mono);font-size:12px;color:var(--ink-3)}
+.tdy-note{margin:0;font-family:var(--font-body);font-style:italic;font-size:15px;
+  color:var(--ink-3);max-width:52ch}
+
+.tdy-applayout{max-width:720px;margin:0 auto;padding:44px 24px 0;
+  display:flex;flex-direction:column;gap:52px}
+.tdy-section{display:flex;flex-direction:column;gap:14px}
+.tdy-section.benefits{gap:16px}
+
+.tdy-shot,.tdy-shot-wrap{width:100%;border-radius:14px;box-shadow:var(--shadow-card);display:block}
+.tdy-plinth{padding:30px;border-radius:18px;border:1px solid var(--line);display:flex;
+  align-items:center;justify-content:center;
+  background:radial-gradient(130% 150% at 50% 0%,color-mix(in oklab,var(--tint) 20%,transparent) 0%,transparent 64%),var(--surface-card)}
+.tdy-cropshot{width:100%;border-radius:12px;box-shadow:var(--shadow-shelf);
+  background-repeat:no-repeat}
+.tdy-extras{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch}
+.tdy-extra{display:flex;flex-direction:column;gap:8px}
+.tdy-extra.wide{grid-column:1 / -1}
+.tdy-extra .plinth{flex:1;padding:22px;border-radius:16px;border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(130% 150% at 50% 0%,color-mix(in oklab,var(--tint) 20%,transparent) 0%,transparent 64%),var(--surface-card)}
+.tdy-extra .cropshot{width:100%;border-radius:10px;box-shadow:var(--shadow-shelf);background-repeat:no-repeat}
+.tdy-extra .caption{font-family:var(--font-mono);font-size:11px;color:var(--ink-3)}
+
+.tdy-benefits{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px}
+.tdy-benefits li{display:flex;gap:14px;align-items:baseline;font-family:var(--font-body);
+  font-size:var(--text-lg);color:var(--ink-1);line-height:var(--leading-body)}
+.tdy-benefits li::before{content:'';width:8px;height:8px;border-radius:3px;
+  background:var(--tint);flex-shrink:0;position:relative;top:1px}
+
+.tdy-why p{margin:0;font-family:var(--font-body);font-size:var(--text-lg);color:var(--ink-1);
+  line-height:var(--leading-body)}
+.tdy-why .sig{font-family:var(--font-round);font-weight:700;font-size:14px;color:var(--ink-2)}
+
+.tdy-get{display:flex;flex-direction:column;align-items:center;gap:16px;background:var(--surface-card);
+  border:1px solid var(--line);border-radius:var(--radius-card);padding:32px 28px;box-shadow:var(--shadow-card)}
+.tdy-get p{margin:0;font-family:var(--font-body);font-size:15px;color:var(--ink-2);text-align:center}
+.tdy-get .bundleline{font-family:var(--font-body);font-style:italic;font-size:14px;color:var(--ink-2)}
+
+.tdy-family{display:flex;flex-direction:column;align-items:center;gap:16px}
+.tdy-family .siblings{display:flex;gap:30px;flex-wrap:wrap;justify-content:center}
+.tdy-family .sib{display:flex;flex-direction:column;align-items:center;gap:7px;text-decoration:none;
+  opacity:0.75;transition:all var(--dur-quick) var(--ease-tidy)}
+.tdy-family .sib:hover{opacity:1;transform:translateY(-2px)}
+.tdy-family .sib.current{opacity:1}
+.tdy-family .sib .lbl{font-family:var(--font-round);font-weight:600;font-size:12px;color:var(--ink-2)}
+.tdy-family .sib.current .lbl{font-weight:800;color:var(--ink-1)}
+
+/* ---- Notify form (app pages) ---- */
+.tdy-notify{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+.tdy-notify input[type=email]{font-family:var(--font-body);font-size:15px;color:var(--ink-1);
+  background:var(--surface-card);border:1px solid var(--line);border-radius:12px;
+  padding:12px 16px;width:240px;outline:none;transition:border-color 150ms var(--ease-tidy)}
+.tdy-notify input[type=email]:focus{border-color:var(--tint)}
+
+/* Success state toggling (JS adds .is-done to the form) */
+.tdy-form .on-done,.tdy-notify .on-done{display:none}
+.tdy-form.is-done .on-open,.tdy-notify.is-done .on-open{display:none}
+.tdy-form.is-done .on-done,.tdy-notify.is-done .on-done{display:inline-flex}
+
+/* ======================= DOC / PROSE PAGE ======================= */
+.tdy-doc{max-width:720px;margin:0 auto;padding:44px 24px 8px}
+.tdy-doc-head{display:flex;flex-direction:column;gap:12px;padding-bottom:22px;
+  margin-bottom:30px;border-bottom:1px solid var(--line)}
+.tdy-crumbs{font-family:var(--font-mono);font-size:12px;letter-spacing:var(--track-wide);
+  text-transform:uppercase;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tdy-crumbs a{color:var(--ink-2)}
+.tdy-crumbs a:hover{color:var(--tint-deep,var(--ink-1))}
+.tdy-crumbs .sep{color:var(--ink-3)}
+.tdy-doc-head h1{margin:0;font-family:var(--font-round);font-weight:800;font-size:var(--text-3xl);
+  letter-spacing:-0.02em;color:var(--ink-1);line-height:var(--leading-tight)}
+.tdy-doc-head .tagline{margin:0;font-family:var(--font-body);font-size:var(--text-lg);
+  color:var(--ink-2);line-height:var(--leading-snug);max-width:52ch}
+
+.tdy-prose{font-family:var(--font-body);font-size:var(--text-lg);color:var(--ink-1);
+  line-height:var(--leading-body)}
+.tdy-prose > *:first-child{margin-top:0}
+.tdy-prose p{margin:0 0 20px}
+.tdy-prose em{color:var(--ink-2)}
+.tdy-prose strong{font-weight:600;color:var(--ink-1)}
+.tdy-prose a{color:var(--tint-deep,var(--tidy-cyan-deep));text-decoration:underline;
+  text-decoration-thickness:1px;text-underline-offset:2px}
+.tdy-prose a:hover{color:var(--tint,var(--tidy-cyan))}
+.tdy-prose h2{font-family:var(--font-round);font-weight:800;font-size:var(--text-xl);
+  letter-spacing:-0.01em;color:var(--ink-1);line-height:var(--leading-tight);margin:40px 0 14px}
+.tdy-prose h3{font-family:var(--font-round);font-weight:700;font-size:var(--text-md);
+  color:var(--ink-1);margin:28px 0 10px}
+.tdy-prose ul,.tdy-prose ol{margin:0 0 20px;padding-left:0;list-style:none;
+  display:flex;flex-direction:column;gap:10px}
+.tdy-prose li{position:relative;padding-left:22px}
+.tdy-prose ul li::before{content:'';position:absolute;left:2px;top:12px;width:7px;height:7px;
+  border-radius:2px;background:var(--tint,var(--tidy-cyan))}
+.tdy-prose ol{counter-reset:tdy}
+.tdy-prose ol li{counter-increment:tdy}
+.tdy-prose ol li::before{content:counter(tdy);position:absolute;left:0;top:0;
+  font-family:var(--font-mono);font-size:13px;color:var(--tint-deep,var(--ink-3))}
+.tdy-prose hr{border:none;border-top:1px solid var(--line);margin:34px 0}
+.tdy-prose code{font-family:var(--font-mono);font-size:0.85em;background:var(--surface-card);
+  border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+.tdy-prose em code{font-style:normal}
+.tdy-prose blockquote{margin:0 0 20px;padding:2px 0 2px 18px;border-left:3px solid var(--tint,var(--tidy-cyan));
+  color:var(--ink-2);font-style:italic}
+
+.tdy-doc-foot{margin-top:36px;padding-top:22px;border-top:1px solid var(--line)}
+.tdy-doc-foot a{font-family:var(--font-round);font-weight:700;font-size:15px;color:var(--ink-2)}
+.tdy-doc-foot a:hover{color:var(--tint-deep,var(--ink-1))}
+
+/* "More" links on an app landing (deep dive / privacy) */
+.tdy-morelinks{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:4px}
+.tdy-morelinks a{font-family:var(--font-round);font-weight:700;font-size:14px;
+  color:var(--tint-deep,var(--ink-2))}
+.tdy-morelinks a:hover{color:var(--tint,var(--ink-1))}
+
+@media (max-width:560px){
+  .tdy-hero h1{font-size:44px}
+  .tdy-topbar{padding:16px 20px}
+  .tdy-extras{grid-template-columns:1fr}
+  .tdy-extra.wide{grid-column:auto}
+  .tdy-doc-head h1{font-size:34px}
+}

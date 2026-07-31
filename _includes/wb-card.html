@@ -11,7 +11,7 @@
 <a class="tools__card" href="{{ t.url }}"{% if t.external %} rel="noopener noreferrer"{% endif %}>
   <div class="tools__card-header">
     {% if t.family_icon %}
-      <span class="tools__famico" aria-hidden="true"><span class="m1"></span><span class="m2"></span><span class="m3"></span><span class="m4"></span></span>
+      <img class="tools__famico-mark" src="/assets/tidy/tidy-mark.svg" alt="" aria-hidden="true">
     {% else %}
       <span class="tools__card-icon">{{ t.icon }}</span>
     {% endif %}

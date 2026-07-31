@@ -10,7 +10,7 @@
 groups:
   - { id: publish,  label: "WRITE & PUBLISH" }
   - { id: rhythms,  label: "DAILY RHYTHMS" }
-  - { id: mac,      label: "MAC UTILITIES" }
+  - { id: mac,      label: "NATIVE APPS" }
   - { id: toys,     label: "WEB EXPERIMENTS" }
   - { id: money,    label: "SHOP & SUPPORT" }
   - { id: books,    label: "BOOKS" }
@@ -101,8 +101,8 @@ tools:
     group: mac
     cta: SEE THE FAMILY
     blurb: >
-      Four small, single-job Mac utilities — Bar, Stage, Calendar, and Away. Native,
-      private, no telemetry, made by hand. All on one page.
+      Small, single-job apps — Bar, Away, Glance, and Stage — coming to Mac, iPhone,
+      and iPad. Native, private, no telemetry, made by hand. All on one page.
 
   - name: Astromech // Audio Lab
     url: /tools/audio-lab/
