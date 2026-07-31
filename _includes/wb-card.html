@@ -15,7 +15,10 @@
     {% else %}
       <span class="tools__card-icon">{{ t.icon }}</span>
     {% endif %}
-    <span class="tools__card-status{% if soff %} tools__card-status--offline{% endif %}"><span class="tools__card-dot{% if soff %} tools__card-dot--offline{% endif %}"></span>{{ slabel }}</span>
+    <span class="tools__card-hdr-right">
+      {% if t.badge %}<span class="tools__card-badge">{{ t.badge }}</span>{% endif %}
+      <span class="tools__card-status{% if soff %} tools__card-status--offline{% endif %}"><span class="tools__card-dot{% if soff %} tools__card-dot--offline{% endif %}"></span>{{ slabel }}</span>
+    </span>
   </div>
   <h2 class="tools__card-name">{{ t.name | upcase }}</h2>
   <p class="tools__card-desc">{{ t.blurb }}</p>

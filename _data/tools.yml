@@ -205,13 +205,15 @@ tools:
     url: /tools/dispatch/
     icon: "📬"
     status: docs
+    badge: "Updated Jul 2026"
     group: private
     cta: READ THE MANUAL
     blurb: >
-      Private Flask app handling all site communication — contact form forwarding,
-      tools update signups, and a double-locked Markdown newsletter sender. One app,
-      three jobs. This is the technical manual.
-    tags: [Python, Flask, Fastmail, PythonAnywhere]
+      Private Flask app handling all site communication — contact forwarding,
+      interest-segmented update signups, a Markdown composer with a subscriber
+      dashboard, and bounce/complaint hygiene. Sends via Resend, from my own
+      domain, no tracking. This is the technical manual.
+    tags: [Python, Flask, Resend, PythonAnywhere]
 
   - name: The Creed
     url: /tools/creed/
