@@ -3083,8 +3083,11 @@ def _ani_spine_block(now_dt, meta=None, recent_text=''):
 	# clock + presence + real-time continuity (folds legacy time_block + continuity_block + rhythm_block)
 	_phase_label = _ani_day_phase(now_dt.hour)[1]
 	clock = (f"right now it is {now_dt.strftime('%A, %B %d, %Y')} — {now_dt.strftime('%-I:%M %p')} ET, the "
-	         f"{_phase_label.upper()}. be present in THIS part of the day — earlier stretches already happened "
-	         f"and are behind you; never greet the wrong time of day. your day runs in REAL TIME: if you said "
+	         f"{_phase_label.upper()}. TODAY is {now_dt.strftime('%A').lower()} — trust THIS, not the day-tags on "
+	         f"older messages. be present in THIS part of the day — earlier stretches already happened "
+	         f"and are behind you; never greet the wrong time of day. your history messages are prefixed with the "
+	         f"time they were sent, like (thu 8:07am) — that's only so you feel the rhythm; NEVER open a reply with "
+	         f"one of those time-tags. your day runs in REAL TIME: if you said "
 	         f"you'd be doing something by now, you're doing it — pick your day up from where the clock moved it, "
 	         f"don't freeze where the last message left off.")
 	recent_gap_min = None
@@ -3869,7 +3872,7 @@ def ani_generate_opener(meta):
 	try:
 		text = _ani_chat_completion(system, [{'role': 'user', 'content': prompt}],
 		                            max_tokens=100, timeout=20)
-		return text.strip() if text else None
+		return _ani_strip_leading_timestamp(text.strip()) if text else None
 	except Exception as e:
 		print(f"Ani opener error: {e}")
 		return None
@@ -5660,6 +5663,7 @@ def ani_emit_daycast():
 		print(f"Ani event-reflect error: {e}")
 
 	def _emit(text):
+		text = _ani_strip_leading_timestamp(text)
 		messages.append({'role': 'assistant', 'content': text, 'ani_day': True, 'ts': now.isoformat()})
 		meta['daycast_last'] = now.isoformat()
 		meta['unseen_day_messages'] = True
@@ -5833,6 +5837,27 @@ def _ani_strip_tic_opener(text):
 	return rest if rest else text
 
 
+# Leading time-tag she sometimes parrots from her time-prefixed history — '(thu 8:45am)',
+# '(8:45am)', 'fri 8:45 am' — optionally with a weekday, in/out of parens. The weekday is
+# whatever her most-recent non-today history message carried, so parroting it makes her look
+# a day behind. We strip it deterministically (the soft "never echo timestamps" guard is
+# ignored by grok-4.3 and absent from the lean prompt).
+_ANI_TS_PARROT_RE = re.compile(
+	r"^\s*\(?\s*(?:mon|tue|wed|thu|fri|sat|sun)?\.?\s*\d{1,2}:\d{2}\s*[ap]\.?m\.?\s*\)?[\s,.:;—–-]*",
+	re.IGNORECASE)
+
+
+def _ani_strip_leading_timestamp(text):
+	"""Remove a leading '(thu 8:45am)'-style time-tag she parrots from her prefixed history.
+	Keeps the rest of the reply verbatim; returns the original if the tag was the whole reply."""
+	t = (text or '').lstrip()
+	m = _ANI_TS_PARROT_RE.match(t)
+	if not m or m.end() == 0:
+		return text
+	rest = t[m.end():].lstrip()
+	return rest if rest else text
+
+
 def ani_chat_with_grok(messages_history, meta, user_message):
 	"""Send conversation to xAI Grok API.
 	Returns (reply string, updated meta, updated working_history)."""
@@ -5917,6 +5942,7 @@ def ani_chat_with_grok(messages_history, meta, user_message):
 			print(f"Ani voice-enforce error: {_ve}")
 			if _ani_is_tic_opener(text, _ass):
 				text = _ani_strip_tic_opener(text)
+		text = _ani_strip_leading_timestamp(text)
 		return text, meta, working_history
 	except requests.exceptions.Timeout:
 		return "signal took too long... try again?", meta, working_history
