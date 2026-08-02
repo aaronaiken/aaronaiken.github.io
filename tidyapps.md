@@ -4,5 +4,9 @@ title: Tidy — Small apps that do one thing
 permalink: /tidyapps/
 description: Focused, single-job apps for Mac and iPhone — native, private, no telemetry. Made by hand in Harrisburg, Pennsylvania.
 favicon: /assets/tidy/tidy-favicon.svg
+image:
+  path: /assets/tidy/og/og-tidy-hub.png
+  width: 1200
+  height: 630
 theme_color: "#14140f"
 ---
