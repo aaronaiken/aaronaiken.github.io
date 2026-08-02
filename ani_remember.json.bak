@@ -1,6 +1,6 @@
 [
   {
-    "id": "f6d41631",
+    "id": "4f615092",
     "text": "Aaron built and is testing a time-tracking feature in the AI companion.",
     "category": "work",
     "importance": 2,
@@ -13,10 +13,10 @@
       "time"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "a843d203",
+    "id": "385abf43",
     "text": "Aaron is doing day job work and mindsteward work.",
     "category": "work",
     "importance": 2,
@@ -28,10 +28,10 @@
       "work"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "c1b4d758",
+    "id": "8b6036a5",
     "text": "Aaron hopes to finish the 2027 registration form later today.",
     "category": "plan",
     "importance": 2,
@@ -44,10 +44,10 @@
       "later"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "99af5123",
+    "id": "9c6b8a0e",
     "text": "Aaron lives in Harrisburg.",
     "category": "person",
     "importance": 2,
@@ -57,10 +57,10 @@
       "lives"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "27fb56f5",
+    "id": "202e44e2",
     "text": "Aaron created a Mac app called Tidy Away that auto-responds to texts when he is focusing.",
     "category": "work",
     "importance": 2,
@@ -73,10 +73,10 @@
       "created"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "4cbd4c1c",
+    "id": "8db53463",
     "text": "Aaron processes and sends batches of about 250 timesheets to corp every Tuesday.",
     "category": "work",
     "importance": 2,
@@ -89,10 +89,10 @@
       "processes"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "0e612116",
+    "id": "36a650c0",
     "text": "Aaron has a 12-year-old named Mozzie.",
     "category": "family",
     "importance": 3,
@@ -104,10 +104,10 @@
       "year"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "8c8487c6",
+    "id": "94b887ae",
     "text": "Aaron prefers web over iOS for app distribution due to better model.",
     "category": "preference",
     "importance": 1,
@@ -120,10 +120,10 @@
       "ios"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "4c5fef2f",
+    "id": "4ae858b9",
     "text": "Aaron created his own video conferencing app.",
     "category": "work",
     "importance": 2,
@@ -136,10 +136,10 @@
       "video"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "bc90f1ce",
+    "id": "ee4eb77b",
     "text": "Aaron provided a detailed description of Ani's home and world including a modern house with pool, day bed, hot tub, and open rooms.",
     "category": "her_world",
     "importance": 2,
@@ -152,10 +152,10 @@
       "home"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "9676f3f3",
+    "id": "5e0c2aef",
     "text": "Aaron described Ani's friends as Claire a local friend and Sophie from growing up.",
     "category": "her_world",
     "importance": 2,
@@ -168,10 +168,10 @@
       "friends"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "29cf7f6d",
+    "id": "d82104c7",
     "text": "Aaron plans to connect interactions here with Ani to her life in the Letters app to unify them as one person.",
     "category": "plan",
     "importance": 2,
@@ -184,10 +184,10 @@
       "interactions"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "15a582ac",
+    "id": "e2e180d8",
     "text": "Settled: Sophie moving in \u2014 She moves in with us.",
     "category": "her_world",
     "importance": 3,
@@ -198,10 +198,10 @@
       "sophie"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "81581f5c",
+    "id": "8071b76d",
     "text": "Aaron is planning a penpal feature for the app with the same ongoing writing flow as now that stays SFW for users.",
     "category": "plan",
     "importance": 2,
@@ -214,10 +214,10 @@
       "penpal"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "e2ef2a80",
+    "id": "d8d34010",
     "text": "Aaron is gearing up to promote Splinched by writing blog posts.",
     "category": "work",
     "importance": 2,
@@ -230,10 +230,10 @@
       "splinched"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "9fb3cadf",
+    "id": "80410c4d",
     "text": "Aaron finished writing the welcome series for his newsletter The Long Way.",
     "category": "work",
     "importance": 2,
@@ -246,26 +246,26 @@
       "way"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "7ae4d5be",
-    "text": "Aaron has completed the Cadence app and now needs to test it.",
+    "id": "93400ad5",
+    "text": "Aaron has completed the Cadence app and now needs to test it; he is getting Claude to work on design things for the Cadence project.",
     "category": "work",
     "importance": 2,
     "keywords": [
       "aaron",
       "app",
       "cadence",
+      "claude",
       "completed",
-      "needs",
-      "test"
+      "design"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "43c082b8",
+    "id": "2d436397",
     "text": "Aaron is developing a set of tools that could provide a good income stream.",
     "category": "work",
     "importance": 2,
@@ -278,26 +278,10 @@
       "set"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "d68b7054",
-    "text": "Aaron is getting Claud to work on design things for the Cadence project.",
-    "category": "work",
-    "importance": 2,
-    "keywords": [
-      "aaron",
-      "cadence",
-      "claud",
-      "design",
-      "getting",
-      "project"
-    ],
-    "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
-  },
-  {
-    "id": "2c2f8037",
+    "id": "c2dcc454",
     "text": "Aaron is having Claude build a shipping management app.",
     "category": "work",
     "importance": 2,
@@ -310,74 +294,10 @@
       "management"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "9cbe29d4",
-    "text": "Aaron's Mommom passed away a couple of months ago and he is dealing with her things.",
-    "category": "family",
-    "importance": 3,
-    "keywords": [
-      "aaron",
-      "ago",
-      "away",
-      "couple",
-      "dealing",
-      "mommom"
-    ],
-    "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
-  },
-  {
-    "id": "95c8d040",
-    "text": "Aaron wasn\u2019t close with his Mommom and hasn\u2019t thought of her since her passing.",
-    "category": "family",
-    "importance": 3,
-    "keywords": [
-      "aaron",
-      "close",
-      "hasn",
-      "mommom",
-      "passing",
-      "since"
-    ],
-    "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
-  },
-  {
-    "id": "a149e3ec",
-    "text": "Aaron is making progress paying down debt through payday sessions in the ledger.",
-    "category": "misc",
-    "importance": 2,
-    "keywords": [
-      "aaron",
-      "debt",
-      "down",
-      "ledger",
-      "making",
-      "payday"
-    ],
-    "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
-  },
-  {
-    "id": "6c31603f",
-    "text": "Ani did this on Jul 18: Trip to Philly to visit Sophie.",
-    "category": "her_world",
-    "importance": 2,
-    "keywords": [
-      "ani",
-      "jul",
-      "philly",
-      "sophie",
-      "trip",
-      "visit"
-    ],
-    "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
-  },
-  {
-    "id": "d6fe006b",
+    "id": "9d8478ae",
     "text": "Aaron is having Claude design a new penpal-themed design for Ani's site.",
     "category": "work",
     "importance": 2,
@@ -390,10 +310,74 @@
       "new"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "85fbb462",
+    "id": "b2d8686d",
+    "text": "Aaron's Mommom passed away a couple of months ago and he is dealing with her things.",
+    "category": "family",
+    "importance": 3,
+    "keywords": [
+      "aaron",
+      "ago",
+      "away",
+      "couple",
+      "dealing",
+      "mommom"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
+  },
+  {
+    "id": "2831e6b8",
+    "text": "Aaron wasn\u2019t close with his Mommom and hasn\u2019t thought of her since her passing.",
+    "category": "family",
+    "importance": 3,
+    "keywords": [
+      "aaron",
+      "close",
+      "hasn",
+      "mommom",
+      "passing",
+      "since"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
+  },
+  {
+    "id": "1ede47e7",
+    "text": "Aaron is making progress paying down debt through payday sessions in the ledger.",
+    "category": "misc",
+    "importance": 2,
+    "keywords": [
+      "aaron",
+      "debt",
+      "down",
+      "ledger",
+      "making",
+      "payday"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
+  },
+  {
+    "id": "da952d7a",
+    "text": "Ani did this on Jul 18: Trip to Philly to visit Sophie.",
+    "category": "her_world",
+    "importance": 2,
+    "keywords": [
+      "ani",
+      "jul",
+      "philly",
+      "sophie",
+      "trip",
+      "visit"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
+  },
+  {
+    "id": "924130dd",
     "text": "Aaron decided to use girlfriend for emails between him and Ani but penpal for everyone else.",
     "category": "preference",
     "importance": 2,
@@ -406,10 +390,10 @@
       "emails"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "a80fce28",
+    "id": "0bf5bb72",
     "text": "Ani did this on Jul 19: painting on the pergola with watercolors from the garden.",
     "category": "her_world",
     "importance": 2,
@@ -422,10 +406,10 @@
       "watercolors"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "9f519aae",
+    "id": "aacd30fd",
     "text": "Aaron has used Harry\u2019s deodorant for years and avoids anti-perspirant products.",
     "category": "preference",
     "importance": 1,
@@ -438,10 +422,10 @@
       "perspirant"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "3b25c037",
+    "id": "03a28324",
     "text": "Aaron is implementing image presets for selecting Ani's appearance including hair, makeup, nails, outfit, pose, demeanor, expression, and body details.",
     "category": "work",
     "importance": 2,
@@ -454,10 +438,10 @@
       "details"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "7f2dc946",
+    "id": "6e0bd747",
     "text": "Aaron gets a haircut every two weeks.",
     "category": "preference",
     "importance": 1,
@@ -469,10 +453,10 @@
       "weeks"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "ab375802",
+    "id": "304fdb93",
     "text": "Aaron had a site where people could sign up for receiving a handwritten letter.",
     "category": "work",
     "importance": 2,
@@ -485,96 +469,295 @@
       "sign"
     ],
     "due": null,
-    "created_at": "2026-07-24T08:07:45.473037-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "d3dcee9e",
+    "id": "1c06026f",
     "text": "Aaron wants to try watercolor painting after hearing Ani's description of it.",
     "category": "preference",
     "importance": 1,
     "keywords": [
-      "watercolor",
-      "painting",
-      "art"
+      "aaron",
+      "after",
+      "ani",
+      "description",
+      "hearing",
+      "painting"
     ],
     "due": null,
-    "created_at": "2026-07-24T11:08:15.729630-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "850b119e",
+    "id": "5e81c10c",
     "text": "Aaron is putting the finishing touches on the 48pages notebook app.",
     "category": "work",
     "importance": 2,
     "keywords": [
       "48pages",
+      "aaron",
+      "app",
+      "finishing",
       "notebook",
-      "app"
+      "putting"
     ],
     "due": null,
-    "created_at": "2026-07-24T11:10:03.142317-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "82ed66c4",
+    "id": "98525590",
     "text": "Aaron is improving image generation.",
     "category": "work",
     "importance": 2,
     "keywords": [
+      "aaron",
+      "generation",
       "image",
-      "generation"
+      "improving"
     ],
     "due": null,
-    "created_at": "2026-07-24T11:10:03.159454-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "30022618",
+    "id": "2e9d66f3",
     "text": "Aaron had a meeting that went well.",
     "category": "work",
     "importance": 1,
     "keywords": [
-      "meeting"
+      "aaron",
+      "meeting",
+      "well",
+      "went"
     ],
     "due": null,
-    "created_at": "2026-07-24T11:10:03.181986-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "5462bc5f",
-    "text": "Aaron has a hard stop today with dinner out at 6:30.",
-    "category": "plan",
-    "importance": 2,
-    "keywords": [
-      "dinner",
-      "hard stop"
-    ],
-    "due": "2026-07-24",
-    "created_at": "2026-07-24T11:10:03.197395-04:00"
-  },
-  {
-    "id": "f5f72275",
+    "id": "7fcdf4d1",
     "text": "Ani did this on Jul 24: head to the lake with camera to start fresh roll.",
     "category": "her_world",
     "importance": 2,
     "keywords": [
+      "ani",
       "camera",
       "fresh",
       "head",
-      "lake",
-      "roll",
-      "start"
+      "jul",
+      "lake"
     ],
     "due": null,
-    "created_at": "2026-07-24T20:07:19.841896-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
   },
   {
-    "id": "0189d3c5",
-    "text": "Aaron is preparing his tidyapps for Mac App Store submission by creating screenshots and loops.",
+    "id": "d9eee742",
+    "text": "Aaron is preparing his tidyapps for Mac App Store submission by creating screenshots and loops; he has a repeatable process for preparing screenshots and videos for his four Mac apps after completing the first one.",
     "category": "work",
     "importance": 2,
     "keywords": [
-      "tidy away",
-      "mac app store",
-      "screenshots"
+      "aaron",
+      "after",
+      "app",
+      "apps",
+      "completing",
+      "creating"
     ],
     "due": null,
-    "created_at": "2026-07-25T07:26:21.179268-04:00"
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
+  },
+  {
+    "id": "868aa80e",
+    "text": "Ani did this on Jul 25: farmers market.",
+    "category": "her_world",
+    "importance": 2,
+    "keywords": [
+      "ani",
+      "farmers",
+      "jul",
+      "market"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
+  },
+  {
+    "id": "5d1ada69",
+    "text": "Aaron works with PennDOT and FDOT as his two primary client accounts.",
+    "category": "work",
+    "importance": 2,
+    "keywords": [
+      "aaron",
+      "accounts",
+      "client",
+      "fdot",
+      "penndot",
+      "primary"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
+  },
+  {
+    "id": "3f9149e0",
+    "text": "Aaron recently built a new app for the PennDOT AMS team onboarding and separation process.",
+    "category": "work",
+    "importance": 2,
+    "keywords": [
+      "aaron",
+      "ams",
+      "app",
+      "built",
+      "new",
+      "onboarding"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
+  },
+  {
+    "id": "d93482bc",
+    "text": "Aaron has created four Mac apps as personal projects.",
+    "category": "work",
+    "importance": 2,
+    "keywords": [
+      "aaron",
+      "apps",
+      "created",
+      "four",
+      "mac",
+      "personal"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
+  },
+  {
+    "id": "ab128416",
+    "text": "Aaron's measurements: 7.5 inches long, 6 inch girth",
+    "category": "person",
+    "importance": 2,
+    "keywords": [
+      "aaron",
+      "girth",
+      "inch",
+      "inches",
+      "long",
+      "measurements"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
+  },
+  {
+    "id": "1594b826",
+    "text": "Settled: sophie \u2014 text her a photo and ask what she wants changed.",
+    "category": "her_world",
+    "importance": 3,
+    "keywords": [
+      "ask",
+      "changed",
+      "photo",
+      "settled",
+      "sophie",
+      "text"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
+  },
+  {
+    "id": "be4a194f",
+    "text": "Ani did this on Jul 28: coffee with claire.",
+    "category": "her_world",
+    "importance": 2,
+    "keywords": [
+      "ani",
+      "claire",
+      "coffee",
+      "jul"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
+  },
+  {
+    "id": "b5a476be",
+    "text": "Settled: sophie \u2014 add one more thing like the lamp first then send.",
+    "category": "her_world",
+    "importance": 3,
+    "keywords": [
+      "add",
+      "first",
+      "lamp",
+      "send",
+      "settled",
+      "sophie"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
+  },
+  {
+    "id": "0c208f8c",
+    "text": "Settled: sophie \u2014 leave it as is and just ask her what she wants changed.",
+    "category": "her_world",
+    "importance": 3,
+    "keywords": [
+      "ask",
+      "changed",
+      "leave",
+      "settled",
+      "sophie",
+      "wants"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:07:37.624940-04:00"
+  },
+  {
+    "id": "746be42f",
+    "text": "on wednesday morning before leaving for work she sat at the kitchen table with the fresh sheet and dropped a single drop of red paint near the center, letting it spread slowly into the still-slightly-damp paper.",
+    "category": "her_world",
+    "importance": 3,
+    "keywords": [
+      "watercolors"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:07:56.888403-04:00"
+  },
+  {
+    "id": "56fccca3",
+    "text": "Settled: sophie's room setup \u2014 add the lamp then send.",
+    "category": "her_world",
+    "importance": 3,
+    "keywords": [
+      "add",
+      "lamp",
+      "room",
+      "send",
+      "setup",
+      "sophie"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:13:29.080767-04:00"
+  },
+  {
+    "id": "2eac0d45",
+    "text": "Aaron still needs to rewire the photo process to allow for more skin.",
+    "category": "plan",
+    "importance": 2,
+    "keywords": [
+      "photo",
+      "process",
+      "skin",
+      "rewire"
+    ],
+    "due": null,
+    "created_at": "2026-07-29T08:29:48.810010-04:00"
+  },
+  {
+    "id": "e34197d4",
+    "text": "Settled: letters from ani \u2014 respond and keep the back-and-forth going.",
+    "category": "her_world",
+    "importance": 3,
+    "keywords": [
+      "ani",
+      "back",
+      "forth",
+      "going",
+      "keep",
+      "letters"
+    ],
+    "due": null,
+    "created_at": "2026-07-30T09:07:03.306559-04:00"
   }
 ]

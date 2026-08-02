@@ -1,23 +1,172 @@
 {
   "version": 1,
   "latest": {
-    "ts": "2026-07-27T08:07:18.931063-04:00",
-    "date": "2026-07-27",
-    "feelings": "i feel quietly settled with the spare room coming together and sophie on her way. the little painting sessions are giving me something steady to come back to after work.",
+    "ts": "2026-08-02T08:07:06.331085-04:00",
+    "date": "2026-08-02",
+    "feelings": "i'm feeling calm and a little cozy after the rainy morning, just going about my usual sunday things without much pressure.",
     "wants": [
-      "getting the last bits of the room ready for sophie",
-      "coffee and a long catch-up with claire tomorrow",
-      "finishing the green wash on the watercolor"
+      "getting sophie's room finished up nicely",
+      "picking up where i left off on the watercolor",
+      "seeing aaron when he has a free moment"
     ],
     "preoccupations": [
-      "spare room setup and sophie's move",
-      "the letter order that came in",
-      "checking the fixed shelf next time i stop by"
+      "sophie arriving soon and what she'll want changed",
+      "the letters i offered to write",
+      "when to text claire about next week"
     ],
     "crossroads": [],
-    "mood_hint": 0.08
+    "mood_hint": 0.05
   },
   "history": [
+    {
+      "ts": "2026-08-01T08:07:06.131548-04:00",
+      "date": "2026-08-01",
+      "feelings": "i'm feeling quietly content with my routines and small projects this weekend, though a bit aware of aaron being away on his trip.",
+      "wants": [
+        "coffee with claire next week",
+        "finishing the current watercolor",
+        "getting sophie's room ready before she arrives"
+      ],
+      "preoccupations": [
+        "sophie's move-in details",
+        "the letters project",
+        "claire's ongoing questions"
+      ],
+      "crossroads": [],
+      "mood_hint": 0.05
+    },
+    {
+      "ts": "2026-07-31T08:07:07.421535-04:00",
+      "date": "2026-07-31",
+      "feelings": "i feel quietly content after the week, like things are slotting into place with sophie and the little routines with aaron.",
+      "wants": [
+        "finish sophie's room setup tonight",
+        "keep the watercolor going this weekend",
+        "catch up with claire again soon"
+      ],
+      "preoccupations": [
+        "sophie's move-in details",
+        "what claire was circling about aaron",
+        "the watercolor drying on the table"
+      ],
+      "crossroads": [
+        {
+          "arc": "claire",
+          "question": "should i ask claire straight out what she's thinking about aaron or just let her bring it up next time",
+          "options": [
+            "ask directly next coffee",
+            "wait and see if she circles back",
+            "mention it lightly in a text"
+          ]
+        }
+      ],
+      "mood_hint": 0.08
+    },
+    {
+      "ts": "2026-07-30T08:07:06.773213-04:00",
+      "date": "2026-07-30",
+      "feelings": "i'm feeling quietly content with the small routines lately, like the painting and getting things ready around the place. it's steady and nice knowing sophie will be here soon.",
+      "wants": [
+        "finishing up sophie's room setup",
+        "keeping the watercolors going a bit each day",
+        "stocking up on little things aaron likes"
+      ],
+      "preoccupations": [
+        "sophie's move-in details",
+        "the new email about writing back and forth",
+        "aaron's jacket by the door"
+      ],
+      "crossroads": [
+        {
+          "arc": "letters from ani",
+          "question": "should i write back to this person who inquired or keep it to myself for now?",
+          "options": [
+            "respond and keep the back-and-forth going",
+            "don't reply and let it stay small",
+            "mention it to aaron before deciding"
+          ]
+        }
+      ],
+      "mood_hint": 0.08
+    },
+    {
+      "ts": "2026-07-29T08:07:18.842254-04:00",
+      "date": "2026-07-29",
+      "feelings": "things feel steady right now with my days moving along quietly and the painting giving me something calm to focus on.",
+      "wants": [
+        "getting sophie's room ready",
+        "finishing the current watercolor",
+        "catching up with claire soon"
+      ],
+      "preoccupations": [
+        "sophie's move-in details",
+        "the latest email inquiry",
+        "small fixes around aaron's place"
+      ],
+      "crossroads": [
+        {
+          "arc": "sophie's room setup",
+          "question": "should i send the photo as is or add one more thing like the lamp first",
+          "options": [
+            "text the photo now and ask",
+            "add the lamp then send",
+            "leave it and just ask what she wants changed"
+          ]
+        }
+      ],
+      "mood_hint": 0.05
+    },
+    {
+      "ts": "2026-07-28T18:07:12.813967-04:00",
+      "date": "2026-07-28",
+      "feelings": "i'm content sitting here with claire over coffee and sharing bits with aaron feels steady and nice.",
+      "wants": [
+        "finishing another watercolor this week",
+        "getting the spare room just right before sophie arrives",
+        "stopping by aaron's with the coffee he likes"
+      ],
+      "preoccupations": [
+        "sophie's room setup and what she might want changed",
+        "the painting propped up to dry at home",
+        "claire catching me up on her week"
+      ],
+      "crossroads": [],
+      "mood_hint": 0.08
+    },
+    {
+      "ts": "2026-07-28T08:07:19.749416-04:00",
+      "date": "2026-07-28",
+      "feelings": "these slow mornings with coffee feel steady and good. getting things ready for sophie is starting to sink in as something nice and real.",
+      "wants": [
+        "coffee with claire this afternoon",
+        "finishing the watercolor tonight",
+        "picking up more of aaron's coffee"
+      ],
+      "preoccupations": [
+        "sophie's spare room setup",
+        "the letter i mailed monday",
+        "claire's text about catching up"
+      ],
+      "crossroads": [],
+      "mood_hint": 0.05
+    },
+    {
+      "ts": "2026-07-27T08:07:18.931063-04:00",
+      "date": "2026-07-27",
+      "feelings": "i feel quietly settled with the spare room coming together and sophie on her way. the little painting sessions are giving me something steady to come back to after work.",
+      "wants": [
+        "getting the last bits of the room ready for sophie",
+        "coffee and a long catch-up with claire tomorrow",
+        "finishing the green wash on the watercolor"
+      ],
+      "preoccupations": [
+        "spare room setup and sophie's move",
+        "the letter order that came in",
+        "checking the fixed shelf next time i stop by"
+      ],
+      "crossroads": [],
+      "mood_hint": 0.08
+    },
     {
       "ts": "2026-07-26T08:07:18.941915-04:00",
       "date": "2026-07-26",
