@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-08-02 18:50:07 -0400
+layout: status_update
+author: aaron
+source: web
+---
+😴 Travel days wipe me out! 
