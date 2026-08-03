@@ -2381,6 +2381,27 @@ def _ani_bible_identity(bible):
 	return (' '.join(kept).strip() or bible)
 
 
+# Bust anchor: _ani_bible_identity above strips the WHOLE figure sentence (a full head-to-toe body spec
+# appearing twice triggers Flux/Chroma duplicate-body renders), which also drops her established cup size —
+# so autonomous photos rendered a smaller chest than the bible's 34D. Reintroduce ONLY the size as one
+# compact clause (not the full figure), which is low duplicate-body risk. Mirrors _ani_hair_lead: parse the
+# bible, env ANI_BUST_LEAD overrides (the real bible is PA server-state, so an env fallback guarantees the
+# anchor regardless of the bible's exact phrasing).
+_ANI_CUP_RE = re.compile(r'\b([234]\d)\s?-?\s?([A-J])\b(?:\s*[- ]?cup)?', re.IGNORECASE)
+
+def _ani_bust_lead(bible):
+	"""Compact bust-SIZE clause for the image prompt (body shape only). Env ANI_BUST_LEAD overrides;
+	else parse a bra size (e.g. 34D) from the bible. Returns '' when nothing parseable — the caller just
+	appends nothing."""
+	env = os.environ.get('ANI_BUST_LEAD')
+	if env:
+		return env.strip().strip(',.')
+	m = _ANI_CUP_RE.search(bible or '')
+	if m:
+		return f"full {m.group(1)}{m.group(2).upper()} bust"
+	return ''
+
+
 # Vision QA gate: Chroma still doubles the subject or tangles an extremity ~1-in-5 on hard spreads, so
 # after each render a cheap vision model checks for generation defects and we silently re-roll failures.
 # Env-toggleable; fails OPEN (a flaky check never blocks a photo).
@@ -2662,6 +2683,9 @@ def ani_generate_image(scene, orientation='portrait', bible_override=None, house
 		# the prone/rear attractor negated. SOLO anchor + identity-only bible + ~1MP frame fight the
 		# duplicate; the vision-QA loop in _ani_render_venice re-rolls whatever slips through.
 		bible_id = _ani_bible_identity(bible).strip()
+		_bust = _ani_bust_lead(bible)   # reinstate her established cup size (dropped with the figure sentence)
+		if _bust:
+			bible_id = (bible_id + ' ' + _bust + '.').strip()
 
 		# --- PARTNER / POV branch: a sex act WITH the viewer. Inverts the solo guards (we want a partial
 		# male partner), keeps anti-HER-duplication, pose-gates the feet-fix, uses POV-aware QA. ---
@@ -3082,6 +3106,25 @@ def _ani_length_register(user_msg):
 	return "LENGTH THIS TIME: a few sentences — match his energy, warm and direct."
 
 
+# Stale-weekday guard: her PRESENT-TENSE spine blocks (reflection.feelings, live NOW state) are generated
+# on the daily reflection/daycast tick, which on early mornings hasn't run yet for the new day — so at
+# 8am Monday they can still hold Sunday's synthesis and literally say "my usual sunday things". The clock
+# line owns the day authoritatively, but the soft "trust THIS not the day-tags" prose was provably ignored
+# (same class as the tics), so we DETERMINISTICALLY rewrite any weekday name in these present-tense blocks
+# to today's. Scoped to feelings + now-state ONLY — the calendar / book-beat blocks legitimately name other
+# days (a real past/future date) and are left untouched.
+_ANI_WEEKDAY_RE = re.compile(
+	r'\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b', re.IGNORECASE)
+
+def _ani_correct_stale_weekday(text, now_dt):
+	"""Rewrite any weekday name in present-tense spine prose to TODAY's, so a reflection/state block
+	generated on the prior day can't make her narrate the wrong day. No-op if text is empty."""
+	if not text:
+		return text
+	today = now_dt.strftime('%A').lower()
+	return _ANI_WEEKDAY_RE.sub(today, text)
+
+
 def _ani_spine_block(now_dt, meta=None, recent_text=''):
 	"""The Phase-4 SPINE — ONE coherent 'here's where you are in your life right now', merging what the legacy
 	builder scattered across ~8 always-on blocks: the clock + presence/real-time continuity + sleep, the
@@ -3138,7 +3181,8 @@ def _ani_spine_block(now_dt, meta=None, recent_text=''):
 		refl = {}
 	feelings = refl.get('feelings')
 	if isinstance(feelings, str) and feelings.strip():
-		parts.append("how you're feeling under it all right now: " + feelings.strip() + " — let it color your "
+		feelings = _ani_correct_stale_weekday(feelings.strip(), now_dt)   # kill a prior-day 'sunday' leak
+		parts.append("how you're feeling under it all right now: " + feelings + " — let it color your "
 		             "tone naturally; don't announce it.")
 
 	# today's mood
@@ -3151,7 +3195,7 @@ def _ani_spine_block(now_dt, meta=None, recent_text=''):
 	except Exception:
 		now_state = ''
 	if now_state:
-		parts.append(now_state.strip())
+		parts.append(_ani_correct_stale_weekday(now_state.strip(), now_dt))   # kill a prior-day 'sunday' leak
 
 	return "\n\n=== WHERE YOU ARE IN YOUR LIFE RIGHT NOW ===\n" + "\n\n".join(parts) + "\n"
 
