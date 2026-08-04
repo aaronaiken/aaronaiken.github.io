@@ -121,6 +121,20 @@ _ANI_ACTIVEWEAR_RE = re.compile(r"\b(sports bra|gym clothes|workout clothes|athl
                                 r"yoga pants|running (shorts|clothes|tights)|leotard|spandex|sweaty)\b", re.I)
 _ANI_GYM_DOING_RE = re.compile(r"\b(gym|working out|workout|lifting|weights|jog(ging)?|yoga|pilates|"
                                r"spin class|cardio|exercis|treadmill)\b", re.I)
+# Going OUT of the house to be somewhere public/social (keys off the LEAVING transition in where/doing, NOT
+# merely being home). "heading home" is deliberately excluded — going home doesn't need a change of clothes.
+_ANI_GOING_OUT_RE = re.compile(
+    r"\b(heading (out|over|to (?!home\b))|on (my|the|her) way|"
+    r"(going|headed|off|out) to (?:see|meet|grab|the )|going (out|over)|leaving (for|the house|to (?!go ?home))|"
+    r"to see \w|meet(ing)? (up|\w+ (for|at))|out (with|for)|errand|running (to|out|errands)|"
+    r"at (?:the )?(store|market|shop|mall|cafe|café|coffee shop|restaurant|bar|salon|park))\b", re.I)
+# At-home / undressed / not-fit-to-be-seen-in-public outfits — the ones she'd change OUT of before going out.
+_ANI_HOMEBODY_OUTFIT_RE = re.compile(
+    r"(nothing (on )?underneath|nothing else on|no (panties|underwear)\b|"
+    r"(his|aaron'?s)[^.,]{0,24}\b(t-?shirt|tee|shirt)|"
+    r"pajamas?|pyjamas?|\bpj'?s?\b|night(gown|ie|shirt|dress)|sleep shirt|"
+    r"bath ?robe|\brobe\b|\btowel\b|\bnaked\b|\bnude\b|undressed|lingerie|"
+    r"just (a |her )?(thong|panties|underwear|a bra|bra)\b)", re.I)
 # Colors / adjectives / filler that DESCRIBE an outfit without identifying it. Shared garment NOUNS are what
 # tell us "same outfit, reworded" (leggings → sweaty leggings → these leggings) from a real change of clothes.
 _ANI_OUTFIT_FILLER = frozenset((
@@ -1652,9 +1666,18 @@ def ani_now_state_context(now_dt, recent_text=''):
 	if st.get('doing'):   bits.append(st['doing'])
 	wearing = (st.get('wearing') or '').strip()
 
+	# Going OUT in at-home / undressed clothes — she'd change first. Context-driven (keys off the LEAVING
+	# transition in where/doing + an at-home outfit), so it fires regardless of the outfit's freshness timer.
+	# Placed here (the shared state block) rather than the day-update-only wardrobe nudge, so it reaches chat +
+	# EVERY proactive generator (event reach-out / opener / plan / update) uniformly. Being AT a public place
+	# already is left alone (she may have changed and just not restated it).
+	going_out_underdressed = bool(
+		wearing and _ANI_HOMEBODY_OUTFIT_RE.search(wearing)
+		and _ANI_GOING_OUT_RE.search(((st.get('where') or '') + ' ' + (st.get('doing') or '')).strip()))
+
 	# Is the outfit worth putting in front of her this turn?
-	outfit_relevant = False
-	if wearing:
+	outfit_relevant = going_out_underdressed  # if she's underdressed to go out, always surface it to correct
+	if wearing and not outfit_relevant:
 		ws = st.get('wearing_set')
 		if ws:
 			try:
@@ -1674,7 +1697,11 @@ def ani_now_state_context(now_dt, recent_text=''):
 	line = ("\nWHERE YOUR DAY IS RIGHT NOW (for your AWARENESS — stay consistent with it, but do NOT restate "
 	        "it every message) — %s%s. don't suddenly be somewhere else for no reason; move it forward as the "
 	        "clock advances.\n" % (pre, ', '.join(bits) or 'settled in'))
-	if wearing and outfit_relevant:
+	if going_out_underdressed:
+		line += ("(you're heading out, but the last outfit on record is %s — you wouldn't leave the house to be "
+		         "seen in that. you'd have changed into a real going-out outfit first; mention what you put on to "
+		         "go out, picked fresh — not loungewear or his shirt.)\n" % wearing)
+	elif wearing and outfit_relevant:
 		line += ("(you're in %s right now — mention it only if it actually fits this moment; don't just "
 		         "recite it.)\n" % wearing)
 	return line
