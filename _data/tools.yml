@@ -104,6 +104,19 @@ tools:
       Small, single-job apps — Bar, Away, Glance, and Stage — coming to Mac, iPhone,
       and iPad. Native, private, no telemetry, made by hand. All on one page.
 
+  - name: Shift
+    url: /tools/shift/
+    icon: "↕️"
+    status: soon
+    group: mac
+    cta: LEARN MORE
+    blurb: >
+      A sit/stand posture app for iPhone, Watch, and Mac. Dismissal is never
+      completion — a prompt resolves only when a sensor confirms you actually moved.
+      And standing too long counts too: the unit of success is transitions, not
+      standing minutes. A Tidy app.
+    tags: [iOS, watchOS, macOS, Swift]
+
   - name: Astromech // Audio Lab
     url: /tools/audio-lab/
     icon: "🔊"
