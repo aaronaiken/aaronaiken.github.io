@@ -141,7 +141,7 @@ body.tools-page::after { content: ''; position: fixed; inset: 0; background: rad
     {% for g in site.data.tools.groups %}
     {% assign items = site.data.tools.tools | where: "group", g.id %}
     {% if items.size > 0 %}
-    <section class="wb-section" data-section="{{ g.id }}">
+    <section class="wb-section" id="{{ g.id }}" data-section="{{ g.id }}">
       <div class="tools__rule"><span class="tools__rule-glyph">// {{ g.label }}</span></div>
       <div class="tools__grid">
         {% for tool in items %}{% include wb-card.html tool=tool %}{% endfor %}
@@ -171,16 +171,34 @@ body.tools-page::after { content: ''; position: fixed; inset: 0; background: rad
       (function () {
         var chips = document.querySelectorAll('.wb-chip');
         var sections = document.querySelectorAll('.wb-section');
+        function applyFilter(f, updateHash) {
+          var matched = false;
+          chips.forEach(function (c) {
+            var on = c.getAttribute('data-filter') === f;
+            c.classList.toggle('active', on);
+            if (on) matched = true;
+          });
+          if (!matched) { f = 'all'; chips[0].classList.add('active'); }
+          sections.forEach(function (sec) {
+            var s = sec.getAttribute('data-section');
+            sec.style.display = (f === 'all' || s === f) ? '' : 'none';
+          });
+          if (updateHash) {
+            if (f === 'all') { history.replaceState(null, '', location.pathname + location.search); }
+            else { location.hash = f; }
+          }
+        }
         chips.forEach(function (chip) {
           chip.addEventListener('click', function () {
-            var f = chip.getAttribute('data-filter');
-            chips.forEach(function (c) { c.classList.toggle('active', c === chip); });
-            sections.forEach(function (sec) {
-              var s = sec.getAttribute('data-section');
-              sec.style.display = (f === 'all' || s === f) ? '' : 'none';
-            });
+            applyFilter(chip.getAttribute('data-filter'), true);
           });
         });
+        // Deep-link support: /tools/#books activates the BOOKS filter on load.
+        window.addEventListener('hashchange', function () {
+          applyFilter((location.hash || '').replace('#', '') || 'all', false);
+        });
+        var initial = (location.hash || '').replace('#', '');
+        if (initial) applyFilter(initial, false);
       })();
     </script>
 
