@@ -90,7 +90,7 @@ def generate_photo_v2(messages, orientation="portrait"):
     backend isn't venice or extraction can't run."""
     # Imported lazily to avoid any import-order coupling with blueprints.ani.
     from blueprints.ani import (
-        ani_get_bible, ani_load_state, _ani_bible_identity,
+        ani_get_bible, ani_load_state, _ani_bible_identity, _ani_bust_lead,
         _ani_render_venice, ANI_IMAGE_BACKEND)
 
     if ANI_IMAGE_BACKEND != "venice":
@@ -100,7 +100,11 @@ def generate_photo_v2(messages, orientation="portrait"):
     spec = extract_scene(_chat_lines(messages), _xai_llm_call, state=ani_load_state() or {})
     spec.orientation = "landscape" if str(orientation or "").lower().startswith("land") else "portrait"
 
-    bible_id = _ani_bible_identity(ani_get_bible() or "").strip()
+    _bible = ani_get_bible() or ""
+    bible_id = _ani_bible_identity(_bible).strip()
+    _bust = _ani_bust_lead(_bible)   # carry the v1 figure/bust anchor into v2 (identity strips the figure line otherwise)
+    if _bust:
+        bible_id = (bible_id + " " + _bust + ".").strip()
     req = compile_scene(spec, _cfg(), subject_identity=bible_id)
     applied = req.meta.get("applied_profiles", [])
     print(f"Ani PIC v2 profiles={applied} cfg{req.cfg} {req.width}x{req.height} "
