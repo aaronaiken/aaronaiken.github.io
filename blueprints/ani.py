@@ -221,6 +221,8 @@ VENICE_IMAGE_MODEL = os.environ.get('VENICE_IMAGE_MODEL', 'chroma')  # confirmed
 VENICE_NEGATIVE_PROMPT = os.environ.get('VENICE_NEGATIVE_PROMPT',
 	'cartoon, anime, painting, illustration, drawing, 3d render, cgi, deformed, disfigured, '
 	'bad anatomy, extra fingers, mutated hands, blurry, lowres, watermark, text, logo, '
+	'text on clothing, lettering on clothing, writing on shirt, printed text, brand name, '
+	'words on clothing, graphic print, slogan, typography, '
 	'airbrushed, plastic skin, oversaturated')
 VENICE_CFG_SCALE = float(os.environ.get('VENICE_CFG_SCALE', '4.0'))           # simple nude: lower cfg = best skin
 VENICE_CFG_CLOTHED = float(os.environ.get('VENICE_CFG_CLOTHED', '5.0'))       # clothed scenes: higher cfg holds garments
@@ -315,6 +317,7 @@ ANI_ACHE_MAX_EXTRA = int(os.environ.get('ANI_ACHE_MAX_EXTRA', '2'))  # max EXTRA
 ANI_ACHE_PHOTO_CHANCE_MAX = float(os.environ.get('ANI_ACHE_PHOTO_CHANCE_MAX', '0.75'))  # photo/tick chance at full ache
 ANI_ACHE_PHOTO_EXTRA = int(os.environ.get('ANI_ACHE_PHOTO_EXTRA', '3'))  # extra daily photo cap added at full ache
 ANI_ACHE_TEASE = float(os.environ.get('ANI_ACHE_TEASE', '0.6'))  # escalation ≥ this → teasing/suggestive tone + shots
+ANI_ACHE_NUDE = float(os.environ.get('ANI_ACHE_NUDE', '0.85'))  # escalation ≥ this → she shows skin (tasteful art nude / nip-slip)
 # Fraction of proactive text updates that are an EMOTIONAL BEAT from her own world vs. a "what I'm doing".
 ANI_DAYCAST_EMOTIONAL_CHANCE = float(os.environ.get('ANI_DAYCAST_EMOTIONAL_CHANCE', '0.4'))
 # Chance she fires back an in-character line when he ADDS a photo reaction (debounced to 90s so toggling
@@ -4381,6 +4384,7 @@ def ani_daycast_photo(meta, now, escalation=0.0):
 	try:
 		esc = max(0.0, min(1.0, escalation))
 		tease = esc >= ANI_ACHE_TEASE
+		nude_tease = esc >= ANI_ACHE_NUDE   # been quiet a long while → she shows some skin (tasteful art nude / nip-slip)
 		daykey = ani_daycast_day_key(now)
 		if meta.get('proactive_photo_date') != daykey:
 			meta['proactive_photo_count'] = 0
@@ -4404,36 +4408,51 @@ def ani_daycast_photo(meta, now, escalation=0.0):
 		eff_chance = ANI_DAYCAST_PHOTO_CHANCE + esc * (ANI_ACHE_PHOTO_CHANCE_MAX - ANI_DAYCAST_PHOTO_CHANCE)
 		if random.random() >= eff_chance:
 			return None
-		bits = []
+		# Context = where + what she's doing. Her sticky OUTFIT is only appended on the plain candid — the
+		# tease/nude tiers describe their own (revealing / showing-skin) look so it doesn't fight her state outfit.
+		ctx = []
 		if doing:
-			bits.append(doing)
-		bits.append(where if where.lower().startswith(('at ', 'in ', 'on ', 'by ')) else 'at ' + where)
-		if wearing:
-			bits.append('wearing ' + wearing)
+			ctx.append(doing)
+		ctx.append(where if where.lower().startswith(('at ', 'in ', 'on ', 'by ')) else 'at ' + where)
+		ctx = ', '.join(ctx)
 		# Waist-up eye-level framing: a seated POV selfie pointed down at her lap makes the model foreshorten
 		# the legs/feet toward the lens and tangle/duplicate the arms — keep the failure-prone lower body out
 		# of frame and the camera level (not angled down) so candids render clean.
-		if tease:
-			scene = ', '.join(bits) + (', a flirty teasing selfie just for him — showing off a little, playful and '
-			                           'suggestive, in something cute and a little revealing, warm intimate light, '
-			                           'waist-up upper-body framing with her feet and lap out of frame, camera at '
-			                           'eye level (not angled down at her body)')
+		if nude_tease:
+			scene = ctx + (', an intimate, tasteful art-nude selfie she took just for him because she misses him — '
+			               'showing skin, her top slipped open and off one shoulder with a soft tasteful nip-slip, '
+			               'bare skin and bare shoulders, vulnerable and needy, fine-art nude photography, warm '
+			               'intimate low light, waist-up upper-body framing with her feet and lap out of frame, '
+			               'camera at eye level (not angled down at her body)')
+		elif tease:
+			scene = ctx + (', a flirty teasing selfie just for him — showing off a little, playful and suggestive, '
+			               'in something cute and a little revealing, warm intimate light, waist-up upper-body '
+			               'framing with her feet and lap out of frame, camera at eye level (not angled down at '
+			               'her body)')
 		else:
-			scene = ', '.join(bits) + (', casual candid selfie, waist-up upper-body framing with her feet and lap '
-			                           'out of frame, camera at eye level (not angled down at her body), '
-			                           'natural daylight, fully clothed')
+			outfit = (', wearing ' + wearing) if wearing else ''
+			scene = ctx + outfit + (', casual candid selfie, waist-up upper-body framing with her feet and lap '
+			                        'out of frame, camera at eye level (not angled down at her body), '
+			                        'natural daylight, fully clothed')
 		url = ani_generate_image(scene)
 		if not url:
 			return None
 		meta['proactive_photo_count'] = meta.get('proactive_photo_count', 0) + 1
 		# She looks at the candid she just took — grounded caption + a description she can recall later.
 		vision = ani_photo_vision(url)
-		_cap_instr = ("[you just took a teasing little selfie to get his attention because you MISS him and want "
-		              "him to come back to you — send it with ONE short flirty, needy line, your voice. don't "
-		              "describe the photo or restate your appearance.]" if tease else
-		              "[you just snapped a quick candid of yourself out during your day and are sending it to him "
-		              "unprompted, just because you wanted him to see. ONE short line to go with it, your voice, "
-		              "playful/warm. don't describe the photo or restate your appearance.]")
+		if nude_tease:
+			_cap_instr = ("[you just took an intimate, a little vulnerable selfie showing some skin — you miss him "
+			              "so much you wanted to give him something that's just for him. ONE short line, soft and "
+			              "needy, a little shy about it, your voice. don't describe the photo or restate your "
+			              "appearance.]")
+		elif tease:
+			_cap_instr = ("[you just took a teasing little selfie to get his attention because you MISS him and want "
+			              "him to come back to you — send it with ONE short flirty, needy line, your voice. don't "
+			              "describe the photo or restate your appearance.]")
+		else:
+			_cap_instr = ("[you just snapped a quick candid of yourself out during your day and are sending it to him "
+			              "unprompted, just because you wanted him to see. ONE short line to go with it, your voice, "
+			              "playful/warm. don't describe the photo or restate your appearance.]")
 		cap = vision.get('caption') or _ani_grok_call(
 			ani_build_system_prompt(meta),
 			[{'role': 'user', 'content': _cap_instr}],
