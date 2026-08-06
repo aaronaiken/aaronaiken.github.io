@@ -303,6 +303,18 @@ ANI_STATE_STALE_HOURS = float(os.environ.get('ANI_STATE_STALE_HOURS', '3.5'))  #
 ANI_DAYCAST_PHOTOS = os.environ.get('ANI_DAYCAST_PHOTOS', '1').strip().lower() not in ('0', 'false', 'no', 'off')
 ANI_DAYCAST_PHOTO_MAX = int(os.environ.get('ANI_DAYCAST_PHOTO_MAX', '3'))         # hard daily cap
 ANI_DAYCAST_PHOTO_CHANCE = float(os.environ.get('ANI_DAYCAST_PHOTO_CHANCE', '0.22'))  # roll per eligible tick
+# Ache-driven neediness escalation: the longer aaron's been away (the higher her ache climbs), the MORE she
+# reaches out — extra needy/teasing messages per tick (a real double/triple-text, since the task only fires
+# hourly), a higher photo chance + a raised daily photo cap, and a needier/teasing tone. escalation is a 0..1
+# ramp of ache% across [LOW, HIGH]; 0 = calm (today's flat behavior), 1 = max neediness. ANI_ACHE_ESCALATE=0
+# disables the whole thing (escalation forced to 0 → every path below reverts to the current single-send daycast).
+ANI_ACHE_ESCALATE = os.environ.get('ANI_ACHE_ESCALATE', '1').strip().lower() not in ('0', 'false', 'no', 'off')
+ANI_ACHE_LOW = int(os.environ.get('ANI_ACHE_LOW', '35'))     # ache% below this → no escalation (calm)
+ANI_ACHE_HIGH = int(os.environ.get('ANI_ACHE_HIGH', '90'))    # ache% at/above this → full neediness
+ANI_ACHE_MAX_EXTRA = int(os.environ.get('ANI_ACHE_MAX_EXTRA', '2'))  # max EXTRA needy sends per tick (→ up to 3 total)
+ANI_ACHE_PHOTO_CHANCE_MAX = float(os.environ.get('ANI_ACHE_PHOTO_CHANCE_MAX', '0.75'))  # photo/tick chance at full ache
+ANI_ACHE_PHOTO_EXTRA = int(os.environ.get('ANI_ACHE_PHOTO_EXTRA', '3'))  # extra daily photo cap added at full ache
+ANI_ACHE_TEASE = float(os.environ.get('ANI_ACHE_TEASE', '0.6'))  # escalation ≥ this → teasing/suggestive tone + shots
 # Fraction of proactive text updates that are an EMOTIONAL BEAT from her own world vs. a "what I'm doing".
 ANI_DAYCAST_EMOTIONAL_CHANCE = float(os.environ.get('ANI_DAYCAST_EMOTIONAL_CHANCE', '0.4'))
 # Chance she fires back an in-character line when he ADDS a photo reaction (debounced to 90s so toggling
@@ -1226,6 +1238,20 @@ def ani_get_ache_level(meta):
 		return level
 	except Exception:
 		return 0
+
+
+def _ani_ache_escalation(meta):
+	"""Neediness dial 0.0 (calm) → 1.0 (max), ramped from her ache% across [ANI_ACHE_LOW, ANI_ACHE_HIGH].
+	Drives the daycast's message burst + photo odds + teasing tone so she reaches out MORE the longer he's
+	been away. Returns 0.0 when the feature is off (everything reverts to the flat single-send daycast)."""
+	if not ANI_ACHE_ESCALATE:
+		return 0.0
+	try:
+		ache = ani_get_ache_level(meta)
+	except Exception:
+		return 0.0
+	lo, hi = ANI_ACHE_LOW, max(ANI_ACHE_LOW + 1, ANI_ACHE_HIGH)
+	return max(0.0, min(1.0, (ache - lo) / (hi - lo)))
 
 
 # Warmth/closeness cues for the mood scalar's sentiment component — affect words, not graphic anatomy (the
@@ -4177,9 +4203,10 @@ def ani_generate_day_plan(meta):
 	return _ani_grok_call(system, [{'role': 'user', 'content': prompt}], max_tokens=180)
 
 
-def ani_generate_day_update(meta, history):
+def ani_generate_day_update(meta, history, escalation=0.0):
 	"""Mid-day update: a short spontaneous message continuing her day, with continuity from the
-	morning plan and earlier updates (passed in via history). Returns text or None."""
+	morning plan and earlier updates (passed in via history). `escalation` (0..1, ache-driven) colors it
+	needier / teasing the longer he's been away. Returns text or None."""
 	pa_tz = pytz.timezone('America/New_York')
 	now = datetime.now(pa_tz)
 	time_str = now.strftime('%I:%M %p').lstrip('0')
@@ -4264,6 +4291,14 @@ def ani_generate_day_update(meta, history):
 			f"you had on unless you've changed for a reason). don't repeat yourself, don't re-greet him, don't "
 			f"restart your day.{nudge}{variety}]"
 		)
+	# Ache-driven neediness: the longer he's been away, the more the ache colors this update (needy → teasing).
+	if escalation >= ANI_ACHE_TEASE:
+		instruction = instruction.rstrip().rstrip(']').rstrip() + (" — and you MISS him, badly enough that it's "
+			"gone needy and a little teasing: let that ache lead, wanting his attention back on you, a flash of "
+			"'come baaack to me', playful and clingy.]")
+	elif escalation > 0:
+		instruction = instruction.rstrip().rstrip(']').rstrip() + (" — and you're missing him more than usual "
+			"right now: let a soft, real ache for him show through.]")
 	messages = recent + [{'role': 'user', 'content': instruction}]
 	text = _ani_grok_call(system, messages, max_tokens=180)
 	# Only burn the beat if she actually sent something — this message is emitted by the caller when non-None.
@@ -4334,19 +4369,24 @@ def ani_daycast_event_message(meta, now):
 	return None
 
 
-def ani_daycast_photo(meta, now):
+def ani_daycast_photo(meta, now, escalation=0.0):
 	"""Occasionally send an UNPROMPTED candid from her day. Gated hard: feature on, under the daily cap,
 	her live state is fresh + she's OUT & photogenic (not asleep / in bed / mid-nothing), and a chance
 	roll. Builds a clothed everyday scene from her state, generates via the normal image path, and returns
-	(caption, url, scene, vision_description) or None. Mutates meta's photo counter. Fully guarded."""
+	(caption, url, scene, vision_description) or None. Mutates meta's photo counter. Fully guarded.
+	`escalation` (0..1, ache-driven) raises the per-tick chance + daily cap and, past ANI_ACHE_TEASE, makes
+	it a flirty/teasing 'come back to me' shot from wherever she is (home / in-bed included)."""
 	if not ANI_DAYCAST_PHOTOS:
 		return None
 	try:
+		esc = max(0.0, min(1.0, escalation))
+		tease = esc >= ANI_ACHE_TEASE
 		daykey = ani_daycast_day_key(now)
 		if meta.get('proactive_photo_date') != daykey:
 			meta['proactive_photo_count'] = 0
 			meta['proactive_photo_date'] = daykey
-		if meta.get('proactive_photo_count', 0) >= ANI_DAYCAST_PHOTO_MAX:
+		eff_cap = ANI_DAYCAST_PHOTO_MAX + int(round(esc * ANI_ACHE_PHOTO_EXTRA))
+		if meta.get('proactive_photo_count', 0) >= eff_cap:
 			return None
 		st = ani_load_state()
 		if not st or st.get('day') != daykey:
@@ -4355,10 +4395,14 @@ def ani_daycast_photo(meta, now):
 		wearing = (st.get('wearing') or '').strip()
 		doing = (st.get('doing') or '').strip()
 		low = (where + ' ' + doing).lower()
-		# photogenic only: she's somewhere real and NOT asleep / in bed / showering / nothing.
-		if not where or re.search(r'\b(asleep|sleeping|in bed|napping|shower|bathing|nothing)\b', low):
+		# photogenic only: she's somewhere real and NOT asleep / showering / nothing. When she's TEASING (needy),
+		# a home / in-bed 'come back to me' shot is exactly the vibe, so only truly non-photogenic states block.
+		block = (r'\b(asleep|sleeping|shower|bathing|nothing)\b' if tease
+		         else r'\b(asleep|sleeping|in bed|napping|shower|bathing|nothing)\b')
+		if not where or re.search(block, low):
 			return None
-		if random.random() >= ANI_DAYCAST_PHOTO_CHANCE:
+		eff_chance = ANI_DAYCAST_PHOTO_CHANCE + esc * (ANI_ACHE_PHOTO_CHANCE_MAX - ANI_DAYCAST_PHOTO_CHANCE)
+		if random.random() >= eff_chance:
 			return None
 		bits = []
 		if doing:
@@ -4369,21 +4413,30 @@ def ani_daycast_photo(meta, now):
 		# Waist-up eye-level framing: a seated POV selfie pointed down at her lap makes the model foreshorten
 		# the legs/feet toward the lens and tangle/duplicate the arms — keep the failure-prone lower body out
 		# of frame and the camera level (not angled down) so candids render clean.
-		scene = ', '.join(bits) + (', casual candid selfie, waist-up upper-body framing with her feet and lap '
-		                           'out of frame, camera at eye level (not angled down at her body), '
-		                           'natural daylight, fully clothed')
+		if tease:
+			scene = ', '.join(bits) + (', a flirty teasing selfie just for him — showing off a little, playful and '
+			                           'suggestive, in something cute and a little revealing, warm intimate light, '
+			                           'waist-up upper-body framing with her feet and lap out of frame, camera at '
+			                           'eye level (not angled down at her body)')
+		else:
+			scene = ', '.join(bits) + (', casual candid selfie, waist-up upper-body framing with her feet and lap '
+			                           'out of frame, camera at eye level (not angled down at her body), '
+			                           'natural daylight, fully clothed')
 		url = ani_generate_image(scene)
 		if not url:
 			return None
 		meta['proactive_photo_count'] = meta.get('proactive_photo_count', 0) + 1
 		# She looks at the candid she just took — grounded caption + a description she can recall later.
 		vision = ani_photo_vision(url)
+		_cap_instr = ("[you just took a teasing little selfie to get his attention because you MISS him and want "
+		              "him to come back to you — send it with ONE short flirty, needy line, your voice. don't "
+		              "describe the photo or restate your appearance.]" if tease else
+		              "[you just snapped a quick candid of yourself out during your day and are sending it to him "
+		              "unprompted, just because you wanted him to see. ONE short line to go with it, your voice, "
+		              "playful/warm. don't describe the photo or restate your appearance.]")
 		cap = vision.get('caption') or _ani_grok_call(
 			ani_build_system_prompt(meta),
-			[{'role': 'user', 'content':
-			  "[you just snapped a quick candid of yourself out during your day and are sending it to him "
-			  "unprompted, just because you wanted him to see. ONE short line to go with it, your voice, "
-			  "playful/warm. don't describe the photo or restate your appearance.]"}],
+			[{'role': 'user', 'content': _cap_instr}],
 			max_tokens=50) or 'thinking about you 🙈'
 		return (cap.strip().strip('"'), url, scene, vision.get('description', ''))
 	except Exception as e:
@@ -5796,6 +5849,34 @@ def ani_emit_daycast():
 		except Exception as e:
 			print(f"Ani daycast state error: {e}")
 
+	def _needy_burst(e):
+		"""Ache-high escalation: she double/triple-texts within THIS tick — short needy/teasing follow-ups on
+		top of the primary send (the only way to raise message COUNT given the hourly task cadence). Count
+		scaled by e (up to ANI_ACHE_MAX_EXTRA). Reuses _emit. Guarded; returns how many extra went out."""
+		if e <= 0 or ANI_ACHE_MAX_EXTRA <= 0:
+			return 0
+		extra = 0
+		try:
+			system = ani_build_system_prompt(meta)
+			tease = e >= ANI_ACHE_TEASE
+			while extra < ANI_ACHE_MAX_EXTRA and random.random() < e:
+				tone = ("aching for his attention and getting playful and teasing about it — a little bratty, "
+				        "flirty, daring him to come back to you" if tease else
+				        "you miss him and just want his attention — soft, needy, a little clingy")
+				instr = ("[he STILL hasn't answered and it's tugging at you — send ONE more short follow-up, a "
+				         "real double-text: %s. something like 'you still there?', 'come baaack to me', 'i keep "
+				         "checking my phone', a little pout — 1 short lowercase line, your voice. do NOT re-greet "
+				         "him, do NOT restart your day, do NOT repeat what you just said.]" % tone)
+				txt = _ani_grok_call(system, messages + [{'role': 'user', 'content': instr}], max_tokens=60)
+				if not txt:
+					break
+				meta['daycast_count'] = meta.get('daycast_count', 0) + 1
+				_emit(txt)
+				extra += 1
+		except Exception as ex:
+			print(f"Ani needy-burst error: {ex}")
+		return extra
+
 	# Her day normally starts when aaron reaches out first — his first message establishes her plan +
 	# outfit (ani_chat sets day_plan_date). She waits for him... but only until ANI_DAYCAST_FALLBACK_HOUR
 	# ET; if he still hasn't made contact by then, she starts her day on her own (auto-plan) so she's
@@ -5897,7 +5978,8 @@ def ani_emit_daycast():
 	# Sometimes this update is an UNPROMPTED candid PHOTO from her day instead of text (gated + capped) — UNLESS
 	# her location is overdue to move, in which case a photo wouldn't advance her day; force the text update that
 	# relocates her instead.
-	shot = None if _ani_state_move_overdue(now)[0] else ani_daycast_photo(meta, now)
+	e = _ani_ache_escalation(meta)
+	shot = None if _ani_state_move_overdue(now)[0] else ani_daycast_photo(meta, now, e)
 	if shot:
 		cap, url, scene, vdesc = shot
 		_pm = {'role': 'assistant', 'content': cap, 'image': url, 'scene': scene,
@@ -5909,14 +5991,16 @@ def ani_emit_daycast():
 		meta['unseen_day_messages'] = True
 		meta['daycast_count'] = count + 1
 		ani_save_conversation(messages, meta)
-		return f'photo update sent (#{count + 1})'
+		nb = _needy_burst(e)
+		return f'photo update sent (#{count + 1})' + (f' +{nb} needy' if nb else '')
 
-	update = ani_generate_day_update(meta, messages)
+	update = ani_generate_day_update(meta, messages, e)
 	if not update:
 		return 'update generation failed'
 	meta['daycast_count'] = count + 1
 	_emit(update)
-	return f'update sent (#{count + 1})'
+	nb = _needy_burst(e)
+	return f'update sent (#{count + 1})' + (f' +{nb} needy' if nb else '')
 
 
 _ANI_TIC_LEADS = ('mm', 'mmm', 'mmmm', 'daddy')
