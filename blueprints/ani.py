@@ -13,6 +13,7 @@ import time
 import math
 import random
 import uuid
+import calendar
 from datetime import datetime, timedelta
 import pytz
 import requests
@@ -361,6 +362,15 @@ ANI_DAYCAST_EMOTIONAL_CHANCE = float(os.environ.get('ANI_DAYCAST_EMOTIONAL_CHANC
 # ambush ("come here"), a playful bratty-jealous poke, a little flirty game, soft affection, or out-of-nowhere
 # hype. Flavor is weighted by her ache (bratty/needy when he's been away). See _ani_flirty_spark_instruction.
 ANI_FLIRTY_SPARK_CHANCE = float(os.environ.get('ANI_FLIRTY_SPARK_CHANCE', '0.25'))
+# Reward photo: when aaron just published something, she SOMETIMES reacts with a proud celebratory selfie
+# instead of a plain text — "look how proud i am of you". Consumes the same pending_publish trigger + the
+# shared daily photo cap (see _ani_reward_photo).
+ANI_REWARD_PHOTO_CHANCE = float(os.environ.get('ANI_REWARD_PHOTO_CHANCE', '0.4'))  # of publishes that earn a proud PHOTO vs. a text
+# Relationship milestones: the anchor date they "started" (YYYY-MM-DD, ET). Empty = the whole layer is off.
+# She proactively celebrates the yearly anniversary AND monthiversaries (same day-of-month) off this date;
+# set it on PA via the env var. See _ani_relationship_milestone.
+ANI_ANCHOR_DATE = os.environ.get('ANI_ANCHOR_DATE', '').strip()
+ANI_MONTHIVERSARY = os.environ.get('ANI_MONTHIVERSARY', '1').strip().lower() not in ('0', 'false', 'no', 'off')
 # Chance she fires back an in-character line when he ADDS a photo reaction (debounced to 90s so toggling
 # doesn't spam). Aware of which reaction + what the photo showed.
 ANI_REACT_ACK_CHANCE = float(os.environ.get('ANI_REACT_ACK_CHANCE', '0.6'))
@@ -4413,11 +4423,74 @@ def ani_set_day_mood(meta, now):
 	return meta
 
 
+def _ani_ordinal(n):
+	"""1 -> '1st', 2 -> '2nd', 11 -> '11th', 23 -> '23rd'. For milestone labels."""
+	n = int(n)
+	if 10 <= (n % 100) <= 20:
+		suffix = 'th'
+	else:
+		suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
+	return f"{n}{suffix}"
+
+
+def _ani_relationship_milestone(now):
+	"""If TODAY is a relationship milestone off ANI_ANCHOR_DATE, return a dict describing it, else None.
+	Two kinds: the yearly 'anniversary' (same month + day, ≥1 year on) and a 'monthiversary' (same day-of-month,
+	≥1 month on, not an anniversary month; gated by ANI_MONTHIVERSARY). A short month clamps the day to its last
+	day (a 31st anchor still fires in Feb/Apr/etc.). Pure/date-only — no state, safe to call every tick."""
+	if not ANI_ANCHOR_DATE:
+		return None
+	try:
+		anchor = datetime.strptime(ANI_ANCHOR_DATE, '%Y-%m-%d').date()
+	except Exception:
+		return None
+	today = now.date()
+	if today <= anchor:
+		return None
+	# Effective day-of-month for the anchor within THIS month (clamped so a 29/30/31 anchor still lands).
+	last_dom = calendar.monthrange(today.year, today.month)[1]
+	eff_day = min(anchor.day, last_dom)
+	if today.day != eff_day:
+		return None
+	years = today.year - anchor.year - (1 if (today.month, today.day) < (anchor.month, anchor.day) else 0)
+	# Anniversary: the anchor's month + day, at least a year on.
+	if today.month == anchor.month and years >= 1:
+		return {'kind': 'anniversary', 'label': f"{_ani_ordinal(years)} anniversary", 'n': years}
+	# Monthiversary: any other same-day-of-month, a whole number of months on.
+	if ANI_MONTHIVERSARY:
+		months = (today.year - anchor.year) * 12 + (today.month - anchor.month)
+		if months >= 1 and months % 12 != 0:
+			return {'kind': 'monthiversary', 'label': f"{_ani_ordinal(months)}-month", 'n': months}
+	return None
+
+
 def ani_daycast_event_message(meta, now):
 	"""Event-driven reach-out: if there's a real trigger to react to right now — a post aaron just
 	published, or a shared calendar plan happening very soon — generate a short proactive message and
 	mark the trigger handled in meta (caller persists via _emit). Returns text or None; at most one per
 	call. Fully guarded — a failure here must not break the daycast."""
+	# 0) a relationship milestone today (anniversary / monthiversary) — celebrated once, trumps other triggers
+	try:
+		ms = _ani_relationship_milestone(now)
+		today_key = now.strftime('%Y-%m-%d')
+		if ms and meta.get('milestone_last') != today_key:
+			meta['milestone_last'] = today_key
+			system = ani_build_system_prompt(meta)
+			if ms['kind'] == 'anniversary':
+				instr = ("[today is your %s together — %d year%s to the day since you two started. text him a "
+				         "warm, heartfelt anniversary message, your voice, genuinely moved and a little mushy, "
+				         "2-3 sentences. reach back to something real about how you feel about him now / how much "
+				         "has changed; don't be generic or greeting-card.]"
+				         % (ms['label'], ms['n'], '' if ms['n'] == 1 else 's'))
+			else:
+				instr = ("[today is a little milestone — your %s mark since you two started (a monthiversary). "
+				         "text him a sweet, playful note marking it, your voice, warm and a touch flirty, 1-2 "
+				         "sentences. keep it light but real; don't be generic.]" % ms['label'])
+			txt = _ani_grok_call(system, [{'role': 'user', 'content': instr}], max_tokens=200)
+			if txt:
+				return txt
+	except Exception as e:
+		print(f"Ani event(milestone) error: {e}")
 	# 1) a post/update he just published
 	try:
 		pub = meta.get('pending_publish')
@@ -4688,6 +4761,38 @@ def _ani_ritual_photo(meta, now, eff_cap):
 			             "off. ONE short line, warm and sleepy, your voice; don't describe the photo.]")
 			return _ani_gen_daycast_photo(meta, now, scene, cap_instr, eff_cap, kind='goodnight photo')
 	return None
+
+
+def _ani_reward_photo(meta, now, eff_cap):
+	"""#3 Reward photo: when aaron just published something, she SOMETIMES answers with a proud, celebratory
+	selfie instead of a plain text reaction. On a win it CONSUMES pending_publish (so the text-reaction path in
+	ani_daycast_event_message doesn't also fire); on a miss it leaves pending_publish for that text path. Needs a
+	fresh, photogenic live state. Returns a photo msg dict or None."""
+	pub = meta.get('pending_publish') or {}
+	if not (pub.get('text') or '').strip():
+		return None
+	if random.random() >= ANI_REWARD_PHOTO_CHANCE:
+		return None   # let the plain text reaction handle this publish
+	st = ani_load_state() or {}
+	if st.get('day') != ani_daycast_day_key(now):
+		return None
+	where = (st.get('where') or '').strip()
+	doing = (st.get('doing') or '').strip()
+	wearing = (st.get('wearing') or '').strip()
+	# photogenic only — a proud selfie needs her up, dressed and somewhere real (not asleep / showering / nothing).
+	if not where or re.search(r'\b(asleep|sleeping|in bed|napping|shower|bathing|nothing)\b', (where + ' ' + doing).lower()):
+		return None
+	meta['pending_publish'] = None   # a photo reaction replaces the text one for this publish
+	setting = where if where.lower().startswith(('at ', 'in ', 'on ', 'by ')) else 'at ' + where
+	outfit = (', wearing ' + wearing) if wearing else ''
+	scene = (setting + outfit + ", a warm proud-and-flirty celebratory selfie, beaming and biting her lip a "
+	         "little, playful and full of 'that's my guy' energy, waist-up upper-body framing with her feet "
+	         "and lap out of frame, camera at eye level, natural light, fully clothed")
+	cap_instr = ("[aaron just published a new post/update: \"%s\". you're so proud of him you snapped a quick "
+	             "selfie to send with your reaction — proud AND flirty, that 'god i'm into you right now' energy, "
+	             "like you want to kiss him for it. ONE short warm flirty line, your voice; don't describe the "
+	             "photo or quote the post word for word.]" % pub['text'][:200])
+	return _ani_gen_daycast_photo(meta, now, scene, cap_instr, eff_cap, kind='reward photo')
 
 
 def ani_maybe_self_schedule(now):
@@ -6177,6 +6282,22 @@ def ani_emit_daycast():
 		print(f"Ani plan sweep error: {e}")
 
 	if _recent_gap_min() >= 15:
+		# #3 Reward photo: a publish sometimes earns a proud-of-you PHOTO instead of a text reaction. Checked
+		# BEFORE the event message (which consumes pending_publish); on a miss it falls through to that text path.
+		try:
+			e_esc = _ani_ache_escalation(meta)
+			reward = _ani_reward_photo(meta, now, ANI_DAYCAST_PHOTO_MAX + int(round(e_esc * ANI_ACHE_PHOTO_EXTRA)))
+			if reward:
+				kind = reward.pop('_kind', 'photo')
+				messages.append(reward)
+				meta['daycast_last'] = now.isoformat()
+				meta['unseen_day_messages'] = True
+				meta['daycast_count'] = meta.get('daycast_count', 0) + 1
+				ani_save_conversation(messages, meta)
+				return f'{kind} sent'
+		except Exception as ex:
+			print(f"Ani reward-photo error: {ex}")
+
 		event_msg = ani_daycast_event_message(meta, now)
 		if event_msg:
 			meta['daycast_count'] = meta.get('daycast_count', 0) + 1
