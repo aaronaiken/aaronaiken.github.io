@@ -177,8 +177,20 @@ _ANI_PHOTO_REQUEST_SKIN_RE = re.compile(
 	r"\b(show|send|gimme|give me|let me see|lemme see|wanna see|flash)\b\s*(?:me\s+)?(?:some\s+)?"
 	r"\b(skin|your (?:body|figure|curves|tits|boobs|breasts|ass|butt|cleavage))\b", re.IGNORECASE)
 # Does he want it undressed? (nudity is in-bounds art per the boundary; sexual acts stay his to author.)
-_ANI_NUDE_REQUEST_RE = re.compile(
-	r"\b(nude|nudes|naked|topless|undressed|bare|no clothes|nothing on|show me some skin)\b", re.IGNORECASE)
+# Words in HIS message that read as "she's nude in this one". The base list is tasteful-nude vocabulary; an
+# operator can widen it (explicit anatomy terms, etc.) via ANI_NUDE_TRIGGERS_EXTRA (comma-separated) so that
+# vocabulary lives in the environment, off the repo.
+_ANI_NUDE_TERMS = ['nude', 'nudes', 'naked', 'topless', 'undressed', 'bare', 'no clothes', 'nothing on',
+                   'show me some skin']
+_ANI_NUDE_TERMS += [t.strip() for t in os.environ.get('ANI_NUDE_TRIGGERS_EXTRA', '').split(',') if t.strip()]
+_ANI_NUDE_REQUEST_RE = re.compile(r"\b(" + "|".join(re.escape(t) for t in _ANI_NUDE_TERMS) + r")\b", re.IGNORECASE)
+# Framing levers for the photos SHE sends (chat-photo + proactive). The STANDARD clause is an anti-artifact
+# crop — a POV-down selfie foreshortens the legs/feet toward the lens and tangles/duplicates the hands, so the
+# failure-prone lower body is kept out of frame; but that same crop removes the lap entirely, which is wrong for
+# a nude. The NUDE clause is used when the request/scene is a nude so a full-body art nude isn't cropped at the
+# waist. Both env-overridable so the explicit framing can be tuned operator-side.
+_ANI_CROP_STD = os.environ.get('ANI_SELFIE_FRAMING', 'waist-up upper-body framing with her feet and lap out of frame')
+_ANI_CROP_NUDE = os.environ.get('ANI_NUDE_FRAMING', 'full-length framing with her whole body in frame')
 # Is she HOME (vs out) — read from her live-state 'where'. Blank/unknown → treated as home (send openly).
 _ANI_AT_HOME_RE = re.compile(
 	r"\b(home|house|my place|apartment|flat|bed|bedroom|couch|sofa|kitchen|living room|bath|bathtub|shower)\b",
@@ -4650,18 +4662,15 @@ def ani_daycast_photo(meta, now, escalation=0.0):
 			scene = ctx + (', an intimate, tasteful art-nude selfie she took just for him because she misses him — '
 			               'showing skin, her top slipped open and off one shoulder with a soft tasteful nip-slip, '
 			               'bare skin and bare shoulders, vulnerable and needy, fine-art nude photography, warm '
-			               'intimate low light, waist-up upper-body framing with her feet and lap out of frame, '
-			               'camera at eye level (not angled down at her body)')
+			               'intimate low light, ' + _ANI_CROP_NUDE + ', camera at eye level (not angled down at her body)')
 		elif tease:
 			scene = ctx + (', a flirty teasing selfie just for him — showing off a little, playful and suggestive, '
-			               'in something cute and a little revealing, warm intimate light, waist-up upper-body '
-			               'framing with her feet and lap out of frame, camera at eye level (not angled down at '
-			               'her body)')
+			               'in something cute and a little revealing, warm intimate light, ' + _ANI_CROP_STD +
+			               ', camera at eye level (not angled down at her body)')
 		else:
 			outfit = (', wearing ' + wearing) if wearing else ''
-			scene = ctx + outfit + (', casual candid selfie, waist-up upper-body framing with her feet and lap '
-			                        'out of frame, camera at eye level (not angled down at her body), '
-			                        'natural daylight, fully clothed')
+			scene = ctx + outfit + (', casual candid selfie, ' + _ANI_CROP_STD + ', camera at eye level (not angled '
+			                        'down at her body), natural daylight, fully clothed')
 		url = ani_generate_image(scene)
 		if not url:
 			return None
@@ -4729,8 +4738,9 @@ def _ani_promise_photo(meta, now, eff_cap):
 	setting = where if where.lower().startswith(('at ', 'in ', 'on ', 'by ')) else ('at ' + where if where else 'at home')
 	body = ("a tasteful art-nude selfie, showing skin, bare and soft, fine-art nude photography" if wants_nude
 	        else "a warm, flirty selfie she took just for him")
+	crop = _ANI_CROP_NUDE if wants_nude else _ANI_CROP_STD
 	scene = (setting + ", " + body + ", finally home and making good on what she promised him earlier, warm "
-	         "intimate light, camera at eye level, waist-up upper-body framing with her feet and lap out of frame")
+	         "intimate light, camera at eye level, " + crop)
 	cap_instr = ("[you're finally home, and earlier while you were out you promised him a photo and made him wait "
 	             "— now you're making good on it. ONE short line, a little triumphant and flirty ('told you it'd be "
 	             "worth the wait'), your voice; don't describe the photo.]")
@@ -6652,6 +6662,7 @@ def _ani_make_chat_photo(user_message, meta, now, plan):
 	st = ani_load_state() or {}
 	where = (st.get('where') or 'at home').strip()
 	wants_nude = bool(_ANI_NUDE_REQUEST_RE.search(user_message or ''))
+	crop = _ANI_CROP_NUDE if wants_nude else _ANI_CROP_STD   # a nude isn't cropped waist-up; see the levers up top
 	# his specific ask, stripped of the imperative lead + the pic noun so it reads as a plain description
 	ask = re.sub(r"^\s*(?:hey\s+|babe\s+)?(?:can you |could you |would you |please |pls )?"
 	             r"(?:send|take|snap|show|gimme|give|flash)\s+(?:me\s+)?(?:a\s+|an\s+|some\s+|your\s+)?",
@@ -6663,8 +6674,7 @@ def _ani_make_chat_photo(user_message, meta, now, plan):
 		        "this out in public" if wants_nude else "playful and a little suggestive, teasing him")
 		extra = (', ' + ask) if ask and not wants_nude else ''
 		scene = ("a quick candid phone selfie she snuck away to take just for him, ducked somewhere private while "
-		         "out — " + body + extra + ", warm light, camera at eye level, waist-up upper-body framing with "
-		         "her feet and lap out of frame")
+		         "out — " + body + extra + ", warm light, camera at eye level, " + crop)
 	else:                        # HOME — open
 		setting = where if where.lower().startswith(('at ', 'in ', 'on ', 'by ')) else 'at ' + where
 		if wants_nude:
@@ -6674,8 +6684,7 @@ def _ani_make_chat_photo(user_message, meta, now, plan):
 			body = "a selfie she took just for him: " + ask[:140]
 		else:
 			body = "a warm, flirty selfie she took just for him"
-		scene = (setting + ", " + body + ", warm intimate light, camera at eye level, waist-up upper-body framing "
-		         "with her feet and lap out of frame")
+		scene = (setting + ", " + body + ", warm intimate light, camera at eye level, " + crop)
 	url = ani_generate_image(scene)
 	return (url, scene) if url else (None, None)
 
