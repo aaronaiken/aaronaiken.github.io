@@ -362,6 +362,10 @@ ANI_DAYCAST_EMOTIONAL_CHANCE = float(os.environ.get('ANI_DAYCAST_EMOTIONAL_CHANC
 # ambush ("come here"), a playful bratty-jealous poke, a little flirty game, soft affection, or out-of-nowhere
 # hype. Flavor is weighted by her ache (bratty/needy when he's been away). See _ani_flirty_spark_instruction.
 ANI_FLIRTY_SPARK_CHANCE = float(os.environ.get('ANI_FLIRTY_SPARK_CHANCE', '0.25'))
+# "She sends you things": a spontaneous, thoughtful SHARE from her world instead of a day update — a song that
+# made her think of him, a meme/funny thing she saw, or a little find (a sunset, a dog, a quote, a dress she
+# wants). The forwarding-you-things gap (selfies already covered by the candid path). See _ani_sends_thing_instruction.
+ANI_SENDS_THINGS_CHANCE = float(os.environ.get('ANI_SENDS_THINGS_CHANCE', '0.18'))
 # Reward photo: when aaron just published something, she SOMETIMES reacts with a proud celebratory selfie
 # instead of a plain text — "look how proud i am of you". Consumes the same pending_publish trigger + the
 # shared daily photo cap (see _ani_reward_photo).
@@ -4300,6 +4304,28 @@ def _ani_flirty_spark_instruction(escalation, time_str, variety=''):
 	return base + body + f" your voice, lowercase; don't re-greet him or restart your day.{variety}]"
 
 
+def _ani_sends_thing_instruction(time_str, variety=''):
+	"""One spontaneous 'sending you a little something' SHARE (NOT a day update): a song that made her think of
+	him, a meme/funny thing she saw, or a little find she wanted him to see. The forwarding-you-things she'd do
+	as a girlfriend. All text — warm, one short line, in her voice."""
+	flavor = random.choices(['song', 'meme', 'find'], weights=[4, 3, 3])[0]
+	base = (f"[it's now {time_str}. this is a SPONTANEOUS 'sending you a little something' text — NOT a day update, "
+	        f"do NOT recap your day. ")
+	if flavor == 'song':
+		body = ("a song came on / you've had it on repeat and it made you think of him — 'sending' it to him. name a "
+		        "REAL song + artist and say in a line why it's you two / why it got you. warm, like you're forwarding "
+		        "it. ONE short line (e.g. 'ok you HAVE to hear this — <song> by <artist>, it's so us 🎧').")
+	elif flavor == 'meme':
+		body = ("you saw something funny — a meme, a video, a dumb post — and it made you laugh and think of him. "
+		        "'forward' it: describe the funny thing in a line like you're showing it to him, tickled. ONE short "
+		        "line (e.g. 'saw this and immediately thought of you 😭 — <the funny thing>').")
+	else:  # find
+		body = ("a little thing from your day you wanted him to see — a sunset, a dog you passed, a quote that got "
+		        "you, a recipe, a dress you're eyeing. show it to him like 'look what i found', wishing he were here "
+		        "for it. ONE short line.")
+	return base + body + f" your voice, lowercase; don't re-greet him or restart your day.{variety}]"
+
+
 def ani_generate_day_update(meta, history, escalation=0.0):
 	"""Mid-day update: a short spontaneous message continuing her day, with continuity from the
 	morning plan and earlier updates (passed in via history). `escalation` (0..1, ache-driven) colors it
@@ -4336,6 +4362,7 @@ def ani_generate_day_update(meta, history, escalation=0.0):
 	beat = (ani_story_unspoken_beats(1) or [None])[0]
 	want_emotional = random.random() < ANI_DAYCAST_EMOTIONAL_CHANCE
 	want_spark = random.random() < ANI_FLIRTY_SPARK_CHANCE
+	want_thing = random.random() < ANI_SENDS_THINGS_CHANCE
 	told_ref = None
 	# TOP PRIORITY: if her live location has been frozen too long, force a cast that RELOCATES her (naming a new
 	# current place so _emit's state extractor advances her) — otherwise photos + backward beats leave her
@@ -4370,6 +4397,9 @@ def ani_generate_day_update(meta, history, escalation=0.0):
 	elif want_spark:
 		# FLIRTY SPARK — a spontaneous ambush / bratty poke / game / affection / hype instead of a day update.
 		instruction = _ani_flirty_spark_instruction(escalation, time_str, variety)
+	elif want_thing:
+		# SENDS-YOU-THINGS — a spontaneous thoughtful share (song / meme / little find) from her world.
+		instruction = _ani_sends_thing_instruction(time_str, variety)
 	elif want_emotional:
 		# EMOTIONAL BEAT — share something from her own inner world, not just her schedule.
 		instruction = (
