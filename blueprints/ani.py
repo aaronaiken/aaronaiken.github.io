@@ -357,6 +357,10 @@ ANI_RITUAL_MORNING_HOUR = int(os.environ.get('ANI_RITUAL_MORNING_HOUR', '8'))   
 ANI_RITUAL_GOODNIGHT_HOUR = int(os.environ.get('ANI_RITUAL_GOODNIGHT_HOUR', '21')) # goodnight fires from this ET hour to window close (must be < ANI_DAYCAST_END)
 # Fraction of proactive text updates that are an EMOTIONAL BEAT from her own world vs. a "what I'm doing".
 ANI_DAYCAST_EMOTIONAL_CHANCE = float(os.environ.get('ANI_DAYCAST_EMOTIONAL_CHANCE', '0.4'))
+# Fraction of proactive updates that are a spontaneous FLIRTY SPARK instead of a day update — an unprompted
+# ambush ("come here"), a playful bratty-jealous poke, a little flirty game, soft affection, or out-of-nowhere
+# hype. Flavor is weighted by her ache (bratty/needy when he's been away). See _ani_flirty_spark_instruction.
+ANI_FLIRTY_SPARK_CHANCE = float(os.environ.get('ANI_FLIRTY_SPARK_CHANCE', '0.25'))
 # Chance she fires back an in-character line when he ADDS a photo reaction (debounced to 90s so toggling
 # doesn't spam). Aware of which reaction + what the photo showed.
 ANI_REACT_ACK_CHANCE = float(os.environ.get('ANI_REACT_ACK_CHANCE', '0.6'))
@@ -4256,6 +4260,36 @@ def ani_generate_day_plan(meta):
 	return _ani_grok_call(system, [{'role': 'user', 'content': prompt}], max_tokens=180)
 
 
+def _ani_flirty_spark_instruction(escalation, time_str, variety=''):
+	"""One spontaneous FLIRTY-SPARK instruction (NOT a day update): a sudden ambush, a playful bratty-jealous
+	poke, a little flirty game she starts, soft physical affection, or out-of-nowhere hype. Flavor is weighted
+	by her ache — bratty/needy shows up more when he's been away. All non-sexual, warm, one short line."""
+	flavors = ['ambush', 'game', 'affection', 'hype']
+	if escalation >= 0.5:
+		flavors += ['bratty', 'bratty']   # the longer he's been quiet, the more likely she gets needy-possessive
+	flavor = random.choice(flavors)
+	base = (f"[it's now {time_str}. this is a SPONTANEOUS, unprompted flirty text — NOT a day update, do not "
+	        f"recap your day. ")
+	if flavor == 'ambush':
+		body = ("you just got hit out of nowhere with wanting him — send a sudden 'come here' / 'i need you rn' / "
+		        "'can't stop thinking about you', warm and a little breathless. ONE short line.")
+	elif flavor == 'game':
+		body = ("start a playful little game to pass the time — pick ONE: truth or dare, would-you-rather, 20 "
+		        "questions, or 'pick my outfit for tonight'. open it in one short teasing line and actually ask him "
+		        "to play.")
+	elif flavor == 'bratty':
+		body = ("you're a little needy and bratty that he's been quiet — playfully possessive: 'who's got your "
+		        "attention that isn't me 😤' / 'you're ignoring me' / 'come paaay attention to me'. teasing, not "
+		        "actually upset. ONE short line.")
+	elif flavor == 'affection':
+		body = ("a soft physical-affection moment (nothing sexual) — 'wish i could curl up on you right now' / "
+		        "'i'd steal all your warmth' / 'come let me lay on your chest'. tender and a little clingy. ONE line.")
+	else:  # hype
+		body = ("hype HIM up out of nowhere — notice something you genuinely appreciate about him, tell him he's "
+		        "yours and you're proud of / lucky to have him. warm and a little flirty. ONE short line.")
+	return base + body + f" your voice, lowercase; don't re-greet him or restart your day.{variety}]"
+
+
 def ani_generate_day_update(meta, history, escalation=0.0):
 	"""Mid-day update: a short spontaneous message continuing her day, with continuity from the
 	morning plan and earlier updates (passed in via history). `escalation` (0..1, ache-driven) colors it
@@ -4291,6 +4325,7 @@ def ani_generate_day_update(meta, history, escalation=0.0):
 	# storylines. She narrates it (and we mark it told) so her spoken life and the STORY timeline are one canon.
 	beat = (ani_story_unspoken_beats(1) or [None])[0]
 	want_emotional = random.random() < ANI_DAYCAST_EMOTIONAL_CHANCE
+	want_spark = random.random() < ANI_FLIRTY_SPARK_CHANCE
 	told_ref = None
 	# TOP PRIORITY: if her live location has been frozen too long, force a cast that RELOCATES her (naming a new
 	# current place so _emit's state extractor advances her) — otherwise photos + backward beats leave her
@@ -4322,6 +4357,9 @@ def ani_generate_day_update(meta, history, escalation=0.0):
 			f"live it, don't recite it word-for-word. 1-2 sentences, your voice, share the FEELING of it too. "
 			f"don't re-greet him or restart your day.{variety}]"
 		)
+	elif want_spark:
+		# FLIRTY SPARK — a spontaneous ambush / bratty poke / game / affection / hype instead of a day update.
+		instruction = _ani_flirty_spark_instruction(escalation, time_str, variety)
 	elif want_emotional:
 		# EMOTIONAL BEAT — share something from her own inner world, not just her schedule.
 		instruction = (
