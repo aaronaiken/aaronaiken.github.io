@@ -21,16 +21,11 @@ class TestRetry(unittest.TestCase):
         self.assertFalse(p.should_retry)
         self.assertEqual(p.note, "budget-exhausted")
 
-    def test_not_rear_escalates_via_recompile(self):
-        p = self.plan({"ok": False, "defect": "not_rear"}, spec=SceneSpec(rear=True))
-        self.assertTrue(p.should_retry)
+    def test_feet_glitch_recompiles_by_raising_steps(self):
+        # Foreshortened feet on a full-length nude → raise steps (clean_limbs) on the next compile.
+        p = self.plan({"ok": False, "defect": "feet_glitch"}, spec=SceneSpec(nude=True))
         self.assertTrue(p.recompile)
-        self.assertEqual(p.spec.escalations, {"rear_boost": 1})
-
-    def test_feet_glitch_recompiles_with_feet_fix(self):
-        p = self.plan({"ok": False, "defect": "feet_glitch"}, spec=SceneSpec(partner=True))
-        self.assertTrue(p.recompile)
-        self.assertEqual(p.spec.escalations, {"feet_fix": 1})
+        self.assertEqual(p.spec.escalations, {"clean_limbs": 1})
 
     def test_duplicate_merges_negative_no_recompile(self):
         p = self.plan({"ok": False, "defect": "duplicate"})

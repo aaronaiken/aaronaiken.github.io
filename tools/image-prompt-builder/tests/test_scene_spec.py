@@ -21,26 +21,26 @@ class TestSceneSpec(unittest.TestCase):
         self.assertEqual(spec.outfit, "cream sweater")
         self.assertTrue(spec.pose_complex)
         self.assertTrue(spec.clothed)
-        self.assertFalse(spec.partner)                        # default
+        self.assertFalse(spec.nude)                           # default
         self.assertEqual(spec.orientation, "landscape")
 
     def test_bad_orientation_falls_back(self):
         self.assertEqual(SceneSpec(orientation="sideways").orientation, "portrait")
 
     def test_matches_when_clause(self):
-        spec = SceneSpec(partner=True, rear=False)
+        spec = SceneSpec(nude=True, clothed=False)
         self.assertTrue(spec.matches({}))                     # empty = always
-        self.assertTrue(spec.matches({"partner": True}))
-        self.assertTrue(spec.matches({"partner": True, "rear": False}))
-        self.assertFalse(spec.matches({"partner": True, "rear": True}))
+        self.assertTrue(spec.matches({"nude": True}))
+        self.assertTrue(spec.matches({"nude": True, "clothed": False}))
+        self.assertFalse(spec.matches({"nude": True, "clothed": True}))
 
     def test_with_escalation_is_immutable_and_cumulative(self):
-        base = SceneSpec(rear=True)
-        once = base.with_escalation("rear_boost")
-        twice = once.with_escalation("rear_boost")
+        base = SceneSpec(nude=True)
+        once = base.with_escalation("clean_limbs")
+        twice = once.with_escalation("clean_limbs")
         self.assertEqual(base.escalations, {})                # original untouched
-        self.assertEqual(once.escalations, {"rear_boost": 1})
-        self.assertEqual(twice.escalations, {"rear_boost": 2})
+        self.assertEqual(once.escalations, {"clean_limbs": 1})
+        self.assertEqual(twice.escalations, {"clean_limbs": 2})
 
 
 if __name__ == "__main__":

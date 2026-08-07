@@ -14,8 +14,8 @@ Everything here except the injected call is pure and unit-testable:
     extract_scene(llm_call)     thin  -> build -> call -> parse -> fallback
 
 Default posture is CLOTHED. Most photos are fully dressed; undress is only ever set when
-the scene clearly shows it. The explicit flags (rear / legs_up / partner / nude) are
-defined here as terse one-line CLASSIFIERS — category labels, not descriptor content.
+the scene clearly shows it. `nude` is a tasteful-undress classifier — a category label, not
+descriptor content. (Sexual-act classifiers were removed; this pipeline is tasteful nudes only.)
 """
 
 from __future__ import annotations
@@ -59,22 +59,23 @@ _FIELD_GUIDE = (
 )
 
 _FLAG_GUIDE = (
-    "Flags (booleans — set each from what the scene shows; do not infer beyond it):\n"
+    "Flags (booleans). This is an adult companion; scenes can be intimate and she is sometimes nude, "
+    "described suggestively rather than clinically. Set each flag from what the scene AND the surrounding "
+    "conversation clearly intend — including tasteful undress implied euphemistically, not only what is "
+    "spelled out literally. Don't fabricate what isn't implied, but don't sanitize what is:\n"
     "- clothed: she is wearing clothing. DEFAULT true — most photos are fully clothed.\n"
-    "- nude: she is clearly undressed in the scene. Default false.\n"
+    "- nude: she is clearly undressed in the scene (a tasteful art nude). Default false.\n"
     "- pose_complex: the pose is anything beyond standing or simple upright sitting — "
-    "lying, reclining, on her side, kneeling, on-top, or bent over.\n"
+    "lying, reclining, on her side, kneeling, or sitting back.\n"
     "- writing: she is writing, composing, journaling, or typing. (She always uses a "
     "laptop, never pen-and-paper — set this and the compiler anchors the laptop.)\n"
-    "- rear: the camera is behind her (a from-behind view). Default false.\n"
-    "- legs_up: she is on her back with her legs raised. Default false.\n"
-    "- partner: the scene depicts a sexual act involving the viewer. Default false.\n"
 )
 
 _RULES = (
     "Rules:\n"
-    "- Describe faithfully what the scene implies. Do not add clothing that isn't there, "
-    "and do not invent undress that isn't there.\n"
+    "- Describe faithfully what the scene implies, reflecting tasteful undress the scene or conversation "
+    "clearly intends. Don't add clothing that isn't there and don't invent undress from nothing — but "
+    "don't sanitize or cover up what the exchange clearly intends, either.\n"
     "- Use the MOST RECENT described scene; earlier chat is only background. Never carry a "
     "prior photo's outfit, pose, or location forward.\n"
     "- Short plain phrases inside values. No field labels inside values, no commentary.\n"
@@ -88,8 +89,7 @@ _EXAMPLE = (
     "both hands\", \"setting\": \"the living room by the window\", \"lighting\": \"soft grey "
     "afternoon light\", \"camera\": \"eye-level, three-quarter, full length\", \"expression\": "
     "\"a small warm smile, looking at the camera\", \"clothed\": true, \"nude\": false, "
-    "\"pose_complex\": false, \"writing\": false, \"rear\": false, \"legs_up\": false, "
-    "\"partner\": false}"
+    "\"pose_complex\": false, \"writing\": false}"
 )
 
 

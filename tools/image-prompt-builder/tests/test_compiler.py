@@ -76,24 +76,13 @@ class TestCompiler(unittest.TestCase):
         self.assertIn("pen", req.negative)
         self.assertIn("handwriting", req.negative)
 
-    # --- explicit-payload profiles: STRUCTURAL behavior only (content left blank) ---
-    def test_partner_drops_solo_and_sets_qa(self):
-        req = self.compile(SceneSpec(partner=True))
-        self.assertNotIn("solo, a single woman", req.positive)   # solo guard inverted
-        self.assertTrue(req.partner_qa)
-        self.assertIn("partner", req.meta["applied_profiles"])
-        self.assertEqual(req.cfg, 4.5)                           # pose cfg
-
-    def test_rear_sets_rear_qa(self):
-        req = self.compile(SceneSpec(rear=True))
-        self.assertTrue(req.require_rear_qa)
-        self.assertIn("rear", req.meta["applied_profiles"])
-
-    def test_partner_feet_fix_pose_gated(self):
-        upright = self.compile(SceneSpec(partner=True, rear=False, legs_up=False))
-        self.assertIn("partner_feet_fix", upright.meta["applied_profiles"])
-        rear = self.compile(SceneSpec(partner=True, rear=True))
-        self.assertNotIn("partner_feet_fix", rear.meta["applied_profiles"])
+    # --- tasteful nude: fires the nude amplifier, stays solo, keeps the default skin cfg ---
+    def test_nude_fires_amplifier_and_stays_solo(self):
+        req = self.compile(SceneSpec(nude=True))
+        self.assertIn("nude", req.meta["applied_profiles"])
+        self.assertIn("fine-art nude photography", req.positive)
+        self.assertIn("solo, a single woman", req.positive)     # always solo — no act mode
+        self.assertEqual(req.cfg, 4.0)                          # default skin cfg
 
     def test_negative_accepts_comma_string(self):
         # A row whose `negative` is a single comma-string (an ani.py-style paste) is split.

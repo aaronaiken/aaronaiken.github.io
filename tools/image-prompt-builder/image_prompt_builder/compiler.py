@@ -49,15 +49,11 @@ def compile_scene(spec: SceneSpec, cfg: dict, *, subject_identity: str = "") -> 
     defaults = cfg["engine_defaults"]
     applied = matching_profiles(spec, cfg["profiles"])
 
-    drop_solo = any(p.get("drop_solo") for p in applied)
-    require_rear_qa = any(p.get("require_rear_qa") for p in applied)
-    partner_qa = any(p.get("partner_qa") for p in applied)
-
     # --- positive prompt: prefix + anchors + framing + scene body + extras + identity + suffix ---
-    anchors = []
-    if not drop_solo:
-        anchors.append(base["solo_anchor"])
-    for p in applied:                       # profile anchors (e.g. partner/rear leads)
+    # Solo anchor is always on (this pipeline is solo tasteful nudes / clothed). A profile may still
+    # add its own lead via `anchor`; none do today, but the mechanism stays general.
+    anchors = [base["solo_anchor"]]
+    for p in applied:
         if p.get("anchor"):
             anchors.append(p["anchor"])
 
@@ -84,9 +80,8 @@ def compile_scene(spec: SceneSpec, cfg: dict, *, subject_identity: str = "") -> 
     # --- engine dials: per-param resolution (see resolve_param docstring) ---
     the_cfg = resolve_param("cfg", applied, defaults, "cfg")
     steps = int(resolve_param("steps", applied, defaults, "steps"))
-    # Escalations set by the retry policy. `clean_limbs` is the one content-free knob the
-    # compiler honors directly (more steps clean up extremities); rear_boost / feet_fix are
-    # surfaced in meta for the operator's (payload) profile rows to key off.
+    # Escalations set by the retry policy. `clean_limbs` is the content-free knob the compiler
+    # honors directly — more steps clean up foreshortened extremities on the next attempt.
     esc = spec.escalations or {}
     if esc.get("clean_limbs"):
         steps += 5 * int(esc["clean_limbs"])
@@ -100,11 +95,8 @@ def compile_scene(spec: SceneSpec, cfg: dict, *, subject_identity: str = "") -> 
         steps=steps,
         width=int(width),
         height=int(height),
-        require_rear_qa=require_rear_qa,
-        partner_qa=partner_qa,
         meta={
             "applied_profiles": [p["id"] for p in applied],
-            "drop_solo": drop_solo,
             "escalations": dict(spec.escalations or {}),
         },
     )

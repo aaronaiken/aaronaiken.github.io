@@ -7,13 +7,12 @@ render + vision-QA + Bunny loop (`_ani_render_venice`) for both. That's the clea
 only the prompt changes, the render/QA/rehost stays identical.
 
 Flip per request (`{"pipeline": "v2"}` in the /ani/photo POST body) or globally via
-`ANI_IMAGE_PIPELINE=v2`. Venice-backend only for now — the profiles are tuned for the
-uncensored path. The explicit profile rows (rear/legs_up/partner) compile structurally
-even while blank, so the CLOTHED path is fully functional today and the explicit path
-comes online the moment those four rows are filled — no code change here.
+`ANI_IMAGE_PIPELINE=v2`. Venice-backend only for now. Lane: clothed + tasteful art nudes —
+the sexual-act rows this builder once carried (rear/legs_up/partner) were removed, so the
+clothed and tasteful-nude paths are all there is.
 
 This module contains no scene content: it is control flow + endpoint wiring. All prompt
-text comes from the builder package (SFW) + profiles.json (operator-filled payload).
+text comes from the builder package + profiles.json.
 """
 
 import os
@@ -107,8 +106,7 @@ def generate_photo_v2(messages, orientation="portrait"):
         bible_id = (bible_id + " " + _bust + ".").strip()
     req = compile_scene(spec, _cfg(), subject_identity=bible_id)
     applied = req.meta.get("applied_profiles", [])
-    print(f"Ani PIC v2 profiles={applied} cfg{req.cfg} {req.width}x{req.height} "
-          f"steps{req.steps} rear={req.require_rear_qa} partner={req.partner_qa}")
+    print(f"Ani PIC v2 profiles={applied} cfg{req.cfg} {req.width}x{req.height} steps{req.steps}")
 
     # Flags the extractor set — so the LOG shows *why* a scene rendered as it did (e.g. clothed=true
     # keeping her covered), not just the final prompt. INTENT_FLAGS live on the SceneSpec.
@@ -124,7 +122,6 @@ def generate_photo_v2(messages, orientation="portrait"):
     }
     url = _ani_render_venice(
         req.positive, req.negative, req.cfg, req.width, req.height, req.steps,
-        require_rear=req.require_rear_qa, scene=req.positive,
-        pose=("complex_pose" in applied), clothed=("clothed" in applied),
-        partner=req.partner_qa, info=info)
+        scene=req.positive, pose=("complex_pose" in applied),
+        clothed=("clothed" in applied), info=info)
     return url, req.positive

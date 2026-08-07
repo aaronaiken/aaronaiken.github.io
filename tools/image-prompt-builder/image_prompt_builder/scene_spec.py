@@ -23,7 +23,9 @@ from dataclasses import dataclass, field, asdict
 SCENE_FIELDS = ("hair", "outfit", "pose", "setting", "lighting", "camera", "expression")
 
 # The boolean intent flags. Set by the extractor; never re-derived from a string.
-INTENT_FLAGS = ("nude", "clothed", "rear", "legs_up", "partner", "writing", "pose_complex")
+# Lane: clothed / tasteful-nude / pose / writing. (The sexual-act flags this builder once
+# carried — rear / legs_up / partner — were removed; this pipeline is tasteful nudes only.)
+INTENT_FLAGS = ("nude", "clothed", "writing", "pose_complex")
 
 
 @dataclass
@@ -40,9 +42,6 @@ class SceneSpec:
     # --- intent flags (the compiler's branch inputs) ---
     nude: bool = False
     clothed: bool = False
-    rear: bool = False
-    legs_up: bool = False
-    partner: bool = False
     writing: bool = False
     pose_complex: bool = False
 
@@ -83,7 +82,7 @@ class SceneSpec:
 
     def with_escalation(self, key: str, amount: int = 1) -> "SceneSpec":
         """Return a copy with an escalation counter bumped. The retry policy uses these
-        to strengthen the next attempt (e.g. rear_boost) instead of re-rolling blind."""
+        to strengthen the next attempt (e.g. clean_limbs) instead of re-rolling blind."""
         d = asdict(self)
         esc = dict(d.get("escalations") or {})
         esc[key] = esc.get(key, 0) + amount

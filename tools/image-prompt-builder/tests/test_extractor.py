@@ -16,7 +16,7 @@ CLOTHED_JSON = (
     '{"hair": "loose waves", "outfit": "a cream sweater and jeans", "pose": "curled on the sofa", '
     '"setting": "the living room", "lighting": "soft afternoon light", "camera": "eye-level, full length", '
     '"expression": "a warm smile", "clothed": true, "nude": false, "pose_complex": false, '
-    '"writing": false, "rear": false, "legs_up": false, "partner": false}'
+    '"writing": false}'
 )
 
 

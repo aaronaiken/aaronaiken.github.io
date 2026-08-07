@@ -1,29 +1,48 @@
 {
-  "_comment": "Knowledge-as-data. Every hard-won lesson that used to live as a prose comment beside a regex now lives here as a row with a test pinning it. SFW rows are filled; rows marked \"_payload\": \"explicit\" are intentionally left blank for the operator to fill on their side (the builder is code, the explicit payload is data, and the data is the part that stays off this repo's Claude side).",
-
+  "_comment": "Knowledge-as-data. Committed PLACEHOLDER — the live profiles.json is skip-worktree (adult prompt text stays off the repo). Lane: clothed + tasteful art nudes; the sexual-act rows this file once carried (rear / legs_up / partner / partner_feet_fix) were removed.",
   "engine_defaults": {
     "cfg": 4.0,
     "cfg_clothed": 5.0,
     "cfg_pose": 4.5,
     "steps": 35,
     "steps_pose": 40,
-    "dims_portrait": [896, 1152],
-    "dims_landscape": [1152, 896]
+    "dims_portrait": [
+      896,
+      1152
+    ],
+    "dims_landscape": [
+      1152,
+      896
+    ]
   },
-
   "base": {
     "positive_prefix": "RAW photo, photorealistic, ",
     "framing": "full body shot. ",
     "positive_suffix": " Shot on DSLR, natural skin texture.",
     "solo_anchor": "solo, a single woman alone in the frame, only one person, ",
     "negative": [
-      "cartoon", "anime", "painting", "illustration", "drawing", "3d render", "cgi",
-      "deformed", "disfigured", "bad anatomy", "extra fingers", "mutated hands",
-      "blurry", "lowres", "watermark", "text", "logo", "airbrushed", "plastic skin",
+      "cartoon",
+      "anime",
+      "painting",
+      "illustration",
+      "drawing",
+      "3d render",
+      "cgi",
+      "deformed",
+      "disfigured",
+      "bad anatomy",
+      "extra fingers",
+      "mutated hands",
+      "blurry",
+      "lowres",
+      "watermark",
+      "text",
+      "logo",
+      "airbrushed",
+      "plastic skin",
       "oversaturated"
     ]
   },
-
   "profiles": [
     {
       "id": "dup_guard",
@@ -31,10 +50,24 @@
       "when": {},
       "priority": 10,
       "negative": [
-        "two women", "2 women", "multiple people", "multiple women", "duplicate",
-        "duplicated person", "twins", "extra person", "second person", "cloned person",
-        "two heads", "extra head", "multiple bodies", "conjoined", "group of people",
-        "crowd", "reflection", "mirror image"
+        "two women",
+        "2 women",
+        "multiple people",
+        "multiple women",
+        "duplicate",
+        "duplicated person",
+        "twins",
+        "extra person",
+        "second person",
+        "cloned person",
+        "two heads",
+        "extra head",
+        "multiple bodies",
+        "conjoined",
+        "group of people",
+        "crowd",
+        "reflection",
+        "mirror image"
       ]
     },
     {
@@ -43,99 +76,108 @@
       "when": {},
       "priority": 10,
       "negative": [
-        "extra limb", "extra leg", "third leg", "extra foot", "third foot", "extra arm",
-        "extra hand", "fused limbs", "malformed feet", "malformed hands", "deformed hands",
-        "extra fingers", "missing limb", "impossible anatomy", "distorted limbs",
-        "tangled limbs", "inverted feet", "backwards feet", "twisted ankles", "rotated foot",
-        "deformed toes", "disjointed ankle", "impossibly bent back", "contorted spine",
-        "broken back", "unnatural spine bend", "dislocated joints", "bent backwards",
+        "extra limb",
+        "extra leg",
+        "third leg",
+        "extra foot",
+        "third foot",
+        "extra arm",
+        "extra hand",
+        "fused limbs",
+        "malformed feet",
+        "malformed hands",
+        "deformed hands",
+        "extra fingers",
+        "missing limb",
+        "impossible anatomy",
+        "distorted limbs",
+        "tangled limbs",
+        "inverted feet",
+        "backwards feet",
+        "twisted ankles",
+        "rotated foot",
+        "deformed toes",
+        "disjointed ankle",
+        "impossibly bent back",
+        "contorted spine",
+        "broken back",
+        "unnatural spine bend",
+        "dislocated joints",
+        "bent backwards",
         "body bent the wrong way"
       ]
     },
-
     {
       "id": "clothed",
       "_note": "A garment must stay on: lead the render toward the outfit and hold it with higher cfg. Clothed wins the cfg contest over pose (matches old extra_neg branch).",
-      "when": {"clothed": true, "partner": false},
+      "when": {
+        "clothed": true
+      },
       "priority": 5,
       "cfg": "cfg_clothed",
       "positive_extra": "the named garments clearly worn and visible on her body.",
       "negative": []
     },
-
+    {
+      "id": "nude",
+      "_note": "Tasteful-nude amplifier (fires when nude). Filled locally as skip-worktree — adult prompt text stays off the repo; this committed copy is a blank placeholder.",
+      "when": {
+        "nude": true
+      },
+      "priority": 5,
+      "positive_extra": "",
+      "negative": []
+    },
     {
       "id": "complex_pose",
       "_note": "Lying / spread / kneeling / on-top needs a full-body frame, higher cfg, and extra steps to clean up extremities. cfg here yields to 'clothed' when both fire; steps is owned here.",
-      "when": {"pose_complex": true},
+      "when": {
+        "pose_complex": true
+      },
       "priority": 3,
       "cfg": "cfg_pose",
       "steps": "steps_pose",
       "_note_negative": "Overhead/top-down on a reclining body foreshortens into a shape the model completes with a second head/body. Pure camera-angle vocab, fully SFW.",
       "negative": [
-        "overhead shot", "top-down view", "top-down angle", "bird's eye view",
-        "aerial view", "high angle from above", "looking straight down", "drone shot",
-        "ceiling view", "foreshortened body"
+        "overhead shot",
+        "top-down view",
+        "top-down angle",
+        "bird's eye view",
+        "aerial view",
+        "high angle from above",
+        "looking straight down",
+        "drone shot",
+        "ceiling view",
+        "foreshortened body"
       ]
     },
-
     {
       "id": "writing",
       "_note": "She composes on a MacBook, never by hand. Anchor the laptop and negate the pen-and-paper attractor. Fully SFW — filled.",
-      "when": {"writing": true},
+      "when": {
+        "writing": true
+      },
       "priority": 4,
       "positive_extra": "hands on the keyboard typing on her open silver MacBook laptop, fingers resting on the keys, no pen or paper.",
       "negative": [
-        "pen", "pencil", "stylus", "fountain pen", "holding a pen", "holding a stylus",
-        "pen in hand", "writing implement", "hand on trackpad", "finger on touchpad",
-        "paper", "notebook", "stationery", "handwriting", "handwritten",
-        "writing by hand", "ink"
+        "pen",
+        "pencil",
+        "stylus",
+        "fountain pen",
+        "holding a pen",
+        "holding a stylus",
+        "pen in hand",
+        "writing implement",
+        "hand on trackpad",
+        "finger on touchpad",
+        "paper",
+        "notebook",
+        "stationery",
+        "handwriting",
+        "handwritten",
+        "writing by hand",
+        "ink"
       ]
-    },
-
-    {
-      "id": "rear",
-      "_payload": "explicit",
-      "_note": "From-behind framing. QA must reject front-facing renders (require_rear_qa). Fill anchor/positive_extra/negative (front-view push) on your side.",
-      "when": {"rear": true},
-      "priority": 6,
-      "require_rear_qa": true,
-      "anchor": "",
-      "positive_extra": "",
-      "negative": []
-    },
-
-    {
-      "id": "legs_up",
-      "_payload": "explicit",
-      "_note": "On-back legs-raised framing that avoids the second-inverted-face artifact. Fill positive_extra/negative on your side.",
-      "when": {"legs_up": true},
-      "priority": 6,
-      "positive_extra": "",
-      "negative": []
-    },
-
-    {
-      "id": "partner",
-      "_payload": "explicit",
-      "_note": "POV act with the viewer. INVERTS the solo guard (a partial second body is wanted): drop_solo=true, partner_qa=true, pose cfg/steps. Fill anchor/positive_extra/negative on your side.",
-      "when": {"partner": true},
-      "priority": 8,
-      "drop_solo": true,
-      "partner_qa": true,
-      "cfg": "cfg_pose",
-      "steps": "steps_pose",
-      "anchor": "",
-      "positive_extra": "",
-      "negative": []
-    },
-
-    {
-      "id": "partner_feet_fix",
-      "_payload": "explicit",
-      "_note": "Upright facing partner poses foreshorten feet up by the head. Pose-gated: applies only when partner AND NOT rear AND NOT legs_up. Fill negative on your side.",
-      "when": {"partner": true, "rear": false, "legs_up": false},
-      "priority": 9,
-      "negative": []
     }
   ]
 }
