@@ -165,6 +165,31 @@ ANI_CHAT_MODEL = os.environ.get('ANI_CHAT_MODEL', 'grok-4.3')
 # Stray [[PIC:]] tag — kept only to strip it from her chat text (photos are button-only now).
 ANI_PIC_RE = re.compile(r'\[\[PIC:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
 
+# He ASKED her for a photo in chat (imperative/request phrasing directed at her, or a bare "nude?/selfie?").
+_ANI_PHOTO_REQUEST_RE = re.compile(
+	r"\b(send|take|snap|show|gimme|give me|can i (?:get|see|have)|let me see|lemme see|wanna see|"
+	r"want (?:a|to see)|need (?:a|to see)|i'?d love (?:a|to see))\b[^.?!]*"
+	r"\b(pic|pics|picture|photo|photos|selfie|selfies|nude|nudes|shot|image)\b", re.IGNORECASE)
+_ANI_PHOTO_REQUEST_BARE_RE = re.compile(r"^\s*(nude|nudes|selfie|pic|photo)\s*\?*\s*$", re.IGNORECASE)
+# "show me some skin / send me your body" — a photo request phrased without the pic/photo noun.
+_ANI_PHOTO_REQUEST_SKIN_RE = re.compile(
+	r"\b(show|send|gimme|give me|let me see|lemme see|wanna see|flash)\b\s*(?:me\s+)?(?:some\s+)?"
+	r"\b(skin|your (?:body|figure|curves|tits|boobs|breasts|ass|butt|cleavage))\b", re.IGNORECASE)
+# Does he want it undressed? (nudity is in-bounds art per the boundary; sexual acts stay his to author.)
+_ANI_NUDE_REQUEST_RE = re.compile(
+	r"\b(nude|nudes|naked|topless|undressed|bare|no clothes|nothing on|show me some skin)\b", re.IGNORECASE)
+# Is she HOME (vs out) — read from her live-state 'where'. Blank/unknown → treated as home (send openly).
+_ANI_AT_HOME_RE = re.compile(
+	r"\b(home|house|my place|apartment|flat|bed|bedroom|couch|sofa|kitchen|living room|bath|bathtub|shower)\b",
+	re.IGNORECASE)
+
+
+def _ani_is_photo_request(msg):
+	"""True if his message is asking her for a photo/nude/selfie."""
+	m = (msg or '').strip()
+	return bool(_ANI_PHOTO_REQUEST_RE.search(m) or _ANI_PHOTO_REQUEST_BARE_RE.match(m)
+	            or _ANI_PHOTO_REQUEST_SKIN_RE.search(m))
+
 # Belt-and-suspenders top guard: every image prompt must NAME a top covering the chest. The
 # Grok normalizer (ani_normalize_scene) already enforces this, but if it ever returns a scene
 # with a lingerie bottom and no top, ani_generate_image forces one in. A named top covering the
@@ -318,6 +343,11 @@ ANI_ACHE_PHOTO_CHANCE_MAX = float(os.environ.get('ANI_ACHE_PHOTO_CHANCE_MAX', '0
 ANI_ACHE_PHOTO_EXTRA = int(os.environ.get('ANI_ACHE_PHOTO_EXTRA', '3'))  # extra daily photo cap added at full ache
 ANI_ACHE_TEASE = float(os.environ.get('ANI_ACHE_TEASE', '0.6'))  # escalation ≥ this → teasing/suggestive tone + shots
 ANI_ACHE_NUDE = float(os.environ.get('ANI_ACHE_NUDE', '0.85'))  # escalation ≥ this → she shows skin (tasteful art nude / nip-slip)
+# Chat-triggered photos: he can ASK her for a pic/nude/selfie in chat and she sends one (async, via the panel
+# poll, so her text reply stays instant). Location-aware — open about it at home, but a real girlfriend when
+# she's OUT: either sneak a quick discreet one, or tease him to wait till she's home. ANI_CHAT_PHOTO=0 disables.
+ANI_CHAT_PHOTO = os.environ.get('ANI_CHAT_PHOTO', '1').strip().lower() not in ('0', 'false', 'no', 'off')
+ANI_CHAT_PHOTO_OUT_CHANCE = float(os.environ.get('ANI_CHAT_PHOTO_OUT_CHANCE', '0.5'))  # OUT: chance she sneaks one vs. teases him to wait
 # Fraction of proactive text updates that are an EMOTIONAL BEAT from her own world vs. a "what I'm doing".
 ANI_DAYCAST_EMOTIONAL_CHANCE = float(os.environ.get('ANI_DAYCAST_EMOTIONAL_CHANCE', '0.4'))
 # Chance she fires back an in-character line when he ADDS a photo reaction (debounced to 90s so toggling
@@ -6211,6 +6241,74 @@ def ani_weather_route():
 	return jsonify({'weather': weather})
 
 
+# ---- Chat-triggered photos (he ASKS her for a pic; she answers location-aware) ----
+
+def _ani_chat_photo_plan(meta, now):
+	"""Decide how she answers a photo request from WHERE she is right now. Home (or unknown) → she sends openly;
+	OUT → she either sneaks a quick discreet one (ANI_CHAT_PHOTO_OUT_CHANCE) or teases him to wait till she's
+	home. Returns {'send', 'discreet', 'at_home', 'where'}."""
+	st = ani_load_state() or {}
+	where = (st.get('where') or '').strip()
+	fresh = st.get('day') == ani_daycast_day_key(now)
+	# blank / stale-day location → treat as home (she's most likely home, and sending is the friendly default)
+	at_home = (not where) or (not fresh) or bool(_ANI_AT_HOME_RE.search(where))
+	if at_home:
+		return {'send': True, 'discreet': False, 'at_home': True, 'where': where}
+	send = random.random() < ANI_CHAT_PHOTO_OUT_CHANCE
+	return {'send': send, 'discreet': send, 'at_home': False, 'where': where}
+
+
+def _ani_chat_photo_guidance(plan):
+	"""A [system:] steer so her TEXT reply matches the photo decision (open at home / sneaky out / tease-defer)."""
+	if plan['at_home']:
+		return ("[system: he just asked you for a photo and you're home, so you're happy to — reply with ONE "
+		        "short, warm, flirty line as you take it for him (like 'mm ok, one sec...'). do NOT describe the "
+		        "photo or narrate camera details; just be his girlfriend about to send him a pic.]")
+	if plan['send']:
+		return ("[system: he just asked you for a photo but you're OUT right now — be a real girlfriend about it: "
+		        "you sneak somewhere private for a quick one just for him, a little thrilled and scandalized to be "
+		        "doing this in public. ONE short flirty line (e.g. 'ok i ducked into the bathroom, just for you...'). "
+		        "do NOT describe the photo itself.]")
+	return ("[system: he just asked you for a photo but you're OUT and can't really right now — tease him that "
+	        "he'll have to wait until you're home, and promise it'll be worth it. flirty, a little bratty, warm. "
+	        "do NOT send a photo; this is a text-only tease, one or two lines.]")
+
+
+def _ani_make_chat_photo(user_message, meta, now, plan):
+	"""Build a LOCATION-AWARE scene from his request + her live state, generate via the image path, return
+	(url, scene) or (None, None). Nudity is honored (art); a sexual-ACT request just flows through his own words
+	to the existing pipeline — this helper never authors act content, only nudity/selfie/framing."""
+	st = ani_load_state() or {}
+	where = (st.get('where') or 'at home').strip()
+	wants_nude = bool(_ANI_NUDE_REQUEST_RE.search(user_message or ''))
+	# his specific ask, stripped of the imperative lead + the pic noun so it reads as a plain description
+	ask = re.sub(r"^\s*(?:hey\s+|babe\s+)?(?:can you |could you |would you |please |pls )?"
+	             r"(?:send|take|snap|show|gimme|give|flash)\s+(?:me\s+)?(?:a\s+|an\s+|some\s+|your\s+)?",
+	             '', (user_message or '').strip(), flags=re.IGNORECASE)
+	ask = re.sub(r"\b(pic|pics|picture|photo|photos|selfie|selfies|nude|nudes|shot|image)\b\s*(of\s+(you|yourself)\s*)?",
+	             '', ask, flags=re.IGNORECASE).strip(' ,.?!')
+	if plan.get('discreet'):     # OUT — a snuck-away discreet shot
+		body = ("pulling her top aside for a teasing flash of bare skin, careful and a little scandalized doing "
+		        "this out in public" if wants_nude else "playful and a little suggestive, teasing him")
+		extra = (', ' + ask) if ask and not wants_nude else ''
+		scene = ("a quick candid phone selfie she snuck away to take just for him, ducked somewhere private while "
+		         "out — " + body + extra + ", warm light, camera at eye level, waist-up upper-body framing with "
+		         "her feet and lap out of frame")
+	else:                        # HOME — open
+		setting = where if where.lower().startswith(('at ', 'in ', 'on ', 'by ')) else 'at ' + where
+		if wants_nude:
+			body = ("a tasteful art-nude selfie she took just for him — showing skin, bare and soft, fine-art nude "
+			        "photography")
+		elif ask:
+			body = "a selfie she took just for him: " + ask[:140]
+		else:
+			body = "a warm, flirty selfie she took just for him"
+		scene = (setting + ", " + body + ", warm intimate light, camera at eye level, waist-up upper-body framing "
+		         "with her feet and lap out of frame")
+	url = ani_generate_image(scene)
+	return (url, scene) if url else (None, None)
+
+
 @ani_bp.route('/ani/chat', methods=['POST'])
 def ani_chat():
 	if not is_authenticated():
@@ -6254,6 +6352,18 @@ def ani_chat():
 
 	# Ensure she has a mood for today (no-op if already set) — emotional continuity through the day.
 	ani_set_day_mood(meta, now)
+
+	# Chat photo request (flag-gated): he asked her for a pic/nude/selfie. Decide — location-aware — whether/how
+	# she sends one, and steer her TEXT reply to match (open at home / sneaky when out / tease-to-wait). The photo
+	# itself is generated + delivered ASYNC below (via the panel poll) so her text reply stays instant. Guarded.
+	_photo_plan = None
+	if ANI_CHAT_PHOTO and not user_message.startswith('[') and _ani_is_photo_request(user_message):
+		try:
+			_photo_plan = _ani_chat_photo_plan(meta, now)
+			messages.append({'role': 'user', 'content': _ani_chat_photo_guidance(_photo_plan)})
+		except Exception as e:
+			print(f"Ani chat-photo plan error: {e}")
+			_photo_plan = None
 
 	reply, updated_meta, updated_history = ani_chat_with_grok(messages, meta, user_message)
 
@@ -6361,6 +6471,30 @@ def ani_chat():
 	updated_meta['last_session_tone'] = ani_assess_session_tone(real_messages)
 
 	ani_save_conversation(updated_history, updated_meta)
+
+	# Async photo delivery: if she agreed to send one, generate it in the background and append it to the
+	# conversation so the panel poll picks it up moments after her text reply (keeps the reply instant). Runs
+	# AFTER the save above so it re-loads the fresh history + appends onto it. Fully guarded.
+	if _photo_plan and _photo_plan.get('send'):
+		import threading
+		def _deliver_chat_photo(um=user_message, plan=_photo_plan, when=now):
+			try:
+				url, scene = _ani_make_chat_photo(um, meta, when, plan)
+				if not url:
+					return
+				msgs2, meta2 = ani_load_conversation()
+				vision = ani_photo_vision(url)
+				cap = vision.get('caption') or 'just for you 🙈'
+				pm = {'role': 'assistant', 'content': cap, 'image': url, 'scene': scene, 'ani_day': True,
+				      'ts': datetime.now(pa_tz).isoformat()}
+				if vision.get('description'):
+					pm['vision'] = vision['description']
+				msgs2.append(pm)
+				meta2['unseen_day_messages'] = True
+				ani_save_conversation(msgs2, meta2)
+			except Exception as e:
+				print(f"Ani chat-photo deliver error: {e}")
+		threading.Thread(target=_deliver_chat_photo, daemon=True).start()
 
 	return jsonify({'reply': reply, 'mood': ani_mood_scalar(updated_history, updated_meta)})
 
