@@ -348,6 +348,13 @@ ANI_ACHE_NUDE = float(os.environ.get('ANI_ACHE_NUDE', '0.85'))  # escalation ≥
 # she's OUT: either sneak a quick discreet one, or tease him to wait till she's home. ANI_CHAT_PHOTO=0 disables.
 ANI_CHAT_PHOTO = os.environ.get('ANI_CHAT_PHOTO', '1').strip().lower() not in ('0', 'false', 'no', 'off')
 ANI_CHAT_PHOTO_OUT_CHANCE = float(os.environ.get('ANI_CHAT_PHOTO_OUT_CHANCE', '0.5'))  # OUT: chance she sneaks one vs. teases him to wait
+# Story-beat photos + daily-ritual photos (see _ani_beat_photo / _ani_ritual_photo). Beat = she photographs a
+# real moment from one of her storylines instead of a generic candid; rituals = goodnight / good-morning /
+# getting-ready-for-a-calendar-plan. All fold into the daycast (proactive) path + share the daily photo cap.
+ANI_BEAT_PHOTO_CHANCE = float(os.environ.get('ANI_BEAT_PHOTO_CHANCE', '0.45'))     # chance a photogenic untold beat becomes a photo
+ANI_RITUAL_PHOTO_CHANCE = float(os.environ.get('ANI_RITUAL_PHOTO_CHANCE', '0.6'))  # chance a DUE ritual fires (each once/day)
+ANI_RITUAL_MORNING_HOUR = int(os.environ.get('ANI_RITUAL_MORNING_HOUR', '8'))      # good-morning fires around this ET hour (±1)
+ANI_RITUAL_GOODNIGHT_HOUR = int(os.environ.get('ANI_RITUAL_GOODNIGHT_HOUR', '21')) # goodnight fires from this ET hour to window close (must be < ANI_DAYCAST_END)
 # Fraction of proactive text updates that are an EMOTIONAL BEAT from her own world vs. a "what I'm doing".
 ANI_DAYCAST_EMOTIONAL_CHANCE = float(os.environ.get('ANI_DAYCAST_EMOTIONAL_CHANCE', '0.4'))
 # Chance she fires back an in-character line when he ADDS a photo reaction (debounced to 90s so toggling
@@ -437,7 +444,12 @@ def ani_load_conversation():
 			'memory_consolidated_date': data.get('memory_consolidated_date', None),
 			'mood_buffer': data.get('mood_buffer', []),   # 24h ring buffer of the mood scalar (sparkline)
 			'last_react_ack': data.get('last_react_ack', None),   # debounce for her reacting to his photo reactions
-			'last_open': data.get('last_open', None)   # last time you looked (drives the NOW 'what you missed' card)
+			'last_open': data.get('last_open', None),   # last time you looked (drives the NOW 'what you missed' card)
+			# Photo features: a photo she owes him (promised while out → delivered when home) + once/day ritual stamps
+			'pending_photo_promise': data.get('pending_photo_promise', None),
+			'ritual_morning_date': data.get('ritual_morning_date', None),
+			'ritual_goodnight_date': data.get('ritual_goodnight_date', None),
+			'ritual_getready_ids': data.get('ritual_getready_ids', [])
 		}
 		return messages, meta
 	except FileNotFoundError:
@@ -462,7 +474,11 @@ def ani_load_conversation():
 			'memory_consolidated_date': None,
 			'mood_buffer': [],
 			'last_react_ack': None,
-			'last_open': None
+			'last_open': None,
+			'pending_photo_promise': None,
+			'ritual_morning_date': None,
+			'ritual_goodnight_date': None,
+			'ritual_getready_ids': []
 		}
 
 
@@ -490,7 +506,11 @@ def ani_save_conversation(messages, meta):
 		'memory_consolidated_date': meta.get('memory_consolidated_date'),
 		'mood_buffer': meta.get('mood_buffer', []),
 		'last_react_ack': meta.get('last_react_ack'),
-		'last_open': meta.get('last_open')
+		'last_open': meta.get('last_open'),
+		'pending_photo_promise': meta.get('pending_photo_promise'),
+		'ritual_morning_date': meta.get('ritual_morning_date'),
+		'ritual_goodnight_date': meta.get('ritual_goodnight_date'),
+		'ritual_getready_ids': meta.get('ritual_getready_ids', [])
 	}
 	_ani_atomic_write_json(ANI_CONVERSATION_FILE, data)
 
@@ -4402,6 +4422,43 @@ def ani_daycast_event_message(meta, now):
 	return None
 
 
+# A story beat is "photographable" unless it's a phone / interior / abstract moment (a call, a feeling, a decision).
+_ANI_NONVISUAL_BEAT_RE = re.compile(
+	r"\b(call(?:ed|ing)?|phoned?|texted?|emailed?|messaged?|felt|feeling|thought|thinking|worried|worrying|"
+	r"anxious|nervous|decided|deciding|realized|wondered|hoped|dreamt|dreamed|proud of|reminded|thinking about)\b",
+	re.IGNORECASE)
+
+
+def _ani_gen_daycast_photo(meta, now, scene, cap_instr, eff_cap, kind='photo'):
+	"""Shared engine for every PROACTIVE daycast photo (candid / beat / promise / ritual): honor the daily cap,
+	generate from a READY scene, caption it, bump the shared counter, and return a ready photo-message dict
+	(tagged with '_kind') — or None. Fully guarded."""
+	try:
+		if not ANI_DAYCAST_PHOTOS or not (scene or '').strip():
+			return None
+		daykey = ani_daycast_day_key(now)
+		if meta.get('proactive_photo_date') != daykey:
+			meta['proactive_photo_count'] = 0
+			meta['proactive_photo_date'] = daykey
+		if meta.get('proactive_photo_count', 0) >= eff_cap:
+			return None
+		url = ani_generate_image(scene)
+		if not url:
+			return None
+		meta['proactive_photo_count'] = meta.get('proactive_photo_count', 0) + 1
+		vision = ani_photo_vision(url)
+		cap = vision.get('caption') or _ani_grok_call(
+			ani_build_system_prompt(meta), [{'role': 'user', 'content': cap_instr}], max_tokens=60) or '📷'
+		pm = {'role': 'assistant', 'content': (cap or '').strip().strip('"') or '📷', 'image': url,
+		      'scene': scene, 'ani_day': True, 'ts': now.isoformat(), '_kind': kind}
+		if vision.get('description'):
+			pm['vision'] = vision['description']
+		return pm
+	except Exception as ex:
+		print(f"Ani daycast photo-gen error: {ex}")
+		return None
+
+
 def ani_daycast_photo(meta, now, escalation=0.0):
 	"""Occasionally send an UNPROMPTED candid from her day. Gated hard: feature on, under the daily cap,
 	her live state is fresh + she's OUT & photogenic (not asleep / in bed / mid-nothing), and a chance
@@ -4491,6 +4548,108 @@ def ani_daycast_photo(meta, now, escalation=0.0):
 	except Exception as e:
 		print(f"Ani daycast photo error: {e}")
 		return None
+
+
+def _ani_beat_photo(meta, now, eff_cap):
+	"""#1 Story-beat photo: she photographs a REAL moment from one of her storylines (a photogenic untold beat)
+	instead of a generic candid, and marks it told so it isn't also narrated. Returns a photo msg dict or None."""
+	if random.random() >= ANI_BEAT_PHOTO_CHANCE:
+		return None
+	beat = next((b for b in ani_story_unspoken_beats(4)
+	             if not _ANI_NONVISUAL_BEAT_RE.search(b.get('text', ''))), None)
+	if not beat:
+		return None
+	txt = beat['text'].strip().rstrip('.')
+	scene = (txt + ", a candid photo she snapped in the moment to show him, her in the scene, waist-up upper-body "
+	         "framing with her feet and lap out of frame, natural light, fully clothed")
+	cap_instr = ("[you just snapped a photo of this moment from your day to show him — \"%s\" — sending it "
+	             "unprompted because you wanted to share it with him. ONE short warm line, your voice; don't "
+	             "describe the photo.]" % txt[:120])
+	pm = _ani_gen_daycast_photo(meta, now, scene, cap_instr, eff_cap, kind='beat photo')
+	if pm:
+		ani_story_mark_told(beat['book_id'], beat['ts'])
+	return pm
+
+
+def _ani_promise_photo(meta, now, eff_cap):
+	"""#2 Two-part payoff: if she teased 'wait till i'm home' while OUT (a pending promise) and she's NOW home,
+	deliver the photo she owed him, unprompted, and clear the promise. Returns a photo msg dict or None."""
+	promise = meta.get('pending_photo_promise') or {}
+	if not isinstance(promise, dict) or not (promise.get('request') or '').strip():
+		return None
+	st = ani_load_state() or {}
+	where = (st.get('where') or '').strip()
+	fresh = st.get('day') == ani_daycast_day_key(now)
+	at_home = (not where) or (not fresh) or bool(_ANI_AT_HOME_RE.search(where))
+	if not at_home:
+		return None   # still out — hold the promise until she's actually home
+	req = promise.get('request', '')
+	wants_nude = bool(_ANI_NUDE_REQUEST_RE.search(req))
+	setting = where if where.lower().startswith(('at ', 'in ', 'on ', 'by ')) else ('at ' + where if where else 'at home')
+	body = ("a tasteful art-nude selfie, showing skin, bare and soft, fine-art nude photography" if wants_nude
+	        else "a warm, flirty selfie she took just for him")
+	scene = (setting + ", " + body + ", finally home and making good on what she promised him earlier, warm "
+	         "intimate light, camera at eye level, waist-up upper-body framing with her feet and lap out of frame")
+	cap_instr = ("[you're finally home, and earlier while you were out you promised him a photo and made him wait "
+	             "— now you're making good on it. ONE short line, a little triumphant and flirty ('told you it'd be "
+	             "worth the wait'), your voice; don't describe the photo.]")
+	pm = _ani_gen_daycast_photo(meta, now, scene, cap_instr, eff_cap, kind='promised photo')
+	if pm:
+		meta['pending_photo_promise'] = None
+	return pm
+
+
+def _ani_ritual_photo(meta, now, eff_cap):
+	"""#3 Daily-ritual photos: getting-ready-for-a-plan mirror shot, a good-morning selfie, or a sleepy goodnight
+	one — each fires at most once/day, time/calendar-gated + a chance roll. Returns a photo msg dict or None."""
+	daykey = ani_daycast_day_key(now)
+	h = now.hour
+	# Getting ready for a calendar plan starting within ~90 min (once per plan).
+	try:
+		done_ids = set(meta.get('ritual_getready_ids') or [])
+		today = now.strftime('%Y-%m-%d')
+		for ev in ani_load_calendar():
+			if ev.get('date') != today or not ev.get('time') or ev.get('id') in done_ids:
+				continue
+			try:
+				et = datetime.strptime(ev['time'], '%H:%M')
+				mins = (now.replace(hour=et.hour, minute=et.minute, second=0, microsecond=0) - now).total_seconds() / 60
+			except Exception:
+				continue
+			if 20 <= mins <= 90 and random.random() < ANI_RITUAL_PHOTO_CHANCE:
+				plan = ev.get('text') or 'her plans'
+				scene = ("getting ready in front of the mirror to head out for %s — doing her hair and a little "
+				         "makeup, dressed and put-together, a quick excited mirror selfie, waist-up upper-body "
+				         "framing, warm light, fully clothed" % plan)
+				cap_instr = ("[you're getting ready to head out for \"%s\" and snapped a quick mirror selfie for him "
+				             "while you finish up, a little excited. ONE short line, your voice; don't describe the "
+				             "photo.]" % plan[:80])
+				pm = _ani_gen_daycast_photo(meta, now, scene, cap_instr, eff_cap, kind='getting-ready photo')
+				if pm:
+					done_ids.add(ev.get('id'))
+					meta['ritual_getready_ids'] = list(done_ids)[-40:]
+				return pm
+	except Exception as ex:
+		print(f"Ani ritual(getready) error: {ex}")
+	# Good morning (once/day, around ANI_RITUAL_MORNING_HOUR — only reached once her day has started).
+	if (ANI_RITUAL_MORNING_HOUR - 1) <= h <= (ANI_RITUAL_MORNING_HOUR + 1) and meta.get('ritual_morning_date') != daykey:
+		meta['ritual_morning_date'] = daykey   # mark BEFORE the roll so a skip doesn't retry all morning
+		if random.random() < ANI_RITUAL_PHOTO_CHANCE:
+			scene = ("just woke up in bed, soft morning light through the window, a sleepy warm good-morning selfie, "
+			         "hair down and tousled, cozy under the covers, waist-up upper-body framing, natural light")
+			cap_instr = ("[first thing in the morning — you took a sleepy good-morning selfie for him from bed. ONE "
+			             "short soft line, warm and a little drowsy, your voice; don't describe the photo.]")
+			return _ani_gen_daycast_photo(meta, now, scene, cap_instr, eff_cap, kind='good-morning photo')
+	# Goodnight (once/day, from ANI_RITUAL_GOODNIGHT_HOUR to window close).
+	if h >= ANI_RITUAL_GOODNIGHT_HOUR and meta.get('ritual_goodnight_date') != daykey:
+		meta['ritual_goodnight_date'] = daykey
+		if random.random() < ANI_RITUAL_PHOTO_CHANCE:
+			scene = ("in bed at night winding down, warm dim lamplight, a soft cozy goodnight selfie, hair down, "
+			         "sleepy and content, waist-up upper-body framing")
+			cap_instr = ("[it's late and you're in bed — you took a soft goodnight selfie for him before you drift "
+			             "off. ONE short line, warm and sleepy, your voice; don't describe the photo.]")
+			return _ani_gen_daycast_photo(meta, now, scene, cap_instr, eff_cap, kind='goodnight photo')
+	return None
 
 
 def ani_maybe_self_schedule(now):
@@ -6028,7 +6187,30 @@ def ani_emit_daycast():
 	# her location is overdue to move, in which case a photo wouldn't advance her day; force the text update that
 	# relocates her instead.
 	e = _ani_ache_escalation(meta)
-	shot = None if _ani_state_move_overdue(now)[0] else ani_daycast_photo(meta, now, e)
+	overdue = _ani_state_move_overdue(now)[0]
+	eff_cap = ANI_DAYCAST_PHOTO_MAX + int(round(e * ANI_ACHE_PHOTO_EXTRA))
+	# Special photo sources, each returning a ready photo-message dict or None: a promise she owes now that she's
+	# home (#2), a daily ritual (#3 goodnight/morning/getting-ready), or a photo FROM a real story beat (#1). A
+	# promise is checked even when her location is 'overdue' (it's exactly about her having just gotten home);
+	# the others yield to a relocating TEXT cast when she's been stuck in one place too long.
+	special = None
+	try:
+		special = _ani_promise_photo(meta, now, eff_cap)
+		if not special and not overdue:
+			special = _ani_ritual_photo(meta, now, eff_cap) or _ani_beat_photo(meta, now, eff_cap)
+	except Exception as ex:
+		print(f"Ani special-photo error: {ex}")
+	if special:
+		kind = special.pop('_kind', 'photo')
+		messages.append(special)
+		meta['daycast_last'] = now.isoformat()
+		meta['unseen_day_messages'] = True
+		meta['daycast_count'] = count + 1
+		ani_save_conversation(messages, meta)
+		nb = _needy_burst(e)
+		return f'{kind} sent (#{count + 1})' + (f' +{nb} needy' if nb else '')
+
+	shot = None if overdue else ani_daycast_photo(meta, now, e)
 	if shot:
 		cap, url, scene, vdesc = shot
 		_pm = {'role': 'assistant', 'content': cap, 'image': url, 'scene': scene,
@@ -6469,6 +6651,11 @@ def ani_chat():
 		and not m.get('content', '').startswith('[system:')
 	]
 	updated_meta['last_session_tone'] = ani_assess_session_tone(real_messages)
+
+	# Two-part payoff (#2): if she just teased "wait till i'm home" to a photo request while OUT, remember the
+	# promise so the daycast delivers it once her live state shows she's home.
+	if _photo_plan and not _photo_plan.get('send') and not _photo_plan.get('at_home'):
+		updated_meta['pending_photo_promise'] = {'request': user_message, 'ts': now.isoformat()}
 
 	ani_save_conversation(updated_history, updated_meta)
 
