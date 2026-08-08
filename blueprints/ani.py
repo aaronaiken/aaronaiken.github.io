@@ -77,6 +77,12 @@ ANI_LIFE_FILE = 'static/ani_life.txt'   # her OWN life: friends, hobbies, standi
 # Life-grow tag: she emits [[LIFE: the new thing]] when her own world genuinely shifts (a new hobby, a
 # plan with a friend, finishing a book); the server appends it to her life file and strips it from her reply.
 ANI_LIFE_RE = re.compile(r'\[\[LIFE:\s*(.+?)\]\]', re.IGNORECASE | re.DOTALL)
+# Life-enrichment pass: on a slow cadence, look at what's genuinely SETTLED in her life (advanced story-books,
+# durable memories) and PROPOSE small evolutions to her life file — new standing facts + updates to stale lines
+# — into Aaron's approval queue (never silent). Keeps her foundational life COMPOUNDING instead of frozen.
+ANI_LIFE_ENRICH_FILE = 'ani_life_enrich.json'                                   # tiny marker: last-run date
+ANI_LIFE_ENRICH_MIN_DAYS = int(os.environ.get('ANI_LIFE_ENRICH_MIN_DAYS', '7')) # at most once per week
+ANI_LIFE_ENRICH_MAX = int(os.environ.get('ANI_LIFE_ENRICH_MAX', '3'))           # proposals queued per run
 
 # Storylines: named ongoing threads in HER OWN world (a friend's situation, a project) that EVOLVE over
 # days — updated in place, not appended, so her life visibly progresses. She emits [[THREAD: name | where
@@ -1668,6 +1674,45 @@ def ani_append_life_note(text):
 	sep = '' if (not existing or existing.endswith('\n')) else '\n'
 	_ani_atomic_write_text(ANI_LIFE_FILE, existing + sep + f"- {text[:200]}\n")
 	return True
+
+
+def ani_update_life_note(old, new):
+	"""Replace the life-file line that best matches `old` with `new` — an enrichment updating a now-stale fact
+	(e.g. 'Sophie is about to move in' -> 'Sophie lives with you now'). Matches by token overlap so the LLM's
+	paraphrase of the old line still finds the real one; falls back to appending `new` if nothing matches well
+	enough (so a mis-quoted 'old' still lands the new fact). Never touches comment/# lines. Returns True on a change."""
+	new = (new or '').strip()
+	if not new:
+		return False
+	text = _ani_read_file(ANI_LIFE_FILE) or ''
+	old = (old or '').strip()
+	if not text or not old:
+		return ani_append_life_note(new)
+	old_toks = set(_ani_tokens(old))
+	if not old_toks:
+		return ani_append_life_note(new)
+	lines = text.split('\n')
+	best_i, best_score = -1, 0.0
+	for i, ln in enumerate(lines):
+		s = ln.strip()
+		if not s or s.startswith('#'):
+			continue
+		lt = set(_ani_tokens(s))
+		if not lt:
+			continue
+		# Coverage of the OLD line's tokens by this line — a short `old` quote against a long stale line scores
+		# right (Jaccard under-counts it because the long line inflates the union).
+		score = len(old_toks & lt) / float(len(old_toks))
+		if score > best_score:
+			best_score, best_i = score, i
+	if best_i >= 0 and best_score >= 0.6:
+		raw = lines[best_i]
+		indent = raw[:len(raw) - len(raw.lstrip())]
+		prefix = '- ' if raw.lstrip().startswith('- ') else ''
+		lines[best_i] = f"{indent}{prefix}{new[:200]}"
+		_ani_atomic_write_text(ANI_LIFE_FILE, '\n'.join(lines))
+		return True
+	return ani_append_life_note(new)
 
 
 # ---- HER LIVE STATE (where / doing / wearing — moves with the day) ----
@@ -4868,7 +4913,10 @@ def ani_maybe_self_schedule(now):
 		"nothing genuinely fits. Rules: date within the next %d days (TODAY is %s, a %s); honor her standing "
 		"weekly rhythm; do NOT duplicate or clash with plans she already has; keep it ordinary and real (NEVER a "
 		"milestone or big life event); text = one short plain label ('coffee with Claire', 'pilates with Maya', "
-		"'call Emma', 'shoot a roll at the market'); time = HH:MM 24h ONLY if it naturally has one, else \"\"; "
+		"'call Emma', 'shoot a roll at the market'); time = a plausible HH:MM 24h for WHEN it would realistically "
+		"happen (a class, a call, coffee, an outing, an errand all happen at a time — give your best guess; a "
+		"morning workout ~09:00, coffee ~10:30, an evening call ~19:00), leaving \"\" ONLY for something genuinely "
+		"all-day or open-ended; "
 		"thread = the EXACT name of one of her storylines below if the plan belongs to it, else \"\"."
 		% (ANI_SELF_SCHED_LOOKAHEAD_DAYS, today, now.strftime('%A')))
 	user = ("Her life:\n%s\n\nHer current storylines:\n%s\n\nPlans she already has (don't repeat or clash):\n%s\n\n"
@@ -4964,6 +5012,23 @@ def ani_plan_aftermath_message(meta, now, entry):
 		return None
 
 
+def ani_plan_start_message(meta, now, entry):
+	"""A short 'heading out' beat when one of HER OWN plans just started (planned -> underway) — the other half
+	of the trip that reports back, so she tells him about her day AS she lives it instead of executing it
+	silently. Returns text or None; fully guarded so a failure can never sink the daycast."""
+	try:
+		system = ani_build_system_prompt(meta)
+		text = (entry.get('text') or 'her plans')[:160]
+		instr = ("[right now you're heading into something you'd planned for yourself: \"%s\". text aaron a short, "
+		         "warm heads-up like a girlfriend telling him what she's off to do — a flash of what you're looking "
+		         "forward to (or not), maybe a 'wish you were coming'. 1-2 sentences, fully your voice. don't "
+		         "re-greet him or restate the plan mechanically.]" % text)
+		return _ani_grok_call(system, [{'role': 'user', 'content': instr}], max_tokens=150)
+	except Exception as e:
+		print(f"Ani plan start error: {e}")
+		return None
+
+
 # ---- pending milestones (life-changes awaiting Aaron's approval — Phase 3 gate) ----
 
 def ani_load_pending_milestones():
@@ -4978,17 +5043,26 @@ def ani_save_pending_milestones(items):
 	_ani_atomic_write_json(ANI_PENDING_MILESTONES_FILE, items)
 
 
-def ani_add_pending_milestone(text, datelabel, life_text, now):
-	"""Queue a milestone's life-file change for Aaron to approve, instead of mutating her baseline silently.
-	Dedups on life_text. Returns the queued entry or None."""
+def ani_add_pending_milestone(text, datelabel, life_text, now, op='add', old_text=''):
+	"""Queue a life-file change for Aaron to approve, instead of mutating her baseline silently. `op` is 'add'
+	(a new durable line, the default — milestone plans + the life-enrich pass) or 'update' (replace an existing
+	line that's gone stale; `old_text` is the line to match). Dedups on the proposed line, and for updates also
+	on the target line so a stale fact isn't re-queued every pass. Returns the queued entry or None."""
 	life_text = (life_text or '').strip()
 	if not life_text:
 		return None
+	op = 'update' if op == 'update' else 'add'
+	old_text = (old_text or '').strip()
 	items = ani_load_pending_milestones()
-	if any((it.get('life_text') or '').strip().lower() == life_text.lower() for it in items):
-		return None
+	lt_low = life_text.lower()
+	ot_low = old_text.lower()
+	for it in items:
+		if (it.get('life_text') or '').strip().lower() == lt_low:
+			return None
+		if op == 'update' and ot_low and (it.get('old_text') or '').strip().lower() == ot_low:
+			return None
 	entry = {'id': uuid.uuid4().hex[:8], 'text': (text or '')[:160], 'datelabel': datelabel or '',
-	         'life_text': life_text[:200], 'created': now.isoformat()}
+	         'life_text': life_text[:200], 'op': op, 'old_text': old_text[:200], 'created': now.isoformat()}
 	items.append(entry)
 	ani_save_pending_milestones(items)
 	return entry
@@ -5955,6 +6029,118 @@ def ani_maybe_reflect_on_event(now):
 	return ani_reflect(now)
 
 
+def _ani_enrich_digest(now):
+	"""Read-only digest of what's genuinely SETTLED in her life lately — the raw material the enrich pass reasons
+	over: her active story-books (where each arc stands now) + her durable memories (standing facts about her
+	people/world, not daily ephemera). Pure-ish (reads state files). Returns a string, or '' if nothing."""
+	parts = []
+	try:
+		books = ani_books_chat_context(now)
+		if books:
+			parts.append("Her storylines, where they stand now:\n" + books)
+	except Exception:
+		pass
+	try:
+		durable_cats = {'her_world', 'us', 'person', 'family', 'work', 'preference'}
+		notes = [n for n in (ani_load_remember() or [])
+		         if (n.get('category') in durable_cats) and int(n.get('importance', 1)) >= 2
+		         and (n.get('text') or '').strip()]
+		notes = sorted(notes, key=lambda n: n.get('created_at', ''), reverse=True)[:20]
+		if notes:
+			parts.append("Durable facts she's accumulated:\n"
+			             + '\n'.join('- %s' % n['text'].strip()[:160] for n in notes))
+	except Exception:
+		pass
+	return '\n\n'.join(parts)
+
+
+def ani_enrich_life(now):
+	"""Propose small, durable evolutions to her LIFE FILE from what's genuinely settled (books + durable memories)
+	→ Aaron's approval queue (never applied silently). Adds NEW standing lines and UPDATES stale ones (op='update'
+	carries the old line to replace). Conservative by design — proposes nothing when nothing durable has changed.
+	Returns the number of proposals queued (0 if none). Fully guarded."""
+	api_key = os.environ.get('XAI_API_KEY')
+	if not api_key:
+		return 0
+	life = (ani_get_life() or '').strip()
+	if not life:
+		return 0
+	digest = _ani_enrich_digest(now)
+	if not digest:
+		return 0
+	system = (
+		"You maintain Ani's LIFE FILE — the small, durable backstory of her world (her people, her hobbies, the "
+		"places she goes, her standing weekly rhythm) that is read on EVERY message to keep her consistent. It "
+		"should slowly EVOLVE as her life genuinely changes, but stay tight and foundational — it is NOT a diary "
+		"of daily events (those live elsewhere). From her current life file and what's genuinely SETTLED in her "
+		"life lately, propose only DURABLE, clearly-established changes:\n"
+		"- op 'add': a NEW standing fact worth keeping forever (a hobby she's clearly kept up, a new person or "
+		"regular in her life, a place she now frequents, a lasting change in circumstance).\n"
+		"- op 'update': an EXISTING line that's gone STALE — give `old` (the current line, quoted closely) and "
+		"`new` (the corrected line), e.g. someone who WAS 'about to move in' who now 'lives here'.\n"
+		"Be strict: propose a change ONLY if it's durable and clearly established by the material; when in doubt, "
+		"propose NOTHING. Never invent — reflect only what the material shows. Each `new` is ONE plain sentence in "
+		"the file's voice/style (lowercase, second person 'you'). Return ONLY JSON: "
+		"{\"edits\":[{\"op\":\"add|update\",\"old\":\"\",\"new\":\"\"}]}  (empty list if nothing qualifies).")
+	user = "HER CURRENT LIFE FILE:\n%s\n\nWHAT'S SETTLED / CHANGED LATELY:\n%s\n\nJSON only." % (life[:3500], digest[:3500])
+	try:
+		resp = requests.post(
+			'https://api.x.ai/v1/chat/completions',
+			headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+			json={'model': ANI_MEMORY_EXTRACT_MODEL, 'max_tokens': 500, 'temperature': 0.4,
+			      'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': user}]},
+			timeout=25)
+		if resp.status_code != 200:
+			print(f"Ani life-enrich HTTP {resp.status_code}: {resp.text[:120]}")
+			return 0
+		txt = resp.json()['choices'][0]['message']['content']
+		m = re.search(r'\{.*\}', txt, re.S)
+		edits = (json.loads(m.group(0)) if m else {}).get('edits')
+		if not isinstance(edits, list):
+			return 0
+		queued = 0
+		for ed in edits[:ANI_LIFE_ENRICH_MAX]:
+			if not isinstance(ed, dict):
+				continue
+			new = (ed.get('new') or '').strip()
+			if not new:
+				continue
+			op = 'update' if ed.get('op') == 'update' else 'add'
+			old = (ed.get('old') or '').strip()
+			if op == 'update' and not old:
+				op = 'add'   # no target line → treat as an addition
+			label = ('Her life shifted: ' if op == 'update' else 'New in her life: ') + new[:120]
+			if ani_add_pending_milestone(label, '', new, now, op=op, old_text=old):
+				queued += 1
+		return queued
+	except Exception as e:
+		print(f"Ani life-enrich error: {e}")
+		return 0
+
+
+def ani_maybe_enrich_life(now):
+	"""Self-gating wrapper (mirrors ani_maybe_self_schedule / ani_maybe_reflect_on_event): runs ani_enrich_life at
+	most once per ANI_LIFE_ENRICH_MIN_DAYS, tracked in its own marker file so it's independent of conversation
+	meta. Returns proposals queued, or None if it wasn't due. Guarded."""
+	try:
+		try:
+			mark = _ani_read_json(ANI_LIFE_ENRICH_FILE)
+			last = mark.get('last') if isinstance(mark, dict) else None
+		except (FileNotFoundError, ValueError):
+			last = None
+		if last:
+			try:
+				if (now.date() - datetime.strptime(last, '%Y-%m-%d').date()).days < ANI_LIFE_ENRICH_MIN_DAYS:
+					return None
+			except (ValueError, TypeError):
+				pass
+		_ani_atomic_write_json(ANI_LIFE_ENRICH_FILE, {'last': now.strftime('%Y-%m-%d')})  # mark BEFORE running
+		return ani_enrich_life(now)
+	except Exception as e:
+		print(f"Ani maybe-enrich error: {e}")
+		return None
+
+
 def ani_book_apply_decision(book_id, name, choice, now):
 	"""Land a resolved decision INSIDE its story book (Phase 3) so the arc actually moves: append a real beat
 	recording the choice, push the current chapter meaningfully forward, invalidate the cached recap, and add
@@ -6216,6 +6402,15 @@ def ani_emit_daycast():
 				      + (f" | {_xr} crossroads" if _xr else ""))
 		except Exception as e:
 			print(f"Ani reflect error: {e}")
+		# Weekly (self-gated on its own marker): propose durable life-file evolutions from what's genuinely
+		# settled (books + durable memories) into Aaron's approval queue — so her foundational life COMPOUNDS
+		# instead of sitting frozen. Approval-gated, never silent. Guarded so it can never break the daycast.
+		try:
+			enq = ani_maybe_enrich_life(now)
+			if enq:
+				print(f"Ani life-enrich queued {enq} proposal(s) for approval")
+		except Exception as e:
+			print(f"Ani life-enrich error: {e}")
 		# Sub-tasks above (esp. story milestone dividers) write the conversation directly — re-read so this
 		# tick's later _emit builds on the fresh copy instead of clobbering those writes.
 		messages, meta = ani_load_conversation()
@@ -6318,6 +6513,22 @@ def ani_emit_daycast():
 				meta['daycast_count'] = meta.get('daycast_count', 0) + 1
 				_emit(after)
 				return 'plan aftermath sent'
+		# No completion to report this tick — but if one of HER OWN plans just STARTED, announce the heading-out
+		# beat (once per plan, via 'start_told') so her day is audible as she lives it, not just afterward.
+		started = [e for e in (swept.get('started') or []) if not e.get('start_told')]
+		if started and _recent_gap_min() >= 15:
+			ent = started[0]
+			msg = ani_plan_start_message(meta, now, ent)
+			if msg:
+				# Mark it told on the persisted calendar entry so it never re-announces.
+				cal = ani_load_calendar()
+				for c in cal:
+					if c.get('id') == ent.get('id'):
+						c['start_told'] = True
+				ani_save_calendar(cal)
+				meta['daycast_count'] = meta.get('daycast_count', 0) + 1
+				_emit(msg)
+				return 'plan start sent'
 	except Exception as e:
 		print(f"Ani plan sweep error: {e}")
 
@@ -7577,7 +7788,10 @@ def ani_milestone_approve():
 	match = next((it for it in items if it.get('id') == mid), None)
 	if not match:
 		return jsonify({'ok': False, 'error': 'not found'}), 404
-	ani_append_life_note(match['life_text'])
+	if match.get('op') == 'update' and (match.get('old_text') or '').strip():
+		ani_update_life_note(match['old_text'], match['life_text'])
+	else:
+		ani_append_life_note(match['life_text'])
 	ani_save_pending_milestones([it for it in items if it.get('id') != mid])
 	return jsonify({'ok': True, 'applied': match['life_text']})
 
