@@ -6041,7 +6041,9 @@ def _ani_enrich_digest(now):
 	except Exception:
 		pass
 	try:
-		durable_cats = {'her_world', 'us', 'person', 'family', 'work', 'preference'}
+		# HER-centric only — her own world/people/tastes. Deliberately drops 'work'/'us' (those hold Aaron-about
+		# facts; her life file is her OWN life, kept separate from him).
+		durable_cats = {'her_world', 'family', 'preference', 'person'}
 		notes = [n for n in (ani_load_remember() or [])
 		         if (n.get('category') in durable_cats) and int(n.get('importance', 1)) >= 2
 		         and (n.get('text') or '').strip()]
