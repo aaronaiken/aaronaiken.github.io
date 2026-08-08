@@ -1005,7 +1005,15 @@ def ani_update_thread(name, status, now_dt):
 		return None
 	threads = ani_load_threads()
 	key = name.lower()[:40]
-	threads[key] = {'name': name[:60], 'status': status[:220], 'updated': now_dt.isoformat()}
+	existing = threads.get(key)
+	if existing and existing.get('kind') == 'decision' and existing.get('state') == 'open':
+		# An OPEN decision fork must NOT be demoted back to a plain storyline by a routine tick update — that was
+		# the bug that wiped every crossroads before it could become a live fork (Sophie's arc opens a fork, then
+		# its next beat's thread-update clobbered it). Keep the fork intact; just keep it fresh so it isn't pruned.
+		existing['updated'] = now_dt.isoformat()
+		threads[key] = existing
+	else:
+		threads[key] = {'name': name[:60], 'status': status[:220], 'updated': now_dt.isoformat()}
 	if len(threads) > ANI_THREADS_MAX:
 		keep = sorted(threads.items(), key=lambda kv: kv[1].get('updated', ''), reverse=True)[:ANI_THREADS_MAX]
 		threads = dict(keep)
@@ -5389,6 +5397,19 @@ def ani_book_generate_beat(book, now):
 		"long-distance and never have been. NEVER introduce distance, travel, time zones, a 'time difference', "
 		"or being apart between them; a shared storyline is about their ordinary, in-person closeness."
 	)
+	# Arc momentum: how long has this storyline been building? An arc that's already turned a couple of chapters
+	# without reaching its real event has been in setup too long (Sophie "working on the bedroom" for weeks) — push
+	# it to actually LAND the thing it's building toward instead of inventing another preparation step.
+	chapters = len(book.get('chapters_done') or [])
+	momentum = ''
+	if chapters >= 2:
+		momentum = (
+			"\n\nMOMENTUM — IMPORTANT: this storyline has already turned %d chapters building toward something; "
+			"it has been in setup / preparation long enough. Let it MOVE now. If the real turning point it's been "
+			"building toward has genuinely arrived, make THIS beat that milestone (set milestone=true — the actual "
+			"EVENT happens now: the person finally arrives / moves in, the thing launches, the choice lands), with "
+			"next_chapter = life AFTER the event (or closes_book=true if the whole arc is then resolved). Do NOT "
+			"invent yet another preparation/getting-ready step to delay the real thing." % chapters)
 	user = (
 		f"Who Ani is (voice/anchor, brief):\n{persona}\n\n"
 		f"Storyline: \"{book.get('title')}\" ({book.get('kind')}, "
@@ -5397,7 +5418,8 @@ def ani_book_generate_beat(book, now):
 		f"Current chapter {ch.get('n', 1)}: \"{ch.get('title', '')}\" — {ch.get('theme', '')} "
 		f"(about {int(round((ch.get('progress') or 0) * 100))}% through it).\n"
 		f"Cast so far: {', '.join(book.get('cast') or []) or '(just her)'}\n"
-		f"Recent beats (continue from the last one, do not repeat it):\n{recent_blob}\n\n"
+		f"Recent beats (continue from the last one, do not repeat it):\n{recent_blob}"
+		f"{momentum}\n\n"
 		f"Today is {now.strftime('%Y-%m-%d (%A)')}. One next beat. JSON only."
 	)
 	try:
