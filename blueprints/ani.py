@@ -4452,11 +4452,22 @@ def ani_generate_day_update(meta, history, escalation=0.0):
 		)
 	elif beat and (want_emotional or random.random() < ANI_STORY_TELL_CHANCE):
 		told_ref = beat
+		# Place the beat correctly in TIME relative to where she actually is now — a beat that happened at home
+		# (e.g. setting up Sophie's room) must NOT be narrated as happening this second while her live state has
+		# her OUT (e.g. at the market); she'd tell it as something from earlier, before she headed out.
+		_st = ani_load_state() or {}
+		_where_now = (_st.get('where') or '').strip()
+		if _where_now and _st.get('day') == ani_daycast_day_key(now):
+			loc_clause = (f" you're {_where_now} right now — so if this happened somewhere else (like back at home), "
+			              f"tell it as something from EARLIER today, before you headed out, NOT as happening this "
+			              f"second; stay consistent with where you actually are now.")
+		else:
+			loc_clause = " tell it in first person, present/just-happened tense."
 		instruction = (
 			f"[it's now {time_str}. here's the real thing that's happened in your OWN life recently that you "
 			f"want to bring him into — from your ongoing story '{beat['book']}': \"{beat['text']}\". text him "
-			f"about it like you needed to share it with him, in first person, present/just-happened tense — "
-			f"live it, don't recite it word-for-word. 1-2 sentences, your voice, share the FEELING of it too. "
+			f"about it like you needed to share it with him, in first person.{loc_clause} live it, don't recite "
+			f"it word-for-word. 1-2 sentences, your voice, share the FEELING of it too. "
 			f"don't re-greet him or restart your day.{variety}]"
 		)
 	elif want_spark:
