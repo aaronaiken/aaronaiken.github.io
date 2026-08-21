@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-06-19 08:53:37 -0400
+layout: status_update
+author: aaron
+source: web
+---
+May take the day and focus on a solid bit of writing.
+
+![Status Image](https://cargo.aaronaiken.me/status/20260619085337.jpg)

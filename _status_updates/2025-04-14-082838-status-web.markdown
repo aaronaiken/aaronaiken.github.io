@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-14 08:28:38 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Alright. Beginning to troubleshoot things again. Once done, tags will be supported and the various benefits from them. ☕️

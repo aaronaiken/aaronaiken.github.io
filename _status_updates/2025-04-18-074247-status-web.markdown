@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-18 07:42:47 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Right back to work upon waking, not idea but the present reality. Will make the best of it!

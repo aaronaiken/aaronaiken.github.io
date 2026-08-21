@@ -1,0 +1,11 @@
+---
+title: Status
+date: 2026-05-17 21:28:10 -0400
+layout: status_update
+author: aaron
+source: web
+tags: [flagfootball]
+---
+🏈 Mozzie's Steelers — W 42–8 vs. Falcons (Home) #flagfootball - they’ll be in the playoffs!
+
+![Game photo](https://cargo.aaronaiken.me/status/20260517212810.jpg)

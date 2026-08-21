@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+	<style>
+		.bg { fill: #f7f3ec; }
+		.fg { fill: #7a3e00; }
+		@media (prefers-color-scheme: dark) {
+			.bg { fill: #15110d; }
+			.fg { fill: #d4880a; }
+		}
+	</style>
+	<rect class="bg" width="32" height="32" rx="4" />
+	<!-- The slot: a copydesk U with the inside gap (the slot itself) highlighted. -->
+	<path class="fg" d="M 7 8 L 7 22 Q 7 24 9 24 L 23 24 Q 25 24 25 22 L 25 8 L 22 8 L 22 20 Q 22 21 21 21 L 11 21 Q 10 21 10 20 L 10 8 Z" />
+	<!-- Slot tick — the editor's seat. -->
+	<rect class="fg" x="15" y="4" width="2" height="3" rx="1" />
+</svg>

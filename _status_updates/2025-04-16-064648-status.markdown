@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-16 06:46:48 
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+Up and moving slightly earlier this morning. Busy morning ahead. Work to cover, townhouse run, meeting later, more work.

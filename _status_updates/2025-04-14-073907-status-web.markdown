@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-14 07:39:07 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Good morning world ☕️ a type of hello tweet from the early days. Howdy 🤠

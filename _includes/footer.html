@@ -1,0 +1,228 @@
+<footer class="site-footer h-card">
+  <data class="u-url" href="{{ "/" | relative_url }}"></data>
+  <div class="site-footer__inner">
+
+    <div class="site-footer__col">
+      <p class="site-footer__label">{{ site.data.nav.footer[0].label }}</p>
+      <ul class="site-footer__list">
+        {%- for link in site.data.nav.footer[0].links -%}
+        <li><a href="{{ link.url | relative_url }}">{{ link.label }}</a></li>
+        {%- endfor -%}
+      </ul>
+    </div>
+
+    <div class="site-footer__col">
+      <p class="site-footer__label">{{ site.data.nav.footer[1].label }}</p>
+      <ul class="site-footer__list">
+        {%- for link in site.data.nav.footer[1].links -%}
+        <li><a href="{{ link.url | relative_url }}">{{ link.label }}</a></li>
+        {%- endfor -%}
+        {%- if site.rss -%}
+        <li><a href="{{ '/feed.xml' | relative_url }}" title="{{ site.rss }}">Blog RSS</a></li>
+        {%- endif -%}
+        {%- if site.rss_status -%}
+        <li><a href="{{ '/status.xml' | relative_url }}" title="{{ site.rss_status }}">Status RSS</a></li>
+        {%- endif -%}
+      </ul>
+    </div>
+
+    <div class="site-footer__col">
+      <p class="site-footer__label">Elsewhere</p>
+      <ul class="site-footer__list">
+        {%- if site.github_username -%}
+        <li><a href="https://github.com/{{ site.github_username }}" rel="noopener noreferrer">GitHub</a></li>
+        {%- endif -%}
+        {%- for mst in site.mastodon -%}
+        {%- if mst.username and mst.instance -%}
+        <li><a href="https://{{ mst.instance }}/@{{ mst.username }}" rel="noopener noreferrer">Mastodon</a></li>
+        {%- endif -%}
+        {%- endfor -%}
+        {%- if site.email -%}
+        <li><a href="{{ site.email }}">Email</a></li>
+        {%- endif -%}
+      </ul>
+    </div>
+
+  </div>
+
+  <div class="site-footer__callout">
+    <span class="site-footer__callout-text">A letter, every two weeks — </span><a class="site-footer__callout-link" href="/the-long-way">The Long Way →</a>
+  </div>
+
+  <div class="site-footer__fine-print">
+    <span>Made by hand in Harrisburg, PA by <a href="/about/">{{ site.webmaster | default: "Aaron Aiken" }}</a></span>
+    <span class="site-footer__sep">·</span>
+    <a href="https://themarkup.org/blacklight?url=aaronaiken.me" rel="noopener noreferrer">not tracking you</a>
+    <span class="site-footer__sep">·</span>
+    <a href="/colophon/">colophon</a>
+  </div>
+<!-- HAN SOLO QUOTE — rotates on every page load -->
+  <div class="site-footer__quote-row">
+    <span class="site-footer__quote" id="han-quote">Never tell me the odds.</span>
+  </div>
+  
+  <script>
+  (function () {
+    var quotes = [
+      "Never tell me the odds.",
+      "I know.",
+      "Laugh it up, fuzzball.",
+      "Sorry about the mess.",
+      "Boring conversation anyway.",
+      "It's not my fault.",
+      "You know, sometimes I amaze even myself.",
+      "Don't everybody thank me at once.",
+      "Who's scruffy-looking?",
+      "Chewie, we're home.",
+      "Great shot, kid. That was one in a million.",
+      "I have a bad feeling about this.",
+      "Hey, Luke. May the Force be with you.",
+      "Yes, your Highnessness?",
+      "Traveling through hyperspace ain't like dusting crops, boy.",
+      "Hokey religions and ancient weapons are no match for a good blaster at your side, kid.",
+      "Look, I ain't in this for your revolution. I'm in it for the money.",
+      "And I thought they smelled bad on the outside."
+    ];
+    var el = document.getElementById('han-quote');
+    if (el) {
+      el.textContent = quotes[Math.floor(Math.random() * quotes.length)];
+    }
+  })();
+  </script>
+</footer>
+
+<style>
+/* =============================================
+   SITE FOOTER — universal
+   Works across all layouts via CSS custom
+   properties each layout sets.
+   ============================================= */
+
+.site-footer {
+  margin-top: 56px;
+  padding-top: 24px;
+  border-top: 1px solid var(--footer-border, #2a1c08);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+
+.site-footer__inner {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.site-footer__quote-row {
+  padding-top: 12px;
+  text-align: center;
+}
+
+.site-footer__quote {
+  font-family: 'Crimson Pro', serif;
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--footer-dim, #3a2808);
+  opacity: 0.65;
+  letter-spacing: 0;
+}
+
+@media (max-width: 540px) {
+  .site-footer__inner {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 360px) {
+  .site-footer__inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+.site-footer__label {
+  font-size: 0.58rem !important;
+  letter-spacing: 0.22em !important;
+  text-transform: uppercase;
+  color: var(--footer-label, #3a2808) !important;
+  margin: 0 0 8px !important;
+}
+
+.site-footer__list {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.site-footer__list li {
+  margin-bottom: 4px !important;
+  line-height: 1.4 !important;
+}
+
+.site-footer__list a {
+  color: var(--footer-link, #5a3c10) !important;
+  text-decoration: none !important;
+  background: none !important;
+  transition: color 0.15s;
+}
+
+.site-footer__list a:hover {
+  color: var(--footer-link-hover, #d4880a) !important;
+  background: none !important;
+}
+
+.site-footer__callout {
+  text-align: center;
+  padding: 14px 0;
+  border-top: 1px solid var(--footer-border, #2a1c08);
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-style: italic;
+  font-size: 0.92rem;
+  letter-spacing: 0;
+  color: var(--footer-dim, #3a2808);
+  line-height: 1.4;
+}
+
+.site-footer__callout-text {
+  color: var(--footer-label, #5a3c10);
+}
+
+.site-footer__callout-link {
+  color: var(--footer-link, #5a3c10) !important;
+  text-decoration: none !important;
+  background: none !important;
+  border-bottom: 1px dotted var(--footer-link, #5a3c10);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.site-footer__callout-link:hover {
+  color: var(--footer-link-hover, #d4880a) !important;
+  background: none !important;
+  border-color: var(--footer-link-hover, #d4880a);
+}
+
+.site-footer__fine-print {
+  font-size: 0.62rem !important;
+  color: var(--footer-dim, #3a2808) !important;
+  padding-top: 14px;
+  border-top: 1px solid var(--footer-border, #2a1c08);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.site-footer__fine-print a {
+  color: var(--footer-dim, #3a2808) !important;
+  text-decoration: none !important;
+  background: none !important;
+  transition: color 0.15s;
+}
+
+.site-footer__fine-print a:hover {
+  color: var(--footer-link-hover, #d4880a) !important;
+  background: none !important;
+}
+
+.site-footer__sep { color: var(--footer-border, #2a1c08); }
+</style>

@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-06-19 09:37:39 -0400
+layout: status_update
+author: aaron
+source: web
+---
+☕️ But first, coffee.
+
+![Text on a beige background reading "But first, coffee." with a longer paragraph above it in lighter gray text.](https://cargo.aaronaiken.me/status/20260619093739.jpg)

@@ -1,0 +1,118 @@
+---
+layout: tidy-base
+---
+{%- assign t = site.data.tidy -%}
+{%- assign cfg = t.config -%}
+{%- assign a = t.apps[page.app] -%}
+{%- assign notify = false -%}{% if cfg.mode != 'live' %}{% assign notify = true %}{% endif %}
+{%- comment -%} Screenshot crops are container-relative (bg/px/py % + aspect-ratio),
+precomputed in _data/tidy.yml from each image's real dimensions — fully responsive,
+never clipped. {%- endcomment -%}
+
+<div class="tdy-app" style="--tint: {{ a.sig }}; --tint-deep: {{ a.deep }};">
+
+  <header class="tdy-appheader">
+    <div class="tdy-glow"></div>
+    <div class="inner">
+      <img class="tdy-icon shelf" src="{{ a.icon | relative_url }}" width="140" height="140" alt="{{ a.name }}">
+      <div class="tdy-titlerow">
+        <h1>{{ a.name }}</h1>
+        {%- if a.free -%}<span class="tdy-badge tint">Free</span>{%- endif -%}
+      </div>
+      <p class="tagline">{{ a.tagline }}</p>
+
+      {%- if notify -%}
+        <form class="tdy-notify" data-tidy-notify data-app="{{ a.id }}" data-endpoint="{{ cfg.notify_endpoint }}">
+          <input class="on-open" type="email" required placeholder="you@example.com" aria-label="Your email">
+          <button class="on-open tdy-btn lg primary" type="submit">Notify me at launch</button>
+          <span class="tdy-done-msg on-done">✓ You're on the list — launch day, your inbox.</span>
+        </form>
+      {%- else -%}
+        <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+          {%- for c in a.ctas -%}
+            <a class="tdy-btn lg {{ c.variant }}" href="#">{{ c.label }}</a>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
+      <span class="tdy-metaline">{% if notify %}{{ a.soon }}{% else %}{{ a.meta }}{% endif %}</span>
+      {%- if a.note and a.note != "" -%}
+        <p class="tdy-note">{{ a.note }}</p>
+      {%- endif -%}
+    </div>
+  </header>
+
+  <main class="tdy-applayout">
+    <section class="tdy-section">
+      <span class="tdy-eyebrow">See it work</span>
+      {%- if a.loop -%}
+        <video class="tdy-shot" src="{{ a.loop | relative_url }}"{% if a.loop_poster %} poster="{{ a.loop_poster | relative_url }}"{% endif %} autoplay loop muted playsinline></video>
+      {%- else -%}
+        <div class="tdy-plinth">
+          <div class="tdy-cropshot" role="img" aria-label="{{ a.name }} screenshot"
+               style="aspect-ratio:720 / {{ a.hero.h }};background-image:url({{ '/assets/tidy/uploads/' | append: a.hero.src | relative_url }});background-size:{{ a.hero.bg }}% auto;background-position:{{ a.hero.px }}% {{ a.hero.py }}%"></div>
+        </div>
+      {%- endif -%}
+
+      {%- if a.extras and a.extras.size > 0 -%}
+        <div class="tdy-extras">
+          {%- for x in a.extras -%}
+            <div class="tdy-extra wide">
+              <div class="plinth">
+                <div class="cropshot" role="img" aria-label="{{ x.caption }}"
+                     style="aspect-ratio:720 / {{ x.shot.h }};background-image:url({{ '/assets/tidy/uploads/' | append: x.shot.src | relative_url }});background-size:{{ x.shot.bg }}% auto;background-position:{{ x.shot.px }}% {{ x.shot.py }}%"></div>
+              </div>
+              <span class="caption">{{ x.caption }}</span>
+            </div>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+    </section>
+
+    <section class="tdy-section benefits">
+      <span class="tdy-eyebrow">What it does</span>
+      <ul class="tdy-benefits">
+        {%- for b in a.benefits -%}<li>{{ b }}</li>{%- endfor -%}
+      </ul>
+    </section>
+
+    <section class="tdy-section tdy-why">
+      <span class="tdy-eyebrow">Why I built it</span>
+      <p>{{ a.why }}</p>
+      <span class="sig">— Aaron, Harrisburg PA</span>
+      <div class="tdy-morelinks">
+        <a href="{{ a.url | append: 'how-its-built/' | relative_url }}">How {{ a.name }} is built →</a>
+        {%- if a.privacy -%}<a href="{{ a.privacy | relative_url }}">Privacy policy →</a>{%- endif -%}
+      </div>
+    </section>
+
+    <section class="tdy-get">
+      <span class="tdy-eyebrow">Get {{ a.name }}</span>
+      {%- if notify -%}
+        <p>{{ a.name }} is nearly packed. Leave your email up top and it'll arrive in your inbox on launch day.</p>
+      {%- else -%}
+        <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+          {%- for c in a.ctas -%}
+            <a class="tdy-btn {{ c.variant }}" href="#">{{ c.label }}</a>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+      <span class="bundleline">Or get them all — <a href="{{ cfg.hub_url | relative_url }}">the tidy bundle, {{ cfg.bundle_price }}</a>.</span>
+    </section>
+
+    <div class="tdy-family">
+      <span class="tdy-eyebrow">Part of the tidy family</span>
+      <div class="siblings">
+        {%- for id in t.order -%}
+          {%- assign s = t.apps[id] -%}
+          <a class="sib{% if id == page.app %} current{% endif %}" href="{{ s.url | relative_url }}" title="{{ s.name }}">
+            <img class="tdy-icon{% if id == page.app %} shelf{% endif %}" src="{{ s.icon | relative_url }}" width="44" height="44" alt="{{ s.name }}">
+            <span class="lbl">{{ s.name }}</span>
+          </a>
+        {%- endfor -%}
+      </div>
+    </div>
+  </main>
+
+  <footer class="tdy-footer">Made by hand in Harrisburg, Pennsylvania.</footer>
+</div>

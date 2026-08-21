@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-19 22:40:30 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Random ideas are fun. Eventual goal with this site, in addition to actually writing and publishing, is for the look and feel to resemble a site from the early 2000s. Making a GitHub project now will an initial list of ways to accomplish this.

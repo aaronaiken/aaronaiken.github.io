@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-06-04 13:50:58 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+so many good things going on! hopeful that things begin to slow down at somepoint soon though...a break will be nice :-)

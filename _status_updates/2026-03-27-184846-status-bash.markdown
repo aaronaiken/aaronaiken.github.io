@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2026-03-27 18:48:46 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+🚀 SSH pipeline a success, now testing the API key (second test :-) )

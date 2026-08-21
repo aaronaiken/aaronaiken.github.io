@@ -1,0 +1,13 @@
+# Jekyll build output + caches
+_site/
+.jekyll-cache/
+.jekyll-metadata
+.sass-cache/
+vendor/
+.bundle/
+
+# OS / editor cruft
+.DS_Store
+.nova/
+*.pyc
+__pycache__/

@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-05-12 10:03:03 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+incredible weekend! Ariana graduated from Messiah Universi on Saturday🎓 and Sunday was an incredible Mother's Day💐

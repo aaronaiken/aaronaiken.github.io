@@ -1,0 +1,218 @@
+/* my own styles */
+
+@import url(https://fonts.bunny.net/css?family=amethysta:400|average:400);
+body {
+  font-family: 'Average', serif;
+  margin: 0 auto;
+  max-width: 40em;
+  padding: 2em;
+  position: relative;
+  font-size: x-large;
+}
+
+.wrapper {
+  max-width: 40em;
+  padding: 0;
+}
+
+img {
+  margin: 5px 0 5px 0;
+  max-width: 100%;
+}
+
+img.board-member, img.about {
+  align-content: left;
+  margin: 0 10px 5px 0;
+  width: 300px;
+  float: left;
+}
+
+img.featured-image {
+  padding-bottom: 10px;
+}
+
+img.post-author-img {
+  width: 150px;
+  border-radius: 75px;
+  float: left;
+  margin: 0 10px 5px 0;
+}
+
+h1 {
+  font-family: 'Amethysta', serif;
+}
+#header {
+  align-items: right;
+}
+#footer {
+  font-size: x-small;
+  margin: 50px 0 0 0;
+}
+
+a:hover {
+  background: yellow;
+  //padding: 1px;
+}
+
+h1.post-title {
+  text-decoration: underline;
+  margin-top: 15px;
+}
+
+.post-content h2 {
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.post-content h3 {
+  font-style: italic;
+  font-size: 28px;
+}
+
+.post-content h4 {
+  text-decoration: underline;
+  font-size: inherit;
+  font-weight: 600;
+}
+
+hr {
+  margin-top: 2em;
+}
+
+.fine-print {
+  font-size: small;
+  margin-top: 15px;
+}
+
+.site-nav {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+
+  a { text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a.nav-active { text-decoration: underline; opacity: 1; }
+}
+
+.page-ident {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 1.5em;
+
+  &__label { color: var(--nav-link, #7a5020); }
+  &__divider { opacity: 0.3; }
+  &__sub { opacity: 0.45; }
+}
+
+.site-nav {
+  float: none;
+  line-height: 54px;
+}
+
+.post-link {
+  display: inline;
+  font-size: inherit;  
+}
+
+.post-list > li {
+  margin-bottom: 0;
+}
+
+.post-author-about {
+  padding: 5px;
+  background: color(display-p3 0.757 0.757 0.757);
+}
+
+.statuslol_content {
+font-family: Courier New;
+color: #04D939;
+font-size: .75em;
+text-align: left;
+background: black;
+padding: 1em;
+border-radius: .25em;
+}
+
+.statuslol_content a {
+color: #04D939;
+}
+
+pre, code {
+  background-color: black;
+  color: #04D939;
+  font-size: inherit;
+}
+
+/* Style the button that is used to open and close the collapsible content */
+.collapsible {
+  background-color: #eee;
+  color: #444;
+  cursor: pointer;
+  padding: 18px;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 15px;
+}
+
+/* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+.active, .collapsible:hover {
+  background-color: #ccc;
+}
+
+/* Style the collapsible content. Note: hidden by default */
+.learn-more {
+  padding: 0 18px;
+  display: none;
+  overflow: hidden;
+  background-color: inherit;
+}
+
+@media screen and (max-width: 600px) {
+  .site-nav {
+    position: static;
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+    text-align: left;
+    font-size: 0.72rem;
+  }
+}
+
+/* In support of Dark Mode */
+@media (prefers-color-scheme: dark) {
+body {
+color: #E5E7EB;
+background-color: #1F2937; 
+}
+a, a:visited {
+color: #3B82F6;
+}
+img {
+opacity: .75;
+transition: opacity .5s ease-in-out;
+}
+img:hover {
+opacity: 1;
+}
+html {
+--text-color-normal: #0a244d;
+--text-color-light: #8cabd9;
+}
+html[data-theme='dark'] {
+--text-color-normal: hsl(210, 10%, 62%);
+--text-color-light: hsl(210, 15%, 35%);
+--text-color-richer: hsl(210, 50%, 72%);
+--text-color-highlight: hsl(25, 70%, 45%);
+}
+.post-author-about {
+  background: color(display-p3 0.133 0.145 0.161);
+}
+}

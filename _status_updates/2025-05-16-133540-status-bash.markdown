@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-05-16 13:35:40 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+another friday, and another week that took a lot but also gave a lot. tired and looking forward to rest when i'm able to get it.

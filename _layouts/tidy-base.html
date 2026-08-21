@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {%- include favicons.html -%}
+  {%- seo -%}
+  <link rel="stylesheet" href="{{ '/assets/css/tidy.css' | relative_url }}?v={{ site.time | date: '%s' }}">
+  <script src="{{ '/assets/js/tidy-notify.js' | relative_url }}?v={{ site.time | date: '%s' }}" defer></script>
+</head>
+<body class="tidy">
+  <div class="tdy-topbar{% if page.app %} has-switcher{% endif %}">
+    <a class="tdy-wm" href="{{ site.data.tidy.config.hub_url | relative_url }}" aria-label="tidy">
+      <img class="wm-light" src="{{ '/assets/tidy/wordmark-light.svg' | relative_url }}" alt="tidy">
+      <img class="wm-dark" src="{{ '/assets/tidy/wordmark-dark.svg' | relative_url }}" alt="tidy">
+    </a>
+    {%- if page.app -%}
+      <nav class="tdy-switcher">
+        {%- for id in site.data.tidy.order -%}
+          {%- assign s = site.data.tidy.apps[id] -%}
+          <a href="{{ s.url | relative_url }}"{% if id == page.app %} class="current" style="background: {{ s.deep_hex }}; border-color: {{ s.deep_hex }}"{% endif %}>{{ s.name }}</a>
+        {%- endfor -%}
+      </nav>
+    {%- endif -%}
+    <nav class="tdy-nav">
+      {%- for link in site.data.tidy.nav -%}
+        <a href="{{ link.url | relative_url }}">{{ link.label }}</a>
+      {%- endfor -%}
+    </nav>
+  </div>
+  {{ content }}
+</body>
+</html>

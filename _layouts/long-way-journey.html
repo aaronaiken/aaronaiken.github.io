@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&family=Caveat:wght@500;600&display=swap');
+
+body.lw2{
+  --bg:#cdb98f; --map:#e6d7b6; --paper:#f7f0e2; --ink:#2a2118; --soft:#574733; --dim:#8a785c;
+  --postal:#b03424; --blue:#2c4a78; --rule:#cdbf9f; --env-dk:#c9b184;
+  --nav-link:#8a5034; --nav-link-hover:#b03424; --ident-color:#8a785c; --ident-border:#c9b184;
+  --footer-border:#c9b184; --footer-label:#8a785c; --footer-link:#8a5034; --footer-link-hover:#b03424; --footer-dim:#8a785c;
+  margin:0 !important; max-width:100% !important; padding:0 !important;
+  background:var(--bg) !important; color:var(--ink) !important;
+  font-family:'Newsreader',Georgia,serif !important; font-size:19px; line-height:1.72; overflow-x:hidden;
+}
+body.lw2 *{box-sizing:border-box;}
+.lw2__wrap{max-width:660px; margin:0 auto; padding:34px 22px 90px;}
+.lw2__eyebrow{font-family:'IBM Plex Mono',monospace; font-size:.66rem; letter-spacing:.28em; text-transform:uppercase;
+  color:var(--soft); text-align:center; margin:22px 0 10px;}
+.lw2__eyebrow b{color:var(--postal); font-weight:500;}
+.replay{position:fixed; bottom:16px; right:16px; z-index:40; font-family:'IBM Plex Mono',monospace; font-size:.6rem;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--paper); background:var(--postal); border:none;
+  padding:7px 11px; border-radius:2px; cursor:pointer; opacity:.85;}
+/* MAP FRAME */
+.airmail{padding:8px; border-radius:3px; box-shadow:0 14px 38px rgba(60,40,15,.26); margin-bottom:-16px; position:relative; z-index:2;
+  background:repeating-linear-gradient(-45deg, var(--postal) 0 9px, transparent 9px 18px, var(--blue) 18px 27px, transparent 27px 36px);}
+.lw2__map{position:relative; border-radius:2px; overflow:hidden; background:var(--map);}
+.lw2__map svg{display:block; width:100%; height:auto;}
+.sceneA{animation:aOut .7s linear 4.0s forwards;}
+.sceneB{opacity:0; animation:bIn .8s linear 3.8s forwards;}
+@keyframes aOut{to{opacity:0;}} @keyframes bIn{to{opacity:1;}}
+.cloud1{animation:drift 48s linear infinite;} .cloud2{animation:drift 68s linear infinite;}
+@keyframes drift{from{transform:translateX(0);} to{transform:translateX(38px);}}
+.base{fill:none; stroke:var(--dim); stroke-width:2; stroke-dasharray:2 7; stroke-linecap:round; opacity:.5;}
+.travel{fill:none; stroke:var(--postal); stroke-width:2.5; stroke-linecap:round;
+  stroke-dasharray:1000; stroke-dashoffset:1000; animation:draw 5.5s linear .5s forwards;}
+@keyframes draw{to{stroke-dashoffset:0;}}
+.lbl{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.12em; fill:var(--soft); text-transform:uppercase;}
+.lbl.d{fill:var(--postal);}
+.plane{animation:fOut .4s linear 4.05s forwards;} .truck{opacity:0; animation:fIn .4s linear 4.1s forwards;}
+.env{animation:envOut .45s ease-in 5.25s forwards;}
+@keyframes fOut{to{opacity:0;}} @keyframes fIn{to{opacity:1;}}
+@keyframes envOut{to{opacity:0; transform:translateY(6px);}}
+/* LETTER — unfolds out of the arrived envelope */
+.lw2__letter{position:relative; max-width:604px; margin:0 auto; background:var(--paper); border:1px solid var(--rule);
+  padding:48px 46px 42px; box-shadow:0 22px 50px rgba(60,40,15,.24);
+  transform-origin:top center; opacity:0; animation:unfold 1s cubic-bezier(.2,.7,.2,1) 5.35s both;}
+@keyframes unfold{from{opacity:0; transform:perspective(1500px) rotateX(-84deg);} to{opacity:1; transform:perspective(1500px) rotateX(0);}}
+.lw2__flap{position:absolute; top:-1px; left:0; right:0; height:20px; background:linear-gradient(var(--env-dk), transparent);}
+.lw2__stamp{position:absolute; top:26px; right:30px; width:66px; height:80px; background:var(--paper); border:1px solid var(--rule);
+  display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:7px 4px; text-align:center;
+  transform:rotate(4deg); box-shadow:0 3px 10px rgba(60,40,15,.2); outline:5px solid var(--paper); outline-offset:-1px;}
+.lw2__stamp b{font-family:'IBM Plex Mono',monospace; font-size:.46rem; letter-spacing:.08em; color:var(--postal);}
+.lw2__stamp small{font-family:'IBM Plex Mono',monospace; font-size:.42rem; color:var(--dim);}
+.lw2__postmark{position:absolute; top:60px; right:98px; width:80px; height:80px; border-radius:50%; border:2px solid var(--postal);
+  color:var(--postal); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+  font-family:'IBM Plex Mono',monospace; transform:rotate(-12deg) scale(1.5); opacity:0;
+  box-shadow:inset 0 0 0 3px var(--paper), inset 0 0 0 4px var(--postal); animation:stamp .45s ease-out 5.9s forwards;}
+.lw2__postmark span{font-size:.46rem; letter-spacing:.1em; line-height:1.5;} .lw2__postmark .big{font-size:.62rem; font-weight:500;}
+@keyframes stamp{to{opacity:.8; transform:rotate(-12deg) scale(1);}}
+.lw2__dear{font-family:'Caveat',cursive; font-size:2rem; color:var(--postal); margin:12px 0 12px;}
+.lw2__body p{margin:0 0 1.28em; color:var(--ink); font-size:1.12rem;}
+.lw2__body p:first-of-type{font-size:1.4rem; line-height:1.36;}
+.lw2__body em{color:var(--postal); font-style:italic;} .lw2__body strong{font-weight:500;}
+.lw2__body a{color:var(--postal); text-decoration:none; border-bottom:1px solid var(--rule);}
+.lw2__body a:hover{border-color:var(--postal);}
+.lw2__body hr{border:none; height:1px; width:70px; margin:2em 0; background:var(--rule);}
+/* reply form */
+.lw2__reply{margin:34px 0 6px; padding:24px; background:var(--map); border:1px dashed var(--postal); border-radius:2px;}
+.lw2__reply .k{font-family:'IBM Plex Mono',monospace; font-size:.62rem; letter-spacing:.22em; text-transform:uppercase; color:var(--postal); margin:0 0 8px;}
+.lw2__reply p{color:var(--soft); font-size:1rem; margin:0 0 14px;}
+.lw2__row{display:flex; gap:8px;}
+.lw2__row input{flex:1; padding:13px 15px; background:var(--paper); border:1px solid var(--rule); color:var(--ink);
+  font-family:'IBM Plex Mono',monospace; font-size:.9rem; border-radius:2px;}
+.lw2__row input:focus{outline:none; border-color:var(--postal);}
+.lw2__row button{padding:13px 20px; background:var(--postal); color:var(--paper); border:none; cursor:pointer; border-radius:2px;
+  font-family:'IBM Plex Mono',monospace; font-size:.72rem; letter-spacing:.12em; text-transform:uppercase;}
+.lw2__reply .lw2__note{font-family:'IBM Plex Mono',monospace; font-size:.66rem !important; line-height:1.5; color:var(--dim); margin:12px 0 0; letter-spacing:.04em;}
+.lw2__sign{font-family:'Caveat',cursive; font-size:2.05rem; color:var(--ink); margin:26px 0 0;}
+.lw2__sign small{display:block; font-family:'Newsreader',serif; font-style:italic; font-size:.95rem; color:var(--dim);}
+@media (prefers-reduced-motion:reduce){
+  .sceneA{animation:none; opacity:0;} .sceneB{animation:none; opacity:1;} .cloud1,.cloud2{animation:none;}
+  .travel{animation:none; stroke-dashoffset:0;} .plane{animation:none; opacity:0;} .truck{animation:none; opacity:1;}
+  .env{animation:none; opacity:0;} .lw2__letter{animation:none; opacity:1; transform:none;}
+  .lw2__postmark{animation:none; opacity:.8; transform:rotate(-12deg) scale(1);}
+}
+@media(max-width:560px){
+  .lw2__letter{padding:34px 24px 32px;} .lw2__dear{font-size:1.65rem;}
+  .lw2__stamp{width:56px; height:70px; right:20px; top:22px;} .lw2__postmark{width:66px; height:66px; right:78px; top:50px; transform:rotate(-12deg) scale(1);}
+  .lw2__row{flex-direction:column;} .lw2__row button{width:100%;} .lw2__body p:first-of-type{font-size:1.24rem;}
+}
+@media (prefers-color-scheme:dark){
+  body.lw2{ --bg:#171208; --map:#20190f; --paper:#20190f; --ink:#ece0c8; --soft:#b8a583; --dim:#8a7658;
+    --postal:#d46650; --blue:#6f93c4; --rule:#3a2e1e; --env-dk:#2c2214;
+    --nav-link:#d46650; --nav-link-hover:#e8896f; --footer-border:#3a2e1e; --footer-label:#8a7658;
+    --footer-link:#d46650; --footer-link-hover:#e8896f; --footer-dim:#8a7658; }
+}
+</style>
+<body class="lw2">
+<button class="replay" onclick="location.reload()">&#8635; replay</button>
+<main class="lw2__wrap">
+  {% include nav.html %}
+  <p class="lw2__eyebrow">A letter · taking <b>the long way</b> to your door</p>
+
+  <div class="airmail">
+    <div class="lw2__map">
+      <svg viewBox="0 0 640 260" role="img" aria-label="An airmail route from Harrisburg to your door — flown, then driven, then unfolded at your door">
+        <defs>
+          <linearGradient id="skyA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a7c3da"/><stop offset="1" stop-color="#ecdcb8"/></linearGradient>
+          <linearGradient id="skyB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cdddE6"/><stop offset="1" stop-color="#e6d7b6"/></linearGradient>
+        </defs>
+
+        <!-- SCENE A: sky + airport -->
+        <g class="sceneA">
+          <rect x="0" y="0" width="640" height="260" fill="url(#skyA)"/>
+          <circle cx="556" cy="50" r="25" fill="#ecc873" opacity=".55"/><circle cx="556" cy="50" r="18" fill="#eecf82"/>
+          <g class="cloud1" fill="#f6efe2" opacity=".9"><path d="M120,64 q-16,-2 -14,-12 q2,-11 16,-8 q4,-12 20,-8 q10,-8 18,2 q16,-2 14,12 q-2,10 -16,8 z"/></g>
+          <g class="cloud2" fill="#f6efe2" opacity=".85"><path d="M430,44 q-12,-1 -10,-9 q2,-8 12,-6 q3,-9 15,-6 q10,-4 14,4 q12,0 8,10 q-3,7 -14,6 z"/></g>
+          <!-- control tower + runway -->
+          <polygon points="22,236 130,236 158,214 62,214" fill="#c9b58a"/>
+          <line x1="48" y1="225" x2="140" y2="225" stroke="#efe6d0" stroke-width="2.5" stroke-dasharray="9 9"/>
+          <path d="M44,150 L58,150 L56,222 L46,222 Z" fill="#b79a72"/>
+          <rect x="36" y="138" width="30" height="16" rx="2" fill="#8f7550"/>
+          <polygon points="34,138 68,138 51,128" fill="#7a5c3a"/>
+          <line x1="51" y1="128" x2="51" y2="118" stroke="#8f7550" stroke-width="2"/><circle cx="51" cy="116" r="3" fill="var(--postal)"/>
+        </g>
+
+        <!-- SCENE B: road + countryside -->
+        <g class="sceneB">
+          <rect x="0" y="0" width="640" height="260" fill="url(#skyB)"/>
+          <path d="M0,150 Q160,120 320,150 T640,150 V260 H0 Z" fill="#b7c58c"/>
+          <path d="M0,186 Q200,158 400,190 T640,182 V260 H0 Z" fill="#a9b878"/>
+          <path d="M0,214 Q220,196 440,220 T640,214 V260 H0 Z" fill="#cdbf8f"/>
+          <g><rect x="93" y="184" width="6" height="18" fill="#7a5c3a"/><circle cx="96" cy="176" r="16" fill="#84a058"/><circle cx="88" cy="182" r="11" fill="#7a9650"/><circle cx="105" cy="182" r="10" fill="#7a9650"/></g>
+          <g><rect x="150" y="200" width="5" height="14" fill="#7a5c3a"/><circle cx="152" cy="196" r="11" fill="#84a058"/><circle cx="159" cy="200" r="8" fill="#7a9650"/></g>
+          <!-- the road IS the lower half of the route: red line becomes its center stripe -->
+          <path class="road" pathLength="1000" d="M52,150 C 176,58 300,72 348,132 C 392,190 512,224 588,178"
+                fill="none" stroke="#9a8c72" stroke-width="15" stroke-linecap="round" stroke-dasharray="480 520" stroke-dashoffset="-520"/>
+          <!-- house / your door -->
+          <g>
+            <rect x="571" y="170" width="36" height="28" fill="#f2e7cf" stroke="#b79a72" stroke-width="1.5"/>
+            <polygon points="565,171 589,150 613,171" fill="var(--postal)"/>
+            <rect x="583" y="181" width="11" height="17" fill="#8f7550"/><circle cx="592" cy="190" r="1" fill="#efe6d0"/>
+            <rect x="597" y="176" width="7" height="7" fill="#9fc0d8" stroke="#b79a72" stroke-width=".8"/>
+            <rect x="600" y="152" width="5" height="11" fill="#8f7550"/>
+          </g>
+        </g>
+
+        <!-- ROUTE + labels -->
+        <path class="base" d="M52,150 C 176,58 300,72 348,132 C 392,190 512,224 588,178"/>
+        <path id="route" class="travel" pathLength="1000" d="M52,150 C 176,58 300,72 348,132 C 392,190 512,224 588,178"/>
+        <text class="lbl" x="36" y="252">Harrisburg, PA</text>
+        <text class="lbl d" x="588" y="214" text-anchor="middle">your door</text>
+
+        <!-- the plane (leg 1) -->
+        <g class="plane">
+          <path d="M-16,0 Q-16,-3 -11,-3 L11,-2.4 Q19,-1.4 19,0 Q19,1.4 11,2.4 L-11,3 Q-16,3 -16,0 Z" fill="#f4ecdb" stroke="#9a7f58" stroke-width="1"/>
+          <path d="M7,-2.2 L-7,-15 L-9.5,-14.3 L-3,-2.2 Z" fill="#d8c088" stroke="#9a7f58" stroke-width=".6"/>
+          <path d="M7,2.2 L-7,15 L-9.5,14.3 L-3,2.2 Z" fill="#d8c088" stroke="#9a7f58" stroke-width=".6"/>
+          <path d="M-11,-1.4 L-17,-7 L-18.5,-6.6 L-14,-1.2 Z" fill="#c9b078" stroke="#9a7f58" stroke-width=".5"/>
+          <path d="M-11,1.4 L-17,7 L-18.5,6.6 L-14,1.2 Z" fill="#c9b078" stroke="#9a7f58" stroke-width=".5"/>
+          <path d="M-13,0 L12,0" stroke="var(--postal)" stroke-width="1.4"/>
+          <circle cx="14" cy="0" r="1.8" fill="var(--blue)"/>
+          <animateMotion dur="2.7s" begin="0.5s" fill="freeze" keyPoints="0;0.52" keyTimes="0;1" calcMode="linear" rotate="auto"><mpath href="#route"/></animateMotion>
+        </g>
+        <!-- the mail truck (leg 2) -->
+        <g class="truck">
+          <rect x="-16" y="-11" width="20" height="15" rx="2" fill="#f4ecdb" stroke="#9a7f58"/>
+          <path d="M4,-5 L11,-5 Q14,-5 14,-1 L14,4 L4,4 Z" fill="#eaddb8" stroke="#9a7f58"/>
+          <rect x="6" y="-3" width="6" height="5" rx="1" fill="#9fc0d8"/>
+          <rect x="-16" y="1" width="30" height="3" fill="var(--postal)"/>
+          <path d="M-13,-7 h9 v6 h-9 z M-13,-7 l4.5,3.5 l4.5,-3.5" fill="none" stroke="var(--postal)" stroke-width="1"/>
+          <circle cx="-9" cy="6" r="3.4" fill="#3a3128"/><circle cx="-9" cy="6" r="1.2" fill="#cdbf9f"/>
+          <circle cx="8" cy="6" r="3.4" fill="#3a3128"/><circle cx="8" cy="6" r="1.2" fill="#cdbf9f"/>
+          <animateMotion dur="2.3s" begin="3.3s" fill="freeze" keyPoints="0.52;0.9" keyTimes="0;1" calcMode="linear"><mpath href="#route"/></animateMotion>
+        </g>
+        <!-- the letter, carried the whole way (plane then truck), then it unfolds below -->
+        <g class="env">
+          <g transform="translate(0,-9)">
+            <rect x="-10" y="-7" width="20" height="14" rx="1.5" fill="#f7f0e2" stroke="#9a7f58" stroke-width="1"/>
+            <path d="M-10,-7 L0,1 L10,-7" fill="none" stroke="#9a7f58" stroke-width="1"/>
+            <path d="M-10,7 L-3,0 M10,7 L3,0" stroke="#cdbf9f" stroke-width="1"/>
+          </g>
+          <animateMotion dur="2.7s" begin="0.5s" fill="freeze" keyPoints="0;0.52" keyTimes="0;1" calcMode="linear"><mpath href="#route"/></animateMotion>
+          <animateMotion dur="2.3s" begin="3.3s" fill="freeze" keyPoints="0.52;0.9" keyTimes="0;1" calcMode="linear"><mpath href="#route"/></animateMotion>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <article class="lw2__letter">
+    <span class="lw2__flap"></span>
+    <div class="lw2__stamp"><b>THE LONG WAY</b><span style="font-size:1.3rem;line-height:1">&#9968;</span><small>FOREVER</small></div>
+    <div class="lw2__postmark"><span class="big">HARRISBURG</span><span>PA &middot; USA</span><span>JUL '26</span></div>
+    <p class="lw2__dear">Dear reader,</p>
+    <div class="lw2__body">{{ content }}</div>
+    <p class="lw2__sign">~ Aaron<small>until then, cheers!</small></p>
+  </article>
+
+  {% include footer.html %}
+</main>
+</body>
+</html>

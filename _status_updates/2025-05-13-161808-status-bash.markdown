@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-05-13 16:18:08 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+late afternoon coffee. focus has been difficult lately.

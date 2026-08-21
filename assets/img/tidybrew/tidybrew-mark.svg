@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="brew" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c9985f"></stop>
+      <stop offset="1" stop-color="#7a4f2c"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#brew)"></rect>
+  <g transform="translate(512 512) rotate(-35)">
+    <ellipse cx="0" cy="0" rx="394" ry="256" fill="#ffffff"></ellipse>
+  </g>
+  <path d="M206 699C314 531 412 610 512 512c100-98 198-19 306-187" fill="none" stroke="#8a5c33" stroke-width="67" stroke-linecap="round"></path>
+</svg>

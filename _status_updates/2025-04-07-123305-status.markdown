@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-07 12:33:05 
+layout: status_update
+categories: status
+author: aaron
+---
+back from a new hire meet & greet. seeing folks face to face is always best. post-covid work should be more hybrid than 100% in or out.

@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-05-19 22:16:49 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+schedule has been too busy lately. all good things but too much. need to schedule time off and away. need to make tiem for reading, writing, and tinkering.

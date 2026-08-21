@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-06-09 06:57:01 -0400
+layout: status_update
+author: aaron
+source: web
+---
+A sad but honest goal.
+
+![Status Image](https://cargo.aaronaiken.me/status/20260609065701.jpg)

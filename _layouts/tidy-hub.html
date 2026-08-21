@@ -1,0 +1,87 @@
+---
+layout: tidy-base
+---
+{%- assign t = site.data.tidy -%}
+{%- assign cfg = t.config -%}
+{%- assign hub = t.hub -%}
+
+<header class="tdy-hero">
+  <h1>{{ hub.headline }}</h1>
+  <p>{{ hub.sub }}</p>
+</header>
+
+<main class="tdy-main">
+  <div class="tdy-cards">
+    {%- for id in t.order -%}
+      {%- assign a = t.apps[id] -%}
+      <a class="tdy-card" href="{{ a.url | relative_url }}" style="--card-glow: {{ a.glow }}; --tint-deep: {{ a.deep }};">
+        <img class="tdy-icon shelf" src="{{ a.icon | relative_url }}" width="96" height="96" alt="{{ a.name }}">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+          <span class="name">{{ a.name }}</span>
+          <span class="tagline">{{ a.tagline }}</span>
+        </div>
+        {%- if a.free -%}
+          <span class="tdy-badge tint" style="--tint-deep: {{ a.deep }}">Free</span>
+        {%- else -%}
+          <span class="tdy-badge mono">{{ a.price_line }}</span>
+        {%- endif -%}
+      </a>
+    {%- endfor -%}
+  </div>
+
+  <div class="tdy-panel tdy-bundle">
+    <img class="tdy-icon shelf" src="{{ '/assets/tidy/tidy-mark.svg' | relative_url }}" width="72" height="72" alt="the tidy bundle">
+    <div class="body">
+      <span class="t">{{ hub.bundle_title }}</span>
+      <span class="d">{{ hub.bundle_desc }}</span>
+      <span class="m">{{ cfg.bundle_meta }}</span>
+    </div>
+    {%- if cfg.mode == 'live' -%}
+      <a class="tdy-btn secondary" href="#">Get the bundle — {{ cfg.bundle_price }}</a>
+    {%- endif -%}
+  </div>
+
+  <section class="tdy-who">
+    <span class="tdy-eyebrow">who makes these</span>
+    <p class="lead">{{ hub.who_lead }}</p>
+    <p class="sub">{{ hub.who_sub }} <a href="{{ '/about/' | relative_url }}">aaronaiken.me</a></p>
+  </section>
+
+  <section class="tdy-signup{% if cfg.notify_endpoint == '' %}{% endif %}">
+    <div class="head">
+      <div class="col">
+        <span class="tdy-eyebrow">{{ hub.signup_eyebrow }}</span>
+        <span class="title on-open">{{ hub.signup_title }}</span>
+        <span class="title on-done" style="display:none">{{ hub.signup_done_title }}</span>
+        <span class="desc on-open">{{ hub.signup_desc }}</span>
+        <span class="desc on-done" style="display:none">{{ hub.signup_done_desc }}</span>
+      </div>
+      <div class="tdy-tiles"><span></span><span></span><span></span><span></span></div>
+    </div>
+    <form class="tdy-form" data-tidy-notify data-app="hub" data-endpoint="{{ cfg.notify_endpoint }}">
+      <input class="on-open" type="email" required placeholder="you@example.com" aria-label="Your email">
+      <button class="on-open tdy-btn btn-cyan" type="submit" style="color:#fff">Keep me posted</button>
+      <span class="tdy-done-msg on-done">✓ You're on the list — one note when something ships.</span>
+    </form>
+    <span class="tdy-fineprint on-open">{{ hub.signup_fineprint }}</span>
+  </section>
+</main>
+
+<footer class="tdy-footer">Made by hand in Harrisburg, Pennsylvania.</footer>
+
+<script>
+/* Toggle the signup panel's open/done copy in step with the form's is-done state. */
+(function(){
+  var form = document.querySelector('.tdy-signup .tdy-form');
+  if(!form) return;
+  form.addEventListener('submit', function(){
+    setTimeout(function(){
+      if(!form.classList.contains('is-done')) return;
+      var panel = form.closest('.tdy-signup');
+      panel.classList.add('done');
+      panel.querySelectorAll('.on-open').forEach(function(e){ e.style.display='none'; });
+      panel.querySelectorAll('.on-done').forEach(function(e){ e.style.display=''; });
+    }, 0);
+  });
+})();
+</script>

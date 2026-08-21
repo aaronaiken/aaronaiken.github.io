@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-05-09 00:41:15 -0400
+layout: status_update
+author: aaron
+source: web
+---
+useful. [scanner](https://aaronaiken.me/tools/domains/).
+
+![Status Image](https://cargo.aaronaiken.me/status/20260509004115.jpg)

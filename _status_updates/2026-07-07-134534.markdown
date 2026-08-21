@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-07-07 13:45:34 -0400
+layout: status_update
+author: aaron
+source: web
+---
+📋 New task logged: Tidy Away → [aaronaiken.me/tools/tasks/](https://aaronaiken.me/tools/tasks/)

@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-17 11:12:59 -0400
+layout: status_update
+author: aaron
+source: web
+---
+[🎧](https://www.youtube.com/watch?v=IkXWlNuSwCo){:target="_blank" rel="noopener" title="Dom Dolla Live @ Drumsheds London, 2024 - YouTube" class="external-link"} Focusing.

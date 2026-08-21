@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-04-21 15:48:01 -0400
+layout: status_update
+author: aaron
+source: web
+---
+📋 New task logged: Build "Command Deck" → [aaronaiken.me/tools/tasks/](https://aaronaiken.me/tools/tasks/)

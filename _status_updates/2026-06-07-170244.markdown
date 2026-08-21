@@ -1,0 +1,11 @@
+---
+title: Status
+date: 2026-06-07 17:02:44 -0400
+layout: status_update
+author: aaron
+source: web
+tags: [flagfootball]
+---
+🏈 Mozzie's Steelers — W 19–0 vs. Bengals (Home) #flagfootball - next up is the Super Bowl!
+
+![Game photo](https://mozzie-photos.b-cdn.net/mozzie/game-1780863241491/1780866092.jpg)

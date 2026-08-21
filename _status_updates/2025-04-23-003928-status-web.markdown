@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-23 00:39:28 -0400
+layout: status_update
+author: aaron
+source: web
+---
+A lot on my mind, things to do piling up. Taskwarrior seems to be a good tool for me, for how my brain is currently working. Will get it implemented in my work environment as-well to see how it works there. Now: rest.

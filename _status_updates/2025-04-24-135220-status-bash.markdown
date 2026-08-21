@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-24 13:52:20 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+testing testing... April 24, 2025 1:52 PM via bash

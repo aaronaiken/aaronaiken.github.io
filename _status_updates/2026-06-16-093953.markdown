@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-06-16 09:39:53 -0400
+layout: status_update
+author: aaron
+source: web
+---
+🍃 Trying to keep things calm.
+
+![Status Image](https://cargo.aaronaiken.me/status/20260616093953.jpg)

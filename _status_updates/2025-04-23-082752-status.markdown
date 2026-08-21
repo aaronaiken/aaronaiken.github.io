@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-23 08:27:52 
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+that'll be issue #75 - bash status update time - bug. will squash.

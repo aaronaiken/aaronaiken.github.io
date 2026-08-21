@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-06 08:38:17 
+layout: status_update
+categories: status
+author: aaron
+---
+the novelty of this will wear off eventually, don't worry. Until that time, however, I will post more than is needed.

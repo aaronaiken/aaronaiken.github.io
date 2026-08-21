@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-25 17:14:25 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+not enough coffee in the world. another week kicked my butt.

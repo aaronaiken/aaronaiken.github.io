@@ -1,0 +1,109 @@
+/* Blackbox case study — the app's "oscilloscope" look: cyan traces on graph-ruled
+   graphite. Mirrors static/blackbox.css from the app itself. Dark-primary. */
+:root {
+  --bx-void:#eef1f0; --bx-panel:#f8faf9; --bx-hairline:#d3dbda; --bx-hairline-soft:#e2e8e7;
+  --bx-trace:#0d6f80; --bx-ink:#10181a; --bx-body:#243033; --bx-meta:#6b7d80;
+  --bx-gap:#b83c0c; --bx-gap-text:#8f4b2c; --bx-gap-wash:rgba(184,60,12,.06);
+  --bx-grid:rgba(13,111,128,.05); --bx-glow:0 2px 16px rgba(0,0,0,.10);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bx-void:#07090a; --bx-panel:#0c1114; --bx-hairline:#172227; --bx-hairline-soft:#101a1e;
+    --bx-trace:#4fb8cc; --bx-ink:#eaf4f5; --bx-body:#c3d2d4; --bx-meta:#5d7378;
+    --bx-gap:#e2521c; --bx-gap-text:#c08a72; --bx-gap-wash:rgba(226,82,28,.07);
+    --bx-grid:rgba(79,184,204,.035); --bx-glow:0 0 18px rgba(79,184,204,.12);
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bx-void); color: var(--bx-body);
+  font-family: 'Crimson Pro', Georgia, serif;
+  background-image:
+    linear-gradient(var(--bx-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bx-grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--bx-trace); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---- hero ---- */
+.bx-hero {
+  max-width: 860px; margin: 0 auto; padding: 40px 24px 22px;
+  display: flex; align-items: center; gap: 18px;
+  border-bottom: 1px solid var(--bx-hairline);
+}
+.bx-hero img { flex: none; border: 1px solid var(--bx-hairline); border-radius: 12px; background: var(--bx-panel); }
+.bx-hero .k { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: .2em;
+  color: var(--bx-trace); text-transform: uppercase; }
+.bx-hero h1 { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 30px;
+  color: var(--bx-ink); letter-spacing: -.02em; margin: 6px 0 0; }
+.bx-tagline { font-size: 17px; color: var(--bx-meta); margin: 6px 0 0; }
+.bx-nav { margin-left: auto; align-self: flex-start; display: flex; flex-direction: column;
+  align-items: flex-end; gap: 8px; }
+.bx-back { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--bx-meta); }
+.bx-cta { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .04em;
+  color: var(--bx-trace); border: 1px solid var(--bx-trace); border-radius: 4px; padding: 5px 10px;
+  white-space: nowrap; }
+.bx-cta:hover { background: var(--bx-trace); color: var(--bx-void); text-decoration: none; }
+
+/* ---- article ---- */
+.article { max-width: 760px; margin: 0 auto; padding: 26px 24px 10px; }
+.article > p:first-child { font-size: 19px; color: var(--bx-ink); }
+.article h2 {
+  font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 15px;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--bx-ink);
+  margin: 40px 0 10px; padding-top: 20px; border-top: 1px solid var(--bx-hairline);
+}
+.article h2::before { content: "// "; color: var(--bx-trace); }
+.article h3 { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 15px;
+  color: var(--bx-ink); margin: 24px 0 6px; }
+.article p, .article li { font-size: 17.5px; line-height: 1.62; color: var(--bx-body); }
+.article strong { color: var(--bx-ink); font-weight: 600; }
+.article em { color: var(--bx-body); }
+.article ul { padding-left: 20px; }
+.article li { margin: 6px 0; }
+.article li::marker { color: var(--bx-trace); }
+.article a { border-bottom: 1px solid transparent; }
+.article a:hover { border-bottom-color: currentColor; text-decoration: none; }
+.article code { font-family: 'JetBrains Mono', monospace; font-size: .85em;
+  background: var(--bx-panel); border: 1px solid var(--bx-hairline); border-radius: 3px; padding: 1px 5px; }
+.article hr { border: none; border-top: 1px solid var(--bx-hairline); margin: 34px 0; }
+.article blockquote {
+  margin: 22px 0; padding: 12px 16px; border-left: 2px solid var(--bx-gap);
+  background: var(--bx-gap-wash); color: var(--bx-gap-text); font-style: normal;
+}
+.article blockquote p { color: var(--bx-gap-text); font-size: 16.5px; margin: 0; }
+
+/* figures / screenshots */
+.article img { display: block; width: 100%; height: auto; margin: 8px 0 4px;
+  border: 1px solid var(--bx-hairline); border-radius: 6px; box-shadow: var(--bx-glow); }
+.article img + em, .article figcaption { display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: .04em; color: var(--bx-meta); margin: 4px 0 24px; text-align: center; }
+
+/* a small "chip" list you can drop into the md via inline HTML */
+.bx-stack { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; padding: 0; list-style: none; }
+.bx-stack li { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--bx-meta);
+  border: 1px solid var(--bx-hairline); border-radius: 3px; padding: 5px 9px; margin: 0; }
+
+/* ---- interest form (_includes/work_interest.html) — tint the shared include ---- */
+.wi {
+  --wi-accent: var(--bx-trace); --wi-ink: var(--bx-ink); --wi-meta: var(--bx-meta);
+  --wi-panel: var(--bx-panel); --wi-line: var(--bx-hairline); --wi-field: var(--bx-void);
+  --wi-btn-ink: var(--bx-void); --wi-err: var(--bx-gap);
+  --wi-mono: 'JetBrains Mono', monospace; --wi-serif: 'Crimson Pro', Georgia, serif;
+  box-shadow: var(--bx-glow);
+}
+
+/* ---- footer ---- */
+.bx-foot { max-width: 760px; margin: 30px auto 60px; padding: 18px 24px 0;
+  border-top: 1px solid var(--bx-hairline); display: flex; justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--bx-meta); }
+
+@media (max-width: 620px) {
+  .bx-hero { flex-wrap: wrap; }
+  .bx-back { margin-left: 0; }
+  .bx-hero h1 { font-size: 24px; }
+}

@@ -1,0 +1,19 @@
+---
+layout: default
+title: Movie Reviews
+---
+
+<h1>Movie Reviews</h1>
+<ul>
+  {% for post in site.tags.movie %}
+    <li>
+      <a href="{{ post.url }}">{{ post.title }}</a>
+      {% assign star_count = post.content | split: '⭐️' | size | minus: 1 %}
+      {% if star_count > 0 %}
+        ({% for i in (1..star_count) %}⭐️{% endfor %})
+      {% endif %}
+      <p>{{ post.content | split: '-' | last | strip }}</p>
+      <small>({{ post.date | date: "%Y-%m-%d" }})</small>
+    </li>
+  {% endfor %}
+</ul>

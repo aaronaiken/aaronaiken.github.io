@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-13 23:39:54 -0400
+layout: status_update
+author: aaron
+source: web
+tags: ['movie']
+---
+test post and then bed #movie

@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-06-08 06:40:49 -0400
+layout: status_update
+author: aaron
+source: web
+---
+📋 New task logged: Tidy Bar → [aaronaiken.me/tools/tasks/](https://aaronaiken.me/tools/tasks/)

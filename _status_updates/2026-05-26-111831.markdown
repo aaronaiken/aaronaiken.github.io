@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-05-26 11:18:31 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Out with the old, in with the new. 
+
+![Status Image](https://cargo.aaronaiken.me/status/20260526111831.jpg)

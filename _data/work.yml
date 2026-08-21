@@ -1,0 +1,26 @@
+# The Work section — case studies of things built for other people/teams.
+# Add a piece: append to `projects`, and create its case-study page under work/.
+projects:
+  - title: Blackbox
+    url: /work/blackbox/
+    client: Meeting intelligence
+    year: "2026"
+    icon: /assets/img/blackbox/icon-180.png
+    summary: >
+      Meeting audio → structured minutes and draft software requirements, with
+      acceptance criteria that each cite the moment in the recording they came from.
+      A drafting assistant with citations, not an automation — it surfaces what a
+      meeting left open instead of inventing it.
+    tags: [Flask, "ElevenLabs Scribe", Claude, ffmpeg, SQLite, "Traceable AI"]
+
+  - title: Mindsteward Abacus
+    url: /work/abacus/
+    client: Mind Steward
+    year: "2026"
+    icon: /assets/img/abacus-icon.svg
+    summary: >
+      The operational hub for a ~100-camper musical theater day camp — offline-first
+      check-in/out and movement tracking, plus parent + staff communications, a health
+      &amp; incident log, script-mailing logistics, and one-click reports, all on one
+      real-time roster with role-based access.
+    tags: [Flask, Postgres, "Offline PWA", Resend, "Role-based access"]

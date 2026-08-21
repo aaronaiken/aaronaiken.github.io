@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-07-28 06:03:00 -0400
+layout: status_update
+author: aaron
+source: web
+---
+☕️ up earlier than I wanted to be but feeling rested, and so here I am! First cup of coffee brewed and now sitting down to write.

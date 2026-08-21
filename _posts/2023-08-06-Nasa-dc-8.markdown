@@ -1,0 +1,10 @@
+---
+layout: post
+title: "NASA’s DC-8"
+date: 2023-08-06 10:26 AM
+categories: 
+author: aaron
+source: https://www.nasa.gov/centers/armstrong/news/FactSheets/FS-050-DFRC.html
+image: /assets/img/nasa-dc8.jpg
+---
+> Four types of missions are flown with the DC-8: sensor development, satellite sensor verification, space vehicle launch or re-entry telemetry data retrieval and optical tracking, and other research studies of Earth's surface and atmosphere.

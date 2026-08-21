@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-20 00:20:55 -0400
+layout: status_update
+author: aaron
+source: sms ($0.0079)
+---
+Getting things setup to validate the originating number for SMS status updates is coming along well. Bed calls...eager for rest. Last time I slept in this room I was probably grouchy. So much of a story to tell!

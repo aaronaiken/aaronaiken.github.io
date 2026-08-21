@@ -1,0 +1,146 @@
+{
+  "tasks": [
+    {
+      "id": "1783951843",
+      "title": "Letters From Paul",
+      "status": "open",
+      "created": "2026-07-13T10:10:43.576127-04:00",
+      "completed": null
+    },
+    {
+      "id": "1783446334",
+      "title": "Tidy Away",
+      "status": "open",
+      "created": "2026-07-07T13:45:34.232262-04:00",
+      "completed": null
+    },
+    {
+      "id": "1782424732",
+      "title": "Mindsteward Abacus",
+      "status": "open",
+      "created": "2026-06-25T17:58:52.681566-04:00",
+      "completed": null
+    },
+    {
+      "id": "1781887736",
+      "title": "Tidy Calendar",
+      "status": "open",
+      "created": "2026-06-19T12:48:56.671328-04:00",
+      "completed": null
+    },
+    {
+      "id": "1781101840",
+      "title": "The Slot",
+      "status": "open",
+      "created": "2026-06-10T10:30:40.899173-04:00",
+      "completed": null
+    },
+    {
+      "id": "1780915277",
+      "title": "Splinched",
+      "status": "complete",
+      "created": "2026-06-08T06:41:17.964341-04:00",
+      "completed": "2026-06-19T12:34:30.404170-04:00",
+      "blog_url": "https://aaronaiken.me/thinking/2026/06/19/the-book-i-couldn-t-write-until-i-d-lived-it-110-000-of-debt.html"
+    },
+    {
+      "id": "1780915259",
+      "title": "Tidy Stage",
+      "status": "open",
+      "created": "2026-06-08T06:40:59.521353-04:00",
+      "completed": null
+    },
+    {
+      "id": "1780915249",
+      "title": "Tidy Bar",
+      "status": "open",
+      "created": "2026-06-08T06:40:49.073844-04:00",
+      "completed": null
+    },
+    {
+      "id": "1780413363",
+      "title": "Made My Day",
+      "status": "open",
+      "created": "2026-06-02T11:16:03.321330-04:00",
+      "completed": null
+    },
+    {
+      "id": "1780413345",
+      "title": "First Thing",
+      "status": "open",
+      "created": "2026-06-02T11:15:45.740957-04:00",
+      "completed": null
+    },
+    {
+      "id": "1780280072",
+      "title": "My Scratchpad",
+      "status": "open",
+      "created": "2026-05-31T22:14:32.971564-04:00",
+      "completed": null
+    },
+    {
+      "id": "1780058415",
+      "title": "The Creed",
+      "status": "open",
+      "created": "2026-05-29T08:40:15.687118-04:00",
+      "completed": null
+    },
+    {
+      "id": "1780058329",
+      "title": "Cadence",
+      "status": "open",
+      "created": "2026-05-29T08:38:49.646318-04:00",
+      "completed": null
+    },
+    {
+      "id": "1780058314",
+      "title": "The Long Way",
+      "status": "open",
+      "created": "2026-05-29T08:38:34.563802-04:00",
+      "completed": null
+    },
+    {
+      "id": "1780058268",
+      "title": "Endpaper",
+      "status": "open",
+      "created": "2026-05-29T08:37:48.003395-04:00",
+      "completed": null
+    },
+    {
+      "id": "1780058256",
+      "title": "Plink",
+      "status": "open",
+      "created": "2026-05-29T08:37:36.134994-04:00",
+      "completed": null
+    },
+    {
+      "id": "1777154492",
+      "title": "Clean out washing machine",
+      "status": "complete",
+      "created": "2026-04-25T18:01:32.333905-04:00",
+      "completed": "2026-05-02T16:12:48.852175-04:00"
+    },
+    {
+      "id": "1776800881",
+      "title": "Build \"Command Deck\"",
+      "status": "complete",
+      "created": "2026-04-21T15:48:01.752915-04:00",
+      "completed": "2026-04-22T17:06:26.691461-04:00"
+    },
+    {
+      "id": "1776539623",
+      "title": "Fix the kitchen drawer",
+      "status": "complete",
+      "created": "2026-04-18T15:13:43.883116-04:00",
+      "completed": "2026-04-25T18:01:41.670737-04:00"
+    },
+    {
+      "id": "1776435561",
+      "title": "Fix the freezer",
+      "status": "complete",
+      "created": "2026-04-17T10:19:21.991657-04:00",
+      "completed": "2026-06-19T11:55:12.924833-04:00",
+      "blog_url": "https://aaronaiken.me/status_updates/2026-06-19-115726.html"
+    }
+  ]
+}

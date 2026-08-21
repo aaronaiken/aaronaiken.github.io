@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-24 22:58:57 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+well hey now! we have ignition: latest status update is in the header area of the site. Looking cool! Time for sleep!

@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-17 10:52:51 -0400
+layout: status_update
+author: aaron
+source: web
+---
+In and out of getting the latest status update to show in the footer of each page (except status pages). Going well!

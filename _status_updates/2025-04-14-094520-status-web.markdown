@@ -1,0 +1,8 @@
+---
+title: Status Update
+date: 2025-04-14 09:45:20 -0400
+layout: status_update
+author: aaron
+source: web
+---
+What a mess. Back to normal and keeping things simple. Will try again later :-)

@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-07-12 16:25:47 -0400
+layout: status_update
+author: aaron
+source: web
+---
+ ☀️ opting to take advantage of this sunny sunday by sitting out in the sun, reading a book, and sipping on something cool and refreshing.

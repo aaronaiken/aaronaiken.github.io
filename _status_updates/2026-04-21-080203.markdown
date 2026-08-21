@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-04-21 08:02:03 -0400
+layout: status_update
+author: aaron
+source: web
+---
+☀️ good morning! Sun is shining and the skies are the best shade of blue! I’ll ignore the below freezing temps. 

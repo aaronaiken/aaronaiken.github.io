@@ -1,0 +1,26 @@
+---
+layout: tidy-base
+---
+{%- assign a = site.data.tidy.apps[page.app] -%}
+<div class="tdy-doc"{% if a %} style="--tint: {{ a.sig }}; --tint-deep: {{ a.deep }};"{% endif %}>
+  <div class="tdy-doc-head">
+    {%- if page.breadcrumb -%}
+      <nav class="tdy-crumbs">
+        {%- for c in page.breadcrumb -%}
+          {%- if c.url -%}<a href="{{ c.url | relative_url }}">{{ c.label }}</a>{%- else -%}<span>{{ c.label }}</span>{%- endif -%}
+          {%- unless forloop.last %} <span class="sep">/</span> {% endunless -%}
+        {%- endfor -%}
+      </nav>
+    {%- endif -%}
+    <h1>{{ page.title }}</h1>
+    {%- if page.tagline -%}<p class="tagline">{{ page.tagline }}</p>{%- endif -%}
+  </div>
+  <article class="tdy-prose">
+    {{ content }}
+  </article>
+  {%- if a -%}
+    <div class="tdy-doc-foot"><a href="{{ a.url | relative_url }}">← Back to {{ a.name }}</a></div>
+  {%- endif -%}
+</div>
+
+<footer class="tdy-footer">Made by hand in Harrisburg, Pennsylvania.</footer>

@@ -1,0 +1,8 @@
+---
+title: status update test 2
+layout: status_update
+date: 2025-04-05 08:25:00 -0400
+categories: status
+author: aaron
+---
+It appears to be working!

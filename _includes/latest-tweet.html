@@ -1,0 +1,15 @@
+{% unless page.url == '/status.html' or page.path contains 'status_updates/' %}
+	{% assign latest = site.status_updates | sort: 'date' | reverse | first %}
+	{% if latest %}
+		<div class="latest-content">
+			Latest: {{ latest.content | markdownify | strip_html | truncate: 140 }}
+			<p class="timestamp" data-timestamp="{{ latest.date | date: '%s' }}">{{ latest.date | date: "%I:%M %p %B %-d, %Y %Z" }}</p>
+			<p><a href="{{ site.url | relative_url }}/status.html" title="click/tap to see more status updates">View more</a></p>
+			<!-- {% if latest.source %}
+				<p class="source">via {{ latest.source }} - <a href="{{ latest.url }}">🔗</a></p>
+			{% endif %} -->
+		</div>
+	{% endif %}
+{% endunless %}
+<!-- <p>DEBUG: page.path is '{{ page.path }}'</p>
+<p>DEBUG: page.url is '{{ page.url }}'</p> -->

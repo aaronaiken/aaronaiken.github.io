@@ -1,0 +1,9 @@
+---
+title: Status Update
+date: 2025-04-26 21:15:23 -0400
+layout: status_update
+categories: status
+author: aaron
+source: bash
+---
+finished rewatching Andor S1. I stand by my take after watching it when it first came out: best Star Wars show made.

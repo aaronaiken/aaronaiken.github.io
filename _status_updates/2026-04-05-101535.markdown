@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-04-05 10:15:35 -0400
+layout: status_update
+author: aaron
+source: web
+---
+☁️ overcast skies made for a bleak sunrise service earlier this morning. Was still a great service though, even if cold. 

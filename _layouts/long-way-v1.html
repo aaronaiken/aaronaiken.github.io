@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Karla:wght@400;500;600&display=swap');
+
+/* The Long Way — v1 "the wandering line". Warm, handmade, deliberately NOT the Cadence platform brand. */
+body.lwv1{
+  --paper:#FAF5EC; --ink:#2B2620; --soft:#5C5142; --dim:#8A7A64; --faint:#B0A38C;
+  --rust:#9C4A2F; --rust-dk:#7C3A24; --rule:#E3D8C4; --field:#FFFDF8; --field-line:#D8CBB2;
+  /* site nav + footer inherit the warm palette */
+  --nav-link:#8A7A64; --nav-link-hover:#9C4A2F; --ident-color:#8A7A64; --ident-border:#E3D8C4;
+  --footer-border:#E3D8C4; --footer-label:#8A7A64; --footer-link:#9C4A2F; --footer-link-hover:#7C3A24; --footer-dim:#B0A38C;
+  margin:0 !important; max-width:100% !important; padding:0 !important;
+  background:var(--paper) !important; color:var(--ink) !important;
+  font-family:'EB Garamond',Georgia,serif !important; font-size:19px; line-height:1.75;
+}
+body.lwv1 *{box-sizing:border-box;}
+body.lwv1 a{color:var(--rust);} body.lwv1 a:hover{color:var(--rust-dk);}
+
+/* Nav — a clean, centered, warm row aligned with the content column (overrides the global site-nav) */
+body.lwv1 .site-nav{max-width:620px; margin:0 auto; padding:26px 24px 4px; text-align:center;
+  font-family:'Karla',sans-serif !important; font-size:13px; line-height:1.9; color:var(--dim); float:none; display:block;}
+body.lwv1 .site-nav a{color:var(--dim); text-decoration:none; white-space:nowrap; padding:0 2px;}
+body.lwv1 .site-nav a:hover{color:var(--rust);}
+body.lwv1 .page-ident{display:none;}
+
+/* Footer — keep the site footer, but seated on the warm paper with a hairline above it */
+body.lwv1 .site-footer{background:transparent !important; border-top:1px solid var(--rule); margin-top:8px;
+  font-family:'Karla',sans-serif;}
+body.lwv1 .site-footer__inner{max-width:940px; margin:0 auto;}
+
+.lwv1__wrap{display:flex; flex-direction:column; align-items:center; padding:0 24px;}
+
+/* Hero */
+.lwv1__hero{width:100%; max-width:620px; display:flex; flex-direction:column; align-items:center; text-align:center; padding:72px 0 0;}
+.lwv1__eyebrow{font-family:'Karla',sans-serif; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim);}
+.lwv1__title{font-size:clamp(44px,9vw,64px); font-weight:500; line-height:1.08; margin:18px 0 0; letter-spacing:-.01em; color:var(--ink);}
+.lwv1__sub{font-size:clamp(19px,4vw,22px); font-style:italic; line-height:1.6; color:var(--soft); margin-top:20px; max-width:500px; text-wrap:pretty;}
+.lwv1__mark{margin-top:40px;}
+.lwv1__mark .road{stroke-dasharray:60; animation:lwvDraw 2.8s ease-out both;}
+.lwv1__mark .turn{opacity:0; animation:lwvTurn .6s ease-out 2.4s both;}
+@keyframes lwvDraw{from{stroke-dashoffset:60;} to{stroke-dashoffset:0;}}
+@keyframes lwvTurn{from{opacity:0;} to{opacity:1;}}
+@media (prefers-reduced-motion: reduce){ .lwv1__mark .road{animation:none; stroke-dashoffset:0;} .lwv1__mark .turn{animation:none; opacity:1;} }
+
+/* Body — Aaron's own words, single warm column */
+.lwv1__body{width:100%; max-width:560px; padding:64px 0 0;}
+.lwv1__body p{margin:0 0 22px;}
+.lwv1__body em{color:var(--soft);}
+.lwv1__body hr{border:none; border-top:1px solid var(--rule); margin:40px 0;}
+
+/* Signup (restyles the .lw2__reply block that lives in the page content) */
+.lwv1__body .lw2__reply{border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); padding:34px 0; margin:8px 0 0;}
+.lwv1__body .lw2__reply .k{font-family:'Karla',sans-serif; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); margin:0 0 10px;}
+.lwv1__body .lw2__reply > p:not(.k):not(.lw2__note){font-size:19px; line-height:1.7; margin:0 0 18px;}
+.lw2__row{display:flex; gap:10px; flex-wrap:wrap;}
+.lw2__row input{flex:1; min-width:220px; border:1px solid var(--field-line); background:var(--field); padding:13px 16px;
+  font-family:'Karla',sans-serif; font-size:14px; color:var(--ink); border-radius:3px; outline:none;}
+.lw2__row input:focus{border-color:var(--rust);}
+.lw2__row button{background:var(--rust); color:var(--paper); border:none; font-family:'Karla',sans-serif; font-size:14px;
+  font-weight:600; padding:13px 26px; border-radius:3px; cursor:pointer;}
+.lw2__row button:hover{background:var(--rust-dk);}
+.lw2__row button:disabled{opacity:.6; cursor:default;}
+.lw2__note{font-family:'Karla',sans-serif; font-size:12.5px; color:var(--dim); margin-top:16px; line-height:1.7;}
+
+/* Signoff */
+.lwv1__signoff{width:100%; max-width:620px; margin-top:8px; padding:80px 0 96px; display:flex; flex-direction:column; align-items:center; gap:8px;}
+.lwv1__signoff .sig{font-size:20px; font-style:italic; color:var(--soft);}
+.lwv1__signoff .colophon{font-family:'Karla',sans-serif; font-size:11.5px; color:var(--faint);}
+.lwv1__cadence{display:flex; align-items:center; gap:6px; margin-top:14px; color:var(--faint);
+  font-family:'Karla',sans-serif; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;}
+.lwv1__cadence svg{opacity:.85;}
+
+/* Warm dark mode — espresso paper, cream ink, amber-rust. Same soul, lights low. */
+@media (prefers-color-scheme: dark){
+  body.lwv1{
+    --paper:#211A12; --ink:#F0E6D2; --soft:#C4B69C; --dim:#9C8B71; --faint:#6E5F49;
+    --rust:#C98A3D; --rust-dk:#E0A455; --rule:#4A3D2C; --field:#2B2318; --field-line:#4A3D2C;
+    --nav-link:#9C8B71; --nav-link-hover:#C98A3D; --ident-color:#9C8B71; --ident-border:#4A3D2C;
+    --footer-border:#4A3D2C; --footer-label:#9C8B71; --footer-link:#C98A3D; --footer-link-hover:#E0A455; --footer-dim:#6E5F49;
+  }
+  body.lwv1 .lwv1__path path,
+  body.lwv1 .lwv1__path circle{stroke:#C98A3D !important; fill:#C98A3D;}
+  body.lwv1 .lwv1__path path{fill:none;}
+  body.lwv1 .lw2__row button{color:#211A12;}
+}
+</style>
+<body class="lwv1">
+{% include nav.html %}
+
+<div class="lwv1__wrap">
+  <div class="lwv1__hero">
+    <div class="lwv1__eyebrow">A newsletter, in letters</div>
+    <h1 class="lwv1__title">{{ page.title }}</h1>
+    {% if page.subtitle %}<div class="lwv1__sub">{{ page.subtitle }}</div>{% endif %}
+    <!-- The official mark: the waypoint — a road between two points with an open circle where it turned. -->
+    <svg class="lwv1__mark" width="88" height="88" viewBox="0 0 32 32" aria-label="The Long Way">
+      <path class="road" d="M14 3 C14 8, 8 9, 8 13 C8 17, 22 15, 22 20 C22 24, 17 25, 17 29"
+            fill="none" stroke="var(--rust)" stroke-width="2.2" stroke-linecap="round"></path>
+      <circle cx="14" cy="3" r="2.3" fill="var(--rust)"></circle>
+      <circle class="turn" cx="15.2" cy="15.8" r="2" fill="none" stroke="var(--rust)" stroke-width="1.5"></circle>
+      <circle cx="17" cy="29" r="2.3" fill="var(--rust)"></circle>
+    </svg>
+  </div>
+
+  <div class="lwv1__body">{{ content }}</div>
+
+  <div class="lwv1__signoff">
+    <div class="sig">— Aaron</div>
+    <div class="colophon">aaronaiken.me · handmade, no tracking, built to last</div>
+  </div>
+</div>
+<!-- No site footer here on purpose: this is a calm, self-contained letter page. The signoff above IS
+     the footer; site navigation lives in the top nav. (The heavy multi-column footer + easter-egg
+     quote broke the intimate tone.) -->
+</body>
+</html>
