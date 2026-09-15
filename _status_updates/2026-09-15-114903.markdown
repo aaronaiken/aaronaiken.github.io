@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-09-15 11:49:03 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Quite! a crisp 52*F when I woke up this morning. Seasons lately seem to just show up, not a slow ramp into the change.
+
+![Cloudbase header header dated Tuesday, September 15 with heading "Morning, Aaron" and subtitle "Early autumn — first cool mornings."](https://cargo.aaronaiken.me/status/20260915114903.jpg)
