@@ -5,6 +5,39 @@ layout: tidy-base
 {%- assign cfg = t.config -%}
 {%- assign hub = t.hub -%}
 
+<style>
+  /* iPhone & Watch shelf — a row of doorways to each app's own page. Uses the hub's
+     own tokens (canvas, tints, fonts) so it reads as part of the showroom. */
+  .tdy-family{margin-top:60px;}
+  .tdy-family-head{text-align:center;max-width:54ch;margin:0 auto;}
+  .tdy-family-head h2{font-family:var(--font-round);font-weight:800;font-size:var(--text-xl);
+    color:var(--ink-1);letter-spacing:-.01em;margin:8px 0 6px;}
+  .tdy-family-head p{font-family:var(--font-body);font-size:var(--text-md);color:var(--ink-2);
+    line-height:var(--leading-snug);margin:0;}
+  .tdy-mcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));
+    gap:14px;margin-top:26px;}
+  .tdy-mcard{display:flex;align-items:center;gap:16px;text-decoration:none;
+    background:var(--surface-card);border:1px solid var(--line);border-radius:var(--radius-card);
+    padding:18px 20px;box-shadow:var(--shadow-pop);
+    transition:transform var(--dur-move) var(--ease-tidy),box-shadow var(--dur-move) var(--ease-tidy);}
+  a.tdy-mcard:hover{transform:translateY(-3px);box-shadow:var(--shadow-card);}
+  .tdy-mcard.is-soon{opacity:.6;}
+  .tdy-mmark{width:60px;height:60px;border-radius:14px;flex:0 0 auto;object-fit:cover;
+    box-shadow:var(--shadow-pop);}
+  .tdy-mbody{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
+  .tdy-mname{font-family:var(--font-round);font-weight:800;font-size:var(--text-lg);
+    color:var(--ink-1);line-height:1.1;}
+  .tdy-mtag{font-family:var(--font-body);font-size:var(--text-sm);color:var(--ink-2);line-height:1.35;}
+  .tdy-mplat{font-family:var(--font-mono);font-size:11px;letter-spacing:var(--track-wide);
+    text-transform:uppercase;color:var(--ink-3);margin-top:3px;}
+  .tdy-mstatus{align-self:flex-start;flex:0 0 auto;font-family:var(--font-mono);font-size:10px;
+    letter-spacing:.12em;text-transform:uppercase;padding:4px 9px;border-radius:999px;
+    border:1px solid var(--line);color:var(--ink-2);white-space:nowrap;}
+  .tdy-mstatus.s-testflight{color:var(--tidy-gold-deep);border-color:#e7cf9a;}
+  .tdy-mstatus.s-building{color:var(--ink-3);}
+  @media (max-width:520px){.tdy-mcards{grid-template-columns:1fr;}}
+</style>
+
 <header class="tdy-hero">
   <h1>{{ hub.headline }}</h1>
   <p>{{ hub.sub }}</p>
@@ -40,6 +73,37 @@ layout: tidy-base
       <a class="tdy-btn secondary" href="#">Get the bundle — {{ cfg.bundle_price }}</a>
     {%- endif -%}
   </div>
+
+  <section class="tdy-family">
+    <div class="tdy-family-head">
+      <span class="tdy-eyebrow">{{ t.mobile_hub.eyebrow }}</span>
+      <h2>{{ t.mobile_hub.title }}</h2>
+      <p>{{ t.mobile_hub.sub }}</p>
+    </div>
+    <div class="tdy-mcards">
+      {%- for id in t.mobile_order -%}
+        {%- assign m = t.mobile[id] -%}
+        {%- assign tag = 'div' -%}{%- if m.url -%}{%- assign tag = 'a' -%}{%- endif -%}
+        <{{ tag }} class="tdy-mcard{% unless m.url %} is-soon{% endunless %}"{% if m.url %} href="{{ m.url | relative_url }}"{% endif %}>
+          <img class="tdy-mmark" src="{{ m.mark | relative_url }}" width="60" height="60" alt="{{ m.name }}" loading="lazy">
+          <span class="tdy-mbody">
+            <span class="tdy-mname">{{ m.name }}</span>
+            <span class="tdy-mtag">{{ m.tagline }}</span>
+            {%- unless m.platforms == '' -%}<span class="tdy-mplat">{{ m.platforms }}</span>{%- endunless -%}
+          </span>
+          <span class="tdy-mstatus s-{{ m.status }}">
+            {%- case m.status -%}
+              {%- when 'testflight' -%}TestFlight
+              {%- when 'building' -%}In progress
+              {%- when 'live' -%}App Store
+              {%- when 'free' -%}Free
+              {%- else -%}{{ m.status }}
+            {%- endcase -%}
+          </span>
+        </{{ tag }}>
+      {%- endfor -%}
+    </div>
+  </section>
 
   <section class="tdy-who">
     <span class="tdy-eyebrow">who makes these</span>

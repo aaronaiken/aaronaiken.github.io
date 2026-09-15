@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {%- include favicons.html -%}
+  {%- seo -%}
+  <script src="{{ '/assets/js/tidy-notify.js' | relative_url }}?v={{ site.time | date: '%s' }}" defer></script>
+  <style>
+    /* Shift uses SF Pro Rounded → Nunito on the web; system mono → Share Tech Mono. Self-hosted, OFL. */
+    @font-face{font-family:'ShSans';src:url('/assets/fonts/shift/Nunito-ExtraBold.ttf') format('truetype');font-weight:800;font-display:swap;}
+    @font-face{font-family:'ShSans';src:url('/assets/fonts/shift/Nunito-Bold.ttf') format('truetype');font-weight:700;font-display:swap;}
+    @font-face{font-family:'ShSans';src:url('/assets/fonts/shift/Nunito-SemiBold.ttf') format('truetype');font-weight:600;font-display:swap;}
+    @font-face{font-family:'ShSans';src:url('/assets/fonts/shift/Nunito-Regular.ttf') format('truetype');font-weight:400;font-display:swap;}
+    @font-face{font-family:'ShMono';src:url('/assets/fonts/shift/ShareTechMono-Regular.ttf') format('truetype');font-weight:400;font-display:swap;}
+
+    /* Moss on warm near-black — Shift's design tokens (moss / pending-gold / overdue-coral). */
+    .sh{
+      --ground:#161410; --ground-2:#1C1A14; --ink:#F0ECE0; --muted:#B3AB99; --faint:#7D7666;
+      --moss:#6fbf94; --moss-deep:#3f9a6e; --moss-hi:#57b184; --gold:#e8b24a; --coral:#e8594c;
+      --card:#221F18; --hair:#35312A;
+      --sans:'ShSans','Nunito',-apple-system,'SF Pro Rounded',sans-serif;
+      --mono:'ShMono','Share Tech Mono',ui-monospace,monospace;
+      background:var(--ground); color:var(--ink); font-family:var(--sans);
+      line-height:1.6; margin:0; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    }
+    .sh *{box-sizing:border-box;}
+    .sh img{max-width:100%;display:block;}
+    .sh-wrap{max-width:1000px;margin:0 auto;padding:0 26px;}
+    .sh-eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--moss);margin:0;}
+    .sh-rule{height:1px;background:var(--hair);border:0;margin:0;}
+
+    .sh-bar{display:flex;justify-content:space-between;align-items:center;max-width:1000px;margin:0 auto;
+      padding:18px 26px;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;}
+    .sh-bar a{color:var(--faint);text-decoration:none;}
+    .sh-bar a:hover{color:var(--ink);}
+    .sh-bar .sh-fam{color:var(--moss);}
+
+    /* Hero */
+    .sh-hero{position:relative;text-align:center;padding:40px 0 58px;overflow:hidden;}
+    .sh-hero::before{content:'';position:absolute;inset:-12% 0 auto 0;height:360px;
+      background:radial-gradient(ellipse 54% 100% at 50% 0%, rgba(63,154,110,.5), rgba(63,154,110,0) 70%);pointer-events:none;}
+    .sh-mark{position:relative;width:98px;height:98px;border-radius:24px;margin:6px auto 20px;box-shadow:0 16px 40px rgba(0,0,0,.5);}
+    .sh-word{font-family:var(--sans);font-weight:800;font-size:clamp(2.7rem,6.5vw,4.4rem);letter-spacing:-.02em;color:var(--ink);margin:0;line-height:1;}
+    .sh-pill{display:inline-block;font-family:var(--mono);font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;
+      color:var(--moss);border:1px solid rgba(111,191,148,.4);border-radius:999px;padding:4px 10px;margin-top:14px;}
+    .sh-tag{font-family:var(--sans);font-weight:600;font-size:clamp(1.2rem,2.6vw,1.6rem);color:#d6d1c2;max-width:24ch;margin:18px auto 0;line-height:1.4;}
+    .sh-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:30px 0 14px;}
+    .sh-btn{display:inline-block;padding:14px 26px;border-radius:12px;font-family:var(--sans);font-weight:700;font-size:1.02rem;text-decoration:none;transition:transform .15s ease;}
+    .sh-btn:hover{transform:translateY(-1px);}
+    .sh-btn--go{background:var(--moss-deep);color:#fff;}
+    .sh-btn--go:hover{background:var(--moss-hi);}
+    .sh-btn--ghost{background:transparent;color:var(--ink);border:1px solid var(--hair);}
+    .sh-hero .sh-eyebrow{color:var(--faint);margin-top:8px;}
+
+    /* State language — Shift's signature: three colors, one model */
+    .sh-states{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:6px;}
+    .sh-state{background:var(--card);border:1px solid var(--hair);border-radius:16px;padding:20px 20px;}
+    .sh-state .dot{width:14px;height:14px;border-radius:50%;display:inline-block;}
+    .sh-state h4{font-family:var(--sans);font-weight:800;font-size:1.15rem;color:var(--ink);margin:12px 0 4px;}
+    .sh-state p{font-family:var(--sans);font-weight:400;font-size:.98rem;color:var(--muted);margin:0;line-height:1.45;}
+    .sh-state.moss .dot{background:var(--moss);} .sh-state.gold .dot{background:var(--gold);} .sh-state.coral .dot{background:var(--coral);}
+    .sh-states-cap{font-family:var(--sans);font-weight:400;font-size:1.05rem;color:var(--muted);text-align:center;margin:18px auto 0;max-width:52ch;line-height:1.5;}
+
+    /* Showcase — light iOS screenshots on a dark card */
+    .sh-show{padding:8px 0 4px;}
+    .sh-card{background:var(--card);border:1px solid var(--hair);border-radius:24px;padding:34px 26px 20px;}
+    .sh-card .sh-eyebrow{color:var(--moss);text-align:center;}
+    .sh-shots{display:flex;gap:26px;justify-content:center;align-items:flex-start;flex-wrap:wrap;margin-top:22px;}
+    .sh-shots img{width:min(260px,42vw);border-radius:20px;border:1px solid var(--hair);box-shadow:0 20px 50px rgba(0,0,0,.4);}
+    .sh-cap{font-family:var(--sans);font-weight:400;font-size:1rem;color:var(--muted);text-align:center;margin:22px 0 6px;}
+
+    /* Sections */
+    .sh-sec{padding:58px 0;}
+    .sh-h2{font-family:var(--sans);font-weight:800;font-size:clamp(1.9rem,4.4vw,2.8rem);letter-spacing:-.015em;color:var(--ink);margin:10px 0 0;line-height:1.04;}
+    .sh-quote{font-family:var(--sans);font-weight:800;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.15;letter-spacing:-.01em;color:var(--ink);margin:0;max-width:20ch;}
+    .sh-quote em{font-style:normal;color:var(--moss);}
+    .sh-body{font-family:var(--sans);font-weight:400;font-size:1.16rem;line-height:1.65;color:#d0cabb;max-width:60ch;margin-top:18px;}
+    .sh-body b{font-weight:700;color:var(--ink);}
+
+    .sh-how{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:16px;overflow:hidden;margin-top:34px;}
+    .sh-how>div{background:var(--ground-2);padding:26px 24px;}
+    .sh-how .sh-eyebrow{color:var(--faint);}
+    .sh-how h3{font-family:var(--sans);font-weight:800;font-size:1.3rem;margin:8px 0 6px;color:var(--ink);}
+    .sh-how p{font-family:var(--sans);font-weight:400;font-size:.98rem;line-height:1.5;color:var(--muted);margin:0;}
+    .sh-how .tag{font-family:var(--mono);font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:var(--moss);}
+
+    .sh-note{font-family:var(--sans);font-weight:400;font-size:1.12rem;line-height:1.7;color:#cfc9ba;border-left:2px solid var(--moss-deep);padding:2px 0 2px 22px;margin:30px 0 0;max-width:64ch;}
+
+    /* Notify */
+    .sh-notify{background:var(--ground-2);border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);padding:56px 0;}
+    .sh-notify h2{font-family:var(--sans);font-weight:800;font-size:clamp(1.7rem,4vw,2.3rem);color:var(--ink);margin:12px 0 8px;}
+    .sh-notify p{font-family:var(--sans);font-weight:400;font-size:1.12rem;color:#cfc9ba;max-width:52ch;margin:0 0 22px;}
+    .sh-form{display:flex;gap:12px;flex-wrap:wrap;max-width:34rem;}
+    .sh-form input{flex:1;min-width:16rem;padding:14px 16px;border:1px solid var(--hair);border-radius:12px;background:#100E0A;color:var(--ink);font-size:1rem;font-family:var(--sans);}
+    .sh-form input::placeholder{color:#857d6d;}
+    .sh-form button{padding:14px 26px;border:0;border-radius:12px;background:var(--moss-deep);color:#fff;font-family:var(--sans);font-weight:700;font-size:1.02rem;cursor:pointer;}
+    .sh-form button:hover{background:var(--moss-hi);}
+    .sh-done{display:none;font-family:var(--sans);font-weight:700;font-size:1.12rem;color:var(--moss);margin:4px 0 0;}
+    .sh-notify.is-done .sh-form{display:none;} .sh-notify.is-done .sh-done{display:block;}
+    .sh-fine{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:16px 0 0;}
+
+    .sh-foot{padding:46px 0 70px;}
+    .sh-foot p{font-family:var(--sans);font-weight:400;font-size:1.05rem;color:#b0a897;line-height:1.65;max-width:60ch;}
+    .sh-foot a{color:var(--moss);text-decoration:none;border-bottom:1px solid var(--hair);}
+    .sh-foot a:hover{border-color:var(--moss);}
+
+    @media (max-width:680px){ .sh-states{grid-template-columns:1fr;} .sh-how{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body class="sh">
+  <div class="sh-bar">
+    <a href="{{ '/tools/' | relative_url }}">← The Workbench</a>
+    <a class="sh-fam" href="{{ '/tidyapps/' | relative_url }}">A Tidy app</a>
+  </div>
+  {{ content }}
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {%- include favicons.html -%}
+  {%- seo -%}
+  <script src="{{ '/assets/js/tidy-notify.js' | relative_url }}?v={{ site.time | date: '%s' }}" defer></script>
+  <style>
+    /* The app's own type, self-hosted (SIL OFL) — Archivo Narrow, Newsreader, IBM Plex Mono. */
+    @font-face { font-family:'TRNarrow'; src:url('/assets/fonts/tidyround/ArchivoNarrow-Bold.ttf') format('truetype'); font-weight:700; font-display:swap; }
+    @font-face { font-family:'TRNarrow'; src:url('/assets/fonts/tidyround/ArchivoNarrow-SemiBold.ttf') format('truetype'); font-weight:600; font-display:swap; }
+    @font-face { font-family:'TRSerif'; src:url('/assets/fonts/tidyround/Newsreader-Regular.ttf') format('truetype'); font-weight:400; font-style:normal; font-display:swap; }
+    @font-face { font-family:'TRSerif'; src:url('/assets/fonts/tidyround/Newsreader-Italic.ttf') format('truetype'); font-weight:400; font-style:italic; font-display:swap; }
+    @font-face { font-family:'TRMono'; src:url('/assets/fonts/tidyround/IBMPlexMono-Regular.ttf') format('truetype'); font-weight:400; font-display:swap; }
+
+    /* The Broadsheet palette (from the app's design tokens). */
+    .tr {
+      --paper:#F9F3E6; --paperdim:#ECE2CE; --ink:#2C2720; --ochre:#B3762C;
+      --ochre-ink:#C69A52; --line:#DED5C0; --grey:#8D8574;
+      --sans:'TRNarrow','Archivo Narrow',system-ui,sans-serif;
+      --serif:'TRSerif','Newsreader',Georgia,serif;
+      --mono:'TRMono','IBM Plex Mono',ui-monospace,monospace;
+      background:var(--paper); color:var(--ink);
+      font-family:var(--serif); line-height:1.7; margin:0;
+      -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    }
+    .tr *{box-sizing:border-box;}
+    .tr img{max-width:100%;display:block;}
+
+    .tr-wrap{max-width:1040px;margin:0 auto;padding:0 28px;}
+    .tr-eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--ochre);margin:0;}
+    .tr-rule{height:1px;background:var(--line);border:0;margin:0;}
+    .tr-rule--ochre{height:2px;background:var(--ochre);opacity:.5;}
+
+    /* Top bar */
+    .tr-bar{display:flex;justify-content:space-between;align-items:center;
+      max-width:1040px;margin:0 auto;padding:18px 28px;font-family:var(--mono);
+      font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;}
+    .tr-bar a{color:var(--grey);text-decoration:none;border:0;}
+    .tr-bar a:hover{color:var(--ink);}
+    .tr-bar .tr-fam{color:var(--ochre);}
+
+    /* Masthead */
+    .tr-mast{padding:44px 0 8px;}
+    .tr-mast .tr-eyebrow{margin-bottom:22px;}
+    .tr-h1{font-family:var(--sans);font-weight:700;color:var(--ink);
+      font-size:clamp(2.7rem,7vw,5rem);line-height:.98;letter-spacing:-.02em;margin:0;}
+    .tr-stand{font-family:var(--serif);font-size:clamp(1.15rem,2.4vw,1.5rem);
+      color:#5a5145;max-width:34ch;margin:22px 0 0;line-height:1.5;}
+    .tr-meta{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;
+      text-transform:uppercase;color:var(--grey);margin:26px 0 0;}
+    .tr-cta{display:inline-block;margin:26px 0 4px;padding:15px 30px;
+      font-family:var(--sans);font-weight:700;font-size:1.05rem;letter-spacing:.02em;
+      color:var(--paper);background:var(--ink);border-radius:9px;text-decoration:none;
+      transition:transform .15s ease;}
+    .tr-cta:hover{transform:translateY(-1px);}
+
+    /* Device hero */
+    .tr-hero{background:var(--paperdim);margin-top:40px;padding:52px 0;}
+    .tr-shots{display:flex;gap:30px;justify-content:center;flex-wrap:wrap;}
+    .tr-shot{width:min(300px,42vw);}
+    .tr-shot img{border-radius:22px;box-shadow:0 18px 46px rgba(44,39,32,.14);}
+    .tr-shot figcaption{font-family:var(--mono);font-size:.66rem;letter-spacing:.18em;
+      text-transform:uppercase;color:var(--grey);text-align:center;margin-top:16px;}
+
+    /* Editorial sections */
+    .tr-sec{padding:56px 0;}
+    .tr-sec--tight{padding:40px 0;}
+    .tr-lead{font-family:var(--serif);font-size:1.28rem;line-height:1.6;color:var(--ink);
+      max-width:40ch;margin:14px 0 0;}
+    .tr-h2{font-family:var(--sans);font-weight:700;color:var(--ink);
+      font-size:clamp(1.8rem,4vw,2.6rem);line-height:1.05;letter-spacing:-.015em;margin:12px 0 0;}
+    .tr p{max-width:62ch;}
+    .tr-serif{font-family:var(--serif);font-size:1.08rem;line-height:1.75;color:#453f36;}
+
+    .tr-three{display:grid;grid-template-columns:repeat(3,1fr);gap:36px;margin-top:40px;}
+    .tr-three h3{font-family:var(--sans);font-weight:600;font-size:1.35rem;color:var(--ink);
+      margin:14px 0 8px;line-height:1.1;}
+    .tr-three .n{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;color:var(--ochre);}
+    .tr-three p{font-family:var(--serif);font-size:1rem;line-height:1.65;color:#524b40;margin:0;}
+
+    .tr-runs{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);
+      border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:34px;}
+    .tr-runs>div{background:var(--paper);padding:30px 28px;}
+    .tr-runs h3{font-family:var(--sans);font-weight:600;font-size:1.3rem;margin:10px 0 6px;color:var(--ink);}
+    .tr-runs .tr-eyebrow{margin-bottom:4px;}
+    .tr-runs p{font-family:var(--serif);font-size:1rem;line-height:1.6;color:#524b40;margin:0;}
+
+    .tr-note{font-family:var(--serif);font-size:1.05rem;line-height:1.7;color:#524b40;
+      border-left:2px solid var(--ochre);padding:2px 0 2px 22px;margin:30px 0 0;max-width:64ch;}
+
+    /* Notify */
+    .tr-notify{background:var(--ink);color:var(--paper);padding:56px 0;margin-top:16px;}
+    .tr-notify .tr-eyebrow{color:var(--ochre-ink);}
+    .tr-notify h2{font-family:var(--sans);font-weight:700;font-size:clamp(1.7rem,4vw,2.4rem);
+      color:var(--paper);margin:14px 0 8px;letter-spacing:-.01em;}
+    .tr-notify p{font-family:var(--serif);color:#d8ceba;max-width:52ch;margin:0 0 24px;}
+    .tr-form{display:flex;gap:12px;flex-wrap:wrap;max-width:34rem;}
+    .tr-form input{flex:1;min-width:16rem;padding:15px 16px;border:1px solid #4a4238;
+      border-radius:9px;background:#38322a;color:var(--paper);font-size:1rem;font-family:var(--serif);}
+    .tr-form input::placeholder{color:#8f877a;}
+    .tr-form button{padding:15px 26px;border:0;border-radius:9px;background:var(--paper);
+      color:var(--ink);font-family:var(--sans);font-weight:700;font-size:1.02rem;cursor:pointer;
+      letter-spacing:.02em;}
+    .tr-form button:hover{background:#fff;}
+    .tr-notify .tr-done{display:none;font-family:var(--sans);font-weight:600;font-size:1.15rem;color:var(--ochre-ink);margin:6px 0 0;}
+    .tr-notify.is-done .tr-form{display:none;}
+    .tr-notify.is-done .tr-done{display:block;}
+    .tr-fine{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:#8f877a;margin:18px 0 0;}
+
+    /* Footer */
+    .tr-foot{padding:48px 0 72px;}
+    .tr-foot p{font-family:var(--serif);color:#524b40;font-size:1.02rem;line-height:1.65;max-width:60ch;}
+    .tr-foot a{color:var(--ochre);text-decoration:none;border-bottom:1px solid var(--line);}
+    .tr-foot a:hover{border-color:var(--ochre);}
+    .tr-cite{font-family:var(--mono);font-size:.7rem;letter-spacing:.05em;color:var(--grey);margin-top:22px;}
+
+    @media (max-width:720px){
+      .tr-three{grid-template-columns:1fr;gap:26px;}
+      .tr-runs{grid-template-columns:1fr;}
+      .tr-shot{width:min(280px,72vw);}
+    }
+  </style>
+</head>
+<body class="tr">
+  <div class="tr-bar">
+    <a href="{{ '/tools/' | relative_url }}">← The Workbench</a>
+    <a class="tr-fam" href="{{ '/tidyapps/' | relative_url }}">A Tidy app</a>
+  </div>
+  {{ content }}
+</body>
+</html>

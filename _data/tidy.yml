@@ -170,3 +170,48 @@ apps:
         shot: { src: pasted-1785107075163-0.png, bg: 126.67, px: 50.00, py: 42.42, h: 495 }
       - caption: "the desktop you'd rather not share"
         shot: { src: mock-stage-before.png, bg: 100.00, px: 0.00, py: 0.00, h: 423 }
+
+# ── iPhone + Apple Watch apps ────────────────────────────────────────────────
+# Standalone apps, each with its OWN page + skin (NOT part of the Mac bundle).
+# The hub shows only a card; `url` links to the app's own page when it has one,
+# otherwise the card sits quietly with its status until the page lands.
+#   status -> testflight | building | live | free
+mobile_hub:
+  eyebrow: "iphone & apple watch"
+  title: "Also in the family."
+  sub: "Standalone apps for the pocket and the wrist — each with its own home, not part of the Mac bundle."
+mobile_order: [round, brew, shift, ebb, stilldark]
+mobile:
+  round:
+    name: Tidy Round
+    tagline: "The seven-minute workout, without the clutter."
+    platforms: "iPhone · Watch"
+    status: testflight
+    url: /tools/tidy-round/
+    mark: /assets/img/tidyround/tidyround-mark-256.png
+  brew:
+    name: TidyBrew
+    tagline: "A brew timer that won't let the cold brew be forgotten."
+    platforms: "iPhone · Watch"
+    status: testflight
+    url: /tools/tidy-brew/
+    mark: /assets/img/tidybrew/tidybrew-mark.svg
+  shift:
+    name: Shift
+    tagline: "Sit/stand, done honestly — the barometer verifies you actually moved."
+    platforms: "iPhone · Mac soon"
+    status: testflight
+    url: /tools/shift/
+    mark: /assets/img/shift/shift-mark.png
+  ebb:
+    name: Ebb
+    tagline: "A mirror for your health, never a coach — it shows where what you do and how you feel travel together."
+    platforms: "iPhone · Health"
+    status: building
+    mark: /assets/img/ebb/ebb-mark-256.png
+  stilldark:
+    name: Still Dark
+    tagline: "An encrypted prayer journal — yours alone, no server anyone can read."
+    platforms: "iPhone · Watch · Mac"
+    status: building
+    mark: /assets/img/stilldark/stilldark-mark-256.png
