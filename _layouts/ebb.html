@@ -154,6 +154,49 @@
     .eb-wbtn .dot{width:10px;height:10px;border-radius:999px;}
     .eb-wbtn .nm{font-size:.9rem;font-weight:600;}
 
+    /* Rhythm mockups — morning (bright), evening (always dark), settings (12a/12b/12d) */
+    .eb-phones{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;align-items:flex-start;margin-top:36px;}
+    .eb-phones>div{width:min(300px,86vw);}
+    .eb-phones .eb-phone{width:100%;padding:22px 18px 20px;}
+    .eb-phones .eb-phone h3{font-size:1.4rem;margin:0 0 2px;}
+    .eb-mcap{text-align:center;font-size:.66rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:12px 0 0;}
+    .eb-mcard{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:13px 14px;margin-top:12px;}
+    .eb-mrow{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+    .eb-mrow .k{font-weight:600;font-size:.98rem;color:var(--ink);}
+    .eb-mrow .v{font-size:.9rem;color:var(--muted);}
+    .eb-mseg{display:flex;gap:8px;margin-top:11px;}
+    .eb-mseg span{flex:1;text-align:center;font-weight:600;font-size:.9rem;padding:9px 0;border-radius:12px;}
+    .eb-mseg .on{background:var(--ink);color:var(--ground);}
+    .eb-mseg .off{background:var(--raised);color:var(--ink);}
+    .eb-mnote{font-size:.82rem;color:var(--dim);margin-top:8px;line-height:1.45;}
+    .eb-msave{margin-top:14px;background:var(--ink);color:var(--ground);text-align:center;font-weight:600;font-size:.98rem;padding:12px;border-radius:14px;}
+    .eb-lock{width:15px;height:15px;display:inline-block;border:2px solid var(--dim);border-radius:4px;position:relative;top:2px;}
+    .eb-lock::before{content:"";position:absolute;left:2px;top:-5px;width:7px;height:7px;border:2px solid var(--dim);border-bottom:0;border-radius:5px 5px 0 0;}
+    /* settings rows */
+    .eb-srow{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;gap:10px;}
+    .eb-srow .k{font-weight:600;font-size:.96rem;color:var(--ink);}
+    .eb-srow .k2{font-size:.93rem;color:var(--muted);}
+    .eb-srow .v{font-size:.9rem;color:var(--ink);font-weight:500;}
+    .eb-sdiv{height:1px;background:var(--hair);}
+    .eb-tog{width:42px;height:25px;border-radius:999px;position:relative;flex:none;}
+    .eb-tog.on{background:var(--accent);} .eb-tog.off{background:var(--raised);}
+    .eb-tog i{position:absolute;top:3px;width:19px;height:19px;border-radius:999px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);}
+    .eb-tog.on i{right:3px;} .eb-tog.off i{left:3px;}
+    /* evening is dark regardless of the page theme — the app's dark tokens, hardcoded */
+    .eb-phone--dark{
+      --ground:#191612;--card:#221F1A;--raised:#2B2721;--hair:#2B2721;
+      --ink:#F0EADF;--muted:#A79C8D;--dim:#7E7466;--border:rgba(240,234,223,.08);--track:#2B2721;
+      --phys:oklch(0.70 0.085 250);--ment:oklch(0.70 0.085 300);
+      --sexl:oklch(0.70 0.085 30);--relt:oklch(0.70 0.085 150);
+      background:#191612;border-color:rgba(240,234,223,.08);color:var(--ink);
+    }
+    .eb-phone--dark h3{color:var(--ink);} .eb-phone--dark .sub{color:var(--muted);}
+    .eb-phone--dark .eb-dom-top b{color:var(--ink);}
+    .eb-mslider{position:relative;height:26px;display:flex;align-items:center;margin-top:4px;}
+    .eb-mslider .track{height:8px;width:100%;border-radius:999px;background:var(--track);}
+    .eb-mslider .fill{position:absolute;left:0;height:8px;border-radius:999px;}
+    .eb-mslider .knob{position:absolute;width:24px;height:24px;border-radius:999px;background:var(--card);transform:translateX(-50%);box-shadow:0 2px 6px rgba(0,0,0,.35);}
+
     /* Dark mode — the app's dark tokens + dark domain hues (same swap the app makes). */
     @media (prefers-color-scheme: dark){
       .eb{

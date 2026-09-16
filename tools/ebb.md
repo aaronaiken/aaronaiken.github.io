@@ -97,12 +97,113 @@ author: aaron
       <div>
         <span class="tag">On its own</span>
         <h3>Reads Apple Health.</h3>
-        <p>Sleep, steps, workouts, resting heart rate, HRV, weight — read only. Drinks you log write back to Health (water, caffeine, alcohol) so you don't need a second app. Food is a few taps.</p>
+        <p>Sleep, steps, workouts, resting heart rate, HRV. Drinks you log write back to Health (water, caffeine, alcohol) so you don't need a second app — and your weight too, but only if you turn that on. Everything else it just reads. Food is a few taps.</p>
       </div>
       <div>
         <span class="tag">In about three weeks</span>
         <h3>Shows what travels together.</h3>
         <p>Once there's enough to be sure, it starts naming the patterns — the honest ones, with the numbers behind them.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="eb-rule">
+
+<section class="eb-sec">
+  <div class="eb-wrap">
+    <p class="eb-eyebrow">The rhythm</p>
+    <h2 class="eb-h2">It shows up twice, then leaves you alone.</h2>
+    <p class="eb-body">The two check-ins open full-screen the first time you unlock Ebb Life inside their window — warm in the morning, dark at night — and each appears <b>at most once a day</b>. Log it or swipe it away and it's gone until tomorrow. Open the app to log a drink or read a pattern and it stays out of the way completely: it never interrupts what you actually came to do.</p>
+    <div class="eb-how">
+      <div>
+        <span class="tag">Morning</span>
+        <h3>Tells you before it asks.</h3>
+        <p>"You slept 7h 12m." Confirm or nudge the number, weigh in if you like, and step through to last night's private log — nothing you're made to do.</p>
+      </div>
+      <div>
+        <span class="tag">Evening</span>
+        <h3>Four numbers, then bed.</h3>
+        <p>A dark, quiet screen with all four sliders on one page. The day stays open until 4am, so a late night still lands on the right day.</p>
+      </div>
+      <div>
+        <span class="tag">On your terms</span>
+        <h3>Windows, not alarms.</h3>
+        <p>Set the hours each one may appear — or turn both off entirely. It waits for you to open the app; it never buzzes you first. Off is a perfectly good way to use it.</p>
+      </div>
+    </div>
+
+    <div class="eb-phones">
+      <div>
+        <div class="eb-phone">
+          <h3>Morning.</h3>
+          <p class="sub">You slept 7h 54m.</p>
+          <div class="eb-mcard">
+            <div class="eb-mrow"><span class="k">Sleep</span><span class="v">from Apple Health</span></div>
+            <div class="eb-mseg"><span class="on">Sounds right</span><span class="off">Adjust</span></div>
+          </div>
+          <div class="eb-mcard">
+            <div class="eb-mrow"><span class="k">Last night</span><span class="eb-lock" aria-hidden="true"></span></div>
+            <div class="eb-mnote">Private — opens behind your gate, back-dated to the night before.</div>
+          </div>
+          <div class="eb-mcard">
+            <div class="eb-mrow"><span class="k">Weigh in</span><span class="v" style="color:var(--accent-ink)">Optional</span></div>
+          </div>
+          <div class="eb-mcard">
+            <div class="eb-mrow"><span class="k" style="font-size:.86rem;color:var(--muted);font-weight:600">Medications · Apple Health</span></div>
+            <div class="eb-mnote">Ebb never changes your medications.</div>
+          </div>
+          <div class="eb-msave">Done</div>
+        </div>
+        <p class="eb-mcap">Morning · warm &amp; bright</p>
+      </div>
+
+      <div>
+        <div class="eb-phone eb-phone--dark">
+          <h3>How today went</h3>
+          <p class="sub">Tuesday · about 40 seconds</p>
+          <div class="eb-dom" style="margin-bottom:15px">
+            <div class="eb-dom-top"><b>Physical</b><span class="eb-num" style="color:var(--phys)">7</span></div>
+            <div class="eb-mslider"><div class="track"></div><div class="fill" style="width:67%;background:var(--phys)"></div><div class="knob" style="left:67%;border:2px solid var(--phys)"></div></div>
+          </div>
+          <div class="eb-dom" style="margin-bottom:15px">
+            <div class="eb-dom-top"><b>Mental</b><span class="eb-num" style="color:var(--ment)">5</span></div>
+            <div class="eb-mslider"><div class="track"></div><div class="fill" style="width:44%;background:var(--ment)"></div><div class="knob" style="left:44%;border:2px solid var(--ment)"></div></div>
+          </div>
+          <div class="eb-dom" style="margin-bottom:15px">
+            <div class="eb-dom-top"><b>Sexual</b><span class="eb-num" style="color:var(--sexl)">8</span></div>
+            <div class="eb-mslider"><div class="track"></div><div class="fill" style="width:78%;background:var(--sexl)"></div><div class="knob" style="left:78%;border:2px solid var(--sexl)"></div></div>
+          </div>
+          <div class="eb-dom" style="margin-bottom:18px">
+            <div class="eb-dom-top"><b>Relational</b><span class="eb-num" style="color:var(--relt)">6</span></div>
+            <div class="eb-mslider"><div class="track"></div><div class="fill" style="width:56%;background:var(--relt)"></div><div class="knob" style="left:56%;border:2px solid var(--relt)"></div></div>
+          </div>
+          <div class="eb-msave">Save the day</div>
+          <p class="eb-mnote" style="text-align:center">Swipe down to leave it — the day stays open until 4am.</p>
+        </div>
+        <p class="eb-mcap">Evening · always dark</p>
+      </div>
+
+      <div>
+        <div class="eb-phone">
+          <h3>Check-ins</h3>
+          <p class="sub">Windows, not alarms.</p>
+          <div class="eb-mcard" style="padding:0;overflow:hidden">
+            <div class="eb-srow"><span class="k">Morning takeover</span><span class="eb-tog on"><i></i></span></div>
+            <div class="eb-sdiv"></div>
+            <div class="eb-srow"><span class="k2">Not before</span><span class="v">5:30 AM</span></div>
+            <div class="eb-sdiv"></div>
+            <div class="eb-srow"><span class="k2">Not after</span><span class="v">11:00 AM</span></div>
+            <div class="eb-sdiv"></div>
+            <div class="eb-srow"><span class="k">Evening takeover</span><span class="eb-tog on"><i></i></span></div>
+            <div class="eb-sdiv"></div>
+            <div class="eb-srow"><span class="k2">Not before</span><span class="v">9:00 PM</span></div>
+            <div class="eb-sdiv"></div>
+            <div class="eb-srow"><span class="k">Follow my Sleep Focus</span><span class="eb-tog off"><i></i></span></div>
+          </div>
+          <p class="eb-mnote">Turn both off and Ebb never interrupts — you can still check in any time from Home.</p>
+        </div>
+        <p class="eb-mcap">Your windows</p>
       </div>
     </div>
   </div>
@@ -173,6 +274,30 @@ author: aaron
 
 <section class="eb-sec">
   <div class="eb-wrap">
+    <p class="eb-eyebrow">Meals</p>
+    <h2 class="eb-h2">A meal is a few taps, never a diary.</h2>
+    <p class="eb-body">The same shelf idea as drinks, for food. Build a short menu in your own words — <b>no database, no calories, no weighing, no barcodes.</b> Open it and it's already filtered to the moment: lunch opens on your usual lunch, a short list. Tap what you had, hit Log once, done — because a meal is several things at once, not one at a time. Reach it from the app, a Home Screen widget, or just say <b>"Log a meal in Ebb Life."</b> Never a takeover — three meals a day is too many to interrupt.</p>
+    <div class="eb-phone" style="max-width:440px;margin-top:26px">
+      <h3 style="font-size:1.35rem;margin:0 0 2px">A meal</h3>
+      <p class="sub" style="margin:0 0 16px">Lunch — your usual</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">
+        <span style="padding:9px 14px;border-radius:999px;font-weight:600;font-size:.92rem;background:rgba(95,127,168,.14);color:var(--accent-ink);border:1px solid rgba(95,127,168,.35)">Big salad</span>
+        <span style="padding:9px 14px;border-radius:999px;font-weight:600;font-size:.92rem;background:rgba(95,127,168,.14);color:var(--accent-ink);border:1px solid rgba(95,127,168,.35)">Grilled chicken</span>
+        <span style="padding:9px 14px;border-radius:999px;font-weight:600;font-size:.92rem;background:rgba(95,127,168,.14);color:var(--accent-ink);border:1px solid rgba(95,127,168,.35)">Olive oil</span>
+        <span style="padding:9px 14px;border-radius:999px;font-weight:600;font-size:.92rem;background:var(--card);color:var(--ink);border:1px solid var(--border)">Rice</span>
+        <span style="padding:9px 14px;border-radius:999px;font-weight:600;font-size:.92rem;background:var(--card);color:var(--ink);border:1px solid var(--border)">Sourdough</span>
+        <span style="padding:9px 14px;border-radius:999px;font-weight:600;font-size:.92rem;background:var(--card);color:var(--ink);border:1px solid var(--border)">Yogurt</span>
+        <span style="padding:9px 14px;border-radius:999px;font-weight:600;font-size:.92rem;background:transparent;color:var(--dim);border:1px dashed var(--raised)">+ New item</span>
+      </div>
+      <div class="eb-save">Log 3 items</div>
+    </div>
+  </div>
+</section>
+
+<hr class="eb-rule">
+
+<section class="eb-sec">
+  <div class="eb-wrap">
     <p class="eb-eyebrow">The rest of it</p>
     <h2 class="eb-h2">More than four numbers.</h2>
     <div class="eb-how">
@@ -201,7 +326,7 @@ author: aaron
   <div class="eb-wrap">
     <p class="eb-eyebrow">Private by design</p>
     <h2 class="eb-h2">Everything stays on this phone.</h2>
-    <p class="eb-body">No account, no sync, no analytics — and <b>no networking code at all.</b> Health data is read; the only thing written back is a drink you log. Nothing is ever sent off the phone. It's encrypted at rest and opens with Face ID, and the most personal part — a private log with its own gate and its own key — can be left closed forever without the rest of the app missing it.</p>
+    <p class="eb-body">No account, no sync, no analytics — and <b>no networking code at all.</b> Health data is read; the only things written back are the drinks you log — and your weight, if you turn that on. Your medications are read-only; Ebb never changes them. Nothing is ever sent off the phone. It's encrypted at rest and opens with Face ID, and the most personal part — a private log with its own gate and its own key — can be left closed forever without the rest of the app missing it.</p>
     <p class="eb-note">On-device intelligence, when your iPhone supports it: the questions you ask and the weekly note are written by Apple's on-device model, offline. Not medical advice — a mirror, kept to itself.</p>
   </div>
 </section>
