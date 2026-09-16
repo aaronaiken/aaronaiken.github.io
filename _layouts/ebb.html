@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {%- include favicons.html -%}
+  {%- seo -%}
+  <script src="{{ '/assets/js/tidy-notify.js' | relative_url }}?v={{ site.time | date: '%s' }}" defer></script>
+  <style>
+    /* Ebb — warm paper, four domain hues sharing one lightness & chroma (identity, never
+       valence). No red/green anywhere. SF Pro on device → system-ui on the web. */
+    .eb{
+      --ground:#F4EFE6; --card:#FBF8F2; --raised:#EAE2D5; --hair:#EFE8DC;
+      --ink:#2E2823; --muted:#7A7166; --dim:#9A8F7D;
+      --accent:#5F7FA8; --accent-ink:#4E6F96;
+      --insight:#E7E6E0; --insight-ink:#2E3238; --insight-mut:#5C6470;
+      --track:#E2D8C9; --border:rgba(63,50,38,.07);
+      --phys:oklch(0.62 0.075 250); --ment:oklch(0.62 0.075 300);
+      --sexl:oklch(0.62 0.075 30);  --relt:oklch(0.62 0.075 150);
+      --phys-n:oklch(0.55 0.08 250);--ment-n:oklch(0.55 0.08 300);
+      --sexl-n:oklch(0.55 0.08 30); --relt-n:oklch(0.55 0.08 150);
+      --sans:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro',system-ui,sans-serif;
+      background:var(--ground); color:var(--ink); font-family:var(--sans);
+      line-height:1.6; margin:0; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    }
+    .eb *{box-sizing:border-box;}
+    .eb img{max-width:100%;display:block;}
+    .eb-wrap{max-width:980px;margin:0 auto;padding:0 26px;}
+    .eb-eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:0;}
+    .eb-rule{height:1px;background:var(--hair);border:0;margin:0;}
+
+    .eb-bar{display:flex;justify-content:space-between;align-items:center;max-width:980px;margin:0 auto;
+      padding:18px 26px;font-size:.72rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;}
+    .eb-bar a{color:var(--dim);text-decoration:none;}
+    .eb-bar a:hover{color:var(--ink);}
+    .eb-bar .eb-fam{color:var(--accent-ink);}
+
+    /* Hero */
+    .eb-hero{text-align:center;padding:34px 0 44px;}
+    .eb-mark{width:96px;height:96px;border-radius:23px;margin:6px auto 20px;box-shadow:0 14px 34px rgba(63,50,38,.22);}
+    .eb-word{font-weight:600;font-size:clamp(2.7rem,6.4vw,4.2rem);letter-spacing:-.03em;color:var(--ink);margin:0;line-height:1;}
+    .eb-pill{display:inline-block;font-size:.62rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+      color:var(--accent-ink);border:1px solid rgba(95,127,168,.35);border-radius:999px;padding:4px 11px;margin-top:16px;}
+    .eb-tag{font-weight:500;font-size:clamp(1.2rem,2.6vw,1.55rem);color:#5C5349;max-width:26ch;margin:18px auto 0;line-height:1.4;text-wrap:pretty;}
+    .eb-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:28px 0 12px;}
+    .eb-btn{display:inline-block;padding:14px 26px;border-radius:16px;font-weight:600;font-size:1.02rem;text-decoration:none;transition:transform .15s ease;}
+    .eb-btn:hover{transform:translateY(-1px);}
+    .eb-btn--go{background:var(--ink);color:var(--ground);}
+    .eb-btn--ghost{background:transparent;color:var(--ink);border:1px solid var(--raised);}
+    .eb-hero .eb-eyebrow{margin-top:10px;}
+
+    /* Phone mockup — the check-in (1c), drawn in CSS */
+    .eb-show{padding:6px 0 8px;}
+    .eb-stage{display:flex;gap:34px;justify-content:center;align-items:flex-start;flex-wrap:wrap;}
+    .eb-phone{width:min(340px,86vw);background:var(--ground);border-radius:34px;padding:26px 22px 24px;
+      border:1px solid var(--border);box-shadow:0 22px 54px rgba(63,50,38,.20);}
+    .eb-phone h3{font-weight:600;font-size:1.5rem;letter-spacing:-.02em;margin:2px 0 2px;color:var(--ink);}
+    .eb-phone .sub{font-size:.92rem;color:var(--muted);margin:0 0 20px;}
+    .eb-dom{margin:0 0 20px;}
+    .eb-dom-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px;}
+    .eb-dom-top b{font-weight:600;font-size:1.04rem;}
+    .eb-dom-top span{font-weight:600;font-size:1.4rem;letter-spacing:-.02em;}
+    .eb-slider{position:relative;height:26px;display:flex;align-items:center;}
+    .eb-slider .track{height:8px;width:100%;border-radius:999px;background:var(--track);}
+    .eb-slider .fill{position:absolute;left:0;height:8px;border-radius:999px;}
+    .eb-slider .knob{position:absolute;width:26px;height:26px;border-radius:999px;background:var(--card);
+      transform:translateX(-50%);box-shadow:0 2px 6px rgba(63,50,38,.2);}
+    .eb-hint{font-size:.82rem;color:var(--dim);margin:8px 0 0;}
+    .eb-save{margin-top:6px;background:var(--ink);color:var(--ground);text-align:center;font-weight:600;
+      font-size:1rem;padding:14px;border-radius:16px;}
+
+    .eb-shotcap{font-weight:400;font-size:1rem;color:var(--muted);text-align:center;margin:26px auto 0;max-width:48ch;line-height:1.5;}
+
+    /* Sections */
+    .eb-sec{padding:54px 0;}
+    .eb-quote{font-weight:600;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.15;letter-spacing:-.02em;color:var(--ink);margin:0;max-width:22ch;}
+    .eb-quote em{font-style:normal;color:var(--accent-ink);}
+    .eb-h2{font-weight:600;font-size:clamp(1.9rem,4.4vw,2.7rem);letter-spacing:-.02em;color:var(--ink);margin:10px 0 0;line-height:1.06;}
+    .eb-body{font-weight:400;font-size:1.16rem;line-height:1.65;color:#5C5349;max-width:60ch;margin-top:18px;}
+    .eb-body b{font-weight:600;color:var(--ink);}
+
+    /* Four domains strip */
+    .eb-doms{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:34px;}
+    .eb-domcard{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:18px 16px;}
+    .eb-domcard .bar{height:8px;border-radius:999px;margin-bottom:14px;}
+    .eb-domcard h4{font-weight:600;font-size:1.05rem;margin:0 0 4px;color:var(--ink);}
+    .eb-domcard p{font-weight:400;font-size:.9rem;color:var(--muted);margin:0;line-height:1.45;}
+
+    /* How it works */
+    .eb-how{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--hair);
+      border:1px solid var(--hair);border-radius:18px;overflow:hidden;margin-top:34px;}
+    .eb-how>div{background:var(--card);padding:26px 24px;}
+    .eb-how .tag{font-size:.62rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-ink);}
+    .eb-how h3{font-weight:600;font-size:1.25rem;margin:9px 0 6px;color:var(--ink);}
+    .eb-how p{font-weight:400;font-size:.98rem;line-height:1.5;color:var(--muted);margin:0;}
+
+    /* Insight card (1b) */
+    .eb-insight{background:var(--insight);border:1px solid var(--border);border-radius:24px;padding:22px;margin-top:34px;max-width:60ch;}
+    .eb-insight p{font-weight:500;font-size:1.24rem;line-height:1.38;color:var(--insight-ink);margin:0 0 12px;text-wrap:pretty;}
+    .eb-insight svg{width:100%;height:34px;display:block;margin-bottom:12px;}
+    .eb-conf{display:inline-flex;align-items:center;gap:10px;}
+    .eb-conf .pill{font-size:.66rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+      background:#E4E9F0;color:#4E6F96;padding:4px 11px;border-radius:999px;}
+    .eb-conf .n{font-size:.86rem;color:var(--insight-mut);}
+
+    .eb-note{font-weight:400;font-size:1.12rem;line-height:1.7;color:#5C5349;border-left:2px solid var(--accent);padding:2px 0 2px 22px;margin:30px 0 0;max-width:64ch;}
+
+    /* Notify */
+    .eb-notify{background:var(--card);border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);padding:54px 0;}
+    .eb-notify h2{font-weight:600;font-size:clamp(1.7rem,4vw,2.3rem);letter-spacing:-.02em;color:var(--ink);margin:12px 0 8px;}
+    .eb-notify p{font-weight:400;font-size:1.12rem;color:#5C5349;max-width:52ch;margin:0 0 22px;}
+    .eb-form{display:flex;gap:12px;flex-wrap:wrap;max-width:34rem;}
+    .eb-form input{flex:1;min-width:16rem;padding:14px 16px;border:1px solid var(--raised);border-radius:14px;background:var(--ground);color:var(--ink);font-size:1rem;font-family:var(--sans);}
+    .eb-form input::placeholder{color:var(--dim);}
+    .eb-form button{padding:14px 26px;border:0;border-radius:14px;background:var(--ink);color:var(--ground);font-family:var(--sans);font-weight:600;font-size:1.02rem;cursor:pointer;}
+    .eb-done{display:none;font-weight:600;font-size:1.12rem;color:var(--accent-ink);margin:4px 0 0;}
+    .eb-notify.is-done .eb-form{display:none;} .eb-notify.is-done .eb-done{display:block;}
+    .eb-fine{font-size:.66rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin:16px 0 0;}
+
+    .eb-foot{padding:44px 0 70px;}
+    .eb-foot p{font-weight:400;font-size:1.05rem;color:var(--muted);line-height:1.65;max-width:60ch;}
+    .eb-foot a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid var(--raised);}
+    .eb-foot a:hover{border-color:var(--accent);}
+
+    /* Interactive check-in sliders (real range inputs, live labels via JS) */
+    .eb-num{font-weight:600;font-size:1.4rem;letter-spacing:-.02em;}
+    .eb-range{-webkit-appearance:none;appearance:none;width:100%;height:26px;background:transparent;cursor:pointer;margin:0;}
+    .eb-range::-webkit-slider-runnable-track{height:8px;border-radius:999px;
+      background:linear-gradient(90deg, var(--hue) 0 var(--p,50%), var(--track) var(--p,50%) 100%);}
+    .eb-range::-moz-range-track{height:8px;border-radius:999px;background:var(--track);}
+    .eb-range::-moz-range-progress{height:8px;border-radius:999px;background:var(--hue);}
+    .eb-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:26px;border-radius:999px;
+      background:var(--card);border:2px solid var(--hue);box-shadow:0 2px 6px rgba(63,50,38,.2);margin-top:-9px;}
+    .eb-range::-moz-range-thumb{width:26px;height:26px;border-radius:999px;background:var(--card);border:2px solid var(--hue);}
+    .eb-anchor{font-size:.9rem;color:var(--dim);min-height:1.2em;}
+
+    /* Drink tracker + widget mockups */
+    .eb-drinktiles{display:flex;gap:9px;margin-bottom:14px;}
+    .eb-dtile{flex:1;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:12px 13px;display:flex;flex-direction:column;gap:6px;}
+    .eb-dtile .lbl{font-size:.8rem;color:var(--dim);}
+    .eb-dtile .val{font-size:1.35rem;font-weight:600;letter-spacing:-.02em;}
+    .eb-shelf{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+    .eb-chip3{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:11px 12px;min-height:76px;display:flex;flex-direction:column;justify-content:space-between;}
+    .eb-chip3 .dot{width:10px;height:10px;border-radius:999px;}
+    .eb-chip3 .nm{font-size:.95rem;font-weight:600;line-height:1.15;}
+    .eb-chip3 .sz{font-size:.8rem;color:var(--dim);}
+    .eb-widget{background:var(--raised);border-radius:26px;padding:16px;max-width:360px;}
+    .eb-widget .wcard{background:var(--card);border-radius:20px;padding:14px;border:1px solid var(--border);}
+    .eb-wtop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px;}
+    .eb-wtop b{font-weight:600;} .eb-wtop span{font-size:.85rem;color:var(--muted);}
+    .eb-wbtns{display:flex;gap:8px;}
+    .eb-wbtn{flex:1;background:var(--ground);border:1px solid var(--border);border-radius:14px;padding:12px 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;}
+    .eb-wbtn .dot{width:10px;height:10px;border-radius:999px;}
+    .eb-wbtn .nm{font-size:.9rem;font-weight:600;}
+
+    /* Dark mode — the app's dark tokens + dark domain hues (same swap the app makes). */
+    @media (prefers-color-scheme: dark){
+      .eb{
+        --ground:#191612; --card:#221F1A; --raised:#2B2721; --hair:#2B2721;
+        --ink:#F0EADF; --muted:#A79C8D; --dim:#7E7466;
+        --accent:#86A3CA; --accent-ink:#86A3CA;
+        --insight:#232830; --insight-ink:#EDE9E1; --insight-mut:#6F7B89;
+        --track:#2B2721; --border:rgba(240,234,223,.07);
+        --phys:oklch(0.70 0.085 250); --ment:oklch(0.70 0.085 300);
+        --sexl:oklch(0.70 0.085 30);  --relt:oklch(0.70 0.085 150);
+        --phys-n:oklch(0.75 0.085 250);--ment-n:oklch(0.75 0.085 300);
+        --sexl-n:oklch(0.75 0.085 30); --relt-n:oklch(0.75 0.085 150);
+      }
+      .eb-tag{color:#C6BCAD;}
+      .eb-body{color:#C6BCAD;}
+      .eb-body b{color:var(--ink);}
+      .eb-conf .pill{background:#26303B;color:#9DB6D4;}
+      .eb-mark{box-shadow:0 14px 34px rgba(0,0,0,.5);}
+    }
+
+    @media (max-width:680px){ .eb-doms{grid-template-columns:1fr 1fr;} .eb-how{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body class="eb">
+  <div class="eb-bar">
+    <a href="{{ '/tools/' | relative_url }}">← The Workbench</a>
+    <a class="eb-fam" href="{{ '/tidyapps/' | relative_url }}">A Tidy app</a>
+  </div>
+  {{ content }}
+  <script>
+  (function () {
+    // The user's default anchor wording, band by band — mirrors the app's DefaultAnchors.
+    var ANCHORS = {
+      physical: ["Wiped out. Something feels wrong.","Dragging through the day.","Fine. Unremarkable.","Strong, easy in your body.","About as good as you get."],
+      mental:   ["Can't think straight.","Foggy and flat.","Getting things done, nothing more.","Clear and steady all day.","Sharp, light, everything easy."],
+      sexual:   ["No spark, nothing there.","Low, and it takes effort.","Present but quiet.","Wanting, and it works.","Alive, easy, all there."],
+      relational:["Distant. Barely connected.","Going through the motions.","Fine, side by side.","Close and at ease together.","Deeply in step."]
+    };
+    var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var fillL = dark ? 0.70 : 0.62, fillC = dark ? 0.085 : 0.075;
+    var numL  = dark ? 0.75 : 0.55, numC = 0.08;
+    function band(v){ return Math.min(4, Math.floor((v - 1) / 2)); }
+    document.querySelectorAll('.eb-dom[data-domain]').forEach(function (row) {
+      var domain = row.getAttribute('data-domain');
+      var hue = row.getAttribute('data-hue');
+      var input = row.querySelector('.eb-range');
+      var num = row.querySelector('.eb-num');
+      var anchor = row.querySelector('.eb-anchor');
+      row.style.setProperty('--hue', 'oklch(' + fillL + ' ' + fillC + ' ' + hue + ')');
+      function update() {
+        var v = +input.value;
+        input.style.setProperty('--p', ((v - 1) / 9 * 100) + '%');
+        if (num) { num.textContent = v; num.style.color = 'oklch(' + numL + ' ' + numC + ' ' + hue + ')'; }
+        if (anchor) anchor.textContent = ANCHORS[domain][band(v)];
+      }
+      input.addEventListener('input', update);
+      update();
+    });
+  })();
+  </script>
+</body>
+</html>

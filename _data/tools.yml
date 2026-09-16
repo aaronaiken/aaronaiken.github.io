@@ -184,13 +184,13 @@ tools:
       hands. Part of the Tidy family.
     tags: [iOS, watchOS, Swift, "Tidy family"]
 
-  - name: Ebb
-    url: /tidyapps/
+  - name: Ebb Life
+    url: /tools/ebb/
     logo: /assets/img/ebb/ebb-mark-256.png
     status: soon
-    badge: "In progress"
+    badge: "TestFlight"
     group: mac
-    cta: SEE THE FAMILY
+    cta: LEARN MORE
     blurb: >
       A mirror for your health, not a coach. It records what you do and how you feel, and
       after a few weeks starts pointing out where the two travel together — no streaks, no
