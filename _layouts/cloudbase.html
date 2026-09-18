@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {%- include favicons.html -%}
+  {%- seo -%}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Lora:ital,wght@0,400;0,500;1,400&family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* Cloudbase Design System tokens (mirrored from the bound DS). */
+    :root{
+      --accent:#1d4ed8; --accent-wash:#eaf0ff; --accent-line:#c7d5f5; --accent-press:#1740b0; --accent-2:#8fb0ff;
+      --ink:#11203b; --ink-body:#33415c; --ink-quiet:#5a6b86; --ink-faint:#8b9ab3;
+      --surface:#ffffff; --surface-sunk:#f4f6fb; --surface-quiet:#f9fbff;
+      --line:#d8e0ee; --line-quiet:#eef2f8; --line-strong:#b9c7de;
+      --ok:#1c7a4d; --warn:#a06a00; --warn-line:#e4cfa1; --bad:#a04a3d;
+      --navy:#11203b; --strip-ground:#101828; --strip-live:#f5a623;
+      --serif:'Fraunces',Georgia,serif; --prose:'Lora',Georgia,serif;
+      --mono:'Share Tech Mono',ui-monospace,monospace; --fig:'JetBrains Mono',ui-monospace,monospace;
+    }
+    /* Night flight — the app's real dark palette. Same token names, only the values swap;
+       auto from the OS (unless forced light), and via .night for a manual toggle. */
+    @media (prefers-color-scheme: dark){
+      :root:not(.theme-light){
+        color-scheme:dark;
+        --surface:#111820; --surface-sunk:#0d1117; --surface-quiet:#141c26;
+        --accent-wash:#16283c;
+        --line:#1e2830; --line-quiet:#243444; --line-strong:#3a5470;
+        --ink:#f4f6fb; --ink-body:#d8e0ee; --ink-quiet:#8b9ab3; --ink-faint:#5f7590;
+        --accent:#2f9bff; --accent-2:#8fb0ff; --accent-line:#3a5470;
+        --ok:#4dbb6a; --warn:#f5b332; --warn-line:#4a3d22; --bad:#cc3322;
+      }
+    }
+    .night{
+      color-scheme:dark;
+      --surface:#111820; --surface-sunk:#0d1117; --surface-quiet:#141c26;
+      --accent-wash:#16283c;
+      --line:#1e2830; --line-quiet:#243444; --line-strong:#3a5470;
+      --ink:#f4f6fb; --ink-body:#d8e0ee; --ink-quiet:#8b9ab3; --ink-faint:#5f7590;
+      --accent:#2f9bff; --accent-2:#8fb0ff; --accent-line:#3a5470;
+      --ok:#4dbb6a; --warn:#f5b332; --warn-line:#4a3d22; --bad:#cc3322;
+    }
+    html,body{margin:0;background:var(--surface-sunk);}
+    a{color:var(--accent);text-decoration:none;}
+    a:hover{text-decoration:underline;text-underline-offset:2px;}
+    @keyframes cbpulse{0%{box-shadow:0 0 0 0 rgba(245,166,35,.5);}70%{box-shadow:0 0 0 6px rgba(245,166,35,0);}100%{box-shadow:0 0 0 0 rgba(245,166,35,0);}}
+    @keyframes cbrise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+    @keyframes w{0%,100%{transform:scaleY(.4);}50%{transform:scaleY(1);}}
+    /* Narrow-screen collapse for the inline prose/card grids (the app frame scales on its own). */
+    @media (max-width:760px){
+      [style*="grid-template-columns: 1fr 1fr"],
+      [style*="grid-template-columns: repeat(3, 1fr)"],
+      [style*="grid-template-columns: 1.1fr 1fr"],
+      [style*="grid-template-columns: 1fr 290px"]{ grid-template-columns:1fr !important; }
+      [style*="padding: 44px 46px"]{ padding:30px 24px !important; }
+    }
+  </style>
+</head>
+<body>
+  {{ content }}
+
+  <script>
+  (function(){
+    var q=function(s){return document.querySelector(s);}, qa=function(s){return Array.prototype.slice.call(document.querySelectorAll(s));};
+    var on={bg:'var(--accent-wash)',bd:'var(--accent)',fg:'var(--accent)'}, off={bg:'var(--surface)',bd:'var(--line)',fg:'var(--ink-quiet)'};
+    function show(name){
+      qa('[data-screen]').forEach(function(s){ s.style.display = s.getAttribute('data-screen')===name?'':'none'; });
+      qa('button[data-tab]').forEach(function(b){ var v=b.getAttribute('data-tab')===name?on:off; b.style.background=v.bg; b.style.borderColor=v.bd; b.style.color=v.fg; });
+      qa('[data-navlink]').forEach(function(a){
+        var cur=a.getAttribute('data-navlink')===name;
+        a.style.background=cur?'var(--accent)':'transparent'; a.style.color=cur?'#fff':'var(--ink-body)';
+        Array.prototype.slice.call(a.querySelectorAll('span span')).forEach(function(s){ if(s.style.borderRadius!=='50%') s.style.color=cur?'rgba(255,255,255,.85)':'var(--ink-quiet)'; });
+      });
+      var m=q('[data-appmain]'); if(m) m.scrollTop=0;
+    }
+    function linger(id,done){
+      var row=q('[data-taskrow="'+id+'"]'), box=q('[data-tick="'+id+'"]'), title=q('[data-title="'+id+'"]'), ctrl=q('[data-ctrl="'+id+'"]'), undo=q('[data-undo="'+id+'"]');
+      if(!row) return;
+      row.style.opacity='1'; row.style.transition='opacity .28s ease';
+      if(box){ box.style.background=done?'var(--accent)':'none'; box.style.borderColor=done?'var(--accent)':'var(--line-strong)'; box.textContent=done?'✓':''; }
+      if(title){ title.style.color=done?'var(--ink-faint)':'var(--ink)'; title.style.textDecoration=done?'line-through':'none'; }
+      if(ctrl) ctrl.style.display=done?'none':'flex';
+      if(undo) undo.style.display=done?'flex':'none';
+    }
+    var timers={};
+    function fade(id){ var row=q('[data-taskrow="'+id+'"]'); if(!row) return; row.style.opacity='0'; setTimeout(function(){ linger(id,false); row.style.opacity='1'; },400); }
+    document.addEventListener('click', function(e){
+      var tab=e.target.closest('[data-tab]');
+      if(tab){ e.preventDefault(); show(tab.getAttribute('data-tab')); if(tab.hasAttribute('data-navlink')){ var box=q('[data-fit]'); if(box) window.scrollTo({top:box.getBoundingClientRect().top+window.scrollY-20,behavior:'smooth'}); } return; }
+      var tick=e.target.closest('[data-tick]');
+      if(tick){ var id=tick.getAttribute('data-tick'); linger(id,true); clearTimeout(timers[id]); timers[id]=setTimeout(function(){ fade(id); },8000); return; }
+      var undo=e.target.closest('[data-undobtn]');
+      if(undo){ var uid=undo.getAttribute('data-undobtn'); clearTimeout(timers[uid]); linger(uid,false); }
+    });
+    if(!(window.CSS&&CSS.supports&&CSS.supports('transform','scale(tan(atan2(100cqw, 1200px)))'))){
+      var fit=function(){ var box=q('[data-fit]'); if(!box||!box.clientWidth) return; box.style.setProperty('--s', String(Math.min(1, box.clientWidth/1200))); };
+      fit(); if(window.ResizeObserver){ var box=q('[data-fit]'); if(box){ new ResizeObserver(fit).observe(box); } } window.addEventListener('resize',fit);
+    }
+    var start=Date.now()-(1*3600+12*60+4)*1000, pad=function(n){return String(n).padStart(2,'0');};
+    setInterval(function(){ var c=q('[data-clock]'); if(!c) return; var s=Math.floor((Date.now()-start)/1000); c.textContent=Math.floor(s/3600)+':'+pad(Math.floor((s%3600)/60))+':'+pad(s%60); },1000);
+  })();
+  </script>
+</body>
+</html>

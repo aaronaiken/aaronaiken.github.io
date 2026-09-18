@@ -122,6 +122,25 @@ body.tools-page::after { content: ''; position: fixed; inset: 0; background: rad
       <p class="tools__subtitle">Things I've built — public, private, in progress. Tinkering made visible.</p>
     </div>
 
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+    <a href="/tools/cloudbase/" class="cb-flag" style="display:block;text-decoration:none;background:#11203b;border-radius:12px;padding:34px 36px;margin:0 0 30px;position:relative;overflow:hidden;">
+      <span style="position:absolute;inset:0;background:radial-gradient(120% 150% at 100% 0%, rgba(29,78,216,.40), transparent 62%);pointer-events:none;"></span>
+      <span style="position:relative;display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <span style="width:30px;height:30px;border-radius:7px;background:#1d4ed8;position:relative;flex:none;display:inline-block;">
+          <span style="position:absolute;background:#fff;border-radius:3px;width:12px;height:8px;left:11px;top:9px;"></span>
+          <span style="position:absolute;background:#fff;border-radius:3px;width:20px;height:9px;left:5px;top:15px;"></span>
+        </span>
+        <span style="font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:22px;color:#fff;letter-spacing:-.01em;">Cloudbase</span>
+        <span style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#8fb0ff;display:inline-flex;align-items:center;gap:7px;margin-left:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block;"></span>The flagship · live at cloudbase.day</span>
+      </span>
+      <span style="position:relative;display:block;font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:34px;line-height:1.08;letter-spacing:-.02em;color:#fff;margin:0;max-width:22ch;text-wrap:pretty;">Practice management for the person who does all the jobs.</span>
+      <span style="position:relative;display:block;font-family:'Lora',Georgia,serif;font-size:16px;line-height:1.65;color:rgba(255,255,255,.72);max-width:60ch;margin:14px 0 0;">The productized, multi-tenant descendant of my private Cockpit — the work, the record, and the money in one place, and nothing in it scores you. The biggest thing I've built, and what I open first every morning.</span>
+      <span style="position:relative;display:flex;flex-wrap:wrap;gap:10px;margin-top:22px;font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;">
+        <span style="padding:11px 20px;border-radius:3px;background:#1d4ed8;color:#fff;">Walk the screens →</span>
+        <span style="padding:11px 20px;border-radius:3px;border:1px solid rgba(255,255,255,.28);color:rgba(255,255,255,.9);">Flask · Postgres · Fly.io · 600+ tests</span>
+      </span>
+    </a>
+
     <div class="wb-filters">
       <button class="wb-chip active" type="button" data-filter="all">ALL</button>
       {% for g in site.data.tools.groups %}
