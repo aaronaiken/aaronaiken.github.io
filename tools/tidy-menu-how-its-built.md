@@ -1,23 +1,23 @@
 ---
 layout: tidy-page
 app: bar
-title: "TidyBar — How it's built"
-permalink: /tools/tidy-bar/how-its-built/
+title: "TidyMenu — How it's built"
+permalink: /tools/tidy-menu/how-its-built/
 favicon: /assets/tidy/app/tidybar/favicon.svg
 theme_color: "#3fb8c8"
-tagline: "The engineering notes behind TidyBar — how it works and how it's made."
-description: How TidyBar works and how it's built — a two-item AppKit menu-bar architecture, sandboxed, no dependencies.
+tagline: "The engineering notes behind TidyMenu — how it works and how it's made."
+description: How TidyMenu works and how it's built — a two-item AppKit menu-bar architecture, sandboxed, no dependencies.
 breadcrumb:
   - { label: Tools, url: /tools/ }
   - { label: Tidy, url: /tidyapps/ }
-  - { label: TidyBar, url: /tools/tidy-bar/ }
+  - { label: TidyMenu, url: /tools/tidy-menu/ }
   - { label: How it's built }
 ---
 
 
 *Last updated: 2026-07-07*
 
-TidyBar cleans up your Mac's menu bar. The icons you don't need all the time get tucked away behind a movable separator; click it and they slide back into view. It's the Hidden Bar idea, rebuilt native and careful, and it's the first app in the [Tidy family](/tidyapps/).
+TidyMenu cleans up your Mac's menu bar. The icons you don't need all the time get tucked away behind a movable separator; click it and they slide back into view. It's the Hidden Bar idea, rebuilt native and careful, and it's the first app in the [Tidy family](/tidyapps/).
 
 Native, sandboxed, no telemetry. Coming to the Mac App Store.
 
@@ -26,14 +26,14 @@ Native, sandboxed, no telemetry. Coming to the Mac App Store.
 
 The menu bar fills up. Every app wants a spot, and half of them you only glance at once a day — but they sit there the rest of the time, crowding the icons you actually use, and on a notched laptop they can vanish under the camera housing entirely.
 
-TidyBar gives you a line in the sand. Everything to one side stays visible; everything to the other side hides until you want it. Your menu bar goes back to showing what matters, and the rest is one click away.
+TidyMenu gives you a line in the sand. Everything to one side stays visible; everything to the other side hides until you want it. Your menu bar goes back to showing what matters, and the rest is one click away.
 
 
 ## How It Works
 
 There are two menu-bar items: a **separator** and a **toggle**. Drag the separator to set the line — icons left of it stay, icons right of it hide. Click the toggle (or the separator) to reveal the hidden set, click again to tuck it back. That's the whole interaction.
 
-Under the hood this is the app's defining decision: a **two-item architecture**. Rather than fake a hide with fragile tricks, TidyBar owns two real status items and moves the boundary between them, which is what makes the collapse stable across displays, notches, and macOS updates. It's screen-aware — it knows how much room the current display actually has — so it hides the right things when space runs out.
+Under the hood this is the app's defining decision: a **two-item architecture**. Rather than fake a hide with fragile tricks, TidyMenu owns two real status items and moves the boundary between them, which is what makes the collapse stable across displays, notches, and macOS updates. It's screen-aware — it knows how much room the current display actually has — so it hides the right things when space runs out.
 
 
 ## How It's Built
@@ -42,7 +42,7 @@ Under the hood this is the app's defining decision: a **two-item architecture**.
 
 **State:** Your separator position and collapsed/expanded state persist across launches in standard preferences. Nothing else is stored, because nothing else needs to be.
 
-**Distribution:** Sandboxed for the Mac App Store — TidyBar draws a tidier menu bar and asks for no special access to do it.
+**Distribution:** Sandboxed for the Mac App Store — TidyMenu draws a tidier menu bar and asks for no special access to do it.
 
 
 ## The Stack
@@ -62,4 +62,4 @@ Under the hood this is the app's defining decision: a **two-item architecture**.
 - Not a resource hog. A menu-bar agent that mostly sits still and waits for a click.
 - Not tracking anything. No analytics, no telemetry, no network calls.
 
-The menu bar should show what you're using and hide what you're not. TidyBar draws that line and lets you move it.
+The menu bar should show what you're using and hide what you're not. TidyMenu draws that line and lets you move it.

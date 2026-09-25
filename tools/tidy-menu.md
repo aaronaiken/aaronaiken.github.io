@@ -1,8 +1,8 @@
 ---
 layout: tidy-app
 app: bar
-title: TidyBar — a cleaner Mac menu bar
-permalink: /tools/tidy-bar/
+title: TidyMenu — a cleaner Mac menu bar
+permalink: /tools/tidy-menu/
 description: Hide the menu-bar icons you rarely use behind one tidy toggle. Native, sandboxed, no telemetry. macOS 14+.
 favicon: /assets/tidy/app/tidybar/favicon.svg
 image:
