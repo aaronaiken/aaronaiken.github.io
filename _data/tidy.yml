@@ -46,14 +46,14 @@ apps:
     glow: "var(--glow-cyan)"
     favicon: /assets/tidy/app/tidybar/favicon.svg
     icon: /assets/tidy/app/tidybar/icon.svg
-    price_line: "$3 · one-time"
+    price_line: "$9.99 · one-time"
     tagline: "Hide the menu-bar icons you rarely use — behind one tidy toggle."
     meta: "macOS 14+ · one-time purchase, no subscription"
-    soon: "Coming soon — $3, one-time · macOS 14+"
+    soon: "Coming soon — $9.99, one-time · macOS 14+"
     note: ""
     ctas:
-      - { label: "Buy on the App Store — $3", variant: primary }
-      - { label: "Buy direct — $3", variant: secondary }
+      - { label: "Buy on the App Store — $9.99", variant: primary }
+      - { label: "Buy direct — $9.99", variant: secondary }
     benefits:
       - "⌘-drag icons to either side of the divider — left hides, right stays."
       - "One click on the chevron collapses the clutter."
@@ -148,14 +148,14 @@ apps:
     glow: "var(--glow-gold)"
     favicon: /assets/tidy/app/tidystage/favicon.svg
     icon: /assets/tidy/app/tidystage/icon.svg
-    price_line: "$8 · one-time"
+    price_line: "$12.99 · one-time"
     tagline: "A clean stage for screen sharing, in one click."
     meta: "macOS 14+ · one-time purchase, no subscription"
-    soon: "Coming soon — $8, one-time · macOS 14+"
+    soon: "Coming soon — $12.99, one-time · macOS 14+"
     note: ""
     ctas:
-      - { label: "Buy on the App Store — $8", variant: primary }
-      - { label: "Buy direct — $8", variant: secondary }
+      - { label: "Buy on the App Store — $12.99", variant: primary }
+      - { label: "Buy direct — $12.99", variant: secondary }
     benefits:
       - "One click hides your desktop icons and swaps in a calm backdrop."
       - "Five neutral stages built in — Slate, Mist, Dusk, Forest, Sand."
