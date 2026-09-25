@@ -36,12 +36,11 @@ Your preferences — which backdrop you've chosen and your settings — in your 
 
 ## Permissions
 
-To clear the stage, TidyStage does two things through the system, and nothing more:
+TidyStage asks for **no** system permissions. It doesn't script Finder, doesn't change your wallpaper, and doesn't touch your icons — it simply lays a clean, full-screen window over the top of them on each display, and takes it away again when you're done. Nothing is moved, hidden through the system, or altered.
 
-- **Apple Events to Finder** — to ask Finder to hide and reveal your desktop icons. macOS shows you a one-time prompt the first time; you can revoke it any time in System Settings.
-- **A file you choose** — if (and only if) you pick a custom backdrop image, the standard open panel grants read access to that one file. TidyStage never browses, reads, or scans anything you didn't hand it.
+The only file it ever reads is one **you** hand it: if you pick a custom backdrop image, the standard open panel grants read access to that single file, and nothing else. TidyStage never browses, reads, or scans anything you didn't choose.
 
-It does **not** read your documents, take screenshots, record your screen, or restart Finder. The clean backdrop is just a window it places above your desktop icons on each display.
+It does **not** read your documents, take screenshots, record your screen, or restart Finder.
 
 ---
 
