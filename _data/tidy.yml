@@ -106,7 +106,7 @@ apps:
     id: cal
     slug: tidyglance
     name: TidyGlance
-    url: /tools/tidy-cal/
+    url: /tools/tidy-glance/
     tint: coral
     sig: "var(--tidy-coral)"
     deep: "var(--tidy-coral-deep)"

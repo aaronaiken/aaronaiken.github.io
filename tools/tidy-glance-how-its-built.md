@@ -2,7 +2,7 @@
 layout: tidy-page
 app: cal
 title: "TidyGlance — How it's built"
-permalink: /tools/tidy-cal/how-its-built/
+permalink: /tools/tidy-glance/how-its-built/
 favicon: /assets/tidy/app/tidyglance/favicon.svg
 theme_color: "#d84436"
 tagline: "The engineering notes behind TidyGlance — how it works and how it's made."
@@ -10,7 +10,7 @@ description: How TidyGlance works and how it's built — a locale-correct month 
 breadcrumb:
   - { label: Tools, url: /tools/ }
   - { label: Tidy, url: /tidyapps/ }
-  - { label: TidyGlance, url: /tools/tidy-cal/ }
+  - { label: TidyGlance, url: /tools/tidy-glance/ }
   - { label: How it's built }
 ---
 
