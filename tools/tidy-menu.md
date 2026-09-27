@@ -4,9 +4,9 @@ app: bar
 title: TidyMenu — a cleaner Mac menu bar
 permalink: /tools/tidy-menu/
 description: Hide the menu-bar icons you rarely use behind one tidy toggle. Native, sandboxed, no telemetry. macOS 14+.
-favicon: /assets/tidy/app/tidybar/favicon.svg
+favicon: /assets/tidy/app/tidymenu/favicon.svg
 image:
-  path: /assets/tidy/og/og-tidybar.png
+  path: /assets/tidy/og/og-tidymenu.png
   width: 1200
   height: 630
 theme_color: "#3fb8c8"

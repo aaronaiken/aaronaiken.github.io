@@ -36,7 +36,7 @@ order: [bar, away, cal, stage]
 apps:
   bar:
     id: bar
-    slug: tidybar
+    slug: tidymenu
     name: TidyMenu
     url: /tools/tidy-menu/
     tint: cyan
@@ -44,8 +44,8 @@ apps:
     deep: "var(--tidy-cyan-deep)"
     deep_hex: "#3fb8c8"
     glow: "var(--glow-cyan)"
-    favicon: /assets/tidy/app/tidybar/favicon.svg
-    icon: /assets/tidy/app/tidybar/icon.svg
+    favicon: /assets/tidy/app/tidymenu/favicon.svg
+    icon: /assets/tidy/app/tidymenu/icon.svg
     price_line: "$9.99 · one-time"
     tagline: "Hide the menu-bar icons you rarely use — behind one tidy toggle."
     meta: "macOS 14+ · one-time purchase, no subscription"

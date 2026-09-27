@@ -3,7 +3,7 @@ layout: tidy-page
 app: bar
 title: "TidyMenu — How it's built"
 permalink: /tools/tidy-menu/how-its-built/
-favicon: /assets/tidy/app/tidybar/favicon.svg
+favicon: /assets/tidy/app/tidymenu/favicon.svg
 theme_color: "#3fb8c8"
 tagline: "The engineering notes behind TidyMenu — how it works and how it's made."
 description: How TidyMenu works and how it's built — a two-item AppKit menu-bar architecture, sandboxed, no dependencies.

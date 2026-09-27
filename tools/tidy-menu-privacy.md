@@ -3,7 +3,7 @@ layout: tidy-page
 app: bar
 title: "TidyMenu — Privacy"
 permalink: /tools/tidy-menu/privacy/
-favicon: /assets/tidy/app/tidybar/favicon.svg
+favicon: /assets/tidy/app/tidymenu/favicon.svg
 theme_color: "#3fb8c8"
 tagline: "How TidyMenu treats your data. The short version: it doesn't touch it."
 description: TidyMenu's privacy policy. It collects nothing, sends nothing, and asks for no permissions.
