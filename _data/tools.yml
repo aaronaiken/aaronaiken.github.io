@@ -199,18 +199,33 @@ tools:
     tags: [iOS, "Apple Health", Swift, "Tidy family"]
 
   - name: Still Dark
-    url: /tidyapps/
+    url: /tools/still-dark/
     logo: /assets/img/stilldark/stilldark-mark-256.png
     status: soon
-    badge: "In progress"
+    badge: "TestFlight"
     group: mac
-    cta: SEE THE FAMILY
+    cta: LEARN MORE
     blurb: >
       An encrypted prayer journal — "very early in the morning, while it was still dark …
       he prayed." Your prayers are end-to-end encrypted and sync only between your own
-      devices; no account, no server anyone can read. For iPhone, Watch, and Mac. Part of
-      the Tidy family.
-    tags: [iOS, watchOS, macOS, "E2E encrypted"]
+      devices; no account, no server anyone can read. For iPhone and Mac, one purchase.
+      Part of the Tidy family.
+    tags: [iOS, macOS, "E2E encrypted"]
+
+  - name: Holdfast
+    url: /tools/holdfast/
+    logo: /assets/img/holdfast/holdfast-mark-256.png
+    status: soon
+    badge: "TestFlight"
+    group: mac
+    cta: LEARN MORE
+    blurb: >
+      Keep hold of one thing — a single habit to stop, or to keep only for certain
+      days. It reminds you why in your own words, and when the pull hits it walks you
+      through the moment: slow down, your own reasons, a voice memo from a clearer
+      morning, something to do instead. No shame when you slip, and no streak held
+      over you. For iPhone.
+    tags: [iOS, SwiftUI, "Local-only", "No account"]
 
   - name: Astromech // Audio Lab
     url: /tools/audio-lab/

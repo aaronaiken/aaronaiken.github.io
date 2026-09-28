@@ -180,7 +180,7 @@ mobile_hub:
   eyebrow: "iphone & apple watch"
   title: "Also in the family."
   sub: "Standalone apps for the pocket and the wrist — each with its own home, not part of the Mac bundle."
-mobile_order: [round, brew, shift, ebb, stilldark]
+mobile_order: [round, brew, shift, ebb, holdfast, stilldark]
 mobile:
   round:
     name: Tidy Round
@@ -207,11 +207,20 @@ mobile:
     name: Ebb
     tagline: "A mirror for your health, never a coach — it shows where what you do and how you feel travel together."
     platforms: "iPhone · Health"
-    status: building
+    status: testflight
+    url: /tools/ebb/
     mark: /assets/img/ebb/ebb-mark-256.png
+  holdfast:
+    name: Holdfast
+    tagline: "Keep hold of one habit — it reminds you why in your own words, and never shames you when you slip."
+    platforms: "iPhone"
+    status: testflight
+    url: /tools/holdfast/
+    mark: /assets/img/holdfast/holdfast-mark-256.png
   stilldark:
     name: Still Dark
     tagline: "An encrypted prayer journal — yours alone, no server anyone can read."
-    platforms: "iPhone · Watch · Mac"
-    status: building
+    platforms: "iPhone · Mac"
+    status: testflight
+    url: /tools/still-dark/
     mark: /assets/img/stilldark/stilldark-mark-256.png
