@@ -60,8 +60,8 @@ apps:
       - "Sandboxed, launches at login, then gets out of your way."
     why: "My menu bar had fourteen icons and I used three of them. TidyMenu started as a weekend fix for my own bar — a divider, a chevron, and some peace. It's been running on my Mac ever since."
     # Screencast (cropped to just the menu-bar strip). Optional loop_poster.
-    loop: /assets/tidy/loops/tidybar.mp4
-    # loop_poster: /assets/tidy/loops/tidybar.jpg
+    loop: /assets/tidy/loops/tidymenu.mp4
+    # loop_poster: /assets/tidy/loops/tidymenu.jpg
     hero: { src: tidybar-after.jpeg, bg: 356.94, px: 100.00, py: 0.00, h: 56 }
     extras:
       - caption: "the settings — all of them"
