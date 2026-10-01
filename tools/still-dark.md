@@ -344,6 +344,10 @@ body { margin: 0; padding: 0; max-width: none; display: block;
 
   <footer style="background:#0d0b0a;width:100%;max-width:1080px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px;padding:28px 0 44px;border-top:1px solid #221c17;font-size:13px;line-height:1.6;color:#9a8168;">
     <div style="max-width:48ch;">Designed and built by <a href="/about/">Aaron</a>. A sibling to <a href="/tools/holdfast/">Holdfast</a>, an app for keeping hold of one thing.</div>
+    <nav style="display:flex;gap:20px;align-items:center;">
+      <a href="/tools/still-dark/privacy/">Privacy</a>
+      <a href="/tools/still-dark/support/">Support</a>
+    </nav>
     <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:16px;color:#a68d73;">Very early in the morning.</div>
   </footer>
 
