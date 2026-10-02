@@ -44,10 +44,10 @@ body { margin: 0; padding: 0; max-width: none; display: block;
     <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#9a8168;">Prayer journal · Mac &amp; iPhone · Paid once</div>
     <p style="margin:0;max-width:30ch;font-family:'EB Garamond',serif;font-weight:400;font-size:clamp(22px,2.6vw,27px);line-height:1.45;color:#c79f6e;text-wrap:balance;">A prayer journal that waits in the dark. One page, one caret, nothing in the margins.</p>
     <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:6px;">
-      <a href="#notify" style="display:flex;align-items:center;height:44px;padding:0 22px;border-radius:22px;background:#c79f6e;color:#12100e;font-size:14px;font-weight:400;">Get notified</a>
+      <a href="https://testflight.apple.com/join/CPjjmV97" style="display:flex;align-items:center;height:44px;padding:0 22px;border-radius:22px;background:#c79f6e;color:#12100e;font-size:14px;font-weight:400;">Join the beta →</a>
       <a href="#page" style="display:flex;align-items:center;height:44px;padding:0 22px;border-radius:22px;border:1px solid #4a3b2d;color:#c79f6e;font-size:14px;font-weight:400;">See the page</a>
     </div>
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#9a8168;">Mac &amp; iPhone · One purchase</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#9a8168;">Now in open beta · Mac &amp; iPhone · Paid once at launch</div>
   </header>
 
   <section id="page" style="background:#0d0b0a;width:100%;max-width:1080px;display:flex;flex-direction:column;align-items:center;gap:18px;padding-bottom:96px;">
@@ -327,11 +327,13 @@ body { margin: 0; padding: 0; max-width: none; display: block;
   <section id="notify" style="background:#0d0b0a;width:100%;max-width:1080px;padding:24px 0 72px;">
     <div data-tidy-notify data-app="stilldark" data-endpoint="https://email.aaronaiken.me/subscribe" style="background:#17130f;border:1px solid #2a221c;border-radius:16px;padding:clamp(28px,5vw,56px);display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:28px 48px;align-items:center;">
       <div style="display:flex;flex-direction:column;gap:12px;">
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#9a8168;">When it's ready</div>
-        <div style="font-family:'EB Garamond',serif;font-size:clamp(30px,3.6vw,40px);line-height:1.15;color:#d9b483;">Hear when Still Dark opens.</div>
-        <div style="font-size:15px;color:#ab9075;">One note at launch. That's it.</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#9a8168;">Open beta</div>
+        <div style="font-family:'EB Garamond',serif;font-size:clamp(30px,3.6vw,40px);line-height:1.15;color:#d9b483;">Try it now on TestFlight.</div>
+        <div style="font-size:15px;color:#ab9075;">Free while it's in beta, on Mac &amp; iPhone. You'll need Apple's TestFlight app, then tap through.</div>
+        <a href="https://testflight.apple.com/join/CPjjmV97" style="align-self:flex-start;margin-top:6px;display:flex;align-items:center;height:46px;padding:0 22px;border-radius:23px;background:#c79f6e;color:#12100e;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:400;text-decoration:none;">Join the beta →</a>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#9a8168;">Or wait for launch</div>
         <form class="sd-form" style="display:flex;flex-wrap:wrap;gap:10px;">
           <input type="email" name="email" required autocomplete="email" placeholder="you@example.com" aria-label="Email address" style="flex:1 1 200px;min-width:0;height:46px;padding:0 18px;border-radius:23px;border:1px solid #3a2e22;background:#0f0d0b;color:#d9b483;font-family:'IBM Plex Sans',sans-serif;font-weight:300;font-size:15px;outline:none;">
           <button type="submit" style="height:46px;padding:0 22px;border-radius:23px;border:none;background:#c79f6e;color:#12100e;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:400;cursor:pointer;">Notify me</button>

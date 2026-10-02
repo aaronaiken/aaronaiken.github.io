@@ -201,7 +201,7 @@ tools:
   - name: Still Dark
     url: /tools/still-dark/
     logo: /assets/img/stilldark/stilldark-mark-256.png
-    status: soon
+    status: beta
     badge: "TestFlight"
     group: mac
     cta: LEARN MORE
