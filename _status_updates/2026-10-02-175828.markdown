@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-10-02 17:58:28 -0400
+layout: status_update
+author: aaron
+source: web
+---
+[Still need to write](https://aaronaiken.me/status_updates/2026-10-02-070628.html) that blog post, but today has been insane, in a good way. *Finally* have the private (but open) beta for Cloudbase up and running.  This one is my baby. [https://cloudbase.day/](https://cloudbase.day/) 🎉
+
+![Cloudbase private beta signup page with a to-do list showing tasks for opening the beta, reading requests, sending invites, and fixing issues.](https://cargo.aaronaiken.me/status/20261002175828.jpg)
