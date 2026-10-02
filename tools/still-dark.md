@@ -44,7 +44,7 @@ body { margin: 0; padding: 0; max-width: none; display: block;
     <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#9a8168;">Prayer journal · Mac &amp; iPhone · Paid once</div>
     <p style="margin:0;max-width:30ch;font-family:'EB Garamond',serif;font-weight:400;font-size:clamp(22px,2.6vw,27px);line-height:1.45;color:#c79f6e;text-wrap:balance;">A prayer journal that waits in the dark. One page, one caret, nothing in the margins.</p>
     <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:6px;">
-      <a href="https://testflight.apple.com/join/CPjjmV97" style="display:flex;align-items:center;height:44px;padding:0 22px;border-radius:22px;background:#c79f6e;color:#12100e;font-size:14px;font-weight:400;">Join the beta →</a>
+      <a href="https://testflight.apple.com/join/CPjjmV97" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;height:44px;padding:0 22px;border-radius:22px;background:#c79f6e;color:#12100e;font-size:14px;font-weight:400;">Join the beta →</a>
       <a href="#page" style="display:flex;align-items:center;height:44px;padding:0 22px;border-radius:22px;border:1px solid #4a3b2d;color:#c79f6e;font-size:14px;font-weight:400;">See the page</a>
     </div>
     <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#9a8168;">Now in open beta · Mac &amp; iPhone · Paid once at launch</div>
@@ -330,7 +330,7 @@ body { margin: 0; padding: 0; max-width: none; display: block;
         <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#9a8168;">Open beta</div>
         <div style="font-family:'EB Garamond',serif;font-size:clamp(30px,3.6vw,40px);line-height:1.15;color:#d9b483;">Try it now on TestFlight.</div>
         <div style="font-size:15px;color:#ab9075;">Free while it's in beta, on Mac &amp; iPhone. You'll need Apple's TestFlight app, then tap through.</div>
-        <a href="https://testflight.apple.com/join/CPjjmV97" style="align-self:flex-start;margin-top:6px;display:flex;align-items:center;height:46px;padding:0 22px;border-radius:23px;background:#c79f6e;color:#12100e;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:400;text-decoration:none;">Join the beta →</a>
+        <a href="https://testflight.apple.com/join/CPjjmV97" target="_blank" rel="noopener noreferrer" style="align-self:flex-start;margin-top:6px;display:flex;align-items:center;height:46px;padding:0 22px;border-radius:23px;background:#c79f6e;color:#12100e;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:400;text-decoration:none;">Join the beta →</a>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#9a8168;">Or wait for launch</div>
@@ -346,9 +346,10 @@ body { margin: 0; padding: 0; max-width: none; display: block;
 
   <footer style="background:#0d0b0a;width:100%;max-width:1080px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px;padding:28px 0 44px;border-top:1px solid #221c17;font-size:13px;line-height:1.6;color:#9a8168;">
     <div style="max-width:48ch;">Designed and built by <a href="/about/">Aaron</a>. A sibling to <a href="/tools/holdfast/">Holdfast</a>, an app for keeping hold of one thing.</div>
-    <nav style="display:flex;gap:20px;align-items:center;">
+    <nav style="display:flex;flex-wrap:wrap;gap:20px;align-items:center;">
       <a href="/tools/still-dark/privacy/">Privacy</a>
       <a href="/tools/still-dark/support/">Support</a>
+      <a href="https://cloudbase.day/notes/still_dark" target="_blank" rel="noopener noreferrer">Release notes</a>
     </nav>
     <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:16px;color:#a68d73;">Very early in the morning.</div>
   </footer>
