@@ -1,0 +1,13 @@
+---
+title: Status
+date: 2026-10-02 21:12:16 -0400
+layout: status_update
+author: aaron
+source: web
+---
+☁️ **Grateful Log for Friday, October 2, 2026**
+1. A successful migration from Project Online to Project server last week, fully validated this week
+2. Launched [Cloudbase](https://cloudbase.day/)
+3. [Still Dark](https://aaronaiken.me/tools/still-dark/) in TestFlight
+
+![Hand holding a cut crystal glass filled with amber-colored liquor in an indoor setting with blurred background.](https://cargo.aaronaiken.me/status/20261002211216.jpg)
