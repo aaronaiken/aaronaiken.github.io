@@ -178,17 +178,50 @@ body.home-page::after {
 
 .home-page__status-header .home-page__live-dot { width: 4px; height: 4px; }
 
-.home-page__status-text {
+.home-page__status-headlink {
+  color: var(--hp-amber-lo) !important; text-decoration: none !important;
+  background: none !important; transition: color 0.15s;
+}
+.home-page__status-headlink:hover { color: var(--hp-amber-hi) !important; background: none !important; }
+
+.home-page__status-body {
   font-family: 'Crimson Pro', serif; font-size: 1.1rem;
-  font-style: italic; color: var(--hp-text-body);
-  line-height: 1.75; margin: 0 !important;
+  color: var(--hp-text-body); line-height: 1.75;
+}
+.home-page__status-body p { font-style: italic; margin: 0 0 12px !important; }
+.home-page__status-body p:last-child { margin-bottom: 0 !important; }
+.home-page__status-body a {
+  color: var(--hp-amber) !important; text-decoration: none !important;
+  border-bottom: 1px solid var(--hp-amber-lo); background: none !important;
+  transition: color 0.15s, border-color 0.15s;
+}
+.home-page__status-body a:hover { color: var(--hp-amber-hi) !important; border-color: var(--hp-amber); background: none !important; }
+.home-page__status-body img {
+  display: block; max-width: 100%; height: auto;
+  margin: 12px 0 4px !important; border: 1px solid var(--hp-border);
+  border-radius: 3px; filter: sepia(0.35) brightness(0.92) saturate(0.85);
+}
+
+.home-page__status-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; flex-wrap: wrap; margin-top: 12px;
 }
 
 .home-page__status-time {
   font-family: 'Share Tech Mono', monospace; font-size: 0.65rem;
-  color: var(--hp-text-dim); letter-spacing: 0.1em;
-  margin-top: 10px !important; margin-bottom: 0 !important;
+  color: var(--hp-text-dim) !important; letter-spacing: 0.1em;
+  text-decoration: none !important; background: none !important;
+  transition: color 0.15s;
 }
+.home-page__status-time:hover { color: var(--hp-amber-lo) !important; background: none !important; }
+
+.home-page__status-all {
+  font-family: 'Share Tech Mono', monospace; font-size: 0.65rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--hp-amber-lo) !important; text-decoration: none !important;
+  background: none !important; transition: color 0.15s;
+}
+.home-page__status-all:hover { color: var(--hp-amber-hi) !important; background: none !important; }
 
 .home-page__section-tag {
   font-family: 'Share Tech Mono', monospace; font-size: 0.68rem;
@@ -338,6 +371,7 @@ body.home-page::after {
   .home-page__link--primary { background: #3a2a10 !important; border-color: #3a2a10; color: #f7f3ec !important; }
   .home-page__link--primary:hover { background: #4a3818 !important; }
   .home-page__status-card { background: var(--hp-bg2); border-color: var(--hp-border); border-left-color: var(--hp-amber-lo); }
+  .home-page__status-body img { filter: none; border-color: var(--hp-border); }
   .home-page__footer-quote { color: #a89060; }
 }
 </style>
@@ -362,10 +396,13 @@ body.home-page::after {
     <div class="home-page__status-card">
       <div class="home-page__status-header">
         <span class="home-page__live-dot"></span>
-        Current Status
+        <a class="home-page__status-headlink" href="{{ latest_status.url | relative_url }}">Current Status</a>
       </div>
-      <p class="home-page__status-text">{{ latest_status.content | markdownify | strip_html | truncate: 280 }}</p>
-      <p class="home-page__status-time" data-timestamp="{{ latest_status.date | date: '%s' }}">{{ latest_status.date | date: "%I:%M %p %B %-d, %Y %Z" }}</p>
+      <div class="home-page__status-body">{{ latest_status.content | markdownify }}</div>
+      <div class="home-page__status-meta">
+        <a class="home-page__status-time" href="{{ latest_status.url | relative_url }}" data-timestamp="{{ latest_status.date | date: '%s' }}">{{ latest_status.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a>
+        <a class="home-page__status-all" href="/status.html">All statuses →</a>
+      </div>
     </div>
     {% endif %}
     <p class="home-page__section-tag">// My Words</p>
