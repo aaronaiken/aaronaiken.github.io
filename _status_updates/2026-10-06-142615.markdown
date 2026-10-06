@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-10-06 14:26:15 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Very necessary upgrade. M2, 2022 MacBook Air 8 GB memory 512 GB HD → 16 inch M5 Pro, MacBook Pro, 48 GB memory 1 TB HD. This thing is an absolute beast compared to the Air. Good to be back on a Pro 💪
