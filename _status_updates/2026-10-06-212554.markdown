@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-10-06 21:25:54 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Had some time to do some writing this evening (on my new MacBook Pro, so that was a nice keyboard exercise). Felt good to do so! Eager to shift into that more as the making side of me calms down. 
