@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-10-08 14:59:07 -0400
+layout: status_update
+author: aaron
+source: web
+---
+☕️ power nap ftw. more coffee now.
