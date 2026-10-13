@@ -44,7 +44,7 @@ body.status-page h1#header {
     margin-right: 275px;
     padding-bottom: 15px;
   }
-  body.status-page #side.desktop-content {
+  body.status-page .st-side.desktop-content {
     /* width: 250px; */
     position: absolute;
     top: 60px;
@@ -182,11 +182,59 @@ li.older-status-item .source { font-size: 0.82em; color: #657786; margin: 0 !imp
 li.older-status-item img,
 .latest-content img {
   max-width: 100% !important;
+  max-height: 420px;
   width: auto !important;
   height: auto !important;
   display: block;
   margin: 6px 0 !important;
   border-radius: 2px;
+}
+
+li.older-status-item .content ol,
+li.older-status-item .content ul,
+.latest-content .content ol,
+.latest-content .content ul { margin: 2px 0 4px 1.4em !important; padding: 0 !important; }
+
+li.older-status-item .st-item-meta { margin: 2px 0 0 !important; }
+li.older-status-item .st-item-meta a.timestamp-link { margin-left: 0; }
+
+/* Click/tap-to-enlarge (js/status-lightbox.js) */
+img.st-zoomable { cursor: zoom-in; }
+html.st-lightbox-open { overflow: hidden; }
+.st-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  cursor: zoom-out;
+}
+.st-lightbox[hidden] { display: none; }
+.st-lightbox-img {
+  opacity: 1 !important;  /* beat myown.scss's dark-mode img dimming */
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+}
+.st-lightbox-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 p.timestamp, a.timestamp-link {
@@ -199,7 +247,7 @@ p.timestamp, a.timestamp-link {
 a.timestamp-link:hover { text-decoration: underline; }
 
 /* ---- SIDEBAR ---- */
-body.status-page #side {
+body.status-page .st-side {
   padding: 12px;
   background-color: #e0ff92;
   border: 1px solid #87bc44;
@@ -207,15 +255,15 @@ body.status-page #side {
   line-height: 1.3;
 }
 
-body.status-page #side h3 { margin: 0 0 6px; font-size: 1em; }
+body.status-page .st-side h3 { margin: 0 0 6px; font-size: 1em; }
 
-#side div.msg {
+.st-side div.msg {
   padding: 10px 5px 10px 30px;
   background: url('/assets/img/status/girl.gif') no-repeat 0% 50%;
 }
 
-#side ul#author-details { margin: 4px 0 0; padding: 0; list-style: none; }
-#side ul#author-details li { margin-bottom: 3px; }
+.st-side ul.author-details { margin: 4px 0 0; padding: 0; list-style: none; }
+.st-side ul.author-details li { margin-bottom: 3px; }
 
 /* ---- LOAD MORE ---- */
 .st-load-more-container {
@@ -288,7 +336,7 @@ body.status-page .footer-col-wrapper { margin-left: 0; margin-top: 12px; }
   .desktop-content { display: none !important; }
   .mobile-content { display: block; }
 
-  body.status-page #side.mobile-content {
+  body.status-page .st-side.mobile-content {
     float: none;
     width: 100% !important;
     margin: 12px 0;
@@ -319,7 +367,7 @@ body.status-page .footer-col-wrapper { margin-left: 0; margin-top: 12px; }
 
   body.status-page:not(.st-terminal) li.older-status-item { border-color: #2d3e4a; }
 
-  body.status-page:not(.st-terminal) #side {
+  body.status-page:not(.st-terminal) .st-side {
     background-color: #2a3040;
     border-color: #3a5028;
     color: #c8d8c8;
@@ -450,7 +498,7 @@ body.st-terminal .latest-content .content {
 
 body.st-terminal .latest-content .timestamp,
 body.st-terminal .latest-content .source {
-  color: #3d2804 !important;
+  color: #9a7440 !important;  /* 4.6:1 */
   font-family: 'Share Tech Mono', monospace !important;
   font-size: 0.62rem !important;
   letter-spacing: 0.1em;
@@ -482,7 +530,7 @@ body.st-terminal .st-line-prefix {
 }
 
 body.st-terminal li.older-status-item .content {
-  color: #7a5828 !important;
+  color: #a8834c !important;  /* 5.6:1 on the terminal bg */
   font-family: 'Share Tech Mono', monospace !important;
   font-size: 0.78rem !important;
   line-height: 1.6 !important;
@@ -490,23 +538,28 @@ body.st-terminal li.older-status-item .content {
   flex: 1;
 }
 
+body.st-terminal li.older-status-item .st-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
 body.st-terminal li.older-status-item .source {
-  color: #2e5038 !important;
+  color: #5e8a6a !important;  /* 4.9:1 */
   font-family: 'Share Tech Mono', monospace !important;
   font-size: 0.62rem !important;
 }
 
 body.st-terminal p.timestamp,
 body.st-terminal a.timestamp-link {
-  color: #3d2804 !important;
+  color: #9a7440 !important;  /* 4.6:1 — was 1.4:1, unreadable */
   font-family: 'Share Tech Mono', monospace !important;
   font-size: 0.6rem !important;
   letter-spacing: 0.08em;
 }
 
-body.st-terminal a.timestamp-link:hover { color: #7a4e08 !important; }
+body.st-terminal a.timestamp-link:hover { color: #c89a58 !important; }
 
-body.st-terminal #side {
+body.st-terminal .st-side {
   background: #0d120d !important;
   border: 1px solid #1a3020 !important;
   color: #3d6048 !important;
@@ -514,7 +567,7 @@ body.st-terminal #side {
   font-size: 0.72rem !important;
 }
 
-body.st-terminal #side h3 {
+body.st-terminal .st-side h3 {
   font-family: 'Share Tech Mono', monospace !important;
   font-size: 0.65rem !important;
   letter-spacing: 0.2em;
@@ -522,8 +575,8 @@ body.st-terminal #side h3 {
   color: #2e5038 !important;
 }
 
-body.st-terminal #side div.msg { background-image: none !important; padding-left: 5px; }
-body.st-terminal #side a { color: #4dbb6a !important; }
+body.st-terminal .st-side div.msg { background-image: none !important; padding-left: 5px; }
+body.st-terminal .st-side a { color: #4dbb6a !important; }
 
 /* Terminal toggle */
 body.st-terminal .st-toggle-btn {
@@ -536,7 +589,7 @@ body.st-terminal .st-toggle-btn:hover {
   background: rgba(77,187,106,0.15) !important;
 }
 
-body.st-terminal .st-toggle-opt { color: #1a3020 !important; }
+body.st-terminal .st-toggle-opt { color: #5e8a6a !important; }
 body.st-terminal .st-toggle-opt--active { color: #4dbb6a !important; }
 body.st-terminal .st-toggle-sep { color: #1a3020 !important; }
 

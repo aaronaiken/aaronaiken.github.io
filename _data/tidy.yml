@@ -62,10 +62,10 @@ apps:
     # Screencast (cropped to just the menu-bar strip). Optional loop_poster.
     loop: /assets/tidy/loops/tidymenu.mp4
     # loop_poster: /assets/tidy/loops/tidymenu.jpg
-    hero: { src: tidybar-after.jpeg, bg: 356.94, px: 100.00, py: 0.00, h: 56 }
+    hero: { src: tidybar-after.jpeg, bg: 100.0893, px: 100.0000, py: 0.0000, h: 56 }
     extras:
       - caption: "the settings — all of them"
-        shot: { src: tidybar-settings-1.jpeg, bg: 342.64, px: 51.17, py: 49.94, h: 499 }
+        shot: { src: tidybar-settings-1.jpeg, bg: 100.0869, px: 31.0859, py: 83.7521, h: 499 }
 
   away:
     id: away
@@ -93,14 +93,14 @@ apps:
       - "Leaves every message unread, so your pile is intact when you surface."
       - "Notices that a text arrived — never what it says. Everything stays on your Mac."
     why: "I kept coming out of deep-work stretches to a stack of \"you there?\" texts. TidyAway answers for me, politely, and then leaves the pile exactly where it was. It only sends while your Mac is awake — that's by design."
-    hero: { src: pasted-1785104317850-0.png, bg: 257.92, px: 100.00, py: 0.00, h: 354 }
+    hero: { src: pasted-1785104317850-0.png, bg: 100.0098, px: 100.0000, py: 0.0000, h: 354 }
     extras:
       - caption: "the away note, in your words"
-        shot: { src: pasted-1785105110738-0.png, bg: 119.03, px: 48.91, py: 37.95, h: 632 }
+        shot: { src: pasted-1785105110738-0.png, bg: 100.0850, px: 77.7733, py: 55.6232, h: 632 }
       - caption: "three permissions, each explained"
-        shot: { src: pasted-1785105368742-0.png, bg: 134.72, px: 50.00, py: 38.83, h: 626 }
+        shot: { src: pasted-1785105368742-0.png, bg: 100.0671, px: 50.0000, py: 55.8374, h: 626 }
       - caption: "the reply that goes out on its own"
-        shot: { src: mock-away-messages.png, bg: 100.00, px: 0.00, py: 0.00, h: 441 }
+        shot: { src: mock-away-messages.png, bg: 100.0000, px: 0.0000, py: 0.0000, h: 441 }
 
   cal:
     id: cal
@@ -129,12 +129,12 @@ apps:
       - "Start the week where you start it, with ISO week numbers if you need them."
       - "No permissions. Nothing to grant, nothing to worry about."
     why: "I just wanted to see the date without opening anything. That's the whole app. It asks for no permissions because it needs none."
-    hero: { src: pasted-1785105637230-0.png, bg: 237.08, px: 100.00, py: 0.00, h: 372 }
+    hero: { src: pasted-1785105637230-0.png, bg: 100.0736, px: 100.0000, py: 0.0000, h: 372 }
     extras:
       - caption: "wander ahead, then snap back to today"
-        shot: { src: pasted-1785105710589-0.png, bg: 377.22, px: 99.30, py: 0.00, h: 599 }
+        shot: { src: pasted-1785105710589-0.png, bg: 100.0788, px: 79.7549, py: 0.0000, h: 599 }
       - caption: "the settings — a format, a first day, week numbers"
-        shot: { src: pasted-1785208374076-0.png, bg: 127.64, px: 49.25, py: 37.61, h: 541 }
+        shot: { src: pasted-1785208374076-0.png, bg: 100.1513, px: 40.0366, py: 48.5951, h: 541 }
 
   stage:
     id: stage
@@ -164,12 +164,12 @@ apps:
     # Screencast (full-frame desktop demo). Optional loop_poster.
     loop: /assets/tidy/loops/tidystage.mp4
     # loop_poster: /assets/tidy/loops/tidystage.jpg
-    hero: { src: pasted-1785106925519-0.png, bg: 100.00, px: 0.00, py: 0.00, h: 300 }
+    hero: { src: pasted-1785106925519-0.png, bg: 100.0000, px: 0.0000, py: 0.0000, h: 300 }
     extras:
       - caption: "five neutral stages, plus your own"
-        shot: { src: pasted-1785107075163-0.png, bg: 126.67, px: 50.00, py: 42.42, h: 495 }
+        shot: { src: pasted-1785107075163-0.png, bg: 100.0026, px: 50.0000, py: 65.0096, h: 495 }
       - caption: "the desktop you'd rather not share"
-        shot: { src: mock-stage-before.png, bg: 100.00, px: 0.00, py: 0.00, h: 423 }
+        shot: { src: mock-stage-before.png, bg: 100.0000, px: 0.0000, py: 0.0000, h: 423 }
 
 # ── iPhone + Apple Watch apps ────────────────────────────────────────────────
 # Standalone apps, each with its OWN page + skin (NOT part of the Mac bundle).

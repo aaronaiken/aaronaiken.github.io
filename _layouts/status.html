@@ -4,16 +4,19 @@
 <body class="status-page" id="status-body">
 
   <div class="st-grain"></div>
+  <script src="/js/status-view.js"></script>
 
   <div id="container">
     {% include nav.html %}
 
     <div class="st-header-row">
       <h1 id="header">{{ page.title }}</h1>
-      <button class="st-toggle-btn" id="st-toggle" aria-label="Toggle view mode" title="Switch between 2007 and Terminal view" style="display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border:1px solid #888;background:#f0f0f0;color:#222;font-family:'Share Tech Mono',monospace;font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;border-radius:2px;white-space:nowrap;flex-shrink:0;">
-        <span id="st-opt-twitter">📺 '07</span>
-        <span style="color:#aaa;">⌇</span>
-        <span id="st-opt-terminal" style="color:#aaa;">⌨ TERMINAL</span>
+      <button type="button" class="st-toggle-btn" id="st-toggle" aria-label="Toggle view mode" title="Switch between 2007 and Terminal view">
+        <span class="st-toggle-inner">
+          <span class="st-toggle-opt" id="st-opt-twitter">📺 '07</span>
+          <span class="st-toggle-sep" aria-hidden="true">⌇</span>
+          <span class="st-toggle-opt" id="st-opt-terminal">⌨ TERMINAL</span>
+        </span>
       </button>
     </div>
 
@@ -32,7 +35,7 @@
       <div class="latest-update-container">
         <div class="latest-status">
           <div class="latest-content">
-            <p class="content">{{ latest.content | markdownify | truncate: 300 }}</p>
+            <div class="content">{{ latest.content | markdownify }}</div>
             <p class="timestamp" data-timestamp="{{ latest.date | date: '%s' }}">{{ latest.date | date: "%I:%M %p %B %-d, %Y %Z" }}</p>
             {% if latest.source %}
               <p class="source">via {{ latest.source }} - <a href="{{ latest.url }}">🔗</a></p>
@@ -42,7 +45,7 @@
       </div>
       {% endif %}
 
-      <div id="side" class="mobile-content">
+      <div class="st-side mobile-content">
         {% include twitter-bio.html %}
       </div>
 
@@ -59,10 +62,10 @@
             {% unless forloop.first %}
             <li class="older-status-item">
               <span class="st-terminal-only st-line-prefix">›</span>
-              <p class="content">{{ status.content | markdownify | strip_newlines }}<a href="{{ status.url }}" target="_blank" class="timestamp-link">{{ status.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a></p>
-              {% if status.source %}
-                <p class="source">via {{ status.source }}</p>
-              {% endif %}
+              <div class="st-item-body">
+                <div class="content">{{ status.content | markdownify | replace: '<img ', '<img loading="lazy" decoding="async" ' }}</div>
+                <p class="st-item-meta"><a href="{{ status.url }}" target="_blank" class="timestamp-link">{{ status.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a>{% if status.source %} <span class="source">via {{ status.source }}</span>{% endif %}</p>
+              </div>
             </li>
             {% endunless %}
           {% endfor %}
@@ -84,58 +87,18 @@
 
         <script src="/js/status-load-more.js"></script>
         <script src="/js/dynamic-timestamp.js"></script>
+        <script src="/js/status-lightbox.js"></script>
       </div>
 
       {% include footer.html %}
     </div>
 
-    <div id="side" class="desktop-content">
+    <div class="st-side desktop-content">
       {% include twitter-bio.html %}
     </div>
 
   </div>
 
-  <script>
-  (function() {
-    var STORAGE_KEY = 'status-view-mode';
-    var body = document.getElementById('status-body');
-    var btn = document.getElementById('st-toggle');
-    var optTwitter = document.getElementById('st-opt-twitter');
-    var optTerminal = document.getElementById('st-opt-terminal');
-
-    if (!body || !btn) return;
-
-    function setMode(mode, save) {
-      if (mode === 'terminal') {
-        body.classList.add('st-terminal');
-        optTerminal.style.color = '#222';
-        optTerminal.style.fontWeight = '700';
-        optTwitter.style.color = '#aaa';
-        optTwitter.style.fontWeight = '400';
-      } else {
-        body.classList.remove('st-terminal');
-        optTwitter.style.color = '#222';
-        optTwitter.style.fontWeight = '700';
-        optTerminal.style.color = '#aaa';
-        optTerminal.style.fontWeight = '400';
-      }
-      if (save) {
-        try { localStorage.setItem(STORAGE_KEY, mode); } catch(e) {}
-      }
-    }
-
-    var darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    var saved = 'twitter';
-    try { saved = localStorage.getItem(STORAGE_KEY); } catch(e) {}
-    if (!saved) saved = darkMode ? 'terminal' : 'twitter';
-    setMode(saved, false);
-
-    btn.addEventListener('click', function() {
-      var current = body.classList.contains('st-terminal') ? 'terminal' : 'twitter';
-      setMode(current === 'terminal' ? 'twitter' : 'terminal', true);
-    });
-  })();
-  </script>
 
 </body>
 </html>

@@ -24,12 +24,6 @@
   var loaded = parseInt(container.getAttribute('data-loaded'), 10) || 0;
   var cache = null; // populated on first fetch
 
-  function escHtml(s) {
-    var d = document.createElement('div');
-    d.appendChild(document.createTextNode(s == null ? '' : String(s)));
-    return d.innerHTML;
-  }
-
   function renderItem(item) {
     var li = document.createElement('li');
     li.className = 'older-status-item';
@@ -40,26 +34,34 @@
     prefix.textContent = '›';
     li.appendChild(prefix);
 
-    // Content + timestamp link
-    var content = document.createElement('p');
+    // Body: markdown content, then a meta line (timestamp · source) —
+    // same shape as the Liquid-rendered items. A <div> wrapper, not <p>:
+    // content_html contains block elements (<p>, <ol>, <img>).
+    var body = document.createElement('div');
+    body.className = 'st-item-body';
+
+    var content = document.createElement('div');
     content.className = 'content';
-    // content_html is already HTML — inject as-is, then append the timestamp link
     content.innerHTML = item.content_html || '';
+    body.appendChild(content);
+
+    var meta = document.createElement('p');
+    meta.className = 'st-item-meta';
     var ts = document.createElement('a');
     ts.href = item.url;
     ts.target = '_blank';
     ts.className = 'timestamp-link';
     ts.textContent = item.date_display || '';
-    content.appendChild(ts);
-    li.appendChild(content);
-
-    // Source line
+    meta.appendChild(ts);
     if (item.source) {
-      var src = document.createElement('p');
+      var src = document.createElement('span');
       src.className = 'source';
       src.textContent = 'via ' + item.source;
-      li.appendChild(src);
+      meta.appendChild(document.createTextNode(' '));
+      meta.appendChild(src);
     }
+    body.appendChild(meta);
+    li.appendChild(body);
 
     return li;
   }
