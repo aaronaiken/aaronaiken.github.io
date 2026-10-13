@@ -1,4 +1,4 @@
-// Status page — click/tap an image to view it full size.
+// Status page + homepage status card — click/tap an image to view it full size.
 //
 // Images render capped inline; screenshots in particular need the full
 // resolution to be legible. Delegated on document so items appended later
@@ -6,7 +6,7 @@
 // closes it.
 
 (function () {
-  var SELECTOR = '.older-status-item .content img, .latest-content .content img';
+  var SELECTOR = '.older-status-item .content img, .latest-content .content img, .home-page__status-body img';
   var IMAGE_HREF = /\.(jpe?g|png|gif|webp)(\?.*)?$/i;
 
   var overlay = document.createElement('div');
