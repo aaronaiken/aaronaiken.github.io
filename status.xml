@@ -24,7 +24,17 @@ layout: null
 	<link href="{{ update.url | absolute_url }}"/>
 	<updated>{{ update.date | date_to_xmlschema }}</updated>
 	<id>{{ update.id | default: update.url | absolute_url }}</id>
-	<content type="html"><![CDATA[{{ update.content | markdownify | strip }}]]></content>
+	{%- assign body = update.content | markdownify | strip -%}
+	{%- comment -%}
+	  Cockpit images (Oct 13 2026+) are [![alt](x.jpg)](x-full.jpg): the page shows the
+	  1000px x.jpg, but feed readers (micro.blog) should get the 2400px copy so screenshots
+	  stay legible. Only posts that have a -full link are rewritten; older posts (a single
+	  1200px image, no -full file) pass through untouched.
+	{%- endcomment -%}
+	{%- if body contains '-full.jpg"' -%}
+	  {%- assign body = body | replace: '.jpg" alt=', '-full.jpg" alt=' -%}
+	{%- endif %}
+	<content type="html"><![CDATA[{{ body }}]]></content>
 	<author>
 	  <name>{{ site.webmaster | default: site.author.name | default: site.title | xml_escape }}</name>
 	</author>
