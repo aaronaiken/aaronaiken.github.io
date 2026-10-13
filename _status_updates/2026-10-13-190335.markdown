@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-10-13 19:03:35 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Finally, some time to write and publish :-) 
+
+[![A blog post titled "Untitled" with a purple-to-orange gradient background, displaying paragraphs of text and a bulleted list of draft sections including "Beta Stuff," "Family," "Day job," "AI," and "Debt update."](https://cargo.aaronaiken.me/status/20261013190335.jpg)](https://cargo.aaronaiken.me/status/20261013190335-full.jpg)
