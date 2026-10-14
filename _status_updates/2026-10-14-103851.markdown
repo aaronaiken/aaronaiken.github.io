@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-10-14 10:38:51 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Working on a new way to view the day in [Cloudbase](https://cloudbase.day): tasks in place between parts of the day and meetings.
+
+[![Daily timeline interface showing tasks scheduled from morning to evening, including surveys, lunch, equipment shipment, and bug tracking items with status indicators.](https://cargo.aaronaiken.me/status/20261014103851.jpg)](https://cargo.aaronaiken.me/status/20261014103851-full.jpg)
