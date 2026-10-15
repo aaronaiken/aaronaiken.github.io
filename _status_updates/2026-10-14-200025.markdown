@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-10-14 20:00:25 -0400
+layout: status_update
+author: aaron
+source: web
+---
+[Cloudbase release notes October 14, 2026](https://cloudbase.day/shipped/2026-10-14-2) - "Your day, in two steps". 
+
+[![A small blue aircraft flies across a pale sky with a dashed contrail behind it, above a dark landscape lit by a golden sunset.](https://cargo.aaronaiken.me/status/20261014200025.jpg)](https://cargo.aaronaiken.me/status/20261014200025-full.jpg)
