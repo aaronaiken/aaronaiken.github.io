@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-10-15 19:27:25 -0400
+layout: status_update
+author: aaron
+source: web
+---
+[the current state of things](https://aaronaiken.me/thinking/2026/10/14/the-current-state-of-things.html)
+
+[![Three smiling people posing together outdoors surrounded by green trees and foliage on a sunny day.](https://cargo.aaronaiken.me/status/20261015192725.jpg)](https://cargo.aaronaiken.me/status/20261015192725-full.jpg)
