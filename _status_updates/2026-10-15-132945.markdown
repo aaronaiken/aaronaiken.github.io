@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-10-15 13:29:45 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Cloudbase release notes October 15, 2026 - ["Every Release, Its Own Page"](https://cloudbase.day/shipped/2026-10-15) - for my app devs out there 💻
+
+[![Three small aircraft parked in a row on a desert airstrip with a person standing nearby.](https://cargo.aaronaiken.me/status/20261015132945.jpg)](https://cargo.aaronaiken.me/status/20261015132945-full.jpg)
