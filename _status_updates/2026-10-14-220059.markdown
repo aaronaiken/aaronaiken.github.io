@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-10-14 22:00:59 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Until tomorrow.
+
+[![A dark interface showing a daily activity summary for Wednesday with stats: 12 ticked off, 5:34 logged, 26 miles driven, and 3 written down, with a "Let me back in" button.](https://cargo.aaronaiken.me/status/20261014220059.jpg)](https://cargo.aaronaiken.me/status/20261014220059-full.jpg)
