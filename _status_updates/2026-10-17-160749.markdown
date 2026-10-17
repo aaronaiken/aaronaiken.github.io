@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-10-17 16:07:49 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Today’s football beer. Hoping for a PSU win 😬
+
+[![Hand holding a green beer can labeled "Goose Juice" from Ever Grain Brewing Co., featuring an illustrated woman with spiky hair surrounded by hop designs.](https://cargo.aaronaiken.me/status/20261017160749.jpg)](https://cargo.aaronaiken.me/status/20261017160749-full.jpg)
