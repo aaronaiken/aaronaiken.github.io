@@ -227,6 +227,20 @@ tools:
       over you. For iPhone.
     tags: [iOS, SwiftUI, "Local-only", "No account"]
 
+  - name: Kitchen Table
+    url: /tools/kitchen-table/
+    logo: /assets/img/kitchentable/kitchentable-mark-256.png
+    status: soon
+    badge: "TestFlight"
+    group: mac
+    cta: LEARN MORE
+    blurb: >
+      What we decided, and why. A household decision log for the two of you: write
+      it down in fifteen seconds, keep pending decisions on top, and months later
+      it asks once whether it held up. Plus a money plan that keeps one thing at a
+      time, in order. Shared through your own iCloud. For iPhone, paid once.
+    tags: [iOS, SwiftUI, CloudKit, "Shared"]
+
   - name: Astromech // Audio Lab
     url: /tools/audio-lab/
     icon: "🔊"

@@ -1,0 +1,58 @@
+---
+layout: tidy-page
+title: "Kitchen Table — Support"
+permalink: /tools/kitchen-table/support/
+theme_color: "#FAF5EC"
+tagline: "Help for Kitchen Table, the household decision log for iPhone."
+description: Support for Kitchen Table. Where your data lives, how sharing works, keeping a copy, the money plan, and how to send me a ticket.
+breadcrumb:
+  - { label: Tools, url: /tools/ }
+  - { label: Kitchen Table, url: /tools/kitchen-table/ }
+  - { label: Support }
+---
+
+[Kitchen Table](/tools/kitchen-table/) keeps a record of what your household decided, and why. Check the common questions below. If they don't cover it, **send me a ticket at the bottom of this page**. I'm one person and I read everything.
+
+What's new in each version, and the same two buttons ("Something's broken", "I need something"), live on the [Kitchen Table release notes](https://cloudbase.day/notes/aaron/kitchen_table){:target="_blank" rel="noopener noreferrer"}.
+
+---
+
+## Common questions
+
+**Where is my data?**
+In your own iCloud account, through Apple's CloudKit. I can't see it. See the [privacy policy](/tools/kitchen-table/privacy/).
+
+**How do I share with someone?**
+Tap Share at the top of your list and send the invite. They'll need Kitchen Table and an iCloud account. Once they tap the invite, you both keep the same record, and either of you can add to it.
+
+**Is the money plan shared too?**
+Yes. Money rides along with your decisions in the same share, so there's no second invite.
+
+**Where is the money plan?**
+At the top of the list, tap **Money**, next to **Decisions**. The app remembers which one you had open.
+
+**How do I keep a backup?**
+At the bottom of the list, tap **Keep a copy**. It saves everything, photos included, as a file you can keep in Files. **Restore from a copy** only adds what's missing, so it's safe to run twice.
+
+**I deleted the app. Is my data gone?**
+No. Reinstall it and sign in with the same iCloud account.
+
+**Something I added isn't showing up on the other phone.**
+Check that both phones are online and signed in to iCloud. Then open Kitchen Table on the phone that's behind and give it a moment.
+
+**What does it cost?**
+$2.99, paid once. No subscription and no in-app purchases. If the person you share with is in your Apple Family, Family Sharing covers them.
+
+**Requirements**
+iPhone with iOS 18 or later.
+
+---
+
+## Send me a ticket
+
+Still stuck? Tell me what you were doing and what happened. If it's about sharing, mention whether it's your phone, theirs, or both. It goes straight to me.
+
+<div class="gc-embed">
+<script src="https://cloudbase.day/ground/e.js?w=HSqP6OqHRrrn" data-app="kitchen_table"></script>
+<noscript>Your browser has JavaScript turned off. Email me instead at <a href="mailto:aaron@aaronaiken.me">aaron@aaronaiken.me</a>.</noscript>
+</div>

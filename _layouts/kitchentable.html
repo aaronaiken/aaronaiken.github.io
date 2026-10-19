@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="en">
+{% include head.html %}
+<body>
+  {{ content }}
+  <script src="{{ '/assets/js/tidy-notify.js' | relative_url }}?v={{ site.time | date: '%s' }}" defer></script>
+</body>
+</html>
