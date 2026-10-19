@@ -180,7 +180,7 @@ mobile_hub:
   eyebrow: "iphone & apple watch"
   title: "Also in the family."
   sub: "Standalone apps for the pocket and the wrist — each with its own home, not part of the Mac bundle."
-mobile_order: [round, brew, shift, ebb, holdfast, stilldark, kitchentable]
+mobile_order: [round, brew, shift, ebb, holdfast, kitchentable, stilldark]
 mobile:
   round:
     name: Tidy Round
@@ -226,7 +226,7 @@ mobile:
     mark: /assets/img/stilldark/stilldark-mark-256.png
   kitchentable:
     name: Kitchen Table
-    tagline: "What we decided, and why — a household decision log for the two of you."
+    tagline: "What we decided — and the money plan — written down, so we stop deciding it twice."
     platforms: "iPhone"
     status: testflight
     url: /tools/kitchen-table/
