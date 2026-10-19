@@ -31,6 +31,13 @@ Yes. Money rides along with your decisions in the same share, so there's no seco
 **Where is the money plan?**
 At the top of the list, tap **Money**, next to **Decisions**. The app remembers which one you had open.
 
+**How does the progress bar work?**
+A step gets a thin bar when Target and Where we are are the same kind of number: both dollar amounts, or both months (or weeks). Anything else gets no bar, and that's fine; they're just notes.
+
+- **Saving up:** Target is the goal, Where we are is what you have. `$12,000` and `$4,000` reads *$4,000 of $12,000 · 33% saved*.
+- **Paying something down:** Target is where you started, and Where we are is what's left, with the word "left" in it. `$110,000` and `$51,000 left` reads *$51,000 left of $110,000 · 54% paid*. "Owed", "remaining" and "to go" work too.
+- **Time:** `3 months` and `1 month` reads *1 month of 3 months · 33% done*.
+
 **How do I keep a backup?**
 At the bottom of the list, tap **Keep a copy**. It saves everything, photos included, as a file you can keep in Files. **Restore from a copy** only adds what's missing, so it's safe to run twice.
 
