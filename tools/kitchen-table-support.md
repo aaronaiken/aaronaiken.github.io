@@ -26,7 +26,7 @@ In your own iCloud account, through Apple's CloudKit. I can't see it. See the [p
 Tap Share at the top of your list and send the invite. They'll need Kitchen Table and an iCloud account. Once they tap the invite, you both keep the same record, and either of you can add to it.
 
 **How do I know it's syncing?**
-Look at the bottom of either list. It says who the table is shared with and when it last synced, like *Shared with Lindsay · synced 2 min ago*. If something's wrong (iCloud signed out, asking for your password, or full), a line under the title says so; tap it for more. Changes usually reach the other phone within a minute. Offline is fine: it catches up when you're back.
+Look at the bottom of either list. It says who the table is shared with and when it last synced, like *Shared with Sam · synced 2 min ago*. If something's wrong (iCloud signed out, asking for your password, or full), a line under the title says so; tap it for more. Changes usually reach the other phone within a minute. Offline is fine: it catches up when you're back.
 
 **I used it on my own before I was invited. What happens to my list?**
 It comes with you. Once you accept the invite and the shared table arrives, your own decisions and money steps move into it, and you'll see a note saying how many. A copy of your list from before is saved in the Files app, under Kitchen Table, just in case.
