@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-10-20 09:23:53 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Had a pretty massive release for Cloudbase over the weekend. Generic search became "[Direct-to](https://cloudbase.day/direct-to)" where you can not just search but you can see previews, *do things*, change how it looks, navigate around the app, all from "the box". [Release notes here](https://cloudbase.day/shipped/2026-10-18). 
+
+[![Man sitting in a cockpit, gazing across a flat, expansive landscape.](https://cargo.aaronaiken.me/status/20261020092353.jpg)](https://cargo.aaronaiken.me/status/20261020092353-full.jpg)
