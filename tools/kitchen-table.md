@@ -48,10 +48,10 @@ body { margin: 0; padding: 0; max-width: none; display: block; background: var(-
     <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: var(--kt-meta);">IPHONE · FOR TWO · DECISIONS AND MONEY · NO DEADLINES</div>
     <p style="margin: 4px 0 0; font-size: clamp(22px, 3vw, 28px); line-height: 1.3; max-width: 540px; text-wrap: pretty;">What we decided, written down, so we stop deciding it twice.</p>
     <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 8px;">
-      <a href="https://testflight.apple.com/join/XXXXXXXX" target="_blank" rel="noopener noreferrer" style="height: 46px; padding: 0 22px; border-radius: 2px; background: var(--kt-rust); color: var(--kt-bg); text-decoration: none; display: flex; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.12em;">JOIN THE BETA →</a>
+      <a href="#notify" style="height: 46px; padding: 0 22px; border-radius: 2px; background: var(--kt-rust); color: var(--kt-bg); text-decoration: none; display: flex; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.12em;">BETA SOON · GET A NOTE →</a>
       <a href="#how" style="height: 46px; padding: 0 22px; border-radius: 2px; border: 1px solid var(--kt-ink); color: var(--kt-ink); text-decoration: none; display: flex; align-items: center; box-sizing: border-box; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em;">HOW IT WORKS</a>
     </div>
-    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: var(--kt-meta);">PUBLIC TESTFLIGHT · iOS 18+</div>
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: var(--kt-meta);">PUBLIC TESTFLIGHT COMING SOON · iOS 18+</div>
     <div style="width: min(340px, 82vw); aspect-ratio: 402 / 874; margin-top: 28px; filter: drop-shadow(0 12px 24px var(--kt-shadow));">
       <img src="/assets/img/kitchentable/landing/phone-list.png" alt="Kitchen Table list: still deciding on top, settled below" style="width:100%;height:100%;display:block;border-radius:44px;">
     </div>
@@ -262,10 +262,9 @@ body { margin: 0; padding: 0; max-width: none; display: block; background: var(-
 
     <section id="notify" data-tidy-notify="" data-app="kitchentable" data-endpoint="https://email.aaronaiken.me/subscribe" style="margin: 24px 0 72px; background: var(--kt-inv-bg); color: var(--kt-inv-ink); border-radius: 3px; padding: clamp(28px, 5vw, 56px); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 32px; align-items: end;">
       <div style="display: flex; flex-direction: column; gap: 14px;">
-        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: var(--kt-inv-meta);">IN TESTING NOW</div>
-        <h2 style="margin: 0; font-weight: 400; font-size: clamp(30px, 4vw, 40px); line-height: 1.1;">Try it now, or hear when it ships.</h2>
-        <p style="margin: 0; font-size: 18px; line-height: 1.55; color: var(--kt-inv-meta);">The beta is open on TestFlight. If you'd rather wait for the App Store, leave an address and you'll get one note at launch.</p>
-        <a href="https://testflight.apple.com/join/XXXXXXXX" target="_blank" rel="noopener noreferrer" style="align-self: flex-start; margin-top: 4px; height: 46px; padding: 0 22px; border-radius: 2px; background: #E39068; color: #1B1714; text-decoration: none; display: flex; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.12em;">JOIN THE BETA →</a>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: var(--kt-inv-meta);">COMING SOON</div>
+        <h2 style="margin: 0; font-weight: 400; font-size: clamp(30px, 4vw, 40px); line-height: 1.1;">Hear when the beta opens.</h2>
+        <p style="margin: 0; font-size: 18px; line-height: 1.55; color: var(--kt-inv-meta);">A public beta on TestFlight is days away. Leave an address and you'll get a note when it opens, and one more at launch.</p>
       </div>
       <div style="display: flex; flex-direction: column; gap: 10px;">
         <form class="kt-form" style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -273,7 +272,7 @@ body { margin: 0; padding: 0; max-width: none; display: block; background: var(-
           <button type="submit" style="height: 50px; padding: 0 20px; border-radius: 2px; border: none; background: var(--kt-inv-ink); color: var(--kt-inv-bg); font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; cursor: pointer;">NOTIFY ME</button>
         </form>
         <div class="kt-done" style="display: none; font-size: 24px;">Written down. You'll hear once.</div>
-        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: var(--kt-inv-meta);">ONE NOTE AT LAUNCH · NO TRACKING · LEAVE ANY TIME</div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: var(--kt-inv-meta);">TWO NOTES, TOPS · NO TRACKING · LEAVE ANY TIME</div>
       </div>
     </section>
   </main>
