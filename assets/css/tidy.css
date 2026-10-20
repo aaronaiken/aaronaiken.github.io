@@ -328,3 +328,23 @@ body.tidy{margin:0;background:var(--canvas);color:var(--ink-1);
   .tdy-extra.wide{grid-column:auto}
   .tdy-doc-head h1{font-size:34px}
 }
+
+/* ---- Cloudbase ticket embed ----
+   The widget ships inline light-only styles; these win over them so the
+   form follows the page in light and dark. */
+[data-ground-embed] input:not([type=radio]),
+[data-ground-embed] textarea{
+  background:var(--surface-card) !important;color:var(--ink-1) !important;
+  border:1px solid var(--line) !important;border-radius:var(--radius-sm) !important}
+[data-ground-embed] input::placeholder,
+[data-ground-embed] textarea::placeholder{color:var(--ink-3)}
+[data-ground-embed] input:focus,
+[data-ground-embed] textarea:focus{outline:2px solid var(--ink-2);outline-offset:1px}
+[data-ground-embed] input[type=radio]{accent-color:var(--ink-1)}
+[data-ground-embed] button{
+  background:var(--ink-1) !important;color:var(--canvas) !important;
+  border-radius:var(--radius-sm) !important}
+[data-ground-embed] button:hover{opacity:.85}
+@media (prefers-color-scheme:dark){
+  [data-ground-embed] input,[data-ground-embed] textarea{color-scheme:dark}
+}
