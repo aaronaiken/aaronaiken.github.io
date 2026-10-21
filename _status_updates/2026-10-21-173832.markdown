@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-10-21 17:38:32 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Shipped a pretty substantial update to Cloudbase earlier this morning - getting the team structure just right has been a nice puzzle to work through: "[who can do what](https://cloudbase.day/shipped/2026-10-21)"
+
+[![Two silhouetted figures viewing an airplane's cockpit bathed in golden sunlight from behind.](https://cargo.aaronaiken.me/status/20261021173832.jpg)](https://cargo.aaronaiken.me/status/20261021173832-full.jpg)
