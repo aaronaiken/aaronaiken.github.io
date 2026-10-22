@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-10-22 19:31:01 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Finally got my intro to Cloudbase video published on the tube. Out of practice but fun to get back into recording and publishing video. [Please give it a watch](https://youtu.be/--pl0kfHxMo?si=U2dtLkGkIO43gCJB)!
+
+[![Man in an office setting next to text reading "The whole desk. One seat." advertising Cloudbase's twelve-minute tour.](https://cargo.aaronaiken.me/status/20261022193101.jpg)](https://cargo.aaronaiken.me/status/20261022193101-full.jpg)
