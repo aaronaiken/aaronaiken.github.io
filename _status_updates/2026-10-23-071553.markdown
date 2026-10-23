@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-10-23 07:15:53 -0400
+layout: status_update
+author: aaron
+source: web
+---
+And so, I am now looking for 5–10 couples to test Kitchen Table, a little iPhone app Lindsay and I use to write down what we decided, and why. It’s in public TestFlight, and the thing I most need tested is sharing it with your person. [Interested](https://aaronaiken.me/tools/kitchen-table/)?
