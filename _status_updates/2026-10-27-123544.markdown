@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-10-27 12:35:44 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Working on a thing
+
+[![A profile creation form showing fields for name, occupation, and location, with a preview of the completed profile for a flight instructor named don from Carlisle, PA on the right side.](https://cargo.aaronaiken.me/status/20261027123544.jpg)](https://cargo.aaronaiken.me/status/20261027123544-full.jpg)
