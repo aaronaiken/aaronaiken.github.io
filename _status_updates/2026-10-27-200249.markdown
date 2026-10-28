@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-10-27 20:02:49 -0400
+layout: status_update
+author: aaron
+source: web
+---
+lots of tinkering today. 
