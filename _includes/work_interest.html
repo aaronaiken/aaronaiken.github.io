@@ -1,8 +1,8 @@
 {% comment %}
   Reusable "want this for your team?" interest form for portfolio pages.
-  Standard across Work case studies + the Work index. Posts {name,email,subject,
-  message} to the existing Dispatch /contact endpoint — an inquiry to Aaron's inbox
-  (NOT the /subscribe list the Tidy apps use). No new backend.
+  Standard across Work case studies + the Work index. Posts the note to Aaron's
+  Callsign room on Cloudbase (/p/js/write) — the same inbox as /contact/ (NOT the
+  /subscribe list the Tidy apps use).
 
   Self-styling + themeable: it carries its own base styles; a page tints it by
   setting --wi-* vars on `.wi` in that page's stylesheet (see assets/css/blackbox.css
@@ -25,6 +25,7 @@
       <input class="wi-in" id="wi-name" type="text" placeholder="Name" autocomplete="name">
       <input class="wi-in" id="wi-email" type="email" placeholder="Email" autocomplete="email">
     </div>
+    <input type="text" id="wi-website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
     <textarea class="wi-in wi-ta" id="wi-msg" rows="{% if include.compact %}2{% else %}3{% endif %}" placeholder="{{ include.prompt | default: 'What are you trying to do?' }}"></textarea>
     <div class="wi-foot">
       <button class="wi-btn" id="wi-btn" type="button">Send it →</button>
@@ -58,6 +59,7 @@
     var btn = document.getElementById('wi-btn');
     if (!btn) return;
     var SUBJECT = 'Interest: {{ wi_subject | escape }}';
+    var LOADED = Math.floor(Date.now() / 1000);
     function st(type, msg) { var e = document.getElementById('wi-status'); e.textContent = msg; e.className = 'wi-status ' + type; }
     btn.addEventListener('click', function () {
       var name = document.getElementById('wi-name').value.trim();
@@ -66,10 +68,16 @@
       if (!name) { st('err', '⚠ your name?'); return; }
       if (!email || email.indexOf('@') < 0) { st('err', '⚠ a valid email?'); return; }
       if (!message) { st('err', '⚠ a line on what you need?'); return; }
+      var words = SUBJECT + '\n\n' + message;
+      if (words.length > 4000) { st('err', '⚠ a little shorter? (4000 characters max)'); return; }
       btn.disabled = true; btn.textContent = 'Sending…';
-      fetch('https://email.aaronaiken.me/contact', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name, email: email, subject: SUBJECT, message: message })
+      fetch('https://cloudbase.day/p/js/write', {
+        method: 'POST',
+        body: new URLSearchParams({
+          words: words, email: email, name: name, t: LOADED,
+          website: document.getElementById('wi-website').value,
+          page: location.pathname
+        })
       }).then(function (r) {
         if (!r.ok) throw 0;
         st('ok', '✓ got it — I’ll be in touch'); btn.textContent = 'Sent';

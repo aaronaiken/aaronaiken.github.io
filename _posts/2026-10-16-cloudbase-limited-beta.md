@@ -3,6 +3,8 @@ layout: post
 title: "Cloudbase Limited Beta"
 date: 2026-10-16T16:47:56.644237+00:00
 categories: [apps]
+tags: [cloudbase, beta]
+base: KMDT
 author: aaron
 cosmic_id: Endpaper-Ψ-0016
 written_in: Endpaper

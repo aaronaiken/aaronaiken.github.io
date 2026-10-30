@@ -191,6 +191,8 @@ body.contact-layout::after { content: ''; position: fixed; inset: 0; background:
 		<textarea class="cl__textarea" id="ct-message" placeholder="I've got a bad feeling about this..."></textarea>
 	  </div>
 
+	  <input type="text" id="ct-website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" />
+
 	  <div class="cl__submit-wrap">
 		<button class="cl__submit" id="ct-btn" onclick="handleContact()">Send it →</button>
 		<span class="cl__status" id="ct-status"></span>
@@ -199,13 +201,18 @@ body.contact-layout::after { content: ''; position: fixed; inset: 0; background:
 
 	<p class="cl__note">
 	  Your message goes directly to me — no middleman, no CRM, no ticket system. 
-	  Just a person reading email.
+	  Just a person reading my Callsign box.
 	</p>
 
 	{% include footer.html %}
   </main>
 
   <script>
+	// Notes land in Aaron's Callsign room on Cloudbase. Simple cross-site POST
+	// (URLSearchParams body, no custom headers) so the browser skips the preflight.
+	const CT_ENDPOINT = 'https://cloudbase.day/p/js/write';
+	const CT_LOADED = Math.floor(Date.now() / 1000);
+
 	async function handleContact() {
 	  const btn    = document.getElementById('ct-btn');
 	  const status = document.getElementById('ct-status');
@@ -218,15 +225,21 @@ body.contact-layout::after { content: ''; position: fixed; inset: 0; background:
 	  if (!email || !email.includes('@')) { showStatus('err', '⚠ valid email required'); return; }
 	  if (!subject) { showStatus('err', '⚠ subject required'); return; }
 	  if (!message) { showStatus('err', '⚠ message required'); return; }
+	  const words = subject + '\n\n' + message;
+	  if (words.length > 4000) { showStatus('err', '⚠ a little shorter, please (4000 characters max)'); return; }
 
 	  btn.disabled = true;
 	  btn.textContent = 'Sending...';
 
 	  try {
-		const resp = await fetch('https://email.aaronaiken.me/contact', {
+		const resp = await fetch(CT_ENDPOINT, {
 		  method: 'POST',
-		  headers: { 'Content-Type': 'application/json' },
-		  body: JSON.stringify({ name, email, subject, message })
+		  body: new URLSearchParams({
+			words, email, name,
+			t: CT_LOADED,
+			website: document.getElementById('ct-website').value,
+			page: location.pathname
+		  })
 		});
 
 		if (resp.ok) {
