@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-10-30 10:04:20 -0400
+layout: status_update
+author: aaron
+source: web
+---
+Mac app I made for myself a while ago to run various scripts as needed. The loading screen is themed to seasons, holidays, and has a few random ones thrown in for good measure. Autumn is *Harry Potter*. 
+
+[![Boot screen for Scriptus Runnerus showing "Mischief Managed" with 100% mischief managed progress bar and colorful dots at top.](https://cargo.aaronaiken.me/status/20261030100420.jpg)](https://cargo.aaronaiken.me/status/20261030100420-full.jpg)
