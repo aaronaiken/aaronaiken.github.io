@@ -1,121 +1,5 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  {%- include favicons.html -%}
-  {%- seo -%}
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,400&family=Lora:ital,wght@0,400;0,500;1,400&family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --accent:#1d4ed8; --accent-wash:#eaf0ff; --accent-line:#c7d5f5; --accent-press:#1740b0;
-      --ink:#11203b; --ink-body:#33415c; --ink-quiet:#5a6b86; --ink-faint:#8b9ab3;
-      --surface:#ffffff; --surface-sunk:#f4f6fb; --surface-quiet:#f9fbff;
-      --line:#d8e0ee; --line-quiet:#eef2f8; --line-strong:#b9c7de;
-      --ok:#1c7a4d; --strip-ground:#101828; --strip-live:#f5a623;
-      --serif:'Fraunces',Georgia,serif; --prose:'Lora',Georgia,serif;
-      --mono:'Share Tech Mono',ui-monospace,monospace; --fig:'JetBrains Mono',ui-monospace,monospace;
-    }
-    @media (prefers-color-scheme: dark){
-      :root:not(.theme-light){
-        color-scheme:dark;
-        --surface:#111820; --surface-sunk:#0d1117; --surface-quiet:#141c26;
-        --accent:#2f9bff; --accent-wash:#16283c; --accent-line:#3a5470; --accent-press:#8fb0ff;
-        --line:#1e2830; --line-quiet:#243444; --line-strong:#3a5470;
-        --ink:#f4f6fb; --ink-body:#d8e0ee; --ink-quiet:#8b9ab3; --ink-faint:#5f7590; --ok:#4dbb6a;
-      }
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;background:var(--surface-sunk);color:var(--ink-body);font-family:var(--prose);-webkit-font-smoothing:antialiased}
-    a{color:var(--accent);text-decoration:none}
-    a:hover{color:var(--accent-press)}
-    @keyframes cb-ident{0%{transform:scale(1);opacity:.7}100%{transform:scale(3.2);opacity:0}}
-    @media (prefers-reduced-motion: reduce){.cb-ring{animation:none!important;opacity:0!important}}
-
-    .cb-top{max-width:1120px;margin:0 auto;padding:18px clamp(18px,4vw,40px);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-    .cb-brand{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-quiet)}
-    .cb-brand a{color:var(--ink-quiet)} .cb-brand a:hover{color:var(--accent)}
-    .cb-mark{width:22px;height:22px;border-radius:5px;background:var(--accent);position:relative;overflow:hidden;flex:none;display:inline-block}
-    .cb-mark::before{content:'';position:absolute;width:15px;height:7px;left:4px;top:11px;background:#fff;border-radius:4px}
-    .cb-mark::after{content:'';position:absolute;width:9px;height:6px;left:8px;top:7px;background:#fff;border-radius:4px}
-    .cb-top nav{display:flex;gap:20px;font-size:14px}
-    .cb-top nav a{color:var(--ink-body)} .cb-top nav a:hover{color:var(--accent)}
-
-    .cb-sheet{max-width:860px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-    .cb-head{padding:clamp(28px,5vw,52px) clamp(22px,6vw,64px) 0}
-    .cb-kicker{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-quiet)}
-    .cb-live{position:relative;width:7px;height:7px;flex:none;display:inline-block}
-    .cb-live i{position:absolute;inset:0;border-radius:50%;background:var(--strip-live)}
-    .cb-live i.cb-ring{animation:cb-ident 2s ease-out infinite}
-    .cb-title{font-family:var(--serif);font-weight:600;font-size:clamp(34px,5.4vw,50px);line-height:1.06;letter-spacing:-.025em;color:var(--ink);margin:14px 0 0;text-wrap:balance}
-    .cb-dek{font-size:clamp(18px,2.2vw,21px);line-height:1.6;color:var(--ink-quiet);font-style:italic;margin:14px 0 0;max-width:56ch;text-wrap:pretty}
-
-    .cb-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin:28px calc(-1 * clamp(22px,6vw,64px)) 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface-quiet)}
-    .cb-cell{padding:11px clamp(14px,2vw,18px) 12px;border-left:1px solid var(--line-quiet);min-width:0}
-    .cb-cell:first-child{border-left:0;padding-left:clamp(22px,6vw,64px)}
-    .cb-cell b{display:block;font-family:var(--mono);font-weight:400;font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-faint)}
-    .cb-cell span{display:block;font-family:var(--fig);font-size:13px;color:var(--ink);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .cb-cell span a{color:var(--ink)} .cb-cell span a:hover{color:var(--accent)}
-
-    .cb-body{padding:clamp(26px,4vw,44px) clamp(22px,6vw,64px) clamp(30px,4vw,48px)}
-    .cb-body > *{max-width:66ch}
-    .cb-body p{font-size:19px;line-height:1.9;margin:0 0 1.15em;text-wrap:pretty}
-    .cb-body h2{font-family:var(--serif);font-weight:600;font-size:28px;line-height:1.2;letter-spacing:-.015em;color:var(--ink);margin:1.9em 0 .55em}
-    .cb-body h3{font-family:var(--serif);font-weight:600;font-size:21px;color:var(--ink);margin:1.7em 0 .5em}
-    .cb-body h4{font-family:var(--mono);font-weight:400;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-quiet);margin:2em 0 .6em}
-    .cb-body a{color:var(--accent);text-decoration:underline;text-decoration-color:var(--accent-line);text-underline-offset:3px;text-decoration-thickness:1px}
-    .cb-body a:hover{color:var(--accent-press);text-decoration-color:currentColor}
-    .cb-body strong{color:var(--ink);font-weight:500}
-    .cb-body em{font-style:italic}
-    .cb-body ul,.cb-body ol{padding-left:1.3em;margin:0 0 1.2em}
-    .cb-body li{font-size:19px;line-height:1.85;margin-bottom:.3em}
-    .cb-body li::marker{color:var(--ink-faint);font-family:var(--fig);font-size:.8em}
-    .cb-body blockquote{margin:1.6em 0;padding:2px 0 2px 20px;border-left:2px solid var(--line-strong)}
-    .cb-body blockquote p{color:var(--ink-quiet);font-style:italic}
-    .cb-body hr{border:0;width:72px;height:2px;background:var(--line);margin:2.4em 0}
-    .cb-body code{font-family:var(--fig);font-size:.82em;background:var(--surface-quiet);border:1px solid var(--line-quiet);border-radius:3px;padding:1px 5px;color:var(--ink)}
-    .cb-body pre{font-family:var(--fig);font-size:14px;line-height:1.7;background:var(--surface-quiet);border:1px solid var(--line);border-radius:6px;padding:16px 18px;overflow-x:auto;max-width:100%}
-    .cb-body pre code{border:0;padding:0;background:none}
-    .cb-body img{display:block;width:100%;height:auto;border-radius:6px;border:1px solid var(--line-quiet)}
-    .cb-body p:has(> img:only-child){max-width:none;margin:1.8em 0 .5em}
-    .cb-body p:has(> img:only-child) + p:has(> em:only-child){font-size:15px;line-height:1.55;color:var(--ink-quiet);margin-top:0;margin-bottom:2em}
-    .cb-body table{border-collapse:collapse;width:100%;font-size:16px;margin:1.4em 0}
-    .cb-body th{font-family:var(--mono);font-weight:400;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-quiet);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
-    .cb-body td{padding:9px 10px;border-bottom:1px solid var(--line-quiet)}
-    .cb-body .footnotes{margin-top:2.6em;padding-top:18px;border-top:1px solid var(--line-quiet)}
-    .cb-body .footnotes::before{content:'Notes';display:block;font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:10px}
-    .cb-body .footnotes p,.cb-body .footnotes li{font-size:15px;line-height:1.7;color:var(--ink-quiet)}
-    .cb-body .footnotes hr{display:none}
-    .cb-body sup a,.cb-body a.footnote{font-family:var(--fig);font-size:11px;text-decoration:none;padding:0 2px}
-    .cb-body a.reversefootnote{text-decoration:none;font-family:var(--fig)}
-
-    .cb-sign{border-top:1px solid var(--line);background:var(--surface-quiet);padding:22px clamp(22px,6vw,64px);display:grid;grid-template-columns:56px minmax(0,1fr);gap:16px;align-items:center}
-    .cb-sign img{width:56px;height:56px;border-radius:6px;object-fit:cover;display:block}
-    .cb-sign .n{font-family:var(--serif);font-weight:600;font-size:18px;color:var(--ink)}
-    .cb-sign .l{font-size:15px;line-height:1.6;color:var(--ink-quiet);margin-top:2px}
-    .cb-sign .a{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
-
-    .cb-more{max-width:860px;margin:18px auto 0;display:grid;grid-template-columns:1fr 1fr;gap:18px}
-    .cb-more a{display:block;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px 18px;color:var(--ink);transition:border-color .12s}
-    .cb-more a:hover{border-color:var(--accent)}
-    .cb-more b{display:block;font-family:var(--mono);font-weight:400;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-quiet)}
-    .cb-more span{display:block;font-family:var(--serif);font-weight:600;font-size:17px;line-height:1.35;margin-top:6px}
-    .cb-more .next{text-align:right;grid-column:2}
-
-    .cb-foot{max-width:860px;margin:0 auto;padding:30px 4px 56px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--ink-quiet)}
-    .cb-foot .m{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;display:flex;gap:18px}
-    .cb-foot .m a{color:var(--ink-quiet)} .cb-foot .m a:hover{color:var(--accent)}
-    @media (max-width:640px){
-      .cb-sheet{border-radius:0;border-left:0;border-right:0}
-      .cb-more{grid-template-columns:1fr;padding:0 14px}.cb-more .next{grid-column:1;text-align:left}
-      .cb-foot{padding:24px 18px 48px}
-      .cb-body p,.cb-body li{font-size:18px}
-    }
-  </style>
-</head>
-<body>
+{% include cloudbase-head.html %}<body>
+  {%- comment -%} Neighbours: the series first, then the blog, per side. {%- endcomment -%}
   {%- assign cb_posts = site.tags.cloudbase | sort: 'date' -%}
   {%- for p in cb_posts -%}{%- if p.url == page.url -%}{%- assign cb_i = forloop.index0 -%}{%- endif -%}{%- endfor -%}
   {%- if cb_i -%}
@@ -123,53 +7,217 @@
     {%- if cb_i > 0 -%}{%- assign cb_prev = cb_posts[cb_prev_i] -%}{%- endif -%}
     {%- assign cb_next = cb_posts[cb_next_i] -%}
   {%- endif -%}
+  {%- assign cb_before = cb_prev | default: page.previous -%}
+  {%- assign cb_after = cb_next | default: page.next -%}
 
-  <header class="cb-top">
-    <div class="cb-brand"><span class="cb-mark" aria-hidden="true"></span><a href="{{ '/' | relative_url }}">Aaron Aiken</a><span aria-hidden="true">/</span><a href="{{ '/tags/cloudbase/' | relative_url }}">Cloudbase notes</a></div>
-    <nav><a href="https://cloudbase.day">Cloudbase</a><a href="https://cloudbase.day/shipped">Release notes</a><a href="https://cloudbase.day/@aaron">@aaron</a></nav>
-  </header>
+  {%- assign cb_base = page.base | default: "KMDT" -%}
+  {%- capture cb_base_link -%}<a href="https://airnav.com/airports/{{ cb_base | upcase | uri_escape }}" target="_blank" rel="noopener">{{ cb_base }} ↗</a>{%- endcapture -%}
+  {%- capture cb_written -%}{% if page.written_in == "Endpaper" %}<a href="https://endpaper.day" target="_blank" rel="noopener">Endpaper ↗</a>{% else %}{{ page.written_in }}{% endif %}{%- endcapture -%}
+  {%- assign cb_tags = page.tags | where_exp: "t", "t != 'cloudbase'" -%}
+  {%- assign cb_dek = page.description | default: page.dek -%}
+
+<div class="nb">
+  <div class="nb-lamp-pool" aria-hidden="true"></div>
+  <svg class="nb-grain" aria-hidden="true">
+    <filter id="nb-grain"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"></feTurbulence><feColorMatrix type="saturate" values="0"></feColorMatrix></filter>
+    <rect width="100%" height="100%" filter="url(#nb-grain)"></rect>
+  </svg>
+
+  {% include cloudbase-top.html %}
 
   <main>
-    <article class="cb-sheet">
-      <div class="cb-head">
-        <div class="cb-kicker"><span class="cb-live" aria-hidden="true"><i class="cb-ring"></i><i></i></span>Cloudbase · from the kitchen table</div>
-        <h1 class="cb-title">{{ page.title }}</h1>
-        {%- assign cb_dek = page.description | default: page.dek -%}
-        {%- if cb_dek -%}<p class="cb-dek">{{ cb_dek }}</p>{%- endif -%}
-        <div class="cb-strip">
-          <div class="cb-cell"><b>Filed</b><span>{{ page.date | date: "%b %-d, %Y" }}</span></div>
-          {%- assign cb_base = page.base | default: "KMDT" -%}
-          <div class="cb-cell"><b>From</b><span><a href="https://airnav.com/airports/{{ cb_base | upcase | uri_escape }}" target="_blank" rel="noopener">{{ cb_base }}</a></span></div>
-          {%- assign cb_tags = page.tags | where_exp: "t", "t != 'cloudbase'" -%}
-          {%- if cb_tags.size > 0 -%}<div class="cb-cell"><b>Tagged</b><span>{{ cb_tags | join: ', ' }}</span></div>{%- endif -%}
-          {%- if page.written_in -%}<div class="cb-cell"><b>Written in</b><span>{% if page.written_in == "Endpaper" %}<a href="https://endpaper.day" target="_blank" rel="noopener">Endpaper</a>{% else %}{{ page.written_in }}{% endif %}</span></div>{%- endif -%}
+    <article class="nb-sheet">
+      <div class="nb-marginrule" aria-hidden="true"></div>
+
+      <div class="nb-row nb-head">
+        <div class="nb-side nb-facts">
+          <p class="nb-fact">filed<br><time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%b %-d, %Y" }}</time></p>
+          <p class="nb-fact">from {{ cb_base_link }}</p>
+          {%- if cb_tags.size > 0 -%}<p class="nb-fact">tagged {{ cb_tags | join: ', ' }}</p>{%- endif -%}
+          {%- if page.written_in -%}<p class="nb-fact nb-nowrap">written in {{ cb_written }}</p>{%- endif -%}
+        </div>
+        <div class="nb-main">
+          <p class="nb-kicker">from the kitchen table</p>
+          <svg class="nb-squiggle" aria-hidden="true" width="230" height="12" viewBox="0 0 230 12"><path d="M2 7 C 50 2, 90 11, 140 6 S 205 3, 228 7" fill="none" stroke="var(--hand)" stroke-width="2.4" stroke-linecap="round"></path></svg>
+          <h1 class="nb-title">{{ page.title }}</h1>
+          {%- if cb_dek -%}<p class="nb-dek">{{ cb_dek }}</p>{%- endif -%}
+          <p class="nb-factline">filed {{ page.date | date: "%b %-d, %Y" }} · from {{ cb_base_link }}{% if cb_tags.size > 0 %} · {{ cb_tags | join: ', ' }}{% endif %}{% if page.written_in %} · written in {{ cb_written }}{% endif %}</p>
         </div>
       </div>
-      <div class="cb-body">
-        {{ content }}
+
+      <div class="nb-headrule" aria-hidden="true"></div>
+
+      <div class="nb-ruled">
+        <div class="nb-row">
+          <div class="nb-side nb-pointers" aria-hidden="true"></div>
+          <div class="nb-main nb-content">
+            {{ content }}
+          </div>
+        </div>
       </div>
-      <footer class="cb-sign">
-        {%- assign cb_author = site.data.people[page.author] | default: site.data.people.aaron -%}
-        <img src="{{ cb_author.img | relative_url }}" alt="{{ cb_author.img-alt | default: 'Aaron Aiken' }}">
-        <div>
-          <div class="n">Aaron Aiken</div>
-          <div class="l">I build Cloudbase, mostly at a kitchen table in Harrisburg. If something here is confusing, that's on me. Tell me.</div>
+
+      <footer class="nb-row nb-sign">
+        <div class="nb-side">
+          <div class="nb-snap"><span class="nb-tape" aria-hidden="true"></span><img src="{{ '/assets/cloudbase/aaron.jpg' | relative_url }}" alt="Aaron Aiken, smiling, in sunglasses" width="92" height="92"></div>
+        </div>
+        <div class="nb-main">
+          <p class="n">Aaron Aiken</p>
+          <p class="l">I build Cloudbase, mostly at a kitchen table in Harrisburg. If something here is confusing, that's on me. Tell me.</p>
           <div class="a"><a href="{{ '/contact/' | relative_url }}">⟩ Write to me</a><a href="https://cloudbase.day/@aaron">@aaron on Callsign</a><a href="https://cloudbase.day">See Cloudbase</a></div>
         </div>
       </footer>
+      <p class="nb-printurl">{{ page.url | absolute_url }} · Aaron Aiken</p>
     </article>
 
-    {%- if cb_prev or cb_next -%}
-    <nav class="cb-more" aria-label="More Cloudbase notes">
-      {%- if cb_prev -%}<a href="{{ cb_prev.url | relative_url }}"><b>← Earlier</b><span>{{ cb_prev.title }}</span></a>{%- endif -%}
-      {%- if cb_next -%}<a class="next" href="{{ cb_next.url | relative_url }}"><b>Later →</b><span>{{ cb_next.title }}</span></a>{%- endif -%}
+    {%- if cb_before or cb_after -%}
+    <nav class="nb-near" aria-label="More from the blog">
+      {%- if cb_before -%}
+      <a class="nb-card before" href="{{ cb_before.url | relative_url }}"><span class="nb-tape" aria-hidden="true"></span><span class="lbl">← the one before</span><span class="t">{{ cb_before.title }}</span><span class="m">{{ cb_before.date | date: "%b %-d" }} · on the blog</span></a>
+      {%- endif -%}
+      {%- if cb_after -%}
+      <a class="nb-card after" href="{{ cb_after.url | relative_url }}"><span class="nb-tape" aria-hidden="true"></span><span class="lbl">the one after →</span><span class="t">{{ cb_after.title }}</span><span class="m">{{ cb_after.date | date: "%b %-d" }} · on the blog</span></a>
+      {%- endif -%}
     </nav>
     {%- endif -%}
   </main>
 
-  <div class="cb-foot">
-    <span><em>Built by one person at a kitchen table in Harrisburg.</em></span>
-    <span class="m"><a href="{{ '/' | relative_url }}">Home</a><a href="{{ '/tags/cloudbase/' | relative_url }}">All Cloudbase notes</a><a href="{{ '/feed.xml' | relative_url }}">Feed</a></span>
-  </div>
+  {% include cloudbase-foot.html %}
+  {% include cloudbase-desk.html layout="post" %}
+</div>
+{% include nb-desk-kit.html %}
+
+  <script>
+  // Keep text on the ruled lines: snap prints, code and tables up to the next whole line,
+  // then pencil a pointer into the margin beside any paragraph that has a footnote.
+  (function () {
+    var wide = window.matchMedia('(min-width: 901px)');
+    var els = document.querySelectorAll('.nb-content p:has(img), .nb-content pre, .nb-content table, .nb-content blockquote');
+    var side = document.querySelector('.nb-pointers');
+    var SUP = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' };
+
+    function fit(el) {
+      var line = wide.matches ? 36 : 32;
+      el.style.marginBottom = '';
+      var h = el.getBoundingClientRect().height, mb = parseFloat(getComputedStyle(el).marginBottom) || 0;
+      el.style.marginBottom = (Math.ceil((h + mb) / line) * line - h) + 'px';
+    }
+    function point() {
+      if (!side) return;
+      side.textContent = '';
+      if (!wide.matches) return;
+      var top = side.getBoundingClientRect().top;
+      document.querySelectorAll('.nb-content > p').forEach(function (p) {
+        var ref = p.querySelector('sup a.footnote');
+        if (!ref) return;
+        var n = ref.textContent.trim().replace(/\d/g, function (d) { return SUP[d]; });
+        var note = document.createElement('p');
+        note.className = 'nb-pointer';
+        note.innerHTML = '<b></b> there’s a footnote for this one. it’s at the bottom ↓';
+        note.firstChild.textContent = n;
+        note.style.top = (p.getBoundingClientRect().top - top + 6) + 'px';
+        side.appendChild(note);
+      });
+    }
+    function all() { els.forEach(fit); point(); }
+    els.forEach(function (el) {
+      var img = el.querySelector('img');
+      if (img && !img.complete) img.addEventListener('load', all);
+    });
+    all();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(all);
+    addEventListener('resize', all);
+  })();
+
+  // Fill the desk below the first screen from the kit. Seeded by the URL, so each post
+  // always gets the same desk; resizing only adds or drops tiers.
+  (function () {
+    var desk = document.querySelector('.nb-desk');
+    if (!desk) return;
+    function hash(s) { var x = 2166136261; for (var i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619); } return x >>> 0; }
+    function rng(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+    var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var io = reduce || !('IntersectionObserver' in window) ? null : new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { seen[e.target.dataset.key] = 1; io.unobserve(e.target); arrive(e.target); } });
+    }, { rootMargin: '0px 0px -12% 0px' });
+    var kit = [].slice.call(document.querySelectorAll('template[id^="desk-"]')).map(function (t) {
+      var r = t.content.firstElementChild;
+      return { t: t, id: t.id.slice(5), kind: r.dataset.kind, tier: +r.dataset.tier, w: +r.dataset.w };
+    });
+    var seen = {};
+
+    // Sketches draw on with dash lengths measured in px (Safari mishandles pathLength here).
+    // Once drawn, the dashes come off so the strokes are always whole.
+    function arrive(n) {
+      n.classList.add('is-in');
+      var paths = n.querySelectorAll('[data-draw]');
+      if (!paths.length) return;
+      paths.forEach(function (p) {
+        var L = Math.ceil(p.getTotalLength()) + 2;
+        p.style.transition = 'none';
+        p.style.strokeDasharray = L + ' ' + L;
+        p.style.strokeDashoffset = L;
+      });
+      requestAnimationFrame(function () { requestAnimationFrame(function () {
+        paths.forEach(function (p, i) {
+          p.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(.2,.7,.2,1) ' + (i * 80) + 'ms';
+          p.style.strokeDashoffset = '0';
+        });
+      }); });
+      setTimeout(function () {
+        paths.forEach(function (p) { p.style.transition = p.style.strokeDasharray = p.style.strokeDashoffset = ''; });
+      }, 1600 + paths.length * 80);
+    }
+
+    function layout() {
+      desk.querySelectorAll('.nb-sprinkled').forEach(function (n) { n.remove(); });
+      var W = innerWidth, H = desk.offsetHeight, R = rng(hash(location.pathname)), placed = 0, pool = {}, used = {};
+      // Already on the first screen, so held back until the rest of their pool is used.
+      ['s-freq', 's-metar', 's-fuel', 's-squawk'].forEach(function (id) { used[id] = 1; });
+      kit.forEach(function (i) { (pool[i.kind] = pool[i.kind] || []).push(i); });
+      function open(kind) { return (pool[kind] || []).filter(function (i) { return !used[i.id] && i.tier <= W; }); }
+      function take(kind) {
+        var p = open(kind);
+        if (!p.length && kind !== 'egg') { pool[kind].forEach(function (i) { if (i.id !== 's-verse') used[i.id] = 0; }); p = open(kind); }
+        if (!p.length) return null;
+        var it = p[Math.floor(R() * p.length)];
+        used[it.id] = 1;
+        return it;
+      }
+      function put(it, x, y, rot) {
+        var n = it.t.content.firstElementChild.cloneNode(true), key = it.id + '@' + y;
+        n.classList.add('nb-sprinkled');
+        n.style.left = Math.round(x) + 'px';
+        n.style.top = y + 'px';
+        n.style.setProperty('--r', rot.toFixed(1) + 'deg');
+        n.dataset.key = key;
+        if (io) { n.classList.add('nb-pending'); if (seen[key]) n.classList.add('is-in'); else io.observe(n); }
+        desk.appendChild(n);
+        placed++;
+      }
+      var last = { L: '', R: '' };
+      for (var y = 1400; y < H - 300 && placed < 24; y += 220) {
+        var side = ((y - 1400) / 220) % 2 ? 'R' : 'L';
+        if (R() >= 0.75) continue;
+        var k = R(), kind = k < .4 ? 'sketch' : k < .8 ? 'scribble' : 'object';
+        if (kind === last[side]) kind = kind === 'sketch' ? 'scribble' : 'sketch';
+        var it = take(kind);
+        if (!it) continue;
+        last[side] = kind;
+        put(it, side === 'L' ? 420 - it.w - R() * 40 : 1500 + R() * 40, y, (R() * 2 - 1) * (kind === 'scribble' ? 4 : 6));
+      }
+      for (var ey = 1100, s = 0; ey < H - 300 && placed < 24; ey += 900, s++) {
+        if (R() >= 0.6) continue;
+        var e = take('egg');
+        if (!e) continue;
+        put(e, s % 2 ? 1680 + R() * Math.max(0, 200 - e.w) : 60 + R() * Math.max(0, 200 - e.w), ey, (R() * 2 - 1) * 6);
+      }
+      if (window.nbSpread) nbSpread();
+    }
+    layout();
+    addEventListener('load', layout);
+    var t;
+    addEventListener('resize', function () { clearTimeout(t); t = setTimeout(layout, 250); });
+  })();
+  </script>
 </body>
 </html>

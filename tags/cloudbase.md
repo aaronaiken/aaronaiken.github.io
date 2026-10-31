@@ -1,11 +1,10 @@
 ---
-layout: page
+layout: cloudbase-index
 title: Cloudbase notes
+description: Notes on building Cloudbase, newest first.
 permalink: /tags/cloudbase/
+image:
+  path: /assets/cloudbase/og-cloudbase-notes.png
+  width: 1200
+  height: 630
 ---
-
-Notes on building [Cloudbase](https://cloudbase.day), newest first.
-
-{% for post in site.tags.cloudbase %}
-- [{{ post.title }}]({{ post.url | relative_url }}) · {{ post.date | date: "%b %-d, %Y" }}
-{% endfor %}

@@ -1,10 +1,12 @@
 ---
 layout: post
 title: "Cloudbase Limited Beta"
+description: "Someone asked how they could get their own Cockpit. This was my answer."
 date: 2026-10-16T16:47:56.644237+00:00
 categories: [apps]
 tags: [cloudbase, beta]
 base: KMDT
+image: https://cargo.aaronaiken.me/blog-img/2924d8f856e4468a980c7064fe4e3a3a.jpg
 author: aaron
 cosmic_id: Endpaper-Ψ-0016
 written_in: Endpaper

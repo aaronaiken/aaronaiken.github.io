@@ -1,0 +1,45 @@
+{% include cloudbase-head.html %}<body>
+<div class="nb nb-index">
+  <div class="nb-lamp-pool" aria-hidden="true"></div>
+  <svg class="nb-grain" aria-hidden="true">
+    <filter id="nb-grain"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"></feTurbulence><feColorMatrix type="saturate" values="0"></feColorMatrix></filter>
+    <rect width="100%" height="100%" filter="url(#nb-grain)"></rect>
+  </svg>
+
+  {% include cloudbase-top.html %}
+
+  <main class="nb-indexhead">
+    <p class="nb-kicker">from the kitchen table</p>
+    <svg class="nb-squiggle" aria-hidden="true" width="230" height="12" viewBox="0 0 230 12"><path d="M2 7 C 50 2, 90 11, 140 6 S 205 3, 228 7" fill="none" stroke="var(--hand)" stroke-width="2.4" stroke-linecap="round"></path></svg>
+    <h1>{{ page.title }}</h1>
+    {%- if page.description -%}<p class="nb-dek">{{ page.description }}</p>{%- endif -%}
+
+    {%- assign cb_posts = site.tags.cloudbase | sort: 'date' | reverse -%}
+    {%- if cb_posts.size > 0 -%}
+    <ul class="nb-grid">
+      {%- for post in cb_posts -%}
+      {%- assign i = forloop.index0 -%}
+      {%- assign tape_left = i | times: 13 | modulo: 30 | plus: 30 -%}
+      {%- assign tape_turn = i | modulo: 2 -%}
+      <li>
+        {%- if forloop.first -%}<span class="nb-newest" aria-hidden="true">newest ↓</span>{%- endif -%}
+        <a class="nb-card" href="{{ post.url | relative_url }}" aria-label="{{ post.title | escape }}, a Cloudbase note">
+          <span class="nb-tape" aria-hidden="true" style="left:{{ tape_left }}%;transform:rotate({% if tape_turn == 1 %}5{% else %}-4{% endif %}deg)"></span>
+          <span class="d">{{ post.date | date: "%b %-d, %Y" }}</span>
+          <span class="t">{{ post.title }}</span>
+          {%- if post.description -%}<span class="s">{{ post.description }}</span>{%- endif -%}
+          <span class="go">Read it →</span>
+        </a>
+      </li>
+      {%- endfor -%}
+    </ul>
+    {%- else -%}
+    <div class="nb-empty"><p>Nothing filed yet.</p></div>
+    {%- endif -%}
+  </main>
+
+  {% include cloudbase-foot.html %}
+  {% include cloudbase-desk.html layout="index" %}
+</div>
+</body>
+</html>

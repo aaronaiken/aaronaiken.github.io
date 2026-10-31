@@ -2,7 +2,7 @@
 <html lang="en">
 {% include head.html %}
 <style>
-@import url('https://fonts.googleapis.com/css2?family=VT323&family=Crimson+Pro:ital,wght@0,400;1,400&family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Caveat:wght@500;600&family=Crimson+Pro:ital,wght@0,400;1,400&family=Share+Tech+Mono&display=swap');
 
 body.blog-index-page {
   --nav-link: #a06820; --nav-link-hover: #f5b332;
@@ -15,6 +15,7 @@ body.blog-index-page {
   --bi-scan: rgba(0,0,0,0.18); --bi-text: #c8800a;
   --bi-text-body: #c89040; --bi-text-dim: #7a5020;
   --bi-border: #2a1c08; --bi-border-hi: #4a3010; --bi-green: #4dbb6a;
+  --bi-hand: #8fb0ff;
 
   background: var(--bi-bg) !important; color: var(--bi-text);
   font-family: 'Share Tech Mono', monospace;
@@ -55,6 +56,12 @@ body.blog-index-page::after { content: ''; position: fixed; inset: 0; background
 .bi__post-link--linked { color: var(--bi-amber-lo) !important; }
 .bi__post-category { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--bi-text-dim); text-decoration: none !important; background: none !important; transition: color 0.15s; margin-left: 8px; white-space: nowrap; }
 .bi__post-category:hover { color: var(--bi-amber-lo) !important; background: none !important; }
+/* Cloudbase notes: the notebook theme's blue pencil squiggle and a handwritten label */
+.bi__post-link--cb { position: relative; display: inline-block; }
+.bi__post-link--cb::after { content: ''; position: absolute; left: -2px; right: -4px; bottom: -7px; height: 9px; background: var(--bi-hand); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 230 12' preserveAspectRatio='none'%3E%3Cpath d='M2 7 C 50 2, 90 11, 140 6 S 205 3, 228 7' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E") center / 100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 230 12' preserveAspectRatio='none'%3E%3Cpath d='M2 7 C 50 2, 90 11, 140 6 S 205 3, 228 7' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E") center / 100% 100% no-repeat; }
+.bi__post-cb { font-family: 'Caveat', cursive; font-weight: 600; font-size: 1.15rem; line-height: 1; color: var(--bi-hand) !important; text-decoration: none !important; background: none !important; margin-left: 12px; white-space: nowrap; display: inline-block; transform: rotate(-2deg); }
+.bi__post-cb:hover { text-decoration: underline !important; }
+.bi__post-title-group:has(.bi__post-cb) { row-gap: 14px; }
 .bi__post-title-group { display: flex; align-items: baseline; gap: 0; flex-wrap: wrap; }
 .bi__subscribe { margin-top: 8px; padding-top: 24px; opacity: 0; animation: bi-rise 0.4s ease-out 0.4s forwards; }
 .bi__subscribe-link { display: inline-flex; align-items: center; gap: 8px; font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bi-text-dim) !important; text-decoration: none !important; background: none !important; transition: color 0.15s; }
@@ -76,6 +83,7 @@ body.blog-index-page::after { content: ''; position: fixed; inset: 0; background
     --bi-amber: #7a3e00; --bi-amber-hi: #5a2e00; --bi-amber-lo: #a06020;
     --bi-text: #3a2a10; --bi-text-body: #4a3818; --bi-text-dim: #9a8060;
     --bi-border: #c8bfad; --bi-border-hi: #a89878;
+    --bi-hand: #1d4ed8;
     --nav-link: #a06020; --nav-link-hover: #7a3e00;
     --footer-border: #c8bfad; --footer-label: #8a7858; --footer-link: #a06020; --footer-link-hover: #7a3e00; --footer-dim: #8a7858;
     background: var(--bi-bg) !important;
@@ -107,7 +115,11 @@ body.blog-index-page::after { content: ''; position: fixed; inset: 0; background
           <li class="bi__post-item">
             <time class="bi__post-date">{{ post.date | date: "%b %-d" }}</time>
             <span class="bi__post-title-group">
+              {%- if post.tags contains "cloudbase" -%}
+              <a class="bi__post-link bi__post-link--cb" href="{{ post.url | relative_url }}">{{ post.title | escape }}</a><a href="{{ '/tags/cloudbase/' | relative_url }}" class="bi__post-cb">cloudbase notes</a>
+              {%- else -%}
               <a class="bi__post-link {% if post.source %}bi__post-link--linked{% endif %}" href="{{ post.url | relative_url }}">{% if post.source %}🔗 {% endif %}{{ post.title | escape }}</a>{% if post.categories.size > 0 %}{% assign cat = post.categories.first %}<a href="/blog/{{ cat | replace: '_', '-' }}/" class="bi__post-category">[{{ cat | upcase }}]</a>{% endif %}
+              {%- endif %}
             </span>
           </li>
           {% endfor %}
