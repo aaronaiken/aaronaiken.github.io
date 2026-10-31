@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-10-31 06:53:42 -0400
+layout: status_update
+author: aaron
+source: web
+---
+💻 up to write a little bit before the day has its way.
