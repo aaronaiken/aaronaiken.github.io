@@ -2,7 +2,9 @@
 layout: post
 title: "the current state of things"
 date: 2026-10-14T11:20:36.253948+00:00
-categories: [thinking]
+categories: [cwa]
+permalink: /thinking/2026/10/14/the-current-state-of-things.html
+description: "A recent update on life, covering beta work, family, the day job, AI, and debt."
 author: aaron
 cosmic_id: Endpaper-Ψ-0013
 written_in: Endpaper

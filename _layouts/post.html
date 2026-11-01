@@ -1,4 +1,4 @@
-{% if page.tags contains "cloudbase" %}{% include cloudbase-post.html %}{% else %}
+{% if page.tags contains "cloudbase" %}{% include cloudbase-post.html %}{% elsif page.categories contains "cwa" %}{% include cwa-post.html %}{% else %}
 <!doctype html>
 <html lang="en">
 {% include head.html %}

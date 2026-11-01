@@ -1,0 +1,95 @@
+{% include cwa-head.html %}<body>
+  {%- assign cwa_posts = site.categories.cwa | sort: 'date' | reverse -%}
+  {%- assign cwa_count = cwa_posts.size -%}
+  {%- if cwa_count > 0 -%}
+    {%- assign cwa_punched = cwa_count | minus: 1 | modulo: 10 | plus: 1 -%}
+    {%- assign cwa_card = cwa_count | minus: 1 | divided_by: 10 | plus: 1 -%}
+  {%- else -%}
+    {%- assign cwa_punched = 0 -%}{%- assign cwa_card = 1 -%}
+  {%- endif -%}
+  {%- if cwa_count > 0 -%}{%- capture cwa_punch_label -%}A coffee punch card with {{ cwa_punched }} of 10 punched{%- endcapture -%}
+  {%- else -%}{%- assign cwa_punch_label = "A coffee punch card, not punched yet" -%}{%- endif -%}
+  {%- assign cwa_about = page.category_description | remove_first: "☕️" | remove_first: "☕" | strip -%}
+
+<div class="cwa cwa-index">
+  <div class="cwa-light" aria-hidden="true"></div>
+  <svg class="cwa-grain" aria-hidden="true"><filter id="cwa-gi"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"></feTurbulence><feColorMatrix type="saturate" values="0"></feColorMatrix></filter><rect width="100%" height="100%" filter="url(#cwa-gi)"></rect></svg>
+
+  <header class="cwa-head">
+    <a class="cwa-bare cwa-mono" href="{{ '/' | relative_url }}">← aaronaiken.me</a>
+    <a class="cwa-bare cwa-mono" href="{{ '/blog/' | relative_url }}">✦ the whole blog</a>
+  </header>
+
+  <main>
+    <section class="cwa-hero">
+      <div class="cwa-hero-text">
+        <div class="cwa-hero-mug">{% include cwa-mug.html size=64 stroke=1.3 %}</div>
+        <h1>Coffee with Aaron</h1>
+        <p>{{ cwa_about }}</p>
+      </div>
+      <div class="cwa-punch-wrap">
+        {%- if cwa_card > 1 -%}<div class="cwa-punch-peek" aria-hidden="true"></div>{%- endif -%}
+        <div class="cwa-punch" role="img" aria-label="{{ cwa_punch_label }}">
+          <div class="top"><span>Coffee with Aaron</span><span>card {{ cwa_card }}</span></div>
+          <hr>
+          <div class="cwa-holes">{% for i in (1..10) %}<i class="{% if i <= cwa_punched %}p{% else %}o{% endif %}"></i>{% endfor %}</div>
+          <hr class="b">
+          <div class="bot">one punch per cup poured here</div>
+        </div>
+      </div>
+      <div class="cwa-punch-strip"><span>card {{ cwa_card }}</span><span class="h" role="img" aria-label="{{ cwa_punch_label }}">{% for i in (1..10) %}<i class="{% if i <= cwa_punched %}p{% else %}o{% endif %}"></i>{% endfor %}</span></div>
+    </section>
+
+    <section class="cwa-menu">
+      {%- if cwa_count > 0 -%}
+      <div class="cwa-menu-head"><h2>The menu</h2><span aria-hidden="true"></span></div>
+      {%- assign cwa_years = cwa_posts | group_by_exp: "post", "post.date | date: '%Y'" -%}
+      {%- for y in cwa_years -%}
+      <div class="cwa-year">
+        <h3>{{ y.name }}</h3>
+        <ul>
+          {%- for post in y.items -%}
+          {%- include cwa-pour.html text=post.content -%}
+          <li><a class="cwa-bare cwa-item" href="{{ post.url | relative_url }}">
+            <span class="row"><span class="tt">{{ post.title | escape }}</span><span class="lead" aria-hidden="true"></span><span class="pr">{{ cwa_pour }}</span></span>
+            <span class="meta"><span class="when">{{ post.date | date: "%b %-d" }}<span class="min"> · {{ cwa_minutes }} min</span></span><span class="lead" aria-hidden="true"></span><span class="pr" aria-hidden="true">{{ cwa_pour }}</span>{%- if post.description -%}<span class="dk">{{ post.description }}</span>{%- endif -%}</span>
+          </a></li>
+          {%- endfor -%}
+        </ul>
+      </div>
+      {%- endfor -%}
+      {%- else -%}
+      <div class="cwa-empty">
+        <div class="cwa-cups">{% include cwa-cups.html still=true %}</div>
+        <p class="h">Nothing brewing here yet.</p>
+        <p>The older cups are on Scribbles, at <a href="https://cwa.omg.lol/">cwa.omg.lol ↗</a></p>
+      </div>
+      {%- endif -%}
+
+      {%- if cwa_count > 0 -%}
+      <div class="cwa-sizes">
+        <div>
+          <p class="cwa-mono">Pour sizes</p>
+          <dl>
+            <dt>espresso</dt><dd>under 250 words</dd>
+            <dt>a quick cup</dt><dd>under 600</dd>
+            <dt>one cup</dt><dd>under 1,000</dd>
+            <dt>stay for a refill</dt><dd>1,000 and up</dd>
+          </dl>
+        </div>
+        <div class="older">
+          <p class="cwa-mono">Older cups</p>
+          <p>Everything from before this page lives on Scribbles, at <a href="https://cwa.omg.lol/">cwa.omg.lol ↗</a></p>
+        </div>
+      </div>
+      {%- endif -%}
+    </section>
+  </main>
+
+  <footer class="cwa-foot">
+    <span>Coffee with Aaron · aaronaiken.me</span>
+    <span><a href="{{ '/feed.xml' | relative_url }}">RSS</a><a href="https://cwa.omg.lol/">Scribbles ↗</a></span>
+  </footer>
+</div>
+</body>
+</html>

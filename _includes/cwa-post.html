@@ -1,0 +1,209 @@
+{% include cwa-head.html %}<body>
+  {%- comment -%} Neighbours and ticket number come from the series only. {%- endcomment -%}
+  {%- assign cwa_posts = site.categories.cwa | sort: 'date' -%}
+  {%- for p in cwa_posts -%}{%- if p.url == page.url -%}{%- assign cwa_i = forloop.index0 -%}{%- endif -%}{%- endfor -%}
+  {%- assign cwa_n = cwa_i | plus: 1 | prepend: "00" | slice: -3, 3 -%}
+  {%- if cwa_i > 0 -%}{%- assign cwa_prev_i = cwa_i | minus: 1 -%}{%- assign cwa_before = cwa_posts[cwa_prev_i] -%}{%- endif -%}
+  {%- assign cwa_next_i = cwa_i | plus: 1 -%}{%- assign cwa_after = cwa_posts[cwa_next_i] -%}
+
+  {% include cwa-pour.html text=content %}
+  {%- assign cwa_pour_short = cwa_pour | split: " " | last -%}
+  {%- comment -%} The Scribbles copy is posted after the blog, so default to the Scribbles home. {%- endcomment -%}
+  {%- assign cwa_scrib = "https://cwa.omg.lol/" -%}
+  {%- if page.scribbles_url -%}{%- assign cwa_scrib = page.scribbles_url -%}{%- endif -%}
+
+  {%- comment -%} "On the table today": the post's h2s, when there are at least two. {%- endcomment -%}
+  {%- assign cwa_h2s = content | split: '<h2 id="' -%}
+  {%- capture cwa_topics -%}
+    {%- for chunk in cwa_h2s offset: 1 -%}
+      {%- assign cwa_id = chunk | split: '"' | first -%}
+      {%- assign cwa_label = chunk | split: '</h2>' | first | split: '>' | shift | join: '>' | strip_html | strip -%}
+      <a href="#{{ cwa_id }}">{{ cwa_label }}</a>
+    {%- endfor -%}
+  {%- endcapture -%}
+
+<div class="cwa cwa-post">
+  <div class="cwa-light" aria-hidden="true"></div>
+  <svg class="cwa-grain" aria-hidden="true"><filter id="cwa-g"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"></feTurbulence><feColorMatrix type="saturate" values="0"></feColorMatrix></filter><rect width="100%" height="100%" filter="url(#cwa-g)"></rect></svg>
+
+  <header class="cwa-head">
+    <a class="cwa-bare cwa-mono back" href="{{ '/' | relative_url }}">← aaronaiken.me</a>
+    <a class="cwa-bare cwa-mark" href="{{ '/blog/cwa/' | relative_url }}">{% include cwa-mug.html %}<span>Coffee with Aaron</span></a>
+    <a class="cwa-bare cwa-mono" href="{{ '/blog/cwa/' | relative_url }}">✦ every cup</a>
+  </header>
+
+  <main class="cwa-main">
+    <aside class="cwa-aside" aria-label="The ticket">
+      <div class="cwa-ticket">
+        <p class="c t1">Coffee with Aaron</p>
+        <p class="c q">table for two · for here</p>
+        <hr>
+        <p class="row"><time class="dt-published" datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%a · %b %-d · %Y" }}</time><span>{{ page.date | date: "%-I:%M %P" }}</span></p>
+        <hr>
+        <p class="pour"><span aria-hidden="true">1 ×</span><span>{{ cwa_pour }}</span></p>
+        <p class="ind q">~{{ cwa_words_shown }} words · {{ cwa_minutes }} min</p>
+        <hr>
+        {%- if page.written_in == "Endpaper" -%}<p class="q">written in <a href="https://endpaper.day" target="_blank" rel="noopener">Endpaper ↗</a></p>{%- elsif page.written_in -%}<p class="q">written in {{ page.written_in }}</p>{%- endif -%}
+        <p class="row" style="margin-top:4px"><span>ticket {{ cwa_n }}</span><span>thank you</span></p>
+        <svg class="cwa-tear" width="232" height="8" viewBox="0 0 232 8" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0h232v1l-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7-4 7-4-7z"/></svg>
+      </div>
+    </aside>
+
+    <article class="cwa-article h-entry">
+      <div class="cwa-ticket compact" role="note" aria-label="The ticket">
+        <p class="row"><span>table for two · for here</span><span>{{ cwa_n }}</span></p>
+        <hr>
+        <p class="row"><span>{{ page.date | date: "%a · %b %-d · %-I:%M %P" }}</span><span><span aria-hidden="true">1 × </span>{{ cwa_pour_short }}</span></p>
+        <p class="q">~{{ cwa_words_shown }} words · {{ cwa_minutes }} min{% if page.written_in == "Endpaper" %} · <a href="https://endpaper.day" target="_blank" rel="noopener">Endpaper ↗</a>{% endif %}</p>
+      </div>
+      <p class="cwa-print" aria-hidden="true"><b>Coffee with Aaron</b><span>{{ page.date | date: "%a · %b %-d · %Y" }} · {{ cwa_pour }} · ~{{ cwa_minutes }} min</span></p>
+
+      <h1 class="cwa-title p-name">{{ page.title | escape }}</h1>
+      {%- if page.description -%}<p class="cwa-dek p-summary">{{ page.description }}</p>{%- endif -%}
+
+      {%- if cwa_h2s.size > 2 -%}
+      <nav class="cwa-topics" aria-label="What we talked about"><span class="cwa-mono">on the table today</span>{{ cwa_topics }}</nav>
+      {%- endif -%}
+
+      {%- if page.image -%}<figure class="cwa-image"><img src="{{ page.image }}" alt="{{ page.title | escape }}"></figure>{%- endif -%}
+
+      <div class="cwa-prose e-content">
+        {{ content }}
+        {%- if page.source -%}<p class="cwa-source"><a href="{{ page.source }}" target="_blank" rel="noopener noreferrer">↗ Original Source</a></p>{%- endif -%}
+      </div>
+      <a class="u-url" href="{{ page.url | relative_url }}" hidden></a>
+      <a class="p-author h-card" href="{{ '/' | absolute_url }}" hidden>Aaron Aiken</a>
+
+      <p class="cwa-printfoot"><span>Your turn: aaron@omg.lol</span><span>{{ page.url | absolute_url | remove: 'https://' }}</span></p>
+
+      <section class="cwa-turn" aria-labelledby="cwa-yt">
+        <div class="cwa-cups">{% include cwa-cups.html %}</div>
+        <div class="cwa-who">
+          <img src="{{ '/assets/cloudbase/aaron.jpg' | relative_url }}" alt="Aaron" width="76" height="76">
+          <div>
+            <h2 id="cwa-yt">Your turn.</h2>
+            <p>That's my side of the table. Pull up a chair and tell me what you'd say back. I read every reply.</p>
+          </div>
+        </div>
+        <form class="cwa-form" id="cwa-reply" aria-labelledby="cwa-yt" novalidate>
+          <p class="cwa-subject"><span class="cwa-mono">Subject</span><b>Re: “{{ page.title | escape }}”</b></p>
+          <div class="cwa-pair">
+            <label class="cwa-lab" for="cwa-name">Name<input class="cwa-in" id="cwa-name" name="name" type="text" autocomplete="name" placeholder="Your name" aria-describedby="cwa-name-err"><span class="cwa-err" id="cwa-name-err"></span></label>
+            <label class="cwa-lab" for="cwa-email">Email<input class="cwa-in" id="cwa-email" name="email" type="email" autocomplete="email" autocapitalize="none" placeholder="So I can write back" aria-describedby="cwa-email-err"><span class="cwa-err" id="cwa-email-err"></span></label>
+          </div>
+          <label class="cwa-lab" for="cwa-msg">Message<textarea class="cwa-in" id="cwa-msg" name="message" rows="5" placeholder="What would you say back?" aria-describedby="cwa-msg-err"></textarea><span class="cwa-err" id="cwa-msg-err"></span></label>
+          <div class="cwa-hp" aria-hidden="true"><label for="cwa-website">Website</label><input id="cwa-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+          <div class="cwa-send">
+            <button class="cwa-btn" type="submit">Send it →</button>
+            <span class="cwa-status" id="cwa-status" role="status">It comes straight to me. No list, no CRM.</span>
+          </div>
+        </form>
+        <div class="cwa-sent" id="cwa-sent" tabindex="-1" hidden>
+          <h3>Got it. Thanks for sitting down with me.</h3>
+          <p>Your note is on its way to me. I'll write back to <span id="cwa-sent-to"></span> when I can.</p>
+          <p class="cwa-mono">Re: “{{ page.title | escape }}” · <a href="#cwa-reply" id="cwa-again">write another</a></p>
+        </div>
+        {%- unless page.scribbles == false -%}
+        <p class="cwa-scrib">Also poured on Scribbles. Rather send a Scribble? <a href="{{ cwa_scrib }}">cwa.omg.lol ↗</a></p>
+        {%- endunless -%}
+      </section>
+
+      <nav class="cwa-near" aria-label="More coffee">
+        {%- if cwa_before -%}
+        {%- include cwa-pour.html text=cwa_before.content -%}
+        <a class="cwa-bare cwa-cup before" href="{{ cwa_before.url | relative_url }}"><span class="l">← the cup before</span><span class="t">{{ cwa_before.title | escape }}</span><span class="m">{{ cwa_before.date | date: "%b %-d, %Y" }} · {{ cwa_pour }}</span></a>
+        {%- else -%}
+        <div class="cwa-none before"><span class="l">← the cup before</span><span class="n">The first cup poured here.</span><span class="m"><a href="https://cwa.omg.lol/">older ones on Scribbles ↗</a></span></div>
+        {%- endif -%}
+        {%- if cwa_after -%}
+        {%- include cwa-pour.html text=cwa_after.content -%}
+        <a class="cwa-bare cwa-cup after" href="{{ cwa_after.url | relative_url }}"><span class="l">the next cup →</span><span class="t">{{ cwa_after.title | escape }}</span><span class="m">{{ cwa_after.date | date: "%b %-d, %Y" }} · {{ cwa_pour }}</span></a>
+        {%- else -%}
+        <div class="cwa-none after"><span class="l">the next cup →</span><span class="n">This is the freshest pot.</span><span class="m"><a href="{{ '/blog/cwa/' | relative_url }}">every cup →</a></span></div>
+        {%- endif -%}
+      </nav>
+    </article>
+    <div class="cwa-spacer" aria-hidden="true"></div>
+  </main>
+
+  <footer class="cwa-foot">
+    <span>Coffee with Aaron · aaronaiken.me</span>
+    <span><a href="{{ '/feed.xml' | relative_url }}">RSS</a><a href="https://cwa.omg.lol/">Scribbles ↗</a></span>
+  </footer>
+</div>
+
+  <script>
+  // "Your turn." Replies land in Aaron's Callsign room. Simple cross-site POST
+  // (URLSearchParams body, no custom headers) so the browser skips the preflight.
+  (function () {
+    var ENDPOINT = 'https://cloudbase.day/p/js/write';
+    var LOADED = Math.floor(Date.now() / 1000);
+    var TITLE = {{ page.title | jsonify }};
+    var IDLE = 'It comes straight to me. No list, no CRM.';
+    var COUNT = ['', 'One', 'Two', 'Three', 'Four'];
+    var form = document.getElementById('cwa-reply'), sent = document.getElementById('cwa-sent');
+    var status = document.getElementById('cwa-status'), btn = form.querySelector('.cwa-btn');
+    var f = { name: document.getElementById('cwa-name'), email: document.getElementById('cwa-email'), msg: document.getElementById('cwa-msg') };
+
+    function mark(el, note) {
+      var err = document.getElementById(el.id + '-err');
+      err.textContent = note || '';
+      el.classList.toggle('bad', !!note);
+      if (note) el.setAttribute('aria-invalid', 'true'); else el.removeAttribute('aria-invalid');
+    }
+    function say(text, cls) { status.textContent = text; status.className = 'cwa-status' + (cls ? ' ' + cls : ''); }
+    function busy(on) {
+      [f.name, f.email, f.msg].forEach(function (el) { el.readOnly = on; });
+      btn.disabled = on;
+      btn.textContent = on ? 'Sending…' : 'Send it →';
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var name = f.name.value.trim(), email = f.email.value.trim(), message = f.msg.value.trim();
+      var words = 'Re: “' + TITLE + '”\n\n' + message;
+      var problems = [];
+      mark(f.name, name ? '' : "I'll need your name.");
+      if (!name) problems.push(f.name);
+      var okEmail = /@[^@\s]*\.[^@\s]+$/.test(email) && email.indexOf('@') > 0;
+      mark(f.email, okEmail ? '' : "That email doesn't look right.");
+      if (!okEmail) problems.push(f.email);
+      var msgNote = !message ? 'Write me a line or two first.' : words.length > 4000 ? 'A little shorter, please (4,000 characters max).' : '';
+      mark(f.msg, msgNote);
+      if (msgNote) problems.push(f.msg);
+      if (problems.length) {
+        say(COUNT[problems.length] + (problems.length === 1 ? ' thing' : ' things') + ' to fix above.', 'prob');
+        problems[0].focus();
+        return;
+      }
+
+      say(IDLE);
+      busy(true);
+      fetch(ENDPOINT, { method: 'POST', body: new URLSearchParams({
+        words: words, name: name, email: email, t: LOADED,
+        website: document.getElementById('cwa-website').value, page: location.pathname
+      }) }).then(function (r) {
+        if (!r.ok) throw new Error('send failed');
+        document.getElementById('cwa-sent-to').textContent = email;
+        form.hidden = true;
+        sent.hidden = false;
+        sent.focus();
+      }).catch(function () {
+        busy(false);
+        say('That didn’t go through. Your words are still here; try again in a minute.', 'bad');
+      });
+    });
+
+    document.getElementById('cwa-again').addEventListener('click', function (e) {
+      e.preventDefault();
+      f.msg.value = '';
+      busy(false);
+      say(IDLE);
+      sent.hidden = true;
+      form.hidden = false;
+      f.msg.focus();
+    });
+  })();
+  </script>
+</body>
+</html>

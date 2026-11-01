@@ -1,0 +1,13 @@
+{%- comment -%} Pour size for a CWA post from its text. Sets cwa_words, cwa_words_shown (~rounded, with a comma), cwa_minutes, cwa_pour. {%- endcomment -%}
+{%- assign cwa_words = include.text | strip_html | number_of_words -%}
+{%- assign cwa_minutes = cwa_words | plus: 229 | divided_by: 230 -%}
+{%- if cwa_minutes < 1 -%}{%- assign cwa_minutes = 1 -%}{%- endif -%}
+{%- assign cwa_round = cwa_words | plus: 5 | divided_by: 10 | times: 10 -%}
+{%- if cwa_round >= 1000 -%}
+  {%- assign cwa_k = cwa_round | divided_by: 1000 -%}{%- assign cwa_r = cwa_round | modulo: 1000 | prepend: "00" | slice: -3, 3 -%}
+  {%- capture cwa_words_shown -%}{{ cwa_k }},{{ cwa_r }}{%- endcapture -%}
+{%- else -%}{%- assign cwa_words_shown = cwa_round -%}{%- endif -%}
+{%- if cwa_words < 250 -%}{%- assign cwa_pour = "espresso" -%}
+{%- elsif cwa_words < 600 -%}{%- assign cwa_pour = "a quick cup" -%}
+{%- elsif cwa_words < 1000 -%}{%- assign cwa_pour = "one cup" -%}
+{%- else -%}{%- assign cwa_pour = "stay for a refill" -%}{%- endif -%}
