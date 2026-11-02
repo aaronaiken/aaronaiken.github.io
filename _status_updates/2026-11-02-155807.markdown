@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-02 15:58:07 -0500
+layout: status_update
+author: aaron
+source: web
+---
+Redesigned the look and feel of my *Coffee with Aaron* blog posts as they appear on my personal blog. Pretty happy with how it turned out! [https://aaronaiken.me/blog/cwa/](https://aaronaiken.me/blog/cwa/)
+
+[![Blog homepage for "Coffee with Aaron" featuring a sketch of a small table with two chairs by a window, a loyalty punch card, and menu items about life updates and fatherhood.](https://cargo.aaronaiken.me/status/20261102155807.jpg)](https://cargo.aaronaiken.me/status/20261102155807-full.jpg)
