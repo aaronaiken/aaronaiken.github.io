@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-02 15:49:54 -0500
+layout: status_update
+author: aaron
+source: web
+---
+👻 ☕️ don’t mind if I do. 
+
+[![Hand holding a star-shaped cookie with icing face over a desk with a mug of coffee, keyboard, and gaming controllers.](https://cargo.aaronaiken.me/status/20261102154954.jpg)](https://cargo.aaronaiken.me/status/20261102154954-full.jpg)
