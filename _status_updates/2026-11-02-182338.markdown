@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-02 18:23:38 -0500
+layout: status_update
+author: aaron
+source: web
+---
+The request last week: can you send me those files? And so sharing files in Cloudbase got some major improvement. "[One link, all the files](https://cloudbase.day/shipped/2026-11-02)".
+
+[![Small blue and orange seaplane on a desert runway with two people standing nearby and a flag pole visible in the background.](https://cargo.aaronaiken.me/status/20261102182338.jpg)](https://cargo.aaronaiken.me/status/20261102182338-full.jpg)
