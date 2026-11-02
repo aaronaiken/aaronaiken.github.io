@@ -1,0 +1,9 @@
+{%- comment -%}
+  Where a CWA post's sketch is served from. Sets cwa_art_src and cwa_art_state ("cleaned" or "raw").
+  The Action writes cleaned copies to assets/cwa/art/<slug>.webp; until one exists, the raw image shows.
+  If the cleaned copies move to cargo later, this is the one place to change.
+{%- endcomment -%}
+{%- capture cwa_art_path -%}/assets/cwa/art/{{ page.slug }}.webp{%- endcapture -%}
+{%- assign cwa_clean = site.static_files | where: "path", cwa_art_path | first -%}
+{%- if cwa_clean -%}{%- assign cwa_art_src = cwa_art_path | relative_url -%}{%- assign cwa_art_state = "cleaned" -%}
+{%- else -%}{%- assign cwa_art_src = include.raw -%}{%- assign cwa_art_state = "raw" -%}{%- endif -%}

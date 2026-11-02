@@ -32,6 +32,15 @@
     <a class="cwa-bare cwa-mono" href="{{ '/blog/cwa/' | relative_url }}">✦ every cup</a>
   </header>
 
+  {%- comment -%} Post art: art: sketch (default, Midjourney, blends into the page), photo, or none {%- endcomment -%}
+  {%- assign cwa_img = page.image.path | default: page.image -%}
+  {%- assign cwa_art = page.art | default: "sketch" | downcase -%}
+  {%- unless cwa_img -%}{%- assign cwa_art = "none" -%}{%- endunless -%}
+  {%- if cwa_art == "sketch" -%}
+    {%- include cwa-art-src.html raw=cwa_img -%}
+  <figure class="cwa-art" data-art="{{ cwa_art_state }}"><img src="{{ cwa_art_src }}" alt="{{ page.image_alt | escape }}"{% if page.image.width %} width="{{ page.image.width }}" height="{{ page.image.height }}"{% endif %} loading="eager"></figure>
+  {%- endif %}
+
   <main class="cwa-main">
     <aside class="cwa-aside" aria-label="The ticket">
       <div class="cwa-ticket">
@@ -65,7 +74,7 @@
       <nav class="cwa-topics" aria-label="What we talked about"><span class="cwa-mono">on the table today</span>{{ cwa_topics }}</nav>
       {%- endif -%}
 
-      {%- if page.image -%}<figure class="cwa-image"><img src="{{ page.image }}" alt="{{ page.title | escape }}"></figure>{%- endif -%}
+      {%- if cwa_art == "photo" -%}<figure class="cwa-image"><img src="{{ cwa_img }}" alt="{{ page.image_alt | escape }}"></figure>{%- endif -%}
 
       <div class="cwa-prose e-content">
         {{ content }}

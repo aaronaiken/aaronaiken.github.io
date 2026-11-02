@@ -1,0 +1,58 @@
+# .github/workflows/cwa-art.yml
+# Cleans the Midjourney art for Coffee with Aaron posts after Endpaper publishes.
+# It never edits a post: it only writes assets/cwa/art/<slug>.webp (+ manifest.json).
+name: CWA art
+
+on:
+  push:
+    branches: [main]
+    paths: ["_posts/**"]
+  workflow_dispatch: {}   # "Run workflow" button on the Actions tab, to re-run by hand
+
+permissions:
+  contents: write   # commit the cleaned images
+  pages: write      # ask GitHub Pages to rebuild afterwards
+
+concurrency:
+  group: cwa-art
+  cancel-in-progress: false
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install pillow numpy pyyaml
+
+      - name: Clean CWA art
+        run: python3 _tools/cwa_art_ci.py
+
+      - name: Commit cleaned images
+        id: commit
+        run: |
+          git add assets/cwa/art
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing new to commit."
+          else
+            git config user.name  "cwa-art"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "cwa-art: clean post art"
+            git pull --rebase origin main   # in case Endpaper pushed again meanwhile
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # A push made with the workflow's own token may not start a Pages build on its own,
+      # so ask for one. Harmless if a build was already queued.
+      - name: Rebuild Pages
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/pages/builds" || echo "Pages build request skipped"

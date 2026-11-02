@@ -21,9 +21,29 @@
   </header>
 
   <main>
+    {%- assign cwa_scene = site.data.cwa_index_art.shop | first -%}
+    <figure class="cwa-art cwa-scene" data-art='{{ site.data.cwa_index_art | jsonify | escape }}'><img src="{{ cwa_scene.src | relative_url }}" alt="{{ cwa_scene.alt | escape }}" width="1280" height="853" loading="eager"></figure>
+    <script>
+      (function () {
+        var fig = document.currentScript.previousElementSibling, img = fig.querySelector('img');
+        var pools = JSON.parse(fig.getAttribute('data-art')), root = document.documentElement;
+        var mq = window.matchMedia('(prefers-color-scheme: dark)');
+        function dark() {
+          if (root.classList.contains('night') || fig.closest('.night')) return true;
+          if (root.classList.contains('theme-light')) return false;
+          return mq.matches;
+        }
+        function pick() {
+          var pool = pools[dark() ? 'sunup' : 'shop'], a = pool[Math.floor(Math.random() * pool.length)];
+          img.src = '{{ site.baseurl }}' + a.src; img.alt = a.alt;
+        }
+        pick();
+        if (mq.addEventListener) mq.addEventListener('change', pick); else if (mq.addListener) mq.addListener(pick);
+      })();
+    </script>
+
     <section class="cwa-hero">
       <div class="cwa-hero-text">
-        <div class="cwa-hero-mug">{% include cwa-mug.html size=64 stroke=1.3 %}</div>
         <h1>Coffee with Aaron</h1>
         <p>{{ cwa_about }}</p>
       </div>

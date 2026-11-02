@@ -41,6 +41,8 @@
       :root:not(.theme-light) body{background:#120d09}
       :root:not(.theme-light) .cwa-light{background:radial-gradient(1200px 360px at 50% -10%,rgba(64,84,124,.30),rgba(64,84,124,0) 72%)}
       :root:not(.theme-light) .cwa-grain{opacity:.05}
+      :root:not(.theme-light) .cwa-art img{filter:invert(1) sepia(.9) saturate(1.2) brightness(.95);mix-blend-mode:screen}
+      :root:not(.theme-light) .cwa-image img{filter:sepia(.2) contrast(1.05) brightness(.85)}
     }
     .cwa.night{
       color-scheme:dark;
@@ -51,6 +53,8 @@
     }
     .night .cwa-light{background:radial-gradient(1200px 360px at 50% -10%,rgba(64,84,124,.30),rgba(64,84,124,0) 72%)}
     .night .cwa-grain{opacity:.05}
+    .night .cwa-art img{filter:invert(1) sepia(.9) saturate(1.2) brightness(.95);mix-blend-mode:screen}
+    .night .cwa-image img{filter:sepia(.2) contrast(1.05) brightness(.85)}
 
     *{box-sizing:border-box}
     html,body{margin:0}
@@ -105,6 +109,9 @@
     .cwa-topics{margin-top:22px;padding:12px 0;border-top:1px dashed var(--cwa-line);border-bottom:1px dashed var(--cwa-line);display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline}
     .cwa-topics .cwa-mono{font-size:12px;letter-spacing:.16em}
     .cwa-topics a{font-family:var(--cwa-aside);font-size:19px}
+    /* Post art: a sketch leads the page and melts into it (paper multiplies away; before sunup it's drawn in light) */
+    .cwa-art{position:relative;max-width:1024px;margin:8px auto 0;padding:0 32px}
+    .cwa-art img{display:block;width:100%;height:auto;mix-blend-mode:multiply;-webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 75%,transparent 100%);mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 75%,transparent 100%)}
     .cwa-image{margin:30px 0 0}
     .cwa-image img{display:block;width:100%;height:auto;border-radius:6px;filter:sepia(.2) contrast(1.05) brightness(.92)}
 
@@ -180,9 +187,10 @@
     .cwa-print,.cwa-printfoot{display:none}
 
     /* The menu */
-    .cwa-hero{position:relative;max-width:1104px;margin:0 auto;padding:40px 32px 0;display:flex;flex-wrap:wrap;gap:48px;align-items:center;justify-content:space-between}
+    .cwa-hero{position:relative;max-width:1104px;margin:0 auto;padding:8px 32px 0;display:flex;flex-wrap:wrap;gap:48px;align-items:center;justify-content:space-between}
     .cwa-hero-text{flex:1 1 480px;min-width:0}
-    .cwa-hero-mug{color:var(--cwa-crema);margin-bottom:10px}
+    /* The menu's scene sketch: same treatment as post art, the title tucks under its empty paper */
+    .cwa-art.cwa-scene{max-width:704px;margin:-8px auto -24px}
     .cwa-hero h1{font-family:var(--cwa-display);font-style:italic;font-weight:600;font-size:72px;line-height:1;letter-spacing:-.02em;color:var(--cwa-ink);margin:0 0 18px}
     .cwa-hero-text p{font-family:var(--cwa-aside);font-size:23px;line-height:1.5;color:var(--cwa-ink-body);margin:0;max-width:34em}
     .cwa-punch-wrap{position:relative;flex:0 0 340px}
@@ -245,6 +253,7 @@
       .cwa-mark svg{width:26px;height:26px}
       .cwa-mark span{font-size:20px}
       .cwa-main{padding:14px 22px 0;gap:0}
+      .cwa-art{padding:0;margin:-6px 0 0}
       .cwa-aside{display:none}
       .cwa-ticket.compact{display:block;width:100%;font-size:11.5px;padding:12px 14px;transform:rotate(-1deg)}
       .cwa-ticket.compact hr{margin:7px 0}
@@ -257,7 +266,7 @@
       .cwa-foot{margin:56px 22px 0;padding:20px 0 40px}
       .cwa-hero{padding:6px 22px 0;gap:22px}
       .cwa-hero-text{flex-basis:100%}
-      .cwa-hero-mug{display:none}
+      .cwa-art.cwa-scene{max-width:none;padding:0;margin:-14px 0 -18px}
       .cwa-hero h1{font-size:44px;margin-bottom:12px}
       .cwa-hero-text p{font-size:19px;line-height:1.45}
       .cwa-punch-wrap{display:none}
@@ -292,7 +301,7 @@
       .cwa-print b{font-family:var(--cwa-display);font-style:italic;font-weight:600;font-size:18px;letter-spacing:0;text-transform:none}
       .cwa-title{font-size:32px;margin:30px 0 8px}
       .cwa-dek{font-size:16px;color:#3a2e1a;margin-bottom:22px}
-      .cwa-image img{filter:none}
+      .cwa-image img,.cwa-art img{filter:none!important;mix-blend-mode:normal!important}
       .cwa-prose{font-size:12pt;line-height:1.65;margin-top:0}
       .cwa-prose p{margin:0 0 12px}
       .cwa-prose hr{-webkit-mask:none;mask:none;background:none;height:auto;width:auto;margin:18px 0;text-align:center}

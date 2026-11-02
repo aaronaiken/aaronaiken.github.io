@@ -1,0 +1,11 @@
+# Scene sketches for /blog/cwa/. One is picked at random on each visit:
+# shop in daylight, sunup in dark mode. Clean new ones with
+# python3 _tools/cwa_art.py in.png out.webp --width 1344
+shop:
+  - { src: /assets/cwa/index/cwa-index-shop-1.webp, alt: "An empty café table by a window, two cups on saucers, a chair on each side." }
+  - { src: /assets/cwa/index/cwa-index-shop-2.webp, alt: "A coffee-shop counter with mugs hanging on hooks, a pour-over stand and a kettle." }
+  - { src: /assets/cwa/index/cwa-index-shop-3.webp, alt: "A small brick coffee shop from across the street, a bicycle by the door." }
+  - { src: /assets/cwa/index/cwa-index-shop-4.webp, alt: "Two people talking across a café table under a hanging lamp." }
+sunup:
+  - { src: /assets/cwa/index/cwa-index-sunup-1.webp, alt: "A French press and a mug on a kitchen counter, the window still dark." }
+  - { src: /assets/cwa/index/cwa-index-sunup-2.webp, alt: "A man from behind at a kitchen table before dawn, a mug and an open laptop." }

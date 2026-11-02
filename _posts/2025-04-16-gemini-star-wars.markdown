@@ -6,6 +6,7 @@ categories: [cwa]
 tags: [AI, Gemini, Star Wars]
 author: aaron
 image: /assets/img/r2d2.jpeg
+art: photo
 source:
 description: Recent discussion with Gemini where I discover its favorite Star Wars character.
 ---
