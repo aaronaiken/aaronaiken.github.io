@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-03 10:57:16 -0500
+layout: status_update
+author: aaron
+source: web
+---
+🇺🇸 on today's schedule
+
+[![Timeline interface showing today's schedule with voting at 11:30am, post-ticket and post-release surveys, and lunch at 12:00pm.](https://cargo.aaronaiken.me/status/20261103105716.jpg)](https://cargo.aaronaiken.me/status/20261103105716-full.jpg)
