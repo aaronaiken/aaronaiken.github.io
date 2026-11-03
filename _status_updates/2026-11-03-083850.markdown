@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-11-03 08:38:50 -0500
+layout: status_update
+author: aaron
+source: web
+---
+☕️ alright, Tuesday, let's see what we can do today.
