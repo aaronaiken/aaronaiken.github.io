@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-03 11:51:47 -0500
+layout: status_update
+author: aaron
+source: web
+---
+🗳️ today’s obligatory pic
+
+[![I voted sticker](https://cargo.aaronaiken.me/status/20261103115147.jpg)](https://cargo.aaronaiken.me/status/20261103115147-full.jpg)
