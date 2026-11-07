@@ -39,6 +39,8 @@
   {%- if cwa_art == "sketch" -%}
     {%- include cwa-art-src.html raw=cwa_img -%}
   <figure class="cwa-art" data-art="{{ cwa_art_state }}"><img src="{{ cwa_art_src }}" alt="{{ page.image_alt | escape }}"{% if page.image.width %} width="{{ page.image.width }}" height="{{ page.image.height }}"{% endif %} loading="eager"></figure>
+  {%- comment -%} If the same sketch is also in the body (so Scribbles gets it), don't show it twice here {%- endcomment %}
+  <style>.cwa-prose img[src="{{ cwa_img }}"],.cwa-prose p:has(> img[src="{{ cwa_img }}"]:only-child){display:none}</style>
   {%- endif %}
 
   <main class="cwa-main">
