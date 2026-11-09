@@ -9,6 +9,7 @@ cosmic_id: Endpaper-Ψ-0017
 written_in: Endpaper
 image: https://cargo.aaronaiken.me/blog-img/07183b68dd4044c9826f7c334f8a1d99.jpg
 image_alt: "A man walking into a forest, an ax in his hand."
+description: "The slow, beautiful craft of building a house with an ax and dividers, the faster world that replaced it, and the choice we all face when things change: keep the old tools or carry what we know into the new."
 ---
 
 ![A sketch of a man holding an axe, standing in a forest of tall trees.](https://cargo.aaronaiken.me/blog-img/07183b68dd4044c9826f7c334f8a1d99.jpg)

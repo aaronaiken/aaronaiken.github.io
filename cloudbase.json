@@ -1,0 +1,19 @@
+---
+layout: null
+permalink: /cloudbase.json
+---
+{%- comment -%}
+  Feed of posts tagged `cloudbase`, read by cloudbase.day (the /workshop page).
+  Optional front matter per post: cb_topics, cb_start_here, cb_video (a YouTube id).
+{%- endcomment -%}
+{"items": [
+{%- for post in site.tags.cloudbase %}
+  {%- assign cb_img = post.image.path | default: post.image -%}
+  {%- assign cb_excerpt = post.description | default: post.excerpt -%}
+  {"title": {{ post.title | jsonify }}, "url": {{ post.url | absolute_url | jsonify }},
+   "date": "{{ post.date | date_to_xmlschema }}",
+   "excerpt": {{ cb_excerpt | strip_html | strip | truncate: 220 | jsonify }},
+   "image": {% if cb_img %}{{ cb_img | absolute_url | jsonify }}{% else %}null{% endif %}, "topics": {{ post.cb_topics | jsonify }},
+   "start_here": {% if post.cb_start_here %}true{% else %}false{% endif %}, "video": {{ post.cb_video | jsonify }}}{% unless forloop.last %},{% endunless %}
+{%- endfor %}
+]}
