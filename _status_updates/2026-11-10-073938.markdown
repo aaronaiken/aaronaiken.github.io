@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-11-10 07:39:38 -0500
+layout: status_update
+author: aaron
+source: web
+---
+🚀 [Endpaper 0.1.8](https://cloudbase.day/notes/aaron/endpaper/0.1.8)
