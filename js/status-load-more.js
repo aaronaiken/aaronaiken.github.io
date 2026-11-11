@@ -56,7 +56,14 @@
     if (item.source) {
       var src = document.createElement('span');
       src.className = 'source';
-      src.textContent = 'via ' + item.source;
+      src.appendChild(document.createTextNode('via '));
+      if (item.source === 'cloudbase') {          // posted from Cloudbase: name it with a link home
+        var a = document.createElement('a');
+        a.href = 'https://cloudbase.day'; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'cloudbase';
+        src.appendChild(a);
+      } else {
+        src.appendChild(document.createTextNode(item.source));
+      }
       meta.appendChild(document.createTextNode(' '));
       meta.appendChild(src);
     }

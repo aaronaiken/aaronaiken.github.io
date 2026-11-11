@@ -38,7 +38,7 @@
               <a href="{{ page.url | relative_url }}">{{ page.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a>
             </p>
             {% if page.source %}
-              <p class="source">via {{ page.source }}</p>
+              <p class="source">via {% if page.source == "cloudbase" %}<a href="https://cloudbase.day" target="_blank" rel="noopener">cloudbase</a>{% else %}{{ page.source }}{% endif %}</p>
             {% endif %}
           </div>
         </div>

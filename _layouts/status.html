@@ -38,7 +38,7 @@
             <div class="content">{{ latest.content | markdownify }}</div>
             <p class="timestamp" data-timestamp="{{ latest.date | date: '%s' }}">{{ latest.date | date: "%I:%M %p %B %-d, %Y %Z" }}</p>
             {% if latest.source %}
-              <p class="source">via {{ latest.source }} - <a href="{{ latest.url }}">🔗</a></p>
+              <p class="source">via {% if latest.source == "cloudbase" %}<a href="https://cloudbase.day" target="_blank" rel="noopener">cloudbase</a>{% else %}{{ latest.source }}{% endif %} - <a href="{{ latest.url }}">🔗</a></p>
             {% endif %}
           </div>
         </div>
@@ -64,7 +64,7 @@
               <span class="st-terminal-only st-line-prefix">›</span>
               <div class="st-item-body">
                 <div class="content">{{ status.content | markdownify | replace: '<img ', '<img loading="lazy" decoding="async" ' }}</div>
-                <p class="st-item-meta"><a href="{{ status.url }}" target="_blank" class="timestamp-link">{{ status.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a>{% if status.source %} <span class="source">via {{ status.source }}</span>{% endif %}</p>
+                <p class="st-item-meta"><a href="{{ status.url }}" target="_blank" class="timestamp-link">{{ status.date | date: "%I:%M %p %B %-d, %Y %Z" }}</a>{% if status.source %} <span class="source">via {% if status.source == "cloudbase" %}<a href="https://cloudbase.day" target="_blank" rel="noopener">cloudbase</a>{% else %}{{ status.source }}{% endif %}</span>{% endif %}</p>
               </div>
             </li>
             {% endunless %}
