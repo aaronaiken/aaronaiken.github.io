@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-11-11 17:01:08 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+🌐 Made a super fun thing today. Would love to have a few of my fellow small internet nerds take a look at it with me. Any takers?
