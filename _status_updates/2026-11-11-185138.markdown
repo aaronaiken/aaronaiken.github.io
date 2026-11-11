@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-11-11 18:51:38 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+🥡 Chinese for dinner tonight. 
