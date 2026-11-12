@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-12 07:52:18 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+I brought FlightRadar into Cloudbase, among a few other things.
+
+[![Weather forecast and aircraft tracking display showing afternoon conditions with hourly temperatures, radar overlay, and Southwest Airlines flight details to St Louis.](https://cargo.aaronaiken.me/status/20261112075218.jpg)](https://cargo.aaronaiken.me/status/20261112075218-full.jpg)
