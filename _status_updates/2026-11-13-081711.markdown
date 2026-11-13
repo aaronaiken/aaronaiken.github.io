@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-13 08:17:11 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+I first built *Cockpit* as a place to post [status updates to my blog](https://aaronaiken.me/status.html) (which then hit omg.lol and micro.blog). Recently moved that to [Cloudbase](https://cloudbase.day/) as *Transmit* and I'm super happy with how things are working and the [idea it inspired](https://cloudbase.day/transmit). 
+
+[![A Transmit service dialog box for sending messages to aaronaiken.me with text formatting options, character counter, and a list of recent grateful log entries from yesterday.](https://cargo.aaronaiken.me/status/20261113081711.jpg)](https://cargo.aaronaiken.me/status/20261113081711-full.jpg)
