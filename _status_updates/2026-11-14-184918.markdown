@@ -1,0 +1,20 @@
+---
+title: Status
+date: 2026-11-14 18:49:18 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+Got a ride in before leaving this morning. Felt great!
+
+Sat, Nov 14: Indoor ride (Zwift, Tempus Fugit)
+- Distance: 17.9 mi
+- Time: 1:01:09
+- Avg speed: 17.5 mph
+- Climb: 246 ft
+- Avg power: 112 W
+- Avg HR: ~136 bpm
+- Zone 2: about 45 min
+#ride
+
+[![Zwift cycling game screen showing a rider on a virtual road with performance metrics, course map, and leaderboard displaying power output and position data.](https://media.cloudbase.day/stream/3/2026/11/20261114-184918-c52ee5.webp)](https://media.cloudbase.day/stream/3/2026/11/20261114-184918-c52ee5.webp)
