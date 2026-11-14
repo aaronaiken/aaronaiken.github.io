@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-14 18:31:07 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+A great family day trip to Gettysburg today! Took a ride on the Gettysburg Railway, trains are always a good time :-)
+
+[![Three smiling people sit together on a boat with large windows showing blue water outside and other passengers visible in the background.](https://media.cloudbase.day/stream/3/2026/11/20261114-183107-5692ac.webp)](https://media.cloudbase.day/stream/3/2026/11/20261114-183107-5692ac.webp)
