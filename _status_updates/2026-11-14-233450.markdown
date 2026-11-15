@@ -6,5 +6,6 @@ author: aaron
 source: cloudbase
 syndication:
   - https://status.lol/aaronaiken/6af9366be6def
+  - https://social.lol/@aaronaiken/117618627175106489
 ---
 📺 episode of *Slow Horses* before sleep (S6, E5).
