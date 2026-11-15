@@ -1,0 +1,21 @@
+---
+title: Status
+date: 2026-11-15 15:51:57 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+Some weights and then a ride. Simple on both. 
+
+Sun, Nov 15: Indoor ride (Zwift, INEOS Grenadiers Cafe Ride)
+- Distance: 8.1 mi
+- Time: 34:48
+- Avg speed: 14.0 mph
+- Climb: 292 ft
+- Avg power: 91 W
+- Avg HR: 135 bpm
+- Zone 2: about 26 min
+#ride
+
+
+[![Zwift cycling game interface showing a rider on an urban street with power output of 89W, speed of 24 MPH, and various performance metrics displayed on screen.](https://media.cloudbase.day/stream/3/2026/11/20261115-155157-b615cc.webp)](https://media.cloudbase.day/stream/3/2026/11/20261115-155157-b615cc.webp)
