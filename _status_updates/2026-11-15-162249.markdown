@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-11-15 16:22:49 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+🏈 🧀 Sigh. That Packers game was terrible. 
