@@ -4,5 +4,8 @@ date: 2026-11-15 16:22:49 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://status.lol/aaronaiken/6afa22ab6962f
+  - https://social.lol/@aaronaiken/117622556052564805
 ---
 🏈 🧀 Sigh. That Packers game was terrible. 
