@@ -1,0 +1,14 @@
+---
+title: Status
+date: 2026-11-14 21:18:54 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+🚀 [Cloudbase v229-240](https://cloudbase.day/shipped/2026-11-14), 12 deploys covered in one set of release notes (I gotta slack somewhere, but I do eventually get to them!). 
+- New: 16 items
+- Improved: 22 items
+- Fixed: 10 items
+
+Finally feeling like I've matured this to a solid point. I build first for what I need.
+
