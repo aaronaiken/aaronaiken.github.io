@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-11-14 20:21:06 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+🏈 Penn State right now, wowza!
