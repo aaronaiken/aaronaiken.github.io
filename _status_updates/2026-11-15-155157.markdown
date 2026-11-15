@@ -4,6 +4,8 @@ date: 2026-11-15 15:51:57 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://social.lol/@aaronaiken/117622434870515228
 ---
 Some weights and then a ride. Simple on both. 
 
