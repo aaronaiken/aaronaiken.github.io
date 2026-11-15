@@ -4,5 +4,7 @@ date: 2026-11-14 23:34:50 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://status.lol/aaronaiken/6af9366be6def
 ---
 📺 episode of *Slow Horses* before sleep (S6, E5).
