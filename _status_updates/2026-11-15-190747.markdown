@@ -4,5 +4,8 @@ date: 2026-11-15 19:07:47 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://status.lol/aaronaiken/6afa49553e168
+  - https://social.lol/@aaronaiken/117623204731327160
 ---
 Different week ahead with all-day training Monday - Wednesday plus still needing to cover the usual tasks…going to go fast!
