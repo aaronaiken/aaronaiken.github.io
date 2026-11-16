@@ -1,0 +1,80 @@
+{%- comment -%}
+  Reply, in place. The link works without JavaScript (it opens /contact/ about this post);
+  with it, a small form opens right under the post and sends through Aaron's Cloudbase door,
+  so his email never sits on the page. Usage: {% include reply.html title="..." label="Reply" %}
+{%- endcomment -%}
+{%- assign re_title = include.title | default: page.title -%}
+<div class="rp" data-rp>
+  <a class="rp__open" href="/contact/?re={{ page.url | url_encode }}&amp;title={{ re_title | url_encode }}"
+     aria-expanded="false" data-rp-open aria-label="Reply to: {{ re_title | escape }}">{{ include.label | default: "Reply" }}</a>
+  <form class="rp__form" data-rp-form hidden data-re="{{ site.url }}{{ page.url }}" data-title="{{ re_title | escape }}">
+    <p class="rp__lead">Replying to <em>{{ re_title | escape }}</em>. It comes straight to me, and I answer by email.</p>
+    <div class="rp__row">
+      <label><span>Name</span><input name="name" autocomplete="name" required></label>
+      <label><span>Email</span><input name="email" type="email" autocomplete="email" autocapitalize="none" required></label>
+    </div>
+    <label><span>Your reply</span><textarea name="message" rows="4" required></textarea></label>
+    <input name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="rp__hp">
+    <div class="rp__foot"><button type="submit">Send it</button><button type="button" class="rp__cancel" data-rp-cancel>Not now</button><span class="rp__status" role="status" aria-live="polite"></span></div>
+  </form>
+</div>
+{%- unless rp_loaded -%}{%- assign rp_loaded = true -%}
+<style>
+.rp{display:inline;font-size:inherit}
+.rp__open{color:inherit;opacity:.85;text-decoration:none;border-bottom:1px solid currentColor}
+.rp__open[aria-expanded="true"]{opacity:1}
+.rp__form{margin-top:12px;padding:14px 16px;border:1px solid currentColor;border-color:color-mix(in srgb,currentColor 28%,transparent);border-radius:8px;display:grid;gap:10px;max-width:560px}
+.rp__form[hidden]{display:none}
+.rp__lead{margin:0;font-size:.92em;opacity:.85}
+.rp__row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rp label{display:grid;gap:4px;font-size:.8em;letter-spacing:.04em}
+.rp label span{opacity:.75}
+.rp input,.rp textarea{font:inherit;font-size:1rem;color:inherit;background:transparent;border:1px solid color-mix(in srgb,currentColor 35%,transparent);border-radius:6px;padding:8px 10px;width:100%;box-sizing:border-box}
+.rp textarea{resize:vertical;min-height:90px}
+.rp input:focus,.rp textarea:focus{outline:2px solid currentColor;outline-offset:1px}
+.rp__hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.rp__foot{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.rp button{font:inherit;font-size:.85em;letter-spacing:.06em;color:inherit;background:transparent;border:1px solid currentColor;border-radius:4px;padding:7px 12px;cursor:pointer}
+.rp .rp__cancel{border-color:transparent;opacity:.7}
+.rp__status{font-size:.85em}
+@media (max-width:540px){.rp__row{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:no-preference){.rp__form:not([hidden]){animation:rp-down .18s ease-out}}
+@keyframes rp-down{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+</style>
+<script>
+(function () {
+  // Notes land in Aaron's Callsign room on Cloudbase. A simple cross-site POST (URLSearchParams body,
+  // no custom headers) so the browser skips the preflight — the same door as /contact/.
+  var ENDPOINT = 'https://cloudbase.day/p/js/write', LOADED = Math.floor(Date.now() / 1000);
+  function init(box) {
+    if (box.__rp) return; box.__rp = true;
+    var open = box.querySelector('[data-rp-open]'), form = box.querySelector('[data-rp-form]');
+    var status = form.querySelector('.rp__status'), send = form.querySelector('button[type=submit]');
+    function show(on) {
+      form.hidden = !on; open.setAttribute('aria-expanded', on ? 'true' : 'false');
+      if (on) form.querySelector('input[name=name]').focus(); else open.focus();
+    }
+    open.addEventListener('click', function (e) { e.preventDefault(); show(form.hidden); });
+    form.querySelector('[data-rp-cancel]').addEventListener('click', function () { show(false); });
+    form.addEventListener('keydown', function (e) { if (e.key === 'Escape') show(false); });
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var f = form.elements, msg = f.message.value.trim();
+      if (!msg) { status.textContent = 'Write a few words first.'; return; }
+      var words = 'Re: ' + form.getAttribute('data-title') + '\n\n' + msg + '\n\n— re: ' + form.getAttribute('data-re');
+      if (words.length > 4000) { status.textContent = 'A little shorter, please.'; return; }
+      send.disabled = true; status.textContent = 'Sending…';
+      fetch(ENDPOINT, { method: 'POST', body: new URLSearchParams({
+        words: words, email: f.email.value.trim(), name: f.name.value.trim(),
+        t: LOADED, website: f.website.value, page: location.pathname }) })
+        .then(function (r) { if (!r.ok) throw 0;
+          form.innerHTML = '<p class="rp__lead">Sent. Thanks — I read every one, and I\'ll answer by email.</p>';
+          open.setAttribute('aria-expanded', 'true'); })
+        .catch(function () { send.disabled = false; status.textContent = 'That didn\'t go. Try again in a moment.'; });
+    });
+  }
+  function all() { document.querySelectorAll('[data-rp]').forEach(init); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', all); else all();
+})();
+</script>
+{%- endunless -%}

@@ -173,7 +173,7 @@ body.post-page::after { content: ''; position: fixed; inset: 0; background: radi
         <div class="post__author-text">
           <p class="post__author-byline">Written by <strong><a href="{{ author.author-page }}">{{ author.name }}</a></strong></p>
           <p class="post__author-bio">{{ author.post-bio }}</p>
-          <p class="post__author-reply">Have something to say? <a href="mailto:{{ author.email }}?subject=Re: {{ page.title | uri_escape }}&body={{ site.url }}{{ page.url }}">Send me an email</a>.</p>
+          <div class="post__author-reply">Have something to say? {% include reply.html label="Reply" %}</div>
         </div>
       </div>
     </div>

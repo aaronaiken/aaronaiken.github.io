@@ -38,6 +38,8 @@
             <p class="timestamp">
               <a class="u-url" href="{{ page.url | relative_url }}"><time class="dt-published" datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%I:%M %p %B %-d, %Y %Z" }}</time></a>
             </p>
+            {% capture re_title %}Status, {{ page.date | date: "%B %-d, %Y" }}{% endcapture %}
+            <div class="source">{% include reply.html title=re_title %}</div>
             {% if page.syndication %}
               <p class="source">also at {% for s in page.syndication %}<a class="u-syndication" href="{{ s }}" rel="noopener">{{ s | split: "/" | slice: 2 | first | remove: "www." }}</a>{% unless forloop.last %} · {% endunless %}{% endfor %}</p>
             {% endif %}

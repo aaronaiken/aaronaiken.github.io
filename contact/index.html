@@ -138,6 +138,8 @@ body.contact-layout::after { content: ''; position: fixed; inset: 0; background:
   }
   body.contact-layout::before, body.contact-layout::after { display: none; }
   .cl__title { color: #1a1208 !important; }
+  .cl__re { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; letter-spacing: 0.06em; opacity: 0.8; margin: 0 0 12px; }
+  .cl__re a { color: inherit; border-bottom: 1px solid currentColor; text-decoration: none; }
   .cl__subtitle { color: #7a5020; }
   .cl__rule { background: linear-gradient(to right, #a89878, transparent); }
   .cl__label { color: #8a7858; }
@@ -166,6 +168,8 @@ body.contact-layout::after { content: ''; position: fixed; inset: 0; background:
 	  <h1 class="cl__title">Say hello.</h1>
 	  <p class="cl__subtitle">No contact form fatigue intended — this just keeps my email off the open web. I read everything and reply when I can.</p>
 	</div>
+
+	<p class="cl__re" id="ct-re" hidden>Replying to <a id="ct-re-link"></a></p>
 
 	<div class="cl__rule"></div>
 
@@ -213,6 +217,21 @@ body.contact-layout::after { content: ''; position: fixed; inset: 0; background:
 	const CT_ENDPOINT = 'https://cloudbase.day/p/js/write';
 	const CT_LOADED = Math.floor(Date.now() / 1000);
 
+	// A Reply link from a post or status: /contact/?re=/path/&title=...
+	// Only same-site paths are honored; the title is shown as text, never HTML.
+	const CT_Q = new URLSearchParams(location.search);
+	const CT_RE = (CT_Q.get('re') || '').startsWith('/') && !(CT_Q.get('re') || '').startsWith('//') ? CT_Q.get('re') : '';
+	if (CT_RE) {
+	  const title = (CT_Q.get('title') || CT_RE).slice(0, 140);
+	  const link = document.getElementById('ct-re-link');
+	  link.textContent = title;
+	  link.href = CT_RE;
+	  document.getElementById('ct-re').hidden = false;
+	  const subj = document.getElementById('ct-subject');
+	  if (!subj.value) subj.value = 'Re: ' + title;
+	  document.title = 'Reply · ' + document.title;
+	}
+
 	async function handleContact() {
 	  const btn    = document.getElementById('ct-btn');
 	  const status = document.getElementById('ct-status');
@@ -225,7 +244,7 @@ body.contact-layout::after { content: ''; position: fixed; inset: 0; background:
 	  if (!email || !email.includes('@')) { showStatus('err', '⚠ valid email required'); return; }
 	  if (!subject) { showStatus('err', '⚠ subject required'); return; }
 	  if (!message) { showStatus('err', '⚠ message required'); return; }
-	  const words = subject + '\n\n' + message;
+	  const words = subject + '\n\n' + message + (CT_RE ? '\n\n— re: {{ site.url }}' + CT_RE : '');
 	  if (words.length > 4000) { showStatus('err', '⚠ a little shorter, please (4000 characters max)'); return; }
 
 	  btn.disabled = true;
