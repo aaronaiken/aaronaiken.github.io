@@ -4,5 +4,8 @@ date: 2026-11-15 22:39:26 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://status.lol/aaronaiken/6afa7af043ece
+  - https://social.lol/@aaronaiken/117624037009032699
 ---
 🥱 Sleep is going to be sweet tonight.
