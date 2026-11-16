@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-16 16:44:03 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+Still some things to get through today after today's training. ITIL v3 was my first - went the entire way through to achieve "expert". I do have a soft spot for that based on when in my life it happened, with the group, and with the instructor. But, things always change :-)
+
+[![A task management app showing a daily schedule from 4:38pm to 5:30pm with seven unchecked tasks including updating IT portfolio and QA reports, plus an end of day marker.](https://media.cloudbase.day/stream/3/2026/11/20261116-164403-a33fff.webp)](https://media.cloudbase.day/stream/3/2026/11/20261116-164403-a33fff.webp)
