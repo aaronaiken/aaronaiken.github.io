@@ -1,0 +1,22 @@
+---
+title: Status
+date: 2026-11-16 08:06:00 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+Challenging but glad to have completed it. 
+
+Mon, Nov 16: Indoor ride (Zwift, Coll de Femenia)
+- Distance: 5.1 mi
+- Time: 53:35
+- Avg speed: 5.7 mph
+- Climb: 1,421 ft
+- Avg power: 129 W
+- Avg HR: 145 bpm
+- Max HR: 164 bpm
+
+#ride
+
+
+[![Cyclist riding on a mountain road during a virtual cycling workout with performance metrics and map displayed on screen.](https://media.cloudbase.day/stream/3/2026/11/20261116-080600-7e4706.webp)](https://media.cloudbase.day/stream/3/2026/11/20261116-080600-7e4706.webp)
