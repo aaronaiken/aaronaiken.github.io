@@ -1,0 +1,8 @@
+---
+title: Status
+date: 2026-11-15 22:39:26 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+🥱 Sleep is going to be sweet tonight.
