@@ -4,5 +4,8 @@ date: 2026-11-16 16:22:11 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://status.lol/aaronaiken/6afb7404cb142
+  - https://social.lol/@aaronaiken/117628215851623682
 ---
 ☕️ Never enough coffee.
