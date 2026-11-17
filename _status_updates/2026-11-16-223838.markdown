@@ -4,6 +4,9 @@ date: 2026-11-16 22:38:38 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://status.lol/aaronaiken/6afbcc413c2ac
+  - https://social.lol/@aaronaiken/117629696223191223
 ---
 🚀 [Endpaper 0.1.9](https://cloudbase.day/notes/aaron/endpaper/0.1.9)
 - New: 1
