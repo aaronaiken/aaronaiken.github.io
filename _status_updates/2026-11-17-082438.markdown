@@ -4,5 +4,8 @@ date: 2026-11-17 08:24:38 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://status.lol/aaronaiken/6afc5598417a2
+  - https://social.lol/@aaronaiken/117632000385314316
 ---
 ☕️ Coffee and ITIL practice exam. Good morning!
