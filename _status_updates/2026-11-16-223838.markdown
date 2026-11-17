@@ -1,0 +1,13 @@
+---
+title: Status
+date: 2026-11-16 22:38:38 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+🚀 [Endpaper 0.1.9](https://cloudbase.day/notes/aaron/endpaper/0.1.9)
+- New: 1
+- Improved: 2
+- Fixed: 1
+
+Shipped this one for Lindsay. She had to watch an add in order to get her citation...so I brought the Citation feature out so she could use it free, without an account, no ads, the way it should always be. [Endpaper *Cite*](https://endpaper.day/cite). 
