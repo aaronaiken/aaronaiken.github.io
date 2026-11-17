@@ -1,0 +1,12 @@
+---
+title: Status
+date: 2026-11-17 12:54:35 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+🚀 [Endpaper 0.1.10](https://cloudbase.day/notes/aaron/endpaper/0.1.10)
+- New: 1
+- Improved: 1
+
+A short followup to yesterday's release to support creating an account to save citations.
