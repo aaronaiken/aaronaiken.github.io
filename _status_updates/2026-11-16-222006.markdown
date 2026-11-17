@@ -1,0 +1,13 @@
+---
+title: Status
+date: 2026-11-16 22:20:06 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+🚀 [Cloudbase v244-249](https://cloudbase.day/shipped/2026-11-16)
+- New: 4
+- Improved: 9
+- Fixed: 3
+
+Need to do some proper blog post writing about what I've been working on...so many exciting things in here! In the meantime, click through.
