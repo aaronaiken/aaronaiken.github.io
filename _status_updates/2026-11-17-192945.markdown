@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-17 19:29:45 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+Work on a [new music player](https://cloudbase.day/music) for Cloudbase. 
+
+[![Apple Music player showing a vinyl record for "Apollo Boys" by MARTY, Brenno & Gavin the HotRod with playback controls and progress bar at 23 seconds.](https://media.cloudbase.day/stream/3/2026/11/20261117-192945-4d434b.webp)](https://media.cloudbase.day/stream/3/2026/11/20261117-192945-4d434b.webp)
