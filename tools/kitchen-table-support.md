@@ -4,7 +4,7 @@ title: "Kitchen Table — Support"
 permalink: /tools/kitchen-table/support/
 theme_color: "#FAF5EC"
 tagline: "Help for Kitchen Table, the household decision log for iPhone."
-description: Support for Kitchen Table. Where your data lives, how sharing works, keeping a copy, the money plan, and how to send me a ticket.
+description: Support for Kitchen Table. Where your data lives, how sharing works, keeping a copy, the money plan, tags, and how to send me a ticket.
 breadcrumb:
   - { label: Tools, url: /tools/ }
   - { label: Kitchen Table, url: /tools/kitchen-table/ }
@@ -43,6 +43,9 @@ A step gets a thin bar when Target and Where we are are the same kind of number:
 - **Saving up:** Target is the goal, Where we are is what you have. `$12,000` and `$4,000` reads *$4,000 of $12,000 · 33% saved*.
 - **Paying something down:** Target is where you started, and Where we are is what's left, with the word "left" in it. `$110,000` and `$51,000 left` reads *$51,000 left of $110,000 · 54% paid*. "Owed", "remaining" and "to go" work too.
 - **Time:** `3 months` and `1 month` reads *1 month of 3 months · 33% done*.
+
+**How do tags work?**
+Open a decision and tap **+ Tag**, next to **+ Cost**. Pick a tag you've used before or type a new one, like *Settlement* for everything one lump of money is meant for. A decision can have more than one. To see just those, tap **# Tags** beside search, then the tag. The top of the list adds up their costs, and it tells you about any it couldn't count (a cost like "a few hundred" isn't a dollar amount). Tap **# Tags** again to see everything.
 
 **How do I keep a backup?**
 At the bottom of the list, tap **Keep a copy**. It saves everything, photos included, as a file you can keep in Files. **Restore from a copy** only adds what's missing, so it's safe to run twice.
