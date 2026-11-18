@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-18 09:22:47 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+I enjoy the topics of this type of training. I live and breathe ITIL professionally *in the field*, but by day three, I'm ready to close the books. Classroom learning has never been my preference. Today is the third and final day, thankful for that!
+
+[![A meetings calendar interface showing a Zoom call for "ITIL foundations v5 day 3" scheduled for today at 9:00 AM with a blue "JOIN" button.](https://media.cloudbase.day/stream/3/2026/11/20261118-092247-76b5ec.webp)](https://media.cloudbase.day/stream/3/2026/11/20261118-092247-76b5ec.webp)
