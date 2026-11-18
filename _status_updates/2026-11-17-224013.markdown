@@ -1,0 +1,12 @@
+---
+title: Status
+date: 2026-11-17 22:40:13 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+🚀 [Cloudbase v251](https://cloudbase.day/shipped/2026-11-17)
+- New: 2
+- Fixed: 3
+
+Better handling of non-Formation calls: teams, zoom, etc. 
