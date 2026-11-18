@@ -2,7 +2,7 @@
 layout: stilldark
 title: Still Dark · A prayer journal
 permalink: /tools/still-dark/
-description: A prayer journal for Mac and iPhone. One page, one caret, nothing in the margins. Encrypted end to end and synced only between your own devices — no account, no server anyone can read. Paid once.
+description: A prayer journal for Mac, iPhone and iPad. One page, one caret, nothing in the margins. Encrypted end to end and synced only between your own devices — no account, no server anyone can read. Free.
 image:
   path: /assets/img/stilldark/og.png
   width: 1200
@@ -41,13 +41,13 @@ body { margin: 0; padding: 0; max-width: none; display: block;
   <header style="background:#0d0b0a;width:100%;max-width:1080px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:22px;padding:56px 0 40px;">
     <img src="/assets/img/stilldark/landing/app-icon.png" alt="Still Dark app icon" style="width:88px;height:88px;border-radius:20px;box-shadow:0 16px 32px -14px #000,inset 0 1px 0 rgba(199,159,110,0.11);">
     <h1 style="font-family:'EB Garamond',serif;font-weight:400;font-size:clamp(52px,8vw,84px);line-height:1;color:#d9b483;margin:0;">Still Dark</h1>
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#9a8168;">Prayer journal · Mac &amp; iPhone · Paid once</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#9a8168;">Prayer journal · Mac, iPhone &amp; iPad · Free</div>
     <p style="margin:0;max-width:30ch;font-family:'EB Garamond',serif;font-weight:400;font-size:clamp(22px,2.6vw,27px);line-height:1.45;color:#c79f6e;text-wrap:balance;">A prayer journal that waits in the dark. One page, one caret, nothing in the margins.</p>
     <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:6px;">
       <a href="https://testflight.apple.com/join/CPjjmV97" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;height:44px;padding:0 22px;border-radius:22px;background:#c79f6e;color:#12100e;font-size:14px;font-weight:400;">Join the beta →</a>
       <a href="#page" style="display:flex;align-items:center;height:44px;padding:0 22px;border-radius:22px;border:1px solid #4a3b2d;color:#c79f6e;font-size:14px;font-weight:400;">See the page</a>
     </div>
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#9a8168;">Now in open beta · Mac &amp; iPhone · Paid once at launch</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#9a8168;">Now in open beta · Mac, iPhone &amp; iPad · Free</div>
   </header>
 
   <section id="page" style="background:#0d0b0a;width:100%;max-width:1080px;display:flex;flex-direction:column;align-items:center;gap:18px;padding-bottom:96px;">
@@ -329,7 +329,7 @@ body { margin: 0; padding: 0; max-width: none; display: block;
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#9a8168;">Open beta</div>
         <div style="font-family:'EB Garamond',serif;font-size:clamp(30px,3.6vw,40px);line-height:1.15;color:#d9b483;">Try it now on TestFlight.</div>
-        <div style="font-size:15px;color:#ab9075;">Free while it's in beta, on Mac &amp; iPhone. You'll need Apple's TestFlight app, then tap through.</div>
+        <div style="font-size:15px;color:#ab9075;">Free, on Mac, iPhone &amp; iPad. You'll need Apple's TestFlight app, then tap through.</div>
         <a href="https://testflight.apple.com/join/CPjjmV97" target="_blank" rel="noopener noreferrer" style="align-self:flex-start;margin-top:6px;display:flex;align-items:center;height:46px;padding:0 22px;border-radius:23px;background:#c79f6e;color:#12100e;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:400;text-decoration:none;">Join the beta →</a>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;">

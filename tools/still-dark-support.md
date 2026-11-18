@@ -3,7 +3,7 @@ layout: tidy-page
 title: "Still Dark — Support"
 permalink: /tools/still-dark/support/
 theme_color: "#0D0B0A"
-tagline: "Help for Still Dark, the one-page prayer journal for Mac and iPhone."
+tagline: "Help for Still Dark, the one-page prayer journal for Mac, iPhone and iPad."
 description: Support for Still Dark. How syncing works, how to lock the app, requirements, and how to send me a ticket.
 breadcrumb:
   - { label: Tools, url: /tools/ }
@@ -27,7 +27,7 @@ Automatically, between devices signed in to the **same Apple ID** with iCloud on
 Check that both devices use the same Apple ID and have iCloud turned on, and that you're online. Then open Still Dark on the device that's behind and give it a moment — it syncs when it comes to the foreground.
 
 **How do I lock the app?**
-It unlocks with Face ID (iPhone) or Touch ID (Mac). On Mac, open **Settings (⌘,) → Lock when away** to choose how soon it locks, and press **⌘L again from the archive** to lock it immediately.
+It unlocks with Face ID or Touch ID, whichever your device has. On Mac, open **Settings (⌘,) → Lock when away** to choose how soon it locks, and press **⌘L again from the archive** to lock it immediately.
 
 **Can I open on the writing page instead of full screen (Mac)?**
 Yes — **Settings (⌘,) → Open in full screen**. It takes effect the next time you open the app.
@@ -36,10 +36,10 @@ Yes — **Settings (⌘,) → Open in full screen**. It takes effect the next ti
 Delete the app, then remove its iCloud data in Settings → your name → iCloud → Manage Account Storage → Still Dark.
 
 **What does it cost?**
-One price, paid once. Buy it on either Mac or iPhone and it's yours on both (universal purchase). No subscription.
+Nothing. Still Dark is free on Mac, iPhone and iPad: no price, no in-app purchases, no subscription, no ads.
 
 **Requirements**
-macOS 14 or later, iOS 17 or later.
+macOS 14 or later, iOS and iPadOS 17 or later.
 
 ---
 
