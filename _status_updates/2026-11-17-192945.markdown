@@ -4,6 +4,8 @@ date: 2026-11-17 19:29:45 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://social.lol/@aaronaiken/117634615929521061
 ---
 Work on a [new music player](https://cloudbase.day/music) for Cloudbase. 
 
