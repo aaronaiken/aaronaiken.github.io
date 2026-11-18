@@ -4,6 +4,8 @@ date: 2026-11-18 09:22:47 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://social.lol/@aaronaiken/117637891447790519
 ---
 I enjoy the topics of this type of training. I live and breathe ITIL professionally *in the field*, but by day three, I'm ready to close the books. Classroom learning has never been my preference. Today is the third and final day, thankful for that!
 
