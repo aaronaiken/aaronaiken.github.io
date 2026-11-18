@@ -1,0 +1,29 @@
+{% comment %}
+  A featured ("NOW") card: a little window drawn in the app's own colors and type,
+  then the Workbench details. Set `vignette:` in _data/tools.yml to the name of a
+  file in _includes/wb-vig/. Without one, it falls back to the plain card.
+{% endcomment %}
+{% assign t = include.tool %}
+{% if t.vignette %}
+{% case t.status %}
+  {% when 'live' %}{% assign slabel = 'Live' %}
+  {% when 'soon' %}{% assign slabel = 'Soon' %}
+  {% when 'beta' %}{% assign slabel = 'Beta' %}
+  {% else %}{% assign slabel = t.status | capitalize %}
+{% endcase %}
+<a class="wbf wbf--{{ t.vignette }}" href="{{ t.url }}"{% if t.external %} target="_blank" rel="noopener noreferrer"{% endif %}>
+  <div class="wbf__win" aria-hidden="true">{% include wb-vig/{{ t.vignette }}.html %}</div>
+  <div class="wbf__body">
+    <div class="wbf__head">
+      <img class="wbf__logo" src="{{ t.logo }}" alt="" aria-hidden="true">
+      <h2 class="wbf__name">{{ t.name }}</h2>
+      <span class="wbf__state">{% if t.badge %}{{ t.badge }} · {% endif %}<span class="wbf__dot"></span>{{ slabel }}</span>
+    </div>
+    <p class="wbf__desc">{{ t.blurb }}</p>
+    {% if t.tags %}<p class="wbf__tags">{{ t.tags | join: ' · ' }}</p>{% endif %}
+    <span class="wbf__cta">{{ t.cta | default: 'Open' | capitalize }} <span class="wbf__arrow" aria-hidden="true">{% if t.external %}↗{% else %}→{% endif %}</span></span>
+  </div>
+</a>
+{% else %}
+{% include wb-card.html tool=t %}
+{% endif %}

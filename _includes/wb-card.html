@@ -8,7 +8,7 @@
   {% when 'family' %}{% assign slabel = 'THE FAMILY' %}{% assign soff = true %}
   {% else %}{% assign slabel = t.status | upcase %}{% assign soff = false %}
 {% endcase %}
-<a class="tools__card" href="{{ t.url }}"{% if t.external %} rel="noopener noreferrer"{% endif %}>
+<a class="tools__card" href="{{ t.url }}"{% if t.external %} target="_blank" rel="noopener noreferrer"{% endif %}>
   <div class="tools__card-header">
     {% if t.logo %}
       <img class="tools__card-logo" src="{{ t.logo }}" alt="" aria-hidden="true">

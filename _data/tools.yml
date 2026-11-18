@@ -1,6 +1,7 @@
 # The Workbench — the source of truth for the /tools/ page.
 # Add a thing: append to `tools` below. Move it between sections: change `group`.
-# Put it up top for a while: set `featured: true`. That's it — no HTML to edit.
+# Put it up top for a while: set `featured: true`. Give it a drawn window with
+# `vignette: <name>` (a file in _includes/wb-vig/); without one it gets the plain card.
 #
 # status  -> live | online | docs | soon | blueprint  (drives the dot + label)
 # group   -> must match a `groups` id below
@@ -8,6 +9,7 @@
 # external-> true for off-site links (adds rel=noopener); omit for on-site
 
 groups:
+  - { id: learn,    label: "LEARNING" }
   - { id: publish,  label: "WRITE & PUBLISH" }
   - { id: rhythms,  label: "DAILY RHYTHMS" }
   - { id: mac,      label: "NATIVE APPS" }
@@ -17,6 +19,23 @@ groups:
   - { id: private,  label: "THE SHIP'S SYSTEMS · PRIVATE" }
 
 tools:
+  - name: Shipwright Academy
+    url: https://shipwrightacademy.com
+    external: true
+    logo: /assets/img/shipwright/shipwright-mark.svg
+    status: live
+    badge: "Beta"
+    group: learn
+    featured: true
+    vignette: shipwright   # the NOW card window: _includes/wb-vig/shipwright.html
+    cta: VISIT
+    blurb: >
+      A weekly logbook for kids who build things. The first project takes a kid from
+      barely typing to their own website — HTML and CSS by hand, no assistant, on a
+      domain with their name on it. Then everything they build next lands there. My
+      son Mozzie is the first student.
+    tags: [SvelteKit, SQLite, "Fly.io", "Homeschool"]
+
   - name: Letters from Paul
     url: https://lettersfrompaul.day
     external: true
@@ -52,7 +71,6 @@ tools:
     logo: /assets/img/theslot/theslot-mark.svg
     status: live
     group: publish
-    featured: true
     cta: VISIT
     blurb: >
       A calm editorial planner for writers who publish across more than one place.
@@ -69,12 +87,25 @@ tools:
     badge: "Private beta"
     group: publish
     featured: true
+    vignette: 48pages   # the NOW card window: _includes/wb-vig/48pages.html
     cta: VISIT
     blurb: >
       A zero-knowledge writing notebook — 48 encrypted pages, end to end. Capture a
       thought, roll it to a task, file it to the cabinet; the server only ever sees
       ciphertext. My daily paper, in software — with native iOS + Mac apps in the works.
     tags: ["Zero-knowledge", SvelteKit, "E2E crypto", "iOS + Mac soon"]
+
+  - name: Cloudbase
+    url: /tools/cloudbase/
+    logo: /assets/img/cloudbase/cloudbase-mark.svg
+    status: live
+    group: flagship   # no matching group and not featured: the flagship band (_includes/wb-flagship.html) is its home
+    cta: LEARN MORE
+    blurb: >
+      Practice management for the person who does all the jobs — the work, the
+      record, and the money in one place, and nothing in it scores you. Live at
+      cloudbase.day, built and run by one person.
+    tags: [Flask, Postgres, "Fly.io"]
 
   - name: Cadence
     url: https://cadencestories.com
@@ -198,12 +229,30 @@ tools:
       up anywhere else. Not medical advice. Part of the Tidy family.
     tags: [iOS, "Apple Health", Swift, "Tidy family"]
 
+  - name: Kitchen Table
+    url: /tools/kitchen-table/
+    logo: /assets/img/kitchentable/kitchentable-mark-256.png
+    status: soon
+    badge: "TestFlight"
+    group: mac
+    featured: true
+    vignette: kitchen-table   # the NOW card window: _includes/wb-vig/kitchen-table.html
+    cta: LEARN MORE
+    blurb: >
+      What we decided, and why. A household decision log for the two of you: write
+      it down in fifteen seconds, keep pending decisions on top, and months later
+      it asks once whether it held up. Plus a money plan that keeps one thing at a
+      time, in order. Shared through your own iCloud. For iPhone, paid once.
+    tags: [iOS, SwiftUI, CloudKit, "Shared"]
+
   - name: Still Dark
     url: /tools/still-dark/
     logo: /assets/img/stilldark/stilldark-mark-256.png
     status: beta
     badge: "TestFlight"
     group: mac
+    featured: true
+    vignette: still-dark   # the NOW card window: _includes/wb-vig/still-dark.html
     cta: LEARN MORE
     blurb: >
       An encrypted prayer journal — "very early in the morning, while it was still dark …
@@ -226,20 +275,6 @@ tools:
       morning, something to do instead. No shame when you slip, and no streak held
       over you. For iPhone.
     tags: [iOS, SwiftUI, "Local-only", "No account"]
-
-  - name: Kitchen Table
-    url: /tools/kitchen-table/
-    logo: /assets/img/kitchentable/kitchentable-mark-256.png
-    status: soon
-    badge: "TestFlight"
-    group: mac
-    cta: LEARN MORE
-    blurb: >
-      What we decided, and why. A household decision log for the two of you: write
-      it down in fifteen seconds, keep pending decisions on top, and months later
-      it asks once whether it held up. Plus a money plan that keeps one thing at a
-      time, in order. Shared through your own iCloud. For iPhone, paid once.
-    tags: [iOS, SwiftUI, CloudKit, "Shared"]
 
   - name: Astromech // Audio Lab
     url: /tools/audio-lab/
