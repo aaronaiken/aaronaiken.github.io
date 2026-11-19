@@ -4,6 +4,8 @@ date: 2026-11-18 21:24:34 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://social.lol/@aaronaiken/117640729720438716
 ---
 Coach wasn’t happy with it on a rest day but I needed the movement after my work day. Quick one for the mind. 
 
