@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-19 15:22:35 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+Simple one for today.
+
+[![Stack of cream and beige linen coasters with rounded corners arranged in a fan on a distressed wood surface.](https://media.cloudbase.day/stream/3/2026/11/20261119-152235-bd0090.webp)](https://media.cloudbase.day/stream/3/2026/11/20261119-152235-bd0090.webp)
