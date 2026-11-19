@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-19 11:14:05 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+Fun details on the lock screen. 
+
+[![Cloudbase login screen for user Aaron with a vinyl record player widget showing Apple Music playing "We Wish You the Merriest" by Frank Sinatra.](https://media.cloudbase.day/stream/3/2026/11/20261119-111405-1dd9b3.webp)](https://media.cloudbase.day/stream/3/2026/11/20261119-111405-1dd9b3.webp)
