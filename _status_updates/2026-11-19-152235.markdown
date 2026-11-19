@@ -4,6 +4,8 @@ date: 2026-11-19 15:22:35 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://social.lol/@aaronaiken/117644968642908587
 ---
 Simple one for today.
 
