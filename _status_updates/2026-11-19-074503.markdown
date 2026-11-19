@@ -4,6 +4,9 @@ date: 2026-11-19 07:45:03 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://status.lol/aaronaiken/6afeef513096d
+  - https://social.lol/@aaronaiken/117643169356851420
 ---
 ☀️ **Grateful Log for Thursday, November 19, 2026**
 1. Frosty grass
