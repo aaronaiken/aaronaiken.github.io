@@ -4,6 +4,8 @@ date: 2026-11-19 11:14:05 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://social.lol/@aaronaiken/117643991529637163
 ---
 Fun details on the lock screen. 
 
