@@ -1,0 +1,22 @@
+---
+title: Status
+date: 2026-11-18 21:24:34 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+Coach wasn’t happy with it on a rest day but I needed the movement after my work day. Quick one for the mind. 
+
+Wed, Nov 18: Indoor ride (Zwift, Glen Etive)
+
+- Dist: 4.8 mi
+- Time: 14:00
+- Avg spd: 20.7 mph
+- Climb: 164 ft
+- Avg power: 125 W
+- Avg HR: 136 bpm
+- Max HR: 158
+
+#ride
+
+[![Cyclist in yellow and black jersey riding on a rural mountain road with performance metrics displayed on screen showing 135 watts power output.](https://media.cloudbase.day/stream/3/2026/11/20261118-212434-98870b.webp)](https://media.cloudbase.day/stream/3/2026/11/20261118-212434-98870b.webp)
