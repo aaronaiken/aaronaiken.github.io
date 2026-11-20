@@ -1,0 +1,23 @@
+---
+title: Status
+date: 2026-11-19 22:37:56 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+A nice simple ride. 
+
+Thu, Nov 19: Indoor ride (Zwift, Easy Spin Reset)
+
+- Distance: 6.5 mi
+- Time: 33:13
+- Avg speed: 11.8 mph
+- Climb: 230 ft
+- Avg power: 77 W
+- Avg HR: ~130 bpm
+- Max HR: 139 bpm
+
+#ride
+
+
+[![Cyclist in neon yellow jersey riding on a futuristic blue-lit road with performance metrics and training data displayed on screen.](https://media.cloudbase.day/stream/3/2026/11/20261119-223756-777c7a.webp)](https://media.cloudbase.day/stream/3/2026/11/20261119-223756-777c7a.webp)
