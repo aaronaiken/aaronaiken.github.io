@@ -9,6 +9,6 @@ syndication:
 ---
 🎧 some quick late night work.
 
-https://cloudbase.day/@aaron/t/2026-11-19-2344
+<https://cloudbase.day/@aaron/t/2026-11-19-2344>
 
 [![A now-playing card: the record for Wild - Single sliding out of its sleeve on warm paper, with “Wild, SIDEPIECE.”](https://media.cloudbase.day/stream/3/2026/11/20261119-234444-baaabe.webp)](https://media.cloudbase.day/stream/3/2026/11/20261119-234444-baaabe.webp)
