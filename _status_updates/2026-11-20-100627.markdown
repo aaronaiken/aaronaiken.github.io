@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-20 10:06:27 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+Creative tinkering for a bit.
+
+[![Apple Music browse screen showing playlists including Essential Christmas and Today's Country, top albums like FRESH by Lil Baby, and top songs with Choosin' Texas by Ella Langley playing.](https://media.cloudbase.day/stream/3/2026/11/20261120-100627-314fe4.webp)](https://media.cloudbase.day/stream/3/2026/11/20261120-100627-314fe4.webp)
