@@ -1,0 +1,11 @@
+---
+title: Status
+date: 2026-11-23 15:45:22 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+☀️ **Grateful Log for Monday, November 23, 2026**
+1. Think I may have finally found a solution to tracking HR via Apple Watch [reliably] on Zwift.
+2. Automation
+3. Thanksgiving week!
