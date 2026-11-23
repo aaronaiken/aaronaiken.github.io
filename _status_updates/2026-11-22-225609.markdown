@@ -4,6 +4,9 @@ date: 2026-11-22 22:56:09 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://status.lol/aaronaiken/6b03b95b26322
+  - https://social.lol/@aaronaiken/117663738898425812
 ---
 Last few days have been unpredictable. Fortunate to get this one in. 
 
