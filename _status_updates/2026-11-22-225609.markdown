@@ -1,0 +1,20 @@
+---
+title: Status
+date: 2026-11-22 22:56:09 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+Last few days have been unpredictable. Fortunate to get this one in. 
+
+Sun, Nov 22: Indoor ride (Zwift, Training Zones)
+
+- Distance: 5.2 mi
+- Time: 30:07
+- Avg speed: 10.4 mph
+- Climb: 197 ft
+- Avg power: 78 W
+- Max HR: 131 bpm
+
+#ride
+
