@@ -4,6 +4,9 @@ date: 2026-11-23 15:45:22 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://status.lol/aaronaiken/6b04a5e48e57e
+  - https://social.lol/@aaronaiken/117667707315306282
 ---
 ☀️ **Grateful Log for Monday, November 23, 2026**
 1. Think I may have finally found a solution to tracking HR via Apple Watch [reliably] on Zwift.
