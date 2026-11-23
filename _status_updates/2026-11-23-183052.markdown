@@ -4,6 +4,8 @@ date: 2026-11-23 18:30:52 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://social.lol/@aaronaiken/117668358183260482
 ---
 Great ride after being at my desk all day. 
 
