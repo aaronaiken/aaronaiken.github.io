@@ -1,0 +1,11 @@
+---
+title: Status
+date: 2026-11-23 16:53:40 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+Three quick things I'm excited about but haven't shared:
+- [Callsign](https://cloudbase.day/callsign)
+- [Transmit](https://cloudbase.day/transmit)
+- [Christmas Saturdays](https://cloudbase.day/kits/christmas-saturdays)
