@@ -1,0 +1,22 @@
+---
+title: Status
+date: 2026-11-23 18:30:52 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+Great ride after being at my desk all day. 
+
+FTP Short Blocks
+
+- Distance: 10.2 mi
+- Time: 53:11
+- Avg speed: 11.5 mph
+- Climb: 755 ft
+- Avg power: 103 W
+- Avg HR: 136 bpm
+- Max HR: 155 bpm
+
+#ride
+
+[![Cyclist on a virtual indoor training ride at 140 watts with performance metrics and leaderboard displayed on screen.](https://media.cloudbase.day/stream/3/2026/11/20261123-183052-f85f44.webp)](https://media.cloudbase.day/stream/3/2026/11/20261123-183052-f85f44.webp)
