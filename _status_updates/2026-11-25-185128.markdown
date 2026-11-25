@@ -4,6 +4,8 @@ date: 2026-11-25 18:51:28 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://social.lol/@aaronaiken/117679763855662651
 ---
 Felt good. 
 
