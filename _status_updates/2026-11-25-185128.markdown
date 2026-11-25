@@ -1,0 +1,22 @@
+---
+title: Status
+date: 2026-11-25 18:51:28 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+Felt good. 
+
+Tine
+
+- Distance: 7.3 mi
+- Time: 1:00:19
+- Avg speed: 7.3 mph
+- Climb: 758 ft
+- Avg power: 87 W
+- Avg HR: 118 bpm
+- Max HR: 138 bpm
+
+#ride
+
+[![Cyclist riding on a dirt trail during a virtual indoor cycling workout displaying real-time metrics including power output, heart rate, and route map.](https://media.cloudbase.day/stream/3/2026/11/20261125-185128-92c911.webp)](https://media.cloudbase.day/stream/3/2026/11/20261125-185128-92c911.webp)
