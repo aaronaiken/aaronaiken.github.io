@@ -4,6 +4,9 @@ date: 2026-11-25 09:58:32 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://status.lol/aaronaiken/6b06f79a6ac36
+  - https://social.lol/@aaronaiken/117677668143671199
 ---
 ☁️ **Grateful Log for Wednesday, November 25, 2026**
 1. Slower-ish morning
