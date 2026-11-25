@@ -4,5 +4,8 @@ date: 2026-11-24 23:10:30 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://status.lol/aaronaiken/6b065fb87c244
+  - https://social.lol/@aaronaiken/117675119927400409
 ---
 A huge thanks to those who are trying out [Callsign](https://cloudbase.day/callsign)! You have already given me feedback and I’ve squashed several bugs already based on your signups…keep the feedback coming please!
