@@ -4,6 +4,8 @@ date: 2026-11-24 23:05:41 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://social.lol/@aaronaiken/117675101126248559
 ---
 💻 Mozzie walked through [Shipwright Academy’s](https://shipwrightacademy.com) _By Hand_ lesson 1 this evening. Will go from computer illiterate to published website in 19 more lessons. Eager to see him go through it. 
 
