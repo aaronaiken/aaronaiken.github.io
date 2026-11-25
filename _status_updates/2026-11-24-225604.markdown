@@ -4,5 +4,8 @@ date: 2026-11-24 22:56:04 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://status.lol/aaronaiken/6b065c569974e
+  - https://social.lol/@aaronaiken/117675063217147553
 ---
 🥃 a semi-traditional pre-holiday Manhattan to close out a portion of my work season and enter into the Holiday season, which leads into my busiest season starting January 2027.
