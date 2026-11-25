@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-24 23:05:41 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+💻 Mozzie walked through [Shipwright Academy’s](https://shipwrightacademy.com) _By Hand_ lesson 1 this evening. Will go from computer illiterate to published website in 19 more lessons. Eager to see him go through it. 
+
+[![A young person in a gray hoodie works at a wooden desk, typing on a laptop displaying code with a blue interface.](https://media.cloudbase.day/stream/3/2026/11/20261124-230541-df23e1.webp)](https://media.cloudbase.day/stream/3/2026/11/20261124-230541-df23e1.webp)
