@@ -4,5 +4,8 @@ date: 2026-11-25 20:08:00 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://status.lol/aaronaiken/6b078671f00a9
+  - https://social.lol/@aaronaiken/117680064615859729
 ---
 Stocking up on adult beverages this evening and I ran into my third-grade teacher. Super fun catching up!
