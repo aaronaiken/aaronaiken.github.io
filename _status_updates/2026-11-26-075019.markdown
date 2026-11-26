@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-26 07:50:19 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+'Tis the season at [Cloudbase](https://cloudbase.day). I created 50+ equally cozy Winter/Christmas themed images that will rotate through until 1/6/2027.
+
+[![A Cloudbase login dialog for user Aaron overlays a snowy winter scene with a decorated colonial house featuring a red bow wreath and sleigh.](https://media.cloudbase.day/stream/3/2026/11/20261126-075019-0d8b53.webp)](https://media.cloudbase.day/stream/3/2026/11/20261126-075019-0d8b53.webp)
