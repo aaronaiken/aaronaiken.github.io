@@ -1,0 +1,20 @@
+---
+title: Status
+date: 2026-11-27 16:54:20 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+Molten Momentum
+
+- Distance: 15.1 mi
+- Time: 1:00:25
+- Avg speed: 15.0 mph
+- Climb: 751 ft
+- Avg power: 126 W
+- Avg HR: 140 bpm
+- Max HR: 159 bpm
+
+#ride
+
+[![Cyclist in yellow and black kit riding uphill in a virtual cycling game with real-time stats overlay showing power, speed, and elevation data.](https://media.cloudbase.day/stream/3/2026/11/20261127-165420-f15c5c.webp)](https://media.cloudbase.day/stream/3/2026/11/20261127-165420-f15c5c.webp)
