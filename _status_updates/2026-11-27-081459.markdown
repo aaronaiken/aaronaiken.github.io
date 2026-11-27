@@ -4,5 +4,8 @@ date: 2026-11-27 08:14:59 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://status.lol/aaronaiken/6b098255d372e
+  - https://social.lol/@aaronaiken/117688585611194535
 ---
 ☕️ Time for coffee!
