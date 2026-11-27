@@ -4,6 +4,8 @@ date: 2026-11-27 16:54:20 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://social.lol/@aaronaiken/117690627901358143
 ---
 Molten Momentum
 
