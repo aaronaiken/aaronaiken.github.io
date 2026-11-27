@@ -4,6 +4,8 @@ date: 2026-11-27 08:24:14 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://social.lol/@aaronaiken/117688622577882659
 ---
 A very full, very good, Thanksgiving day yesterday with lots of family, lots of laughs, lots of food (I know turkey is the meat of choice but I enjoyed the ham much more). Plus a quick birthday song to celebrate my dad’s next rung in the ladder 🎂 
 
