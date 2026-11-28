@@ -1,0 +1,10 @@
+---
+title: Status
+date: 2026-11-27 22:32:34 -0500
+layout: status_update
+author: aaron
+source: cloudbase
+---
+Fantastic wine, great cocktails, delicious food! Date nights are the best :-)
+
+[![Two people wearing glasses smile at the camera outside Reunion, a cocktails and provisions restaurant at night.](https://media.cloudbase.day/stream/3/2026/11/20261127-223234-1ad6c3.webp)](https://media.cloudbase.day/stream/3/2026/11/20261127-223234-1ad6c3.webp)
