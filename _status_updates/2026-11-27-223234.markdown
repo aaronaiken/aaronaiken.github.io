@@ -4,6 +4,8 @@ date: 2026-11-27 22:32:34 -0500
 layout: status_update
 author: aaron
 source: cloudbase
+syndication:
+  - https://social.lol/@aaronaiken/117691957792527537
 ---
 Fantastic wine, great cocktails, delicious food! Date nights are the best :-)
 
